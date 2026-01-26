@@ -28,10 +28,17 @@ export default function TwoPanel({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [graphicsWidth, setGraphicsWidth] = useState(DEFAULT_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load saved width from localStorage
+  // Mark as mounted (client-side only)
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Load saved width from localStorage (client-side only)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const width = parseFloat(saved);
@@ -41,12 +48,13 @@ export default function TwoPanel({
     }
   }, []);
 
-  // Save width to localStorage when it changes
+  // Save width to localStorage when it changes (client-side only)
   useEffect(() => {
-    if (!isDragging) {
+    if (typeof window === 'undefined') return;
+    if (!isDragging && isMounted) {
       localStorage.setItem(STORAGE_KEY, graphicsWidth.toString());
     }
-  }, [graphicsWidth, isDragging]);
+  }, [graphicsWidth, isDragging, isMounted]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -183,8 +191,8 @@ export default function TwoPanel({
           <div
             className={`graphics-panel ${
               activeTab === 'graphics' ? 'block' : 'hidden lg:block'
-            } lg:h-[calc(100vh-4rem)] lg:sticky lg:top-0`}
-            style={{ width: `${graphicsWidth}%` }}
+            } lg:h-[calc(100vh-4rem)] lg:sticky lg:top-0 ${!isMounted ? 'lg:w-1/2' : ''}`}
+            style={isMounted ? { width: `${graphicsWidth}%` } : undefined}
           >
             {graphicsPanel}
           </div>
@@ -205,7 +213,7 @@ export default function TwoPanel({
           <div
             className={`text-panel ${
               activeTab === 'text' ? 'block' : 'hidden lg:block'
-            } lg:h-[calc(100vh-4rem)] lg:overflow-y-auto lg:flex-1`}
+            } lg:h-[calc(100vh-4rem)] lg:overflow-y-auto ${!isMounted ? 'lg:w-1/2' : 'lg:flex-1'}`}
           >
             {textPanel}
           </div>
