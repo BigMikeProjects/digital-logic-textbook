@@ -23,6 +23,7 @@ export interface Topic {
   graphics: GraphicItem[];
   chapter: string;
   section: string;
+  isSectionIntro?: boolean;  // True if this is section-level content (not a subtopic)
 }
 
 export interface NavigationItem {

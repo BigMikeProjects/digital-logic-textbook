@@ -11,17 +11,32 @@ interface FolderInfo {
   name: string;
   chapter: string;
   section: string;
+  isSectionIntro: boolean;
 }
 
-function extractChapterAndSection(folderPath: string): { chapter: string; section: string } {
+function extractChapterAndSection(folderPath: string): { chapter: string; section: string; isSectionIntro: boolean } {
   const relativePath = path.relative(CONTENT_DIR, folderPath);
   const parts = relativePath.split(path.sep);
 
-  // Expected structure: chapter/section/topic
-  const chapter = parts[0] || '';
-  const section = parts[1] || '';
+  // Depth 2 = section-level content (chapter/section/text.md)
+  // Depth 3 = topic-level content (chapter/section/topic/text.md)
+  const depth = parts.length;
 
-  return { chapter, section };
+  if (depth === 2) {
+    // Section-level content: chapter/section
+    return {
+      chapter: parts[0] || '',
+      section: parts[1] || '',
+      isSectionIntro: true
+    };
+  }
+
+  // Topic-level content: chapter/section/topic
+  return {
+    chapter: parts[0] || '',
+    section: parts[1] || '',
+    isSectionIntro: false
+  };
 }
 
 function findTopicFolders(dir: string, folders: FolderInfo[] = []): FolderInfo[] {
@@ -35,12 +50,13 @@ function findTopicFolders(dir: string, folders: FolderInfo[] = []): FolderInfo[]
   const hasTextMd = entries.some(e => e.isFile() && e.name === 'text.md');
 
   if (hasTextMd) {
-    const { chapter, section } = extractChapterAndSection(dir);
+    const { chapter, section, isSectionIntro } = extractChapterAndSection(dir);
     folders.push({
       path: dir,
       name: path.basename(dir),
       chapter,
-      section
+      section,
+      isSectionIntro
     });
   }
 
@@ -87,7 +103,8 @@ export async function loadAllTopics(): Promise<Topic[]> {
         markdown,
         graphics,
         chapter: folder.chapter,
-        section: folder.section
+        section: folder.section,
+        isSectionIntro: folder.isSectionIntro
       });
     } catch (error) {
       console.error(`Error loading topic from ${folder.path}:`, error);
