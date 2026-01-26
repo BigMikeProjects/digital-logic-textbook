@@ -4,6 +4,7 @@ export interface GraphicItem {
   path: string;
   caption?: string;
   youtubeId?: string;
+  startTime?: number;
 }
 
 export interface TopicMeta {

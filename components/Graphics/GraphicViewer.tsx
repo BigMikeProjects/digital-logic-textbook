@@ -14,7 +14,7 @@ export default function GraphicViewer({ graphic }: GraphicViewerProps) {
     case 'image':
       return <ImageViewer src={graphic.path} alt={graphic.caption || graphic.filename} />;
     case 'youtube':
-      return <YouTubeEmbed videoId={graphic.youtubeId || ''} />;
+      return <YouTubeEmbed videoId={graphic.youtubeId || ''} startTime={graphic.startTime} />;
     case 'html':
       return <HtmlPreview src={graphic.path} title={graphic.caption || graphic.filename} />;
     default:

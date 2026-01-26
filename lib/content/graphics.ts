@@ -21,18 +21,30 @@ export function getGraphicType(filename: string): 'image' | 'youtube' | 'html' |
   return null;
 }
 
-export function extractYoutubeId(filePath: string): string {
+export function extractYoutubeId(filePath: string): { id: string; startTime?: number } {
   try {
     const content = fs.readFileSync(filePath, 'utf-8').trim();
-    // Handle both full URLs and just video IDs
+
+    // Extract timestamp from URL parameter (t=SECONDS)
+    const timeMatch = content.match(/[?&]t=(\d+)/);
+    const startTime = timeMatch ? parseInt(timeMatch[1], 10) : undefined;
+
+    // Handle full URLs (youtube.com/watch?v=ID or youtu.be/ID)
     const urlMatch = content.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
     if (urlMatch) {
-      return urlMatch[1];
+      return { id: urlMatch[1], startTime };
     }
-    // Assume it's a raw video ID
-    return content;
+
+    // Handle raw video ID with optional timestamp (e.g., "dQw4w9WgXcQ?t=120")
+    const idMatch = content.match(/^([a-zA-Z0-9_-]+)(?:\?t=\d+)?$/);
+    if (idMatch) {
+      return { id: idMatch[1], startTime };
+    }
+
+    // Fallback: return content as-is (for backwards compatibility)
+    return { id: content, startTime };
   } catch {
-    return '';
+    return { id: '' };
   }
 }
 
@@ -78,9 +90,13 @@ export function findAndSortGraphics(
       graphic.caption = metaGraphics[entry.name].caption;
     }
 
-    // Extract YouTube ID if applicable
+    // Extract YouTube ID and start time if applicable
     if (type === 'youtube') {
-      graphic.youtubeId = extractYoutubeId(path.join(searchDir, entry.name));
+      const { id, startTime } = extractYoutubeId(path.join(searchDir, entry.name));
+      graphic.youtubeId = id;
+      if (startTime !== undefined) {
+        graphic.startTime = startTime;
+      }
     }
 
     graphics.push(graphic);
