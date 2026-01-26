@@ -1,0 +1,11 @@
+title: "Half Adder Basics"
+description: "Introduction to the half adder circuit and its operation"
+order: 1
+
+graphics:
+  01-block-diagram.svg:
+    caption: "Half Adder Block Diagram showing inputs A and B with outputs Sum and Carry"
+  02-interactive.html:
+    caption: "Interactive Half Adder - Click inputs to toggle and see outputs change"
+  03-video.youtube:
+    caption: "Video explanation of half adder concepts"
