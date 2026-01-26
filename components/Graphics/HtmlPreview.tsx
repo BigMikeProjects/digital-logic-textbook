@@ -1,13 +1,17 @@
 'use client';
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 interface HtmlPreviewProps {
   src: string;
   title: string;
 }
 
 export default function HtmlPreview({ src, title }: HtmlPreviewProps) {
+  const fullSrc = src.startsWith('/') ? `${basePath}${src}` : src;
+
   const openFullScreen = () => {
-    window.open(src, '_blank');
+    window.open(fullSrc, '_blank');
   };
 
   return (

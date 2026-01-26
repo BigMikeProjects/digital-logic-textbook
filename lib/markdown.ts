@@ -9,9 +9,11 @@ import { visit } from 'unist-util-visit';
 import verilog from 'highlight.js/lib/languages/verilog';
 import type { Root, Element } from 'hast';
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 /**
  * Rehype plugin to rewrite relative image paths to absolute content paths.
- * Transforms ./images/file.png to /content/[chapter]/[section]/[topic]/images/file.png
+ * Transforms ./images/file.png to [basePath]/content/[chapter]/[section]/[topic]/images/file.png
  */
 function rehypeRewriteImagePaths(contentPath: string) {
   return () => (tree: Root) => {
@@ -20,7 +22,7 @@ function rehypeRewriteImagePaths(contentPath: string) {
         const src = node.properties.src as string;
         // Only rewrite relative paths starting with ./
         if (src.startsWith('./')) {
-          node.properties.src = `/content/${contentPath}/${src.slice(2)}`;
+          node.properties.src = `${basePath}/content/${contentPath}/${src.slice(2)}`;
         }
       }
     });
