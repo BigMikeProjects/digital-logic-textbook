@@ -18,6 +18,10 @@ The half adder implements two key functions:
 - **Sum** = A ⊕ B (XOR operation)
 - **Carry** = A · B (AND operation)
 
+The XOR gate symbol used for the Sum output:
+
+![XOR Gate Symbol](./images/xor-gate.svg)
+
 ## Verilog Implementation
 
 ```verilog

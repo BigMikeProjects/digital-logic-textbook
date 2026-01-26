@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { loadAllTopics, buildNavigation } from '@/lib/content';
+import path from 'path';
+import { loadAllTopics, buildNavigation, buildChapterStructure } from '@/lib/content';
 import { renderMarkdown } from '@/lib/markdown';
 import TwoPanel from '@/components/Layout/TwoPanel';
 import { TopNav } from '@/components/Navigation';
@@ -47,18 +48,25 @@ export default async function TopicPage({ params }: PageProps) {
 
   const navigation = buildNavigation(topics);
   const navContext = navigation.get(slug);
+  const chapters = buildChapterStructure(topics);
 
   if (!navContext) {
     notFound();
   }
 
-  const html = await renderMarkdown(topic.markdown);
+  // Extract relative content path for image URL rewriting
+  const contentDir = path.join(process.cwd(), 'content');
+  const relativeContentPath = path.relative(contentDir, topic.contentPath);
+
+  const html = await renderMarkdown(topic.markdown, relativeContentPath);
 
   return (
     <TwoPanel
       topNav={<TopNav navigation={navContext} />}
       graphicsPanel={<GraphicsPanel graphics={topic.graphics} />}
       textPanel={<TextPanel html={html} />}
+      chapters={chapters}
+      currentSlug={slug}
     />
   );
 }

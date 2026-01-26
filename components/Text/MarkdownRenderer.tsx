@@ -14,7 +14,8 @@ export default function MarkdownRenderer({ html }: MarkdownRendererProps) {
         prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
         prose-strong:text-gray-900
         prose-code:text-pink-600 prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
-        prose-pre:bg-gray-900 prose-pre:text-gray-100
+        prose-pre:bg-transparent prose-pre:p-0
+        [&_pre_code]:text-inherit [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:rounded-none
         prose-ul:list-disc prose-ul:pl-6
         prose-ol:list-decimal prose-ol:pl-6
         prose-li:text-gray-700

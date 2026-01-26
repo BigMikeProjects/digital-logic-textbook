@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80">
+  <style>
+    .gate-body { fill: none; stroke: #333; stroke-width: 2; }
+    .gate-line { stroke: #333; stroke-width: 2; }
+    .label { font-family: sans-serif; font-size: 12px; fill: #333; }
+  </style>
+
+  <!-- Input lines -->
+  <line class="gate-line" x1="10" y1="25" x2="35" y2="25"/>
+  <line class="gate-line" x1="10" y1="55" x2="35" y2="55"/>
+
+  <!-- XOR gate body -->
+  <path class="gate-body" d="M 35 10 Q 50 40, 35 70 Q 55 40, 35 10"/>
+  <path class="gate-body" d="M 40 10 Q 55 40, 40 70 Q 75 55, 90 40 Q 75 25, 40 10"/>
+
+  <!-- Output line -->
+  <line class="gate-line" x1="90" y1="40" x2="110" y2="40"/>
+
+  <!-- Labels -->
+  <text class="label" x="2" y="29">A</text>
+  <text class="label" x="2" y="59">B</text>
+  <text class="label" x="95" y="35">S</text>
+</svg>

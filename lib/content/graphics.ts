@@ -42,11 +42,15 @@ export function findAndSortGraphics(
 ): GraphicItem[] {
   const graphics: GraphicItem[] = [];
 
-  if (!fs.existsSync(topicPath)) {
+  // Look for graphics in the graphics/ subfolder first, fall back to topic root for backwards compatibility
+  const graphicsDir = path.join(topicPath, 'graphics');
+  const searchDir = fs.existsSync(graphicsDir) ? graphicsDir : topicPath;
+
+  if (!fs.existsSync(searchDir)) {
     return graphics;
   }
 
-  const entries = fs.readdirSync(topicPath, { withFileTypes: true });
+  const entries = fs.readdirSync(searchDir, { withFileTypes: true });
 
   for (const entry of entries) {
     if (!entry.isFile()) continue;
@@ -54,13 +58,19 @@ export function findAndSortGraphics(
     const type = getGraphicType(entry.name);
     if (!type) continue;
 
-    // Skip text.md and meta.yaml
+    // Skip text.md and meta.yaml (only relevant when searching topic root)
     if (entry.name === 'text.md' || entry.name === 'meta.yaml') continue;
+
+    // Build the public path - include 'graphics/' in path if using subfolder
+    const relativePath = path.relative(path.join(process.cwd(), 'content'), topicPath);
+    const publicPath = searchDir === graphicsDir
+      ? `/content/${relativePath}/graphics/${entry.name}`
+      : `/content/${relativePath}/${entry.name}`;
 
     const graphic: GraphicItem = {
       filename: entry.name,
       type,
-      path: `/content/${path.relative(path.join(process.cwd(), 'content'), topicPath)}/${entry.name}`,
+      path: publicPath,
     };
 
     // Add caption from meta.yaml if available
@@ -70,7 +80,7 @@ export function findAndSortGraphics(
 
     // Extract YouTube ID if applicable
     if (type === 'youtube') {
-      graphic.youtubeId = extractYoutubeId(path.join(topicPath, entry.name));
+      graphic.youtubeId = extractYoutubeId(path.join(searchDir, entry.name));
     }
 
     graphics.push(graphic);
