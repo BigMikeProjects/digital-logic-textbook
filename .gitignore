@@ -40,5 +40,8 @@ coverage/
 # Misc
 *.log
 
+# Content staging area (work in progress)
+staging/
+
 # Generated content assets
 public/content/

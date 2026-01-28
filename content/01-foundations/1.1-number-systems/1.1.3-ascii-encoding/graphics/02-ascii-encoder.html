@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Character Encoding</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4fc3f7;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #90a4ae;
+            font-size: 20px;
+            margin-bottom: 24px;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        /* Concept cards at top */
+        .card-row {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #546e7a;
+            border-radius: 16px;
+            padding: 18px 24px;
+            flex: 1;
+            max-width: 280px;
+        }
+
+        .card h2 {
+            font-size: 18px;
+            color: #4fc3f7;
+            margin-bottom: 8px;
+        }
+
+        .card p {
+            font-size: 14px;
+            color: #90a4ae;
+            line-height: 1.4;
+        }
+
+        /* Main content: two panels */
+        .two-panels {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 30px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .panel {
+            background: #0d1b2a;
+            border: 3px solid #546e7a;
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            font-size: 22px;
+            font-weight: 700;
+            color: #e0e0e0;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* ASCII Reference Table */
+        .ascii-table {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .ascii-entry {
+            background: rgba(79, 195, 247, 0.1);
+            border: 1px solid #37474f;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ascii-char {
+            font-size: 24px;
+            color: #4fc3f7;
+            font-weight: bold;
+            width: 32px;
+            text-align: center;
+        }
+
+        .ascii-values {
+            display: flex;
+            flex-direction: column;
+            font-size: 13px;
+        }
+
+        .ascii-dec {
+            color: #81c784;
+        }
+
+        .ascii-bin {
+            color: #ffb74d;
+            font-size: 12px;
+        }
+
+        /* Interactive encoder */
+        .encoder-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-group label {
+            font-size: 16px;
+            color: #90a4ae;
+        }
+
+        .word-input {
+            background: #1a2a3a;
+            border: 2px solid #546e7a;
+            border-radius: 10px;
+            padding: 16px 20px;
+            font-size: 28px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #4fc3f7;
+            text-align: center;
+            letter-spacing: 8px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .word-input:focus {
+            border-color: #4fc3f7;
+        }
+
+        .word-input::placeholder {
+            color: #37474f;
+            letter-spacing: 4px;
+        }
+
+        .output-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow: hidden;
+        }
+
+        .output-label {
+            font-size: 16px;
+            color: #90a4ae;
+        }
+
+        .encoding-display {
+            flex: 1;
+            background: #0a1520;
+            border: 2px solid #37474f;
+            border-radius: 12px;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-content: flex-start;
+        }
+
+        .char-encoding {
+            background: linear-gradient(145deg, #1a2a3a, #0d1b2a);
+            border: 2px solid #546e7a;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            min-width: 100px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .char-encoding:hover {
+            transform: translateY(-4px);
+            border-color: #4fc3f7;
+        }
+
+        .char-display {
+            font-size: 36px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+
+        .char-display.space-char {
+            background: rgba(79, 195, 247, 0.2);
+            border-radius: 4px;
+            padding: 0 8px;
+        }
+
+        .encoding-values {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .dec-value {
+            font-size: 18px;
+            color: #81c784;
+        }
+
+        .bin-value {
+            font-size: 14px;
+            color: #ffb74d;
+        }
+
+        .hex-value {
+            font-size: 14px;
+            color: #ce93d8;
+        }
+
+        .parity-value {
+            font-size: 13px;
+            color: #ef5350;
+            font-weight: bold;
+        }
+
+        .parity-bit {
+            color: #ef5350;
+            font-weight: bold;
+        }
+
+        /* Parity toggle */
+        .parity-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
+            background: rgba(79, 195, 247, 0.1);
+            border-radius: 10px;
+            margin-top: 4px;
+        }
+
+        .parity-label {
+            font-size: 14px;
+            color: #90a4ae;
+        }
+
+        .parity-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .parity-btn {
+            background: #1a2a3a;
+            border: 2px solid #37474f;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 14px;
+            color: #90a4ae;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: inherit;
+        }
+
+        .parity-btn:hover {
+            border-color: #546e7a;
+        }
+
+        .parity-btn.active {
+            background: linear-gradient(145deg, #2196f3, #1976d2);
+            border-color: #64b5f6;
+            color: #fff;
+        }
+
+        .parity-btn.active.even {
+            background: linear-gradient(145deg, #66bb6a, #43a047);
+            border-color: #81c784;
+        }
+
+        .parity-btn.active.odd {
+            background: linear-gradient(145deg, #ef5350, #e53935);
+            border-color: #ef9a9a;
+        }
+
+        .placeholder-text {
+            color: #546e7a;
+            font-size: 18px;
+            text-align: center;
+            width: 100%;
+            padding: 40px;
+        }
+
+        /* Arrow indicator */
+        .arrow-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4fc3f7;
+            font-size: 24px;
+            padding: 10px 0;
+        }
+
+        .footer {
+            text-align: center;
+            color: #607d8b;
+            font-size: 15px;
+            padding-top: 16px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+            margin-top: auto;
+        }
+
+        .footer span {
+            color: #4fc3f7;
+        }
+
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #4fc3f7;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="viewport-container" id="viewportContainer">
+        <div class="design-surface" id="designSurface">
+
+            <h1>ASCII Character Encoding</h1>
+            <p class="subtitle">How computers represent text as numbers using the American Standard Code for Information Interchange</p>
+
+            <div class="content">
+                <!-- Concept cards -->
+                <div class="card-row">
+                    <div class="card">
+                        <h2>7-Bit Standard</h2>
+                        <p>ASCII uses 7 bits to represent 128 characters (0-127), including letters, digits, punctuation, and control codes.</p>
+                    </div>
+                    <div class="card">
+                        <h2>Text to Numbers</h2>
+                        <p>Each character maps to a unique decimal number, which computers store as binary. 'A' = 65 = 01000001.</p>
+                    </div>
+                    <div class="card">
+                        <h2>Pattern Logic</h2>
+                        <p>Letters follow a pattern: A-Z are 65-90, a-z are 97-122. Digits 0-9 are 48-57. Case differs by 32.</p>
+                    </div>
+                    <div class="card">
+                        <h2>8-Bit Parity</h2>
+                        <p>The 8th bit was used for error detection in serial transmission. Even/odd parity ensures a known count of 1s.</p>
+                    </div>
+                </div>
+
+                <!-- Two-panel layout -->
+                <div class="two-panels">
+                    <!-- Left: ASCII Reference -->
+                    <div class="panel">
+                        <div class="panel-header">Quick Reference Table</div>
+                        <div class="panel-content">
+                            <div class="ascii-table" id="asciiTable">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Interactive Encoder -->
+                    <div class="panel">
+                        <div class="panel-header">Interactive Encoder</div>
+                        <div class="panel-content">
+                            <div class="encoder-section">
+                                <div class="input-group">
+                                    <label>Type a word (up to 8 characters):</label>
+                                    <input type="text" class="word-input" id="wordInput" maxlength="8" placeholder="HELLO" autocomplete="off" spellcheck="false">
+                                    <div class="parity-controls">
+                                        <span class="parity-label">8th Bit Parity:</span>
+                                        <div class="parity-toggle">
+                                            <button class="parity-btn active" id="parityNone" data-parity="none">None (7-bit)</button>
+                                            <button class="parity-btn even" id="parityEven" data-parity="even">Even</button>
+                                            <button class="parity-btn odd" id="parityOdd" data-parity="odd">Odd</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="arrow-indicator">
+                                    Character &rarr; Decimal &rarr; Binary &rarr; Hexadecimal
+                                </div>
+
+                                <div class="output-section">
+                                    <div class="output-label">Encoded Result:</div>
+                                    <div class="encoding-display" id="encodingDisplay">
+                                        <div class="placeholder-text">Enter text above to see its ASCII encoding</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                ASCII (1963) remains the foundation of text encoding | Extended to <span>UTF-8</span> for international characters
+            </div>
+        </div>
+    </div>
+
+    <div class="debug-info" id="debugInfo"></div>
+
+    <script>
+        // ============================================
+        // HIGH-DPI AWARE AUTO-RESIZE SYSTEM
+        // ============================================
+
+        const DESIGN_WIDTH = 1920;
+        const DESIGN_HEIGHT = 1080;
+
+        function autoResize() {
+            const container = document.getElementById('viewportContainer');
+            const surface = document.getElementById('designSurface');
+            const debugInfo = document.getElementById('debugInfo');
+
+            const dpr = window.devicePixelRatio || 1;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            let containerWidth, containerHeight;
+
+            if (viewportWidth / viewportHeight > 16 / 9) {
+                containerHeight = viewportHeight;
+                containerWidth = containerHeight * (16 / 9);
+            } else {
+                containerWidth = viewportWidth;
+                containerHeight = containerWidth * (9 / 16);
+            }
+
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+
+            const scale = containerWidth / DESIGN_WIDTH;
+            surface.style.transform = `scale(${scale})`;
+
+            debugInfo.textContent = `DPR: ${dpr.toFixed(2)} | Scale: ${scale.toFixed(3)} | ${Math.round(containerWidth)}x${Math.round(containerHeight)}`;
+        }
+
+        function initializeResponsive() {
+            autoResize();
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(autoResize, 50);
+            });
+
+            window.addEventListener('orientationchange', () => {
+                setTimeout(autoResize, 100);
+            });
+        }
+
+        // ============================================
+        // ASCII REFERENCE TABLE
+        // ============================================
+
+        const referenceChars = [
+            { char: 'A', code: 65 },
+            { char: 'B', code: 66 },
+            { char: 'Z', code: 90 },
+            { char: 'a', code: 97 },
+            { char: 'b', code: 98 },
+            { char: 'z', code: 122 },
+            { char: '0', code: 48 },
+            { char: '9', code: 57 },
+            { char: ' ', code: 32, display: 'SP' },
+            { char: '!', code: 33 },
+            { char: '.', code: 46 },
+            { char: '?', code: 63 },
+        ];
+
+        // Parity mode: 'none', 'even', 'odd'
+        let parityMode = 'none';
+
+        function countOnes(num) {
+            let count = 0;
+            while (num) {
+                count += num & 1;
+                num >>= 1;
+            }
+            return count;
+        }
+
+        function getParityBit(code, mode) {
+            if (mode === 'none') return null;
+            const ones = countOnes(code);
+            if (mode === 'even') {
+                return ones % 2 === 0 ? 0 : 1;
+            } else { // odd
+                return ones % 2 === 1 ? 0 : 1;
+            }
+        }
+
+        function toBinary(num) {
+            return num.toString(2).padStart(7, '0');
+        }
+
+        function toBinaryWithParity(num, mode) {
+            const bits = num.toString(2).padStart(7, '0');
+            const parityBit = getParityBit(num, mode);
+            if (parityBit !== null) {
+                return { parity: parityBit, bits: bits, full: parityBit + bits };
+            }
+            return { parity: null, bits: bits, full: bits };
+        }
+
+        function populateReferenceTable() {
+            const table = document.getElementById('asciiTable');
+
+            referenceChars.forEach(item => {
+                const entry = document.createElement('div');
+                entry.className = 'ascii-entry';
+
+                const displayChar = item.display || item.char;
+
+                entry.innerHTML = `
+                    <div class="ascii-char">${displayChar}</div>
+                    <div class="ascii-values">
+                        <span class="ascii-dec">Dec: ${item.code}</span>
+                        <span class="ascii-bin">${toBinary(item.code)}</span>
+                    </div>
+                `;
+
+                table.appendChild(entry);
+            });
+        }
+
+        // ============================================
+        // INTERACTIVE ENCODER
+        // ============================================
+
+        function toHex(num) {
+            return '0x' + num.toString(16).toUpperCase().padStart(2, '0');
+        }
+
+        function updateEncoding() {
+            const input = document.getElementById('wordInput');
+            const display = document.getElementById('encodingDisplay');
+            const text = input.value;
+
+            if (text.length === 0) {
+                display.innerHTML = '<div class="placeholder-text">Enter text above to see its ASCII encoding</div>';
+                return;
+            }
+
+            display.innerHTML = '';
+
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const code = char.charCodeAt(0);
+
+                // Only show printable ASCII (32-126)
+                if (code < 32 || code > 126) continue;
+
+                const charBox = document.createElement('div');
+                charBox.className = 'char-encoding';
+
+                const isSpace = char === ' ';
+                const displayChar = isSpace ? 'SP' : char;
+                const spaceClass = isSpace ? ' space-char' : '';
+
+                const binaryInfo = toBinaryWithParity(code, parityMode);
+                let binaryDisplay;
+                if (binaryInfo.parity !== null) {
+                    binaryDisplay = `<span class="parity-bit">${binaryInfo.parity}</span>${binaryInfo.bits}`;
+                } else {
+                    binaryDisplay = binaryInfo.bits;
+                }
+
+                const parityLabel = parityMode !== 'none'
+                    ? `<span class="parity-value">P=${binaryInfo.parity} (${parityMode})</span>`
+                    : '';
+
+                charBox.innerHTML = `
+                    <div class="char-display${spaceClass}">${displayChar}</div>
+                    <div class="encoding-values">
+                        <span class="dec-value">${code}</span>
+                        <span class="bin-value">${binaryDisplay}</span>
+                        <span class="hex-value">${toHex(code)}</span>
+                        ${parityLabel}
+                    </div>
+                `;
+
+                display.appendChild(charBox);
+            }
+        }
+
+        // ============================================
+        // PARITY TOGGLE
+        // ============================================
+
+        function setupParityToggle() {
+            const buttons = document.querySelectorAll('.parity-btn');
+
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Remove active from all
+                    buttons.forEach(b => b.classList.remove('active'));
+                    // Add active to clicked
+                    btn.classList.add('active');
+                    // Update mode
+                    parityMode = btn.dataset.parity;
+                    // Re-render encoding
+                    updateEncoding();
+                });
+            });
+        }
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+
+        initializeResponsive();
+        populateReferenceTable();
+        setupParityToggle();
+
+        const wordInput = document.getElementById('wordInput');
+        wordInput.addEventListener('input', updateEncoding);
+
+        // Initialize with default text
+        wordInput.value = 'Hi!';
+        updateEncoding();
+    </script>
+</body>
+
+</html>

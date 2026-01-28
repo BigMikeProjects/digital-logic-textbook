@@ -1,0 +1,13 @@
+title: "Gray Codes"
+description: "Understanding Gray code encoding for rotary position sensors and conversion circuits"
+order: 2
+
+graphics:
+  01-intro.youtube:
+    caption: "Why Gray code prevents reading errors in rotary encoders"
+  02-encoder.html:
+    caption: "Interactive 4-bit Gray code rotary encoder"
+  03-conversion.youtube:
+    caption: "Converting between binary and Gray code with XOR gates"
+  04-conversion-circuits.html:
+    caption: "Interactive binary to Gray code conversion circuits"

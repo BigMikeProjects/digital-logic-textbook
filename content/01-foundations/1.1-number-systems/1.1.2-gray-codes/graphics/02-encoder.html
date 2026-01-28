@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4-Bit Gray Code Motor Encoder</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ============================================
+           VIEWPORT CONTAINER
+           ============================================ */
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            padding: 30px 50px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ============================================
+           TYPOGRAPHY
+           ============================================ */
+        h1 {
+            text-align: center;
+            color: #4fc3f7;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #90a4ae;
+            font-size: 20px;
+            margin-bottom: 24px;
+        }
+
+        /* ============================================
+           MAIN LAYOUT
+           ============================================ */
+        .content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1.1fr 1fr;
+            gap: 30px;
+            min-height: 0;
+        }
+
+        /* ============================================
+           ENCODER DISK (CENTER)
+           ============================================ */
+        .encoder-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .encoder-container {
+            position: relative;
+            width: 500px;
+            height: 500px;
+        }
+
+        .encoder-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .track-segment {
+            transition: opacity 0.2s ease;
+        }
+
+        .track-segment.bit-1 {
+            fill: #4fc3f7;
+        }
+
+        .track-segment.bit-0 {
+            fill: #1a2a3a;
+        }
+
+        .read-head {
+            fill: #ff5722;
+            filter: drop-shadow(0 0 8px rgba(255, 87, 34, 0.8));
+        }
+
+        .read-head-line {
+            stroke: #ff5722;
+            stroke-width: 3;
+            stroke-dasharray: 8, 4;
+        }
+
+        .position-indicator {
+            font-size: 14px;
+            fill: #90a4ae;
+        }
+
+        .encoder-label {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 18px;
+            color: #90a4ae;
+        }
+
+        .current-reading {
+            margin-top: 12px;
+            padding: 12px 24px;
+            background: rgba(79, 195, 247, 0.1);
+            border: 2px solid #4fc3f7;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .current-reading .label {
+            font-size: 14px;
+            color: #90a4ae;
+            margin-bottom: 4px;
+        }
+
+        .current-reading .value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 32px;
+            color: #4fc3f7;
+            font-weight: 700;
+        }
+
+        .current-reading .decimal {
+            font-size: 18px;
+            color: #81c784;
+            margin-top: 4px;
+        }
+
+        /* ============================================
+           LEFT PANEL - Gray Code Table
+           ============================================ */
+        .table-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.03);
+            border: 2px solid #546e7a;
+            border-radius: 12px;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            font-size: 20px;
+            font-weight: 700;
+            color: #4fc3f7;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .code-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+
+        .code-table th {
+            background: rgba(79, 195, 247, 0.15);
+            color: #4fc3f7;
+            padding: 8px 10px;
+            text-align: center;
+            font-weight: 600;
+            border-bottom: 2px solid #546e7a;
+        }
+
+        .code-table td {
+            padding: 6px 10px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .code-table tr:hover td {
+            background: rgba(79, 195, 247, 0.1);
+        }
+
+        .code-table tr.active td {
+            background: rgba(79, 195, 247, 0.2);
+        }
+
+        .code-table .changed {
+            color: #ff9800;
+            font-weight: bold;
+        }
+
+        .code-table .position-col {
+            color: #90a4ae;
+        }
+
+        /* ============================================
+           RIGHT PANEL - Transition Danger
+           ============================================ */
+        .danger-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .comparison-box {
+            background: rgba(255,255,255,0.03);
+            border: 2px solid #546e7a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .comparison-box.danger {
+            border-color: #ef5350;
+        }
+
+        .comparison-box.safe {
+            border-color: #81c784;
+        }
+
+        .comparison-header {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .comparison-box.danger .comparison-header {
+            color: #ef5350;
+        }
+
+        .comparison-box.safe .comparison-header {
+            color: #81c784;
+        }
+
+        .status-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .comparison-box.danger .status-icon {
+            background: rgba(239, 83, 80, 0.2);
+            color: #ef5350;
+        }
+
+        .comparison-box.safe .status-icon {
+            background: rgba(129, 199, 132, 0.2);
+            color: #81c784;
+        }
+
+        .transition-example {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .transition-label {
+            font-size: 13px;
+            color: #90a4ae;
+            margin-bottom: 8px;
+        }
+
+        .transition-values {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 20px;
+        }
+
+        .bit-box {
+            display: inline-flex;
+            gap: 3px;
+        }
+
+        .bit {
+            width: 28px;
+            height: 34px;
+            line-height: 34px;
+            text-align: center;
+            background: #1a2a3a;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .bit.changed {
+            background: #ff9800;
+            color: #1a1a2e;
+        }
+
+        .bit.error {
+            background: #ef5350;
+            color: #fff;
+        }
+
+        .arrow {
+            color: #546e7a;
+            font-size: 18px;
+        }
+
+        .error-result {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: rgba(239, 83, 80, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #ef5350;
+        }
+
+        .error-result .label {
+            font-size: 12px;
+            color: #ef5350;
+            margin-bottom: 4px;
+        }
+
+        .error-result .values {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            color: #e0e0e0;
+        }
+
+        .safe-result {
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: rgba(129, 199, 132, 0.1);
+            border-radius: 6px;
+            border-left: 3px solid #81c784;
+        }
+
+        .safe-result .label {
+            font-size: 12px;
+            color: #81c784;
+            margin-bottom: 4px;
+        }
+
+        .explanation {
+            font-size: 14px;
+            color: #b0bec5;
+            line-height: 1.5;
+        }
+
+        /* ============================================
+           KEY INSIGHT BOX
+           ============================================ */
+        .key-insight {
+            background: rgba(255, 152, 0, 0.1);
+            border: 2px solid #ff9800;
+            border-radius: 12px;
+            padding: 16px 20px;
+            text-align: center;
+        }
+
+        .key-insight-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ff9800;
+            margin-bottom: 8px;
+        }
+
+        .key-insight-text {
+            font-size: 15px;
+            color: #e0e0e0;
+            line-height: 1.5;
+        }
+
+        /* ============================================
+           CONTROLS
+           ============================================ */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .control-btn {
+            background: #0d1b2a;
+            border: 2px solid #546e7a;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 15px;
+            color: #90a4ae;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            border-color: #4fc3f7;
+            color: #4fc3f7;
+        }
+
+        .control-btn.active {
+            background: rgba(79, 195, 247, 0.2);
+            border-color: #4fc3f7;
+            color: #4fc3f7;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="viewport-container" id="viewportContainer">
+        <div class="design-surface" id="designSurface">
+
+            <h1>4-Bit Gray Code Rotary Encoder</h1>
+            <p class="subtitle">Why Gray code prevents reading errors at position boundaries</p>
+
+            <div class="content">
+                <!-- LEFT: Code Table -->
+                <div class="table-section">
+                    <div class="panel">
+                        <div class="panel-header">Gray Code vs Binary</div>
+                        <table class="code-table">
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Binary</th>
+                                    <th>Gray</th>
+                                    <th>Bits Changed</th>
+                                </tr>
+                            </thead>
+                            <tbody id="codeTableBody">
+                                <!-- Generated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- CENTER: Encoder Disk -->
+                <div class="encoder-section">
+                    <div class="encoder-container">
+                        <svg class="encoder-svg" id="encoderSvg" viewBox="0 0 500 500">
+                            <!-- Encoder tracks will be drawn by JS -->
+                        </svg>
+                    </div>
+                    <div class="current-reading">
+                        <div class="label">Current Position Reading</div>
+                        <div class="value" id="currentGray">0000</div>
+                        <div class="decimal">Position: <span id="currentPosition">0</span> of 16</div>
+                    </div>
+                    <div class="controls">
+                        <button class="control-btn" id="btnPrev">&#9664; Previous</button>
+                        <button class="control-btn" id="btnAuto">Auto Rotate</button>
+                        <button class="control-btn" id="btnNext">Next &#9654;</button>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Transition Danger -->
+                <div class="danger-section">
+                    <!-- Binary Danger -->
+                    <div class="comparison-box danger">
+                        <div class="comparison-header">
+                            <span class="status-icon">✗</span>
+                            Binary: Multi-Bit Transition Problem
+                        </div>
+                        <div class="transition-example">
+                            <div class="transition-label">Transition from position 7 → 8:</div>
+                            <div class="transition-values">
+                                <div class="bit-box">
+                                    <span class="bit changed">0</span>
+                                    <span class="bit changed">1</span>
+                                    <span class="bit changed">1</span>
+                                    <span class="bit changed">1</span>
+                                </div>
+                                <span class="arrow">→</span>
+                                <div class="bit-box">
+                                    <span class="bit changed">1</span>
+                                    <span class="bit changed">0</span>
+                                    <span class="bit changed">0</span>
+                                    <span class="bit changed">0</span>
+                                </div>
+                            </div>
+                            <div class="error-result">
+                                <div class="label">Possible misreads at boundary:</div>
+                                <div class="values">0000(0), 0001(1), 0110(6), 1111(15), etc.</div>
+                            </div>
+                        </div>
+                        <div class="explanation">
+                            When 4 bits change simultaneously, the sensor may read any combination if positioned at the exact boundary.
+                        </div>
+                    </div>
+
+                    <!-- Gray Code Safe -->
+                    <div class="comparison-box safe">
+                        <div class="comparison-header">
+                            <span class="status-icon">✓</span>
+                            Gray Code: Single-Bit Guarantee
+                        </div>
+                        <div class="transition-example">
+                            <div class="transition-label">Transition from position 7 → 8:</div>
+                            <div class="transition-values">
+                                <div class="bit-box">
+                                    <span class="bit">0</span>
+                                    <span class="bit">1</span>
+                                    <span class="bit">0</span>
+                                    <span class="bit changed">0</span>
+                                </div>
+                                <span class="arrow">→</span>
+                                <div class="bit-box">
+                                    <span class="bit">1</span>
+                                    <span class="bit">1</span>
+                                    <span class="bit">0</span>
+                                    <span class="bit changed">0</span>
+                                </div>
+                            </div>
+                            <div class="safe-result">
+                                <div class="label">At boundary, reads either:</div>
+                                <div class="values">0100 (pos 7) or 1100 (pos 8) — both valid!</div>
+                            </div>
+                        </div>
+                        <div class="explanation">
+                            Only one bit changes, so the worst case is reading the adjacent position — never an invalid or distant value.
+                        </div>
+                    </div>
+
+                    <!-- Key Insight -->
+                    <div class="key-insight">
+                        <div class="key-insight-title">Key Insight</div>
+                        <div class="key-insight-text">
+                            Gray code ensures that at any transition boundary, the read head sees either the valid "before" or "after" value — never a spurious intermediate state.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // AUTO-RESIZE SYSTEM
+        // ============================================
+        const DESIGN_WIDTH = 1920;
+        const DESIGN_HEIGHT = 1080;
+
+        function autoResize() {
+            const container = document.getElementById('viewportContainer');
+            const surface = document.getElementById('designSurface');
+
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            let containerWidth, containerHeight;
+
+            if (viewportWidth / viewportHeight > 16 / 9) {
+                containerHeight = viewportHeight;
+                containerWidth = containerHeight * (16 / 9);
+            } else {
+                containerWidth = viewportWidth;
+                containerHeight = containerWidth * (9 / 16);
+            }
+
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+
+            const scale = containerWidth / DESIGN_WIDTH;
+            surface.style.transform = `scale(${scale})`;
+        }
+
+        window.addEventListener('resize', () => setTimeout(autoResize, 50));
+        autoResize();
+
+        // ============================================
+        // GRAY CODE LOGIC
+        // ============================================
+        const POSITIONS = 16;
+        let currentPos = 0;
+        let autoRotating = false;
+        let autoInterval = null;
+
+        // Convert decimal to binary string
+        function toBinary(n, bits = 4) {
+            return n.toString(2).padStart(bits, '0');
+        }
+
+        // Convert decimal to Gray code
+        function toGray(n) {
+            return n ^ (n >> 1);
+        }
+
+        // Convert Gray code to binary string
+        function toGrayBinary(n, bits = 4) {
+            return toBinary(toGray(n), bits);
+        }
+
+        // Count differing bits between two binary strings
+        function countChangedBits(a, b) {
+            let count = 0;
+            for (let i = 0; i < a.length; i++) {
+                if (a[i] !== b[i]) count++;
+            }
+            return count;
+        }
+
+        // ============================================
+        // BUILD CODE TABLE
+        // ============================================
+        function buildCodeTable() {
+            const tbody = document.getElementById('codeTableBody');
+            let html = '';
+
+            for (let i = 0; i < POSITIONS; i++) {
+                const binary = toBinary(i);
+                const gray = toGrayBinary(i);
+                const prevBinary = toBinary((i - 1 + POSITIONS) % POSITIONS);
+                const prevGray = toGrayBinary((i - 1 + POSITIONS) % POSITIONS);
+
+                const binaryChanges = countChangedBits(binary, prevBinary);
+                const grayChanges = countChangedBits(gray, prevGray);
+
+                // Highlight changed bits in gray code
+                let grayDisplay = '';
+                for (let b = 0; b < 4; b++) {
+                    if (gray[b] !== prevGray[b]) {
+                        grayDisplay += `<span class="changed">${gray[b]}</span>`;
+                    } else {
+                        grayDisplay += gray[b];
+                    }
+                }
+
+                html += `
+                    <tr data-pos="${i}">
+                        <td class="position-col">${i}</td>
+                        <td>${binary}</td>
+                        <td>${grayDisplay}</td>
+                        <td style="color: ${grayChanges === 1 ? '#81c784' : '#ef5350'}">${i === 0 ? '-' : grayChanges}</td>
+                    </tr>
+                `;
+            }
+
+            tbody.innerHTML = html;
+        }
+
+        // ============================================
+        // DRAW ENCODER DISK
+        // ============================================
+        function drawEncoder() {
+            const svg = document.getElementById('encoderSvg');
+            const cx = 250, cy = 250;
+            const trackWidths = [40, 40, 40, 40];
+            const innerRadius = 60;
+            const gap = 4;
+
+            let html = '';
+
+            // Draw center hub
+            html += `<circle cx="${cx}" cy="${cy}" r="${innerRadius - 5}" fill="#0d1b2a" stroke="#546e7a" stroke-width="2"/>`;
+            html += `<circle cx="${cx}" cy="${cy}" r="20" fill="#546e7a"/>`;
+
+            // Draw each track (from inside to outside, bit 3 to bit 0)
+            for (let track = 3; track >= 0; track--) {
+                const rInner = innerRadius + (3 - track) * (trackWidths[track] + gap);
+                const rOuter = rInner + trackWidths[track];
+
+                // Draw 16 segments for this track
+                for (let pos = 0; pos < POSITIONS; pos++) {
+                    const grayValue = toGray(pos);
+                    const bit = (grayValue >> track) & 1;
+
+                    const startAngle = (pos / POSITIONS) * 2 * Math.PI - Math.PI / 2;
+                    const endAngle = ((pos + 1) / POSITIONS) * 2 * Math.PI - Math.PI / 2;
+
+                    const x1Inner = cx + rInner * Math.cos(startAngle);
+                    const y1Inner = cy + rInner * Math.sin(startAngle);
+                    const x2Inner = cx + rInner * Math.cos(endAngle);
+                    const y2Inner = cy + rInner * Math.sin(endAngle);
+                    const x1Outer = cx + rOuter * Math.cos(startAngle);
+                    const y1Outer = cy + rOuter * Math.sin(startAngle);
+                    const x2Outer = cx + rOuter * Math.cos(endAngle);
+                    const y2Outer = cy + rOuter * Math.sin(endAngle);
+
+                    const path = `M ${x1Inner} ${y1Inner}
+                                  A ${rInner} ${rInner} 0 0 1 ${x2Inner} ${y2Inner}
+                                  L ${x2Outer} ${y2Outer}
+                                  A ${rOuter} ${rOuter} 0 0 0 ${x1Outer} ${y1Outer}
+                                  Z`;
+
+                    html += `<path class="track-segment bit-${bit}" data-track="${track}" data-pos="${pos}" d="${path}"/>`;
+                }
+
+                // Track label
+                const labelR = rOuter + 12;
+                html += `<text x="${cx + labelR}" y="${cy + 5}" class="position-indicator" font-size="12">Bit ${track}</text>`;
+            }
+
+            // Draw position markers
+            for (let pos = 0; pos < POSITIONS; pos++) {
+                const angle = (pos / POSITIONS) * 2 * Math.PI - Math.PI / 2;
+                const r = innerRadius + 4 * (trackWidths[0] + gap) + 25;
+                const x = cx + r * Math.cos(angle);
+                const y = cy + r * Math.sin(angle);
+                html += `<text x="${x}" y="${y}" class="position-indicator" text-anchor="middle" dominant-baseline="middle" font-size="11">${pos}</text>`;
+            }
+
+            svg.innerHTML = html;
+            updateReadHead();
+        }
+
+        // ============================================
+        // UPDATE READ HEAD POSITION
+        // ============================================
+        function updateReadHead() {
+            const svg = document.getElementById('encoderSvg');
+            const cx = 250, cy = 250;
+
+            // Remove existing read head
+            const existing = svg.querySelectorAll('.read-head, .read-head-line');
+            existing.forEach(el => el.remove());
+
+            // Calculate read head position
+            const angle = (currentPos / POSITIONS) * 2 * Math.PI - Math.PI / 2;
+            const rInner = 55;
+            const rOuter = 250;
+
+            const x1 = cx + rInner * Math.cos(angle);
+            const y1 = cy + rInner * Math.sin(angle);
+            const x2 = cx + rOuter * Math.cos(angle);
+            const y2 = cy + rOuter * Math.sin(angle);
+
+            // Draw read head line
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('class', 'read-head-line');
+            line.setAttribute('x1', x1);
+            line.setAttribute('y1', y1);
+            line.setAttribute('x2', x2);
+            line.setAttribute('y2', y2);
+            svg.appendChild(line);
+
+            // Draw read head indicator
+            const headR = 235;
+            const headX = cx + headR * Math.cos(angle);
+            const headY = cy + headR * Math.sin(angle);
+            const head = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            head.setAttribute('class', 'read-head');
+            head.setAttribute('cx', headX);
+            head.setAttribute('cy', headY);
+            head.setAttribute('r', 10);
+            svg.appendChild(head);
+
+            // Update reading display
+            const gray = toGrayBinary(currentPos);
+            document.getElementById('currentGray').textContent = gray;
+            document.getElementById('currentPosition').textContent = currentPos;
+
+            // Update table highlighting
+            document.querySelectorAll('.code-table tr').forEach(tr => {
+                tr.classList.toggle('active', tr.dataset.pos == currentPos);
+            });
+        }
+
+        // ============================================
+        // CONTROLS
+        // ============================================
+        function nextPosition() {
+            currentPos = (currentPos + 1) % POSITIONS;
+            updateReadHead();
+        }
+
+        function prevPosition() {
+            currentPos = (currentPos - 1 + POSITIONS) % POSITIONS;
+            updateReadHead();
+        }
+
+        function toggleAutoRotate() {
+            autoRotating = !autoRotating;
+            const btn = document.getElementById('btnAuto');
+
+            if (autoRotating) {
+                btn.classList.add('active');
+                btn.textContent = 'Stop';
+                autoInterval = setInterval(nextPosition, 800);
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = 'Auto Rotate';
+                clearInterval(autoInterval);
+            }
+        }
+
+        // Click on encoder to set position
+        document.getElementById('encoderSvg').addEventListener('click', (e) => {
+            const svg = e.currentTarget;
+            const rect = svg.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width * 500 - 250;
+            const y = (e.clientY - rect.top) / rect.height * 500 - 250;
+
+            let angle = Math.atan2(y, x) + Math.PI / 2;
+            if (angle < 0) angle += 2 * Math.PI;
+
+            currentPos = Math.floor((angle / (2 * Math.PI)) * POSITIONS) % POSITIONS;
+            updateReadHead();
+        });
+
+        document.getElementById('btnNext').addEventListener('click', nextPosition);
+        document.getElementById('btnPrev').addEventListener('click', prevPosition);
+        document.getElementById('btnAuto').addEventListener('click', toggleAutoRotate);
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        buildCodeTable();
+        drawEncoder();
+    </script>
+</body>
+
+</html>

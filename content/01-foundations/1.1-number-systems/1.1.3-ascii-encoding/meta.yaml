@@ -1,0 +1,9 @@
+title: "ASCII Encoding"
+description: "How computers represent text characters as binary numbers using the ASCII standard"
+order: 3
+
+graphics:
+  01-intro.youtube:
+    caption: "How ASCII encodes text as binary numbers"
+  02-ascii-encoder.html:
+    caption: "Interactive ASCII character encoder with parity bit demonstration"

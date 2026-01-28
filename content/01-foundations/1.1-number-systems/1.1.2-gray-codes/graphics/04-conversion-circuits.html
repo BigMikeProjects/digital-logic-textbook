@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary ↔ Gray Code Conversion Circuits</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            padding: 30px 50px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4fc3f7;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #90a4ae;
+            font-size: 20px;
+            margin-bottom: 24px;
+        }
+
+        /* ============================================
+           MAIN LAYOUT
+           ============================================ */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            min-height: 0;
+        }
+
+        .circuits-row {
+            display: grid;
+            grid-template-columns: 1fr 340px 1fr;
+            gap: 24px;
+            flex: 1;
+        }
+
+        .circuit-panel {
+            background: rgba(255,255,255,0.03);
+            border: 3px solid #546e7a;
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .circuit-panel.binary-to-gray {
+            border-color: #4fc3f7;
+        }
+
+        .circuit-panel.gray-to-binary {
+            border-color: #81c784;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .panel-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .binary-to-gray .panel-title {
+            color: #4fc3f7;
+        }
+
+        .gray-to-binary .panel-title {
+            color: #81c784;
+        }
+
+        .formula-badge {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            padding: 8px 14px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            color: #b0bec5;
+        }
+
+        /* ============================================
+           CIRCUIT DIAGRAM
+           ============================================ */
+        .circuit-container {
+            flex: 1;
+            position: relative;
+        }
+
+        .circuit-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Wires */
+        .wire {
+            stroke: #546e7a;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        .wire.active-1 {
+            stroke: #4fc3f7;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 4px rgba(79, 195, 247, 0.5));
+        }
+
+        .wire.active-0 {
+            stroke: #37474f;
+            stroke-width: 2;
+        }
+
+        /* XOR Gate */
+        .xor-gate {
+            fill: #1a2a3a;
+            stroke: #4fc3f7;
+            stroke-width: 2;
+        }
+
+        .gray-to-binary .xor-gate {
+            stroke: #81c784;
+        }
+
+        .xor-label {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            fill: #e0e0e0;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        /* Bit labels */
+        .bit-label {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 16px;
+            fill: #90a4ae;
+        }
+
+        .bit-label.binary-label {
+            fill: #4fc3f7;
+        }
+
+        .bit-label.gray-label {
+            fill: #81c784;
+        }
+
+        /* Bit value boxes - Binary (blue) and Gray (green) */
+        .bit-box {
+            cursor: pointer;
+        }
+
+        .bit-box rect {
+            fill: #1a2a3a;
+            stroke: #546e7a;
+            stroke-width: 2;
+            rx: 6;
+            transition: all 0.2s ease;
+        }
+
+        .bit-box text {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            fill: #e0e0e0;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+        }
+
+        /* Binary input boxes (blue) - used in binary-to-gray panel */
+        .bit-box.binary-bit rect {
+            stroke: #4fc3f7;
+        }
+
+        .bit-box.binary-bit:hover rect {
+            stroke: #81d4fa;
+            filter: drop-shadow(0 0 4px rgba(79, 195, 247, 0.4));
+        }
+
+        .bit-box.binary-bit.value-1 rect {
+            fill: #4fc3f7;
+            stroke: #4fc3f7;
+        }
+
+        .bit-box.binary-bit.value-1 text {
+            fill: #1a1a2e;
+        }
+
+        /* Gray input boxes (green) - used in gray-to-binary panel */
+        .bit-box.gray-bit rect {
+            stroke: #81c784;
+        }
+
+        .bit-box.gray-bit:hover rect {
+            stroke: #a5d6a7;
+            filter: drop-shadow(0 0 4px rgba(129, 199, 132, 0.4));
+        }
+
+        .bit-box.gray-bit.value-1 rect {
+            fill: #81c784;
+            stroke: #81c784;
+        }
+
+        .bit-box.gray-bit.value-1 text {
+            fill: #1a1a2e;
+        }
+
+        /* Output boxes (non-interactive) */
+        .output-box rect {
+            fill: #0d1b2a;
+            stroke-width: 2;
+            rx: 6;
+        }
+
+        .output-box text {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 20px;
+            font-weight: 700;
+            fill: #e0e0e0;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        /* Binary output boxes (blue) */
+        .output-box.binary-bit rect {
+            stroke: #4fc3f7;
+        }
+
+        .output-box.binary-bit.value-1 rect {
+            fill: #4fc3f7;
+        }
+
+        .output-box.binary-bit.value-1 text {
+            fill: #1a1a2e;
+        }
+
+        /* Gray output boxes (green) */
+        .output-box.gray-bit rect {
+            stroke: #81c784;
+        }
+
+        .output-box.gray-bit.value-1 rect {
+            fill: #81c784;
+        }
+
+        .output-box.gray-bit.value-1 text {
+            fill: #1a1a2e;
+        }
+
+        /* Junction dots */
+        .junction {
+            fill: #4fc3f7;
+        }
+
+        .gray-to-binary .junction {
+            fill: #81c784;
+        }
+
+        /* ============================================
+           KEY INSIGHT ROW
+           ============================================ */
+        .insight-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 24px;
+        }
+
+        .insight-box {
+            background: rgba(255, 152, 0, 0.1);
+            border: 2px solid #ff9800;
+            border-radius: 12px;
+            padding: 14px 20px;
+            text-align: center;
+        }
+
+        .insight-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ff9800;
+            margin-bottom: 6px;
+        }
+
+        .insight-text {
+            font-size: 15px;
+            color: #e0e0e0;
+            line-height: 1.4;
+        }
+
+        .xor-symbol {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+
+        /* ============================================
+           CENTER VERIFICATION PANEL
+           ============================================ */
+        .verify-panel {
+            background: rgba(255,255,255,0.03);
+            border: 3px solid #ff9800;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .verify-panel .panel-header {
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+        }
+
+        .verify-panel .panel-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ff9800;
+            text-align: center;
+        }
+
+        .verify-section {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .verify-section-title {
+            font-size: 13px;
+            color: #90a4ae;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .verify-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .verify-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .verify-label {
+            font-size: 14px;
+            color: #90a4ae;
+            min-width: 55px;
+            text-align: right;
+        }
+
+        .verify-value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .verify-value.binary {
+            background: rgba(79, 195, 247, 0.15);
+            color: #4fc3f7;
+            border: 2px solid #4fc3f7;
+        }
+
+        .verify-value.gray {
+            background: rgba(129, 199, 132, 0.15);
+            color: #81c784;
+            border: 2px solid #81c784;
+        }
+
+        .verify-decimal {
+            font-size: 14px;
+            color: #ffb74d;
+            min-width: 50px;
+        }
+
+        .verify-arrow {
+            color: #546e7a;
+            font-size: 20px;
+        }
+
+        .verify-equals {
+            font-size: 18px;
+            color: #81c784;
+            font-weight: bold;
+        }
+
+        .match-badge {
+            display: inline-block;
+            background: rgba(129, 199, 132, 0.2);
+            color: #81c784;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .reference-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: auto;
+        }
+
+        .reference-table th {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ff9800;
+            padding: 6px 8px;
+            text-align: center;
+            font-weight: 600;
+            border-bottom: 2px solid #546e7a;
+        }
+
+        .reference-table td {
+            padding: 4px 8px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .reference-table tr:hover td {
+            background: rgba(255, 152, 0, 0.1);
+        }
+
+        .reference-table tr.active td {
+            background: rgba(255, 152, 0, 0.2);
+        }
+
+        .reference-table .decimal-col {
+            color: #90a4ae;
+        }
+
+        .reference-table .binary-col {
+            color: #4fc3f7;
+        }
+
+        .reference-table .gray-col {
+            color: #81c784;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="viewport-container" id="viewportContainer">
+        <div class="design-surface" id="designSurface">
+
+            <h1>Binary ↔ Gray Code Conversion Circuits</h1>
+            <p class="subtitle">Click input bits to toggle values and see the XOR gate logic in action</p>
+
+            <div class="content">
+                <div class="circuits-row">
+                    <!-- Binary to Gray -->
+                    <div class="circuit-panel binary-to-gray">
+                        <div class="panel-header">
+                            <span class="panel-title">Binary → Gray Code</span>
+                            <span class="formula-badge">Gᵢ = Bᵢ₊₁ ⊕ Bᵢ (MSB: G₃ = B₃)</span>
+                        </div>
+                        <div class="circuit-container">
+                            <svg class="circuit-svg" id="binaryToGraySvg" viewBox="0 0 750 380">
+                                <!-- Will be drawn by JS -->
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Center: Verification Panel -->
+                    <div class="verify-panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Verification</span>
+                        </div>
+
+                        <!-- Binary to Gray verification -->
+                        <div class="verify-section">
+                            <div class="verify-section-title">Binary → Gray</div>
+                            <div class="verify-row">
+                                <span class="verify-label">Binary:</span>
+                                <span class="verify-value binary" id="verify-b2g-in">0101</span>
+                                <span class="verify-decimal" id="verify-b2g-in-dec">= 5</span>
+                            </div>
+                            <div class="verify-row">
+                                <span class="verify-arrow">↓</span>
+                            </div>
+                            <div class="verify-row">
+                                <span class="verify-label">Gray:</span>
+                                <span class="verify-value gray" id="verify-b2g-out">0111</span>
+                                <span class="verify-decimal" id="verify-b2g-out-dec">= 7</span>
+                            </div>
+                        </div>
+
+                        <!-- Gray to Binary verification -->
+                        <div class="verify-section">
+                            <div class="verify-section-title">Gray → Binary</div>
+                            <div class="verify-row">
+                                <span class="verify-label">Gray:</span>
+                                <span class="verify-value gray" id="verify-g2b-in">0111</span>
+                                <span class="verify-decimal" id="verify-g2b-in-dec">= 7</span>
+                            </div>
+                            <div class="verify-row">
+                                <span class="verify-arrow">↓</span>
+                            </div>
+                            <div class="verify-row">
+                                <span class="verify-label">Binary:</span>
+                                <span class="verify-value binary" id="verify-g2b-out">0101</span>
+                                <span class="verify-decimal" id="verify-g2b-out-dec">= 5</span>
+                            </div>
+                        </div>
+
+                        <!-- Reference table -->
+                        <table class="reference-table">
+                            <thead>
+                                <tr>
+                                    <th>Dec</th>
+                                    <th>Binary</th>
+                                    <th>Gray</th>
+                                </tr>
+                            </thead>
+                            <tbody id="referenceTableBody">
+                                <!-- Generated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Gray to Binary -->
+                    <div class="circuit-panel gray-to-binary">
+                        <div class="panel-header">
+                            <span class="panel-title">Gray Code → Binary</span>
+                            <span class="formula-badge">Bᵢ = Bᵢ₊₁ ⊕ Gᵢ (MSB: B₃ = G₃)</span>
+                        </div>
+                        <div class="circuit-container">
+                            <svg class="circuit-svg" id="grayToBinarySvg" viewBox="0 0 750 380">
+                                <!-- Will be drawn by JS -->
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Insights Row -->
+                <div class="insight-row">
+                    <div class="insight-box" style="border-color: #4fc3f7;">
+                        <div class="insight-title" style="color: #4fc3f7;">Binary → Gray: Parallel</div>
+                        <div class="insight-text">All XOR gates operate simultaneously — O(1) delay</div>
+                    </div>
+                    <div class="insight-box">
+                        <div class="insight-title">XOR Gate Truth Table</div>
+                        <div class="insight-text" style="font-family: monospace;">0⊕0=0 &nbsp; 0⊕1=1 &nbsp; 1⊕0=1 &nbsp; 1⊕1=0</div>
+                    </div>
+                    <div class="insight-box" style="border-color: #81c784;">
+                        <div class="insight-title" style="color: #81c784;">Gray → Binary: Cascaded</div>
+                        <div class="insight-text">Each gate waits for previous output — O(n) delay</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // AUTO-RESIZE
+        // ============================================
+        function autoResize() {
+            const container = document.getElementById('viewportContainer');
+            const surface = document.getElementById('designSurface');
+            const vw = window.innerWidth, vh = window.innerHeight;
+            let cw, ch;
+            if (vw / vh > 16 / 9) { ch = vh; cw = ch * 16 / 9; }
+            else { cw = vw; ch = cw * 9 / 16; }
+            container.style.width = cw + 'px';
+            container.style.height = ch + 'px';
+            surface.style.transform = `scale(${cw / 1920})`;
+        }
+        window.addEventListener('resize', () => setTimeout(autoResize, 50));
+        autoResize();
+
+        // ============================================
+        // STATE
+        // ============================================
+        let binaryInput = [0, 1, 0, 1]; // B3, B2, B1, B0
+        let grayInput = [0, 1, 1, 1];   // G3, G2, G1, G0
+
+        // ============================================
+        // CONVERSION FUNCTIONS
+        // ============================================
+        function binaryToGray(b) {
+            return [
+                b[0],           // G3 = B3
+                b[0] ^ b[1],    // G2 = B3 XOR B2
+                b[1] ^ b[2],    // G1 = B2 XOR B1
+                b[2] ^ b[3]     // G0 = B1 XOR B0
+            ];
+        }
+
+        function grayToBinary(g) {
+            const b = [0, 0, 0, 0];
+            b[0] = g[0];            // B3 = G3
+            b[1] = b[0] ^ g[1];     // B2 = B3 XOR G2
+            b[2] = b[1] ^ g[2];     // B1 = B2 XOR G1
+            b[3] = b[2] ^ g[3];     // B0 = B1 XOR G0
+            return b;
+        }
+
+        // ============================================
+        // DRAW XOR GATE
+        // ============================================
+        function drawXorGate(x, y, id) {
+            const w = 50, h = 36;
+            return `
+                <g class="xor-gate-group" transform="translate(${x}, ${y})">
+                    <path class="xor-gate" d="
+                        M 0 0
+                        Q 12 ${h/2} 0 ${h}
+                        L 0 ${h}
+                        Q 20 ${h/2} 0 0
+                        M 5 0
+                        C 25 0 35 ${h/2-8} ${w} ${h/2}
+                        C 35 ${h/2+8} 25 ${h} 5 ${h}
+                        Q 25 ${h/2} 5 0
+                        Z
+                    " />
+                    <text class="xor-label" x="${w/2 + 5}" y="${h/2}">⊕</text>
+                </g>
+            `;
+        }
+
+        // ============================================
+        // DRAW BIT BOX
+        // ============================================
+        function drawBitBox(x, y, value, id, isInput = false, label = '', bitType = 'binary') {
+            const w = 40, h = 40;
+            const cls = isInput ? 'bit-box' : 'output-box';
+            const typeClass = bitType === 'binary' ? 'binary-bit' : 'gray-bit';
+            const labelClass = bitType === 'binary' ? 'binary-label' : 'gray-label';
+            return `
+                <g class="${cls} ${typeClass} value-${value}" id="${id}" transform="translate(${x}, ${y})" ${isInput ? 'style="cursor:pointer"' : ''}>
+                    <rect x="0" y="0" width="${w}" height="${h}" />
+                    <text x="${w/2}" y="${h/2 + 2}">${value}</text>
+                </g>
+                ${label ? `<text class="bit-label ${labelClass}" x="${x + w/2}" y="${y - 10}" text-anchor="middle">${label}</text>` : ''}
+            `;
+        }
+
+        // ============================================
+        // DRAW BINARY TO GRAY CIRCUIT
+        // ============================================
+        function drawBinaryToGray() {
+            const svg = document.getElementById('binaryToGraySvg');
+            const gray = binaryToGray(binaryInput);
+
+            const inputX = 50;
+            const gateX = 320;
+            const outputX = 630;
+            const rowHeight = 85;
+            const startY = 40;
+
+            let html = '';
+
+            // Draw input labels and boxes (Binary = blue)
+            for (let i = 0; i < 4; i++) {
+                const y = startY + i * rowHeight;
+                html += drawBitBox(inputX, y, binaryInput[i], `b2g-in-${i}`, true, `B${3-i}`, 'binary');
+            }
+
+            // Draw output labels and boxes (Gray = green)
+            for (let i = 0; i < 4; i++) {
+                const y = startY + i * rowHeight;
+                html += drawBitBox(outputX, y, gray[i], `b2g-out-${i}`, false, `G${3-i}`, 'gray');
+            }
+
+            // Wire colors based on values
+            const wireClass = (val) => val ? 'wire active-1' : 'wire active-0';
+
+            // G3 = B3 (direct connection)
+            html += `<path class="${wireClass(binaryInput[0])}" d="M ${inputX + 40} ${startY + 20} H ${outputX}" />`;
+
+            // G2 = B3 XOR B2
+            const gate2Y = startY + rowHeight - 18;
+            html += drawXorGate(gateX, gate2Y, 'xor2');
+            // B3 to XOR
+            html += `<path class="${wireClass(binaryInput[0])}" d="M ${inputX + 40} ${startY + 20} H ${inputX + 70} V ${gate2Y + 10} H ${gateX}" />`;
+            html += `<circle class="junction" cx="${inputX + 70}" cy="${startY + 20}" r="5" />`;
+            // B2 to XOR
+            html += `<path class="${wireClass(binaryInput[1])}" d="M ${inputX + 40} ${startY + rowHeight + 20} H ${inputX + 110} V ${gate2Y + 26} H ${gateX}" />`;
+            html += `<circle class="junction" cx="${inputX + 110}" cy="${startY + rowHeight + 20}" r="5" />`;
+            // XOR to G2
+            html += `<path class="${wireClass(gray[1])}" d="M ${gateX + 50} ${gate2Y + 18} H ${outputX}" />`;
+
+            // G1 = B2 XOR B1
+            const gate1Y = startY + 2 * rowHeight - 18;
+            html += drawXorGate(gateX, gate1Y, 'xor1');
+            // B2 to XOR
+            html += `<path class="${wireClass(binaryInput[1])}" d="M ${inputX + 110} ${startY + rowHeight + 20} V ${gate1Y + 10} H ${gateX}" />`;
+            // B1 to XOR
+            html += `<path class="${wireClass(binaryInput[2])}" d="M ${inputX + 40} ${startY + 2*rowHeight + 20} H ${inputX + 150} V ${gate1Y + 26} H ${gateX}" />`;
+            html += `<circle class="junction" cx="${inputX + 150}" cy="${startY + 2*rowHeight + 20}" r="5" />`;
+            // XOR to G1
+            html += `<path class="${wireClass(gray[2])}" d="M ${gateX + 50} ${gate1Y + 18} H ${outputX}" />`;
+
+            // G0 = B1 XOR B0
+            const gate0Y = startY + 3 * rowHeight - 18;
+            html += drawXorGate(gateX, gate0Y, 'xor0');
+            // B1 to XOR
+            html += `<path class="${wireClass(binaryInput[2])}" d="M ${inputX + 150} ${startY + 2*rowHeight + 20} V ${gate0Y + 10} H ${gateX}" />`;
+            // B0 to XOR
+            html += `<path class="${wireClass(binaryInput[3])}" d="M ${inputX + 40} ${startY + 3*rowHeight + 20} H ${inputX + 190} V ${gate0Y + 26} H ${gateX}" />`;
+            // XOR to G0
+            html += `<path class="${wireClass(gray[3])}" d="M ${gateX + 50} ${gate0Y + 18} H ${outputX}" />`;
+
+            svg.innerHTML = html;
+
+            // Add click handlers for input bits
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`b2g-in-${i}`).addEventListener('click', () => {
+                    binaryInput[i] = 1 - binaryInput[i];
+                    drawBinaryToGray();
+                    updateVerification();
+                });
+            }
+        }
+
+        // ============================================
+        // DRAW GRAY TO BINARY CIRCUIT
+        // ============================================
+        function drawGrayToBinary() {
+            const svg = document.getElementById('grayToBinarySvg');
+            const binary = grayToBinary(grayInput);
+
+            const inputX = 50;
+            const outputX = 630;
+            const rowHeight = 85;
+            const startY = 40;
+
+            // Gate X positions (cascaded)
+            const gateXs = [0, 260, 360, 460];
+
+            let html = '';
+
+            // Draw input labels and boxes (Gray = green)
+            for (let i = 0; i < 4; i++) {
+                const y = startY + i * rowHeight;
+                html += drawBitBox(inputX, y, grayInput[i], `g2b-in-${i}`, true, `G${3-i}`, 'gray');
+            }
+
+            // Draw output labels and boxes (Binary = blue)
+            for (let i = 0; i < 4; i++) {
+                const y = startY + i * rowHeight;
+                html += drawBitBox(outputX, y, binary[i], `g2b-out-${i}`, false, `B${3-i}`, 'binary');
+            }
+
+            const wireClass = (val) => val ? 'wire active-1' : 'wire active-0';
+
+            // B3 = G3 (direct connection)
+            html += `<path class="${wireClass(grayInput[0])}" d="M ${inputX + 40} ${startY + 20} H ${outputX}" />`;
+            // Junction for cascade
+            html += `<circle class="junction" cx="${inputX + 160}" cy="${startY + 20}" r="5" />`;
+
+            // B2 = B3 XOR G2
+            const gate2X = gateXs[1];
+            const gate2Y = startY + rowHeight - 18;
+            html += drawXorGate(gate2X, gate2Y, 'g2b-xor2');
+            // B3 feeds down to XOR
+            html += `<path class="${wireClass(binary[0])}" d="M ${inputX + 160} ${startY + 20} V ${gate2Y + 10} H ${gate2X}" />`;
+            // G2 to XOR
+            html += `<path class="${wireClass(grayInput[1])}" d="M ${inputX + 40} ${startY + rowHeight + 20} H ${gate2X - 40} V ${gate2Y + 26} H ${gate2X}" />`;
+            // XOR to B2 output
+            html += `<path class="${wireClass(binary[1])}" d="M ${gate2X + 50} ${gate2Y + 18} H ${outputX}" />`;
+            // Junction for cascade
+            html += `<circle class="junction" cx="${gate2X + 85}" cy="${gate2Y + 18}" r="5" />`;
+
+            // B1 = B2 XOR G1
+            const gate1X = gateXs[2];
+            const gate1Y = startY + 2 * rowHeight - 18;
+            html += drawXorGate(gate1X, gate1Y, 'g2b-xor1');
+            // B2 feeds down to XOR
+            html += `<path class="${wireClass(binary[1])}" d="M ${gate2X + 85} ${gate2Y + 18} V ${gate1Y + 10} H ${gate1X}" />`;
+            // G1 to XOR
+            html += `<path class="${wireClass(grayInput[2])}" d="M ${inputX + 40} ${startY + 2*rowHeight + 20} H ${gate1X - 40} V ${gate1Y + 26} H ${gate1X}" />`;
+            // XOR to B1 output
+            html += `<path class="${wireClass(binary[2])}" d="M ${gate1X + 50} ${gate1Y + 18} H ${outputX}" />`;
+            // Junction for cascade
+            html += `<circle class="junction" cx="${gate1X + 85}" cy="${gate1Y + 18}" r="5" />`;
+
+            // B0 = B1 XOR G0
+            const gate0X = gateXs[3];
+            const gate0Y = startY + 3 * rowHeight - 18;
+            html += drawXorGate(gate0X, gate0Y, 'g2b-xor0');
+            // B1 feeds down to XOR
+            html += `<path class="${wireClass(binary[2])}" d="M ${gate1X + 85} ${gate1Y + 18} V ${gate0Y + 10} H ${gate0X}" />`;
+            // G0 to XOR
+            html += `<path class="${wireClass(grayInput[3])}" d="M ${inputX + 40} ${startY + 3*rowHeight + 20} H ${gate0X - 40} V ${gate0Y + 26} H ${gate0X}" />`;
+            // XOR to B0 output
+            html += `<path class="${wireClass(binary[3])}" d="M ${gate0X + 50} ${gate0Y + 18} H ${outputX}" />`;
+
+            svg.innerHTML = html;
+
+            // Add click handlers for input bits
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`g2b-in-${i}`).addEventListener('click', () => {
+                    grayInput[i] = 1 - grayInput[i];
+                    drawGrayToBinary();
+                    updateVerification();
+                });
+            }
+        }
+
+        // ============================================
+        // UPDATE VERIFICATION PANEL
+        // ============================================
+        function updateVerification() {
+            // Binary to Gray
+            const grayFromBinary = binaryToGray(binaryInput);
+            const binaryInputStr = binaryInput.join('');
+            const grayOutputStr = grayFromBinary.join('');
+            const binaryInputDec = parseInt(binaryInputStr, 2);
+
+            document.getElementById('verify-b2g-in').textContent = binaryInputStr;
+            document.getElementById('verify-b2g-in-dec').textContent = `= ${binaryInputDec}`;
+            document.getElementById('verify-b2g-out').textContent = grayOutputStr;
+            document.getElementById('verify-b2g-out-dec').textContent = `(${parseInt(grayOutputStr, 2)})`;
+
+            // Gray to Binary
+            const binaryFromGray = grayToBinary(grayInput);
+            const grayInputStr = grayInput.join('');
+            const binaryOutputStr = binaryFromGray.join('');
+            const binaryOutputDec = parseInt(binaryOutputStr, 2);
+
+            document.getElementById('verify-g2b-in').textContent = grayInputStr;
+            document.getElementById('verify-g2b-in-dec').textContent = `(${parseInt(grayInputStr, 2)})`;
+            document.getElementById('verify-g2b-out').textContent = binaryOutputStr;
+            document.getElementById('verify-g2b-out-dec').textContent = `= ${binaryOutputDec}`;
+
+            // Update reference table highlighting
+            document.querySelectorAll('.reference-table tbody tr').forEach(tr => {
+                const dec = parseInt(tr.dataset.dec);
+                const isB2GActive = dec === binaryInputDec;
+                const isG2BActive = dec === binaryOutputDec;
+                tr.classList.toggle('active', isB2GActive || isG2BActive);
+            });
+        }
+
+        // ============================================
+        // BUILD REFERENCE TABLE
+        // ============================================
+        function buildReferenceTable() {
+            const tbody = document.getElementById('referenceTableBody');
+            let html = '';
+
+            for (let i = 0; i < 16; i++) {
+                const binary = i.toString(2).padStart(4, '0');
+                const grayVal = i ^ (i >> 1);
+                const gray = grayVal.toString(2).padStart(4, '0');
+
+                html += `
+                    <tr data-dec="${i}">
+                        <td class="decimal-col">${i}</td>
+                        <td class="binary-col">${binary}</td>
+                        <td class="gray-col">${gray}</td>
+                    </tr>
+                `;
+            }
+
+            tbody.innerHTML = html;
+        }
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        buildReferenceTable();
+        drawBinaryToGray();
+        drawGrayToBinary();
+        updateVerification();
+    </script>
+</body>
+
+</html>
