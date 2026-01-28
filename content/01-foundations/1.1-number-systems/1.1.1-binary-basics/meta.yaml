@@ -3,5 +3,7 @@ description: "Introduction to the binary number system and conversions"
 order: 1
 
 graphics:
-  01-video.youtube:
+  01-intro.youtube:
     caption: "Video: Binary Number System Explained"
+  02-analog-digital.png:
+    caption: "Analog vs Digital signal representation"
