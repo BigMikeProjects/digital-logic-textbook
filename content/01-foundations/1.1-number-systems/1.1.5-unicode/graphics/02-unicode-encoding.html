@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unicode Character Encoding</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4fc3f7;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #90a4ae;
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            min-height: 0;
+        }
+
+        /* Concept cards at top */
+        .card-row {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #546e7a;
+            border-radius: 16px;
+            padding: 16px 22px;
+            flex: 1;
+            max-width: 295px;
+        }
+
+        .card.highlight {
+            border-color: #ffb74d;
+            background: rgba(255, 183, 77, 0.1);
+        }
+
+        .card h2 {
+            font-size: 17px;
+            color: #4fc3f7;
+            margin-bottom: 8px;
+        }
+
+        .card.highlight h2 {
+            color: #ffb74d;
+        }
+
+        .card p {
+            font-size: 13px;
+            color: #90a4ae;
+            line-height: 1.4;
+        }
+
+        /* Main content: two panels */
+        .two-panels {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr;
+            gap: 28px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .panel {
+            background: #0d1b2a;
+            border: 3px solid #546e7a;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            font-size: 20px;
+            font-weight: 700;
+            color: #e0e0e0;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* UTF-8 Byte Ranges Table */
+        .byte-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+        }
+
+        .byte-table th {
+            background: rgba(79, 195, 247, 0.2);
+            color: #4fc3f7;
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 2px solid #37474f;
+            font-weight: 600;
+        }
+
+        .byte-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #263238;
+            vertical-align: middle;
+        }
+
+        .byte-table tr:hover {
+            background: rgba(79, 195, 247, 0.05);
+        }
+
+        .bytes-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .bytes-1 { background: #81c784; color: #1b5e20; }
+        .bytes-2 { background: #4fc3f7; color: #01579b; }
+        .bytes-3 { background: #ffb74d; color: #e65100; }
+        .bytes-4 { background: #ef5350; color: #b71c1c; }
+
+        .code-range {
+            color: #ce93d8;
+        }
+
+        .bit-pattern {
+            color: #90a4ae;
+            font-size: 12px;
+        }
+
+        /* Interactive encoder */
+        .encoder-section {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            height: 100%;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 15px;
+            color: #90a4ae;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .word-input {
+            flex: 1;
+            background: #1a2a3a;
+            border: 2px solid #546e7a;
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-size: 26px;
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+            color: #4fc3f7;
+            text-align: center;
+            letter-spacing: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .word-input:focus {
+            border-color: #4fc3f7;
+        }
+
+        .word-input::placeholder {
+            color: #37474f;
+            letter-spacing: 4px;
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .preset-btn {
+            background: #1a2a3a;
+            border: 2px solid #37474f;
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 18px;
+            color: #90a4ae;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif;
+        }
+
+        .preset-btn:hover {
+            border-color: #4fc3f7;
+            background: rgba(79, 195, 247, 0.1);
+        }
+
+        .output-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .output-label {
+            font-size: 15px;
+            color: #90a4ae;
+        }
+
+        .encoding-display {
+            flex: 1;
+            background: #0a1520;
+            border: 2px solid #37474f;
+            border-radius: 12px;
+            padding: 14px;
+            overflow-y: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-content: flex-start;
+        }
+
+        .char-encoding {
+            background: linear-gradient(145deg, #1a2a3a, #0d1b2a);
+            border: 2px solid #546e7a;
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 140px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .char-encoding:hover {
+            transform: translateY(-4px);
+            border-color: #4fc3f7;
+        }
+
+        .char-encoding.bytes-1 { border-color: #81c784; }
+        .char-encoding.bytes-2 { border-color: #4fc3f7; }
+        .char-encoding.bytes-3 { border-color: #ffb74d; }
+        .char-encoding.bytes-4 { border-color: #ef5350; }
+
+        .char-display {
+            font-size: 32px;
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+            color: #fff;
+        }
+
+        .char-display.space-char {
+            background: rgba(79, 195, 247, 0.2);
+            border-radius: 4px;
+            padding: 0 8px;
+            color: #4fc3f7;
+            font-family: 'Consolas', monospace;
+        }
+
+        .encoding-values {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .codepoint-value {
+            font-size: 15px;
+            color: #ce93d8;
+            font-weight: bold;
+        }
+
+        .utf8-bytes {
+            font-size: 12px;
+            color: #90a4ae;
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .utf8-byte {
+            background: rgba(255,255,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .byte-count-label {
+            font-size: 12px;
+            font-weight: bold;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .byte-count-1 { background: #81c784; color: #1b5e20; }
+        .byte-count-2 { background: #4fc3f7; color: #01579b; }
+        .byte-count-3 { background: #ffb74d; color: #e65100; }
+        .byte-count-4 { background: #ef5350; color: #b71c1c; }
+
+        .placeholder-text {
+            color: #546e7a;
+            font-size: 18px;
+            text-align: center;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .footer {
+            text-align: center;
+            color: #607d8b;
+            font-size: 15px;
+            padding-top: 14px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+            margin-top: auto;
+        }
+
+        .footer span {
+            color: #4fc3f7;
+        }
+
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #4fc3f7;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="viewport-container" id="viewportContainer">
+        <div class="design-surface" id="designSurface">
+
+            <h1>Unicode &amp; UTF-8 Encoding</h1>
+            <p class="subtitle">The universal character set supporting every writing system on Earth</p>
+
+            <div class="content">
+                <!-- Concept cards -->
+                <div class="card-row">
+                    <div class="card">
+                        <h2>Universal Standard</h2>
+                        <p>Unicode assigns a unique code point (U+0000 to U+10FFFF) to over 150,000 characters from all writing systems.</p>
+                    </div>
+                    <div class="card">
+                        <h2>Code Points</h2>
+                        <p>Each character has a code point written as U+XXXX. ASCII characters keep their values: A = U+0041 (65).</p>
+                    </div>
+                    <div class="card highlight">
+                        <h2>Variable-Width UTF-8</h2>
+                        <p>UTF-8 uses 1-4 bytes per character. ASCII uses 1 byte, most languages 2-3 bytes, emojis use 4 bytes.</p>
+                    </div>
+                    <div class="card">
+                        <h2>Backward Compatible</h2>
+                        <p>UTF-8's first 128 code points match ASCII exactly, making ASCII text valid UTF-8 automatically.</p>
+                    </div>
+                </div>
+
+                <!-- Two-panel layout -->
+                <div class="two-panels">
+                    <!-- Left: UTF-8 Byte Ranges -->
+                    <div class="panel">
+                        <div class="panel-header">UTF-8 Variable-Width Encoding</div>
+                        <div class="panel-content">
+                            <table class="byte-table">
+                                <thead>
+                                    <tr>
+                                        <th>Bytes</th>
+                                        <th>Code Point Range</th>
+                                        <th>Byte Pattern</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="bytes-badge bytes-1">1</span></td>
+                                        <td class="code-range">U+0000 - U+007F</td>
+                                        <td class="bit-pattern">0xxxxxxx</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="bytes-badge bytes-2">2</span></td>
+                                        <td class="code-range">U+0080 - U+07FF</td>
+                                        <td class="bit-pattern">110xxxxx 10xxxxxx</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="bytes-badge bytes-3">3</span></td>
+                                        <td class="code-range">U+0800 - U+FFFF</td>
+                                        <td class="bit-pattern">1110xxxx 10xxxxxx 10xxxxxx</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="bytes-badge bytes-4">4</span></td>
+                                        <td class="code-range">U+10000 - U+10FFFF</td>
+                                        <td class="bit-pattern">11110xxx 10xxxxxx 10xxxxxx 10xxxxxx</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div style="margin-top: 20px; padding: 16px; background: rgba(255,183,77,0.1); border-radius: 10px; border: 1px solid #ffb74d;">
+                                <p style="font-size: 14px; color: #ffb74d; margin-bottom: 8px; font-weight: 600;">How Variable-Width Works:</p>
+                                <p style="font-size: 13px; color: #90a4ae; line-height: 1.5;">
+                                    The leading bits indicate byte count: <span style="color:#81c784">0</span> = 1 byte,
+                                    <span style="color:#4fc3f7">110</span> = 2 bytes,
+                                    <span style="color:#ffb74d">1110</span> = 3 bytes,
+                                    <span style="color:#ef5350">11110</span> = 4 bytes.
+                                    Continuation bytes always start with <span style="color:#90a4ae">10</span>.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Interactive Encoder -->
+                    <div class="panel">
+                        <div class="panel-header">Interactive UTF-8 Encoder</div>
+                        <div class="panel-content">
+                            <div class="encoder-section">
+                                <div class="input-group">
+                                    <label>Enter text (including emoji, accents, symbols):</label>
+                                    <div class="input-row">
+                                        <input type="text" class="word-input" id="wordInput" maxlength="12" placeholder="Hello" autocomplete="off" spellcheck="false">
+                                        <div class="preset-buttons">
+                                            <button class="preset-btn" data-text="Caf&eacute;">Caf&eacute;</button>
+                                            <button class="preset-btn" data-text="&#20320;&#22909;">&#20320;&#22909;</button>
+                                            <button class="preset-btn" data-text="&#128640;&#127775;">&#128640;&#127775;</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="output-section">
+                                    <div class="output-label">UTF-8 Encoded (showing code point and bytes):</div>
+                                    <div class="encoding-display" id="encodingDisplay">
+                                        <div class="placeholder-text">Enter text above to see UTF-8 encoding</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                Unicode 15.1 (2023) contains <span>149,813</span> characters | UTF-8 is the dominant encoding on the web (~98%)
+            </div>
+        </div>
+    </div>
+
+    <div class="debug-info" id="debugInfo"></div>
+
+    <script>
+        // ============================================
+        // HIGH-DPI AWARE AUTO-RESIZE SYSTEM
+        // ============================================
+
+        const DESIGN_WIDTH = 1920;
+        const DESIGN_HEIGHT = 1080;
+
+        function autoResize() {
+            const container = document.getElementById('viewportContainer');
+            const surface = document.getElementById('designSurface');
+            const debugInfo = document.getElementById('debugInfo');
+
+            const dpr = window.devicePixelRatio || 1;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            let containerWidth, containerHeight;
+
+            if (viewportWidth / viewportHeight > 16 / 9) {
+                containerHeight = viewportHeight;
+                containerWidth = containerHeight * (16 / 9);
+            } else {
+                containerWidth = viewportWidth;
+                containerHeight = containerWidth * (9 / 16);
+            }
+
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+
+            const scale = containerWidth / DESIGN_WIDTH;
+            surface.style.transform = `scale(${scale})`;
+
+            debugInfo.textContent = `DPR: ${dpr.toFixed(2)} | Scale: ${scale.toFixed(3)} | ${Math.round(containerWidth)}x${Math.round(containerHeight)}`;
+        }
+
+        function initializeResponsive() {
+            autoResize();
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(autoResize, 50);
+            });
+
+            window.addEventListener('orientationchange', () => {
+                setTimeout(autoResize, 100);
+            });
+        }
+
+        // ============================================
+        // UTF-8 ENCODING FUNCTIONS
+        // ============================================
+
+        function getCodePoint(char) {
+            const code = char.codePointAt(0);
+            return code;
+        }
+
+        function codePointToUTF8Bytes(codePoint) {
+            const bytes = [];
+
+            if (codePoint <= 0x7F) {
+                // 1 byte
+                bytes.push(codePoint);
+            } else if (codePoint <= 0x7FF) {
+                // 2 bytes
+                bytes.push(0xC0 | (codePoint >> 6));
+                bytes.push(0x80 | (codePoint & 0x3F));
+            } else if (codePoint <= 0xFFFF) {
+                // 3 bytes
+                bytes.push(0xE0 | (codePoint >> 12));
+                bytes.push(0x80 | ((codePoint >> 6) & 0x3F));
+                bytes.push(0x80 | (codePoint & 0x3F));
+            } else {
+                // 4 bytes
+                bytes.push(0xF0 | (codePoint >> 18));
+                bytes.push(0x80 | ((codePoint >> 12) & 0x3F));
+                bytes.push(0x80 | ((codePoint >> 6) & 0x3F));
+                bytes.push(0x80 | (codePoint & 0x3F));
+            }
+
+            return bytes;
+        }
+
+        function formatCodePoint(codePoint) {
+            if (codePoint <= 0xFFFF) {
+                return 'U+' + codePoint.toString(16).toUpperCase().padStart(4, '0');
+            }
+            return 'U+' + codePoint.toString(16).toUpperCase();
+        }
+
+        function formatByte(byte) {
+            return byte.toString(16).toUpperCase().padStart(2, '0');
+        }
+
+        // ============================================
+        // INTERACTIVE ENCODER
+        // ============================================
+
+        function updateEncoding() {
+            const input = document.getElementById('wordInput');
+            const display = document.getElementById('encodingDisplay');
+            const text = input.value;
+
+            if (text.length === 0) {
+                display.innerHTML = '<div class="placeholder-text">Enter text above to see UTF-8 encoding</div>';
+                return;
+            }
+
+            display.innerHTML = '';
+
+            // Use Array.from to properly handle surrogate pairs (emoji, etc.)
+            const chars = Array.from(text);
+
+            for (const char of chars) {
+                const codePoint = getCodePoint(char);
+                const utf8Bytes = codePointToUTF8Bytes(codePoint);
+                const byteCount = utf8Bytes.length;
+
+                const charBox = document.createElement('div');
+                charBox.className = `char-encoding bytes-${byteCount}`;
+
+                const isSpace = char === ' ';
+                const displayChar = isSpace ? 'SP' : char;
+                const spaceClass = isSpace ? ' space-char' : '';
+
+                const bytesHtml = utf8Bytes.map(b =>
+                    `<span class="utf8-byte">${formatByte(b)}</span>`
+                ).join('');
+
+                charBox.innerHTML = `
+                    <div class="char-display${spaceClass}">${displayChar}</div>
+                    <div class="encoding-values">
+                        <span class="codepoint-value">${formatCodePoint(codePoint)}</span>
+                        <div class="utf8-bytes">${bytesHtml}</div>
+                        <span class="byte-count-label byte-count-${byteCount}">${byteCount} byte${byteCount > 1 ? 's' : ''}</span>
+                    </div>
+                `;
+
+                display.appendChild(charBox);
+            }
+        }
+
+        // ============================================
+        // PRESET BUTTONS
+        // ============================================
+
+        function setupPresetButtons() {
+            const buttons = document.querySelectorAll('.preset-btn');
+            const input = document.getElementById('wordInput');
+
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    input.value = btn.dataset.text;
+                    updateEncoding();
+                });
+            });
+        }
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+
+        initializeResponsive();
+        setupPresetButtons();
+
+        const wordInput = document.getElementById('wordInput');
+        wordInput.addEventListener('input', updateEncoding);
+
+        // Initialize with default text showing variety
+        wordInput.value = 'A\u00e9\u4e2d\uD83D\uDE00';
+        updateEncoding();
+    </script>
+</body>
+
+</html>
