@@ -1,0 +1,9 @@
+title: "Ten's Complement"
+description: "Understanding subtraction through addition using complement representation in decimal"
+order: 4
+
+graphics:
+  01-intro.youtube:
+    caption: "Video explanation of ten's complement arithmetic"
+  02-complement-subtraction.html:
+    caption: "Interactive ten's complement calculator"

@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10's Complement & Direct Subtraction</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ============================================
+           VIEWPORT CONTAINER
+           Maintains 16:9 aspect ratio, fits in window
+           ============================================ */
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ============================================
+           DESIGN SURFACE
+           Fixed 1920x1080 canvas that gets scaled
+           All content uses fixed pixel values
+           ============================================ */
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            padding: 30px 40px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ============================================
+           TYPOGRAPHY - Fixed pixel sizes
+           ============================================ */
+        h1 {
+            text-align: center;
+            color: #4fc3f7;
+            font-size: 38px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #90a4ae;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        /* ============================================
+           INFO CARD
+           ============================================ */
+        .info-card {
+            background: rgba(156, 39, 176, 0.15);
+            border: 2px solid #9c27b0;
+            border-radius: 12px;
+            padding: 16px 24px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .info-card-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ce93d8;
+            white-space: nowrap;
+        }
+
+        .info-card-content {
+            font-size: 17px;
+            color: #e0e0e0;
+            line-height: 1.5;
+        }
+
+        .info-card-content .formula {
+            font-family: 'Courier New', monospace;
+            color: #ce93d8;
+            font-weight: bold;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .info-card-example {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            color: #4fc3f7;
+            background: rgba(0,0,0,0.3);
+            padding: 8px 16px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        /* ============================================
+           INPUT SECTION
+           ============================================ */
+        .input-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 20px;
+            padding: 16px 24px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 2px solid #546e7a;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .input-label {
+            font-size: 18px;
+            color: #90a4ae;
+            font-weight: 600;
+        }
+
+        .number-input {
+            width: 120px;
+            padding: 10px 16px;
+            font-size: 24px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            text-align: center;
+            background: #0d1b2a;
+            border: 2px solid #4fc3f7;
+            border-radius: 8px;
+            color: #4fc3f7;
+            outline: none;
+        }
+
+        .number-input:focus {
+            border-color: #81d4fa;
+            box-shadow: 0 0 12px rgba(79, 195, 247, 0.3);
+        }
+
+        .operator {
+            font-size: 32px;
+            color: #ff7043;
+            font-weight: bold;
+        }
+
+        .calculate-btn {
+            background: linear-gradient(145deg, #4caf50, #388e3c);
+            color: #fff;
+            border: 2px solid #66bb6a;
+            border-radius: 10px;
+            padding: 12px 28px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+
+        /* ============================================
+           THREE PANEL LAYOUT
+           ============================================ */
+        .two-panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .panel {
+            background: #0d1b2a;
+            border: 3px solid #546e7a;
+            border-radius: 14px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel.tens {
+            border-color: #00bcd4;
+        }
+
+        .panel.direct {
+            border-color: #ff9800;
+        }
+
+        .panel-header {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel.tens .panel-header {
+            color: #4dd0e1;
+        }
+
+        .panel.direct .panel-header {
+            color: #ffb74d;
+        }
+
+        .method-badge {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .panel.tens .method-badge {
+            background: rgba(0, 188, 212, 0.2);
+            color: #4dd0e1;
+        }
+
+        .panel.direct .method-badge {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ffb74d;
+        }
+
+        .panel-content {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        /* ============================================
+           STEP STYLING
+           ============================================ */
+        .step {
+            margin-bottom: 14px;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            border-left: 3px solid #546e7a;
+        }
+
+        .panel.tens .step {
+            border-left-color: #00bcd4;
+        }
+
+        .panel.direct .step {
+            border-left-color: #ff9800;
+        }
+
+        .step-number {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            opacity: 0.7;
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e0e0e0;
+            margin-bottom: 8px;
+        }
+
+        .calculation {
+            font-family: 'Courier New', monospace;
+            font-size: 26px;
+            background: rgba(0,0,0,0.3);
+            padding: 12px 18px;
+            border-radius: 6px;
+            margin: 8px 0;
+            display: inline-block;
+        }
+
+        .calculation .digit {
+            display: inline-block;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .calculation .highlight {
+            color: #4fc3f7;
+            font-weight: bold;
+        }
+
+        .calculation .carry {
+            color: #ff7043;
+            font-size: 18px;
+            vertical-align: super;
+        }
+
+        .calculation .borrow {
+            color: #ef5350;
+            font-size: 20px;
+            text-decoration: line-through;
+        }
+
+        .calculation-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px 0;
+        }
+
+        .calc-label {
+            font-size: 16px;
+            color: #90a4ae;
+            min-width: 110px;
+        }
+
+        .addition-line {
+            border-bottom: 2px solid #546e7a;
+            margin: 6px 0;
+        }
+
+        .result-box {
+            background: rgba(76, 175, 80, 0.15);
+            border: 2px solid #4caf50;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 10px;
+        }
+
+        .result-label {
+            font-size: 13px;
+            color: #81c784;
+            margin-bottom: 4px;
+        }
+
+        .result-value {
+            font-family: 'Courier New', monospace;
+            font-size: 28px;
+            font-weight: bold;
+            color: #4caf50;
+        }
+
+        .explanation {
+            font-size: 13px;
+            color: #90a4ae;
+            font-style: italic;
+            margin-top: 6px;
+        }
+
+        /* ============================================
+           FORMULA BOX
+           ============================================ */
+        .formula-box {
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #b0bec5;
+        }
+
+        .formula {
+            font-family: 'Courier New', monospace;
+            color: #4fc3f7;
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+        .footer {
+            text-align: center;
+            color: #607d8b;
+            font-size: 14px;
+            padding-top: 14px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+            margin-top: 16px;
+        }
+
+        .equivalence-note {
+            display: inline-block;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid #4caf50;
+            border-radius: 20px;
+            padding: 6px 20px;
+            color: #81c784;
+        }
+
+        /* ============================================
+           DEBUG INFO (set display:block to show)
+           ============================================ */
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #4fc3f7;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="viewport-container" id="viewportContainer">
+        <div class="design-surface" id="designSurface">
+
+            <h1>10's Complement & Direct Subtraction</h1>
+            <p class="subtitle">Two methods for decimal subtraction - both yielding the same result</p>
+
+            <!-- Info Card: 9's Complement Definition -->
+            <div class="info-card">
+                <div class="info-card-title">9's Complement</div>
+                <div class="info-card-content">
+                    Subtract each digit from 9. For any digit <span class="formula">d</span>, its 9's complement is <span class="formula">9 - d</span>
+                </div>
+                <div class="info-card-example">
+                    318 → 681&nbsp;&nbsp;(9-3=6, 9-1=8, 9-8=1)
+                </div>
+            </div>
+
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="input-group">
+                    <span class="input-label">Minuend:</span>
+                    <input type="text" id="minuend" class="number-input" value="725" maxlength="3" pattern="[0-9]*">
+                </div>
+                <span class="operator">-</span>
+                <div class="input-group">
+                    <span class="input-label">Subtrahend:</span>
+                    <input type="text" id="subtrahend" class="number-input" value="318" maxlength="3" pattern="[0-9]*">
+                </div>
+                <button class="calculate-btn" onclick="calculate()">Calculate</button>
+            </div>
+
+            <!-- Two Panel Layout -->
+            <div class="two-panels">
+                <!-- 10's Complement Panel -->
+                <div class="panel tens">
+                    <div class="panel-header">
+                        10's Complement Method
+                        <span class="method-badge">Discard Overflow</span>
+                    </div>
+                    <div class="panel-content" id="tensPanel">
+                        <!-- Content populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Direct Subtraction Panel -->
+                <div class="panel direct">
+                    <div class="panel-header">
+                        Direct Subtraction
+                        <span class="method-badge">Borrow Method</span>
+                    </div>
+                    <div class="panel-content" id="directPanel">
+                        <!-- Content populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <span class="equivalence-note" id="equivalenceNote">Both methods produce the same result</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug display -->
+    <div class="debug-info" id="debugInfo"></div>
+
+    <script>
+        // ============================================
+        // HIGH-DPI AWARE AUTO-RESIZE SYSTEM
+        // ============================================
+
+        const DESIGN_WIDTH = 1920;
+        const DESIGN_HEIGHT = 1080;
+
+        function autoResize() {
+            const container = document.getElementById('viewportContainer');
+            const surface = document.getElementById('designSurface');
+            const debugInfo = document.getElementById('debugInfo');
+
+            const dpr = window.devicePixelRatio || 1;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            let containerWidth, containerHeight;
+
+            if (viewportWidth / viewportHeight > 16 / 9) {
+                containerHeight = viewportHeight;
+                containerWidth = containerHeight * (16 / 9);
+            } else {
+                containerWidth = viewportWidth;
+                containerHeight = containerWidth * (9 / 16);
+            }
+
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+
+            const scale = containerWidth / DESIGN_WIDTH;
+            surface.style.transform = `scale(${scale})`;
+
+            debugInfo.textContent = `DPR: ${dpr.toFixed(2)} | Scale: ${scale.toFixed(3)} | ${Math.round(containerWidth)}×${Math.round(containerHeight)}`;
+        }
+
+        function initializeResponsive() {
+            autoResize();
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(autoResize, 50);
+            });
+
+            window.addEventListener('orientationchange', () => {
+                setTimeout(autoResize, 100);
+            });
+        }
+
+        // ============================================
+        // COMPLEMENT CALCULATION LOGIC
+        // ============================================
+
+        function padNumber(num, length) {
+            return num.toString().padStart(length, '0');
+        }
+
+        function getNinesComplement(numStr) {
+            return numStr.split('').map(d => (9 - parseInt(d)).toString()).join('');
+        }
+
+        function getTensComplement(numStr) {
+            const nines = getNinesComplement(numStr);
+            const tens = (parseInt(nines) + 1).toString();
+            return padNumber(tens, numStr.length);
+        }
+
+        function formatDigits(numStr, highlightAll = false) {
+            return numStr.split('').map(d =>
+                `<span class="digit${highlightAll ? ' highlight' : ''}">${d}</span>`
+            ).join('');
+        }
+
+        function calculate() {
+            const minuendInput = document.getElementById('minuend').value;
+            const subtrahendInput = document.getElementById('subtrahend').value;
+
+            // Validate inputs
+            const minuend = parseInt(minuendInput) || 0;
+            const subtrahend = parseInt(subtrahendInput) || 0;
+
+            if (minuend < 0 || subtrahend < 0 || minuend > 999 || subtrahend > 999) {
+                alert('Please enter valid 3-digit numbers (0-999)');
+                return;
+            }
+
+            const numDigits = 3;
+            const minuendStr = padNumber(minuend, numDigits);
+            const subtrahendStr = padNumber(subtrahend, numDigits);
+
+            // Calculate result
+            const result = minuend - subtrahend;
+            const isNegative = result < 0;
+
+            // Update both panels
+            updateTensPanel(minuendStr, subtrahendStr, minuend, subtrahend, result, isNegative);
+            updateDirectPanel(minuendStr, subtrahendStr, minuend, subtrahend, result, isNegative);
+
+            // Update equivalence note
+            const note = document.getElementById('equivalenceNote');
+            if (isNegative) {
+                note.textContent = `Both methods yield: -${Math.abs(result)}`;
+                note.style.borderColor = '#ff9800';
+                note.style.color = '#ffb74d';
+            } else {
+                note.textContent = `Both methods yield: ${result}`;
+                note.style.borderColor = '#4caf50';
+                note.style.color = '#81c784';
+            }
+        }
+
+        function updateTensPanel(minuendStr, subtrahendStr, minuend, subtrahend, result, isNegative) {
+            const panel = document.getElementById('tensPanel');
+            const ninesComp = getNinesComplement(subtrahendStr);
+            const tensComp = getTensComplement(subtrahendStr);
+
+            // Add minuend and 10's complement
+            const additionResult = minuend + parseInt(tensComp);
+            const hasOverflow = additionResult >= 1000;
+            const finalResult = additionResult % 1000;
+
+            let html = `
+                <div class="formula-box">
+                    <strong>Formula:</strong> <span class="formula">A - B = A + (1000 - B), discard overflow</span><br>
+                    <strong>Note:</strong> <span class="formula">10's comp = 9's comp + 1</span>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">Step 1</div>
+                    <div class="step-title">Find 10's complement of subtrahend</div>
+                    <p class="explanation">10's complement = 9's complement + 1</p>
+                    <div class="calculation">
+                        <div class="calculation-row">
+                            <span class="calc-label">9's comp:</span>
+                            ${formatDigits(ninesComp)}
+                        </div>
+                        <div class="calculation-row">
+                            <span class="calc-label">+ 1:</span>
+                            <span class="digit">+</span><span class="digit">1</span>
+                        </div>
+                        <div class="addition-line"></div>
+                        <div class="calculation-row">
+                            <span class="calc-label">10's comp:</span>
+                            ${formatDigits(tensComp, true)}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">Step 2</div>
+                    <div class="step-title">Add minuend and 10's complement</div>
+                    <div class="calculation">
+                        <div class="calculation-row">
+                            <span class="calc-label"></span>
+                            ${formatDigits(minuendStr)}
+                        </div>
+                        <div class="calculation-row">
+                            <span class="calc-label">+</span>
+                            ${formatDigits(tensComp)}
+                        </div>
+                        <div class="addition-line"></div>
+                        <div class="calculation-row">
+                            <span class="calc-label">=</span>
+                            ${hasOverflow ? '<span class="carry">1</span>' : ''}${formatDigits(padNumber(finalResult, 3), true)}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">Step 3</div>
+                    <div class="step-title">Handle overflow</div>
+            `;
+
+            if (hasOverflow) {
+                html += `
+                    <p class="explanation">Overflow exists: discard the leading 1</p>
+                    <div class="calculation">
+                        <div class="calculation-row">
+                            <span class="calc-label">Discard:</span>
+                            <span class="digit borrow">1</span>${formatDigits(padNumber(finalResult, 3), true)}
+                        </div>
+                    </div>
+                    <p class="explanation">Result is positive: ${finalResult}</p>
+                `;
+            } else {
+                const recomplement = getTensComplement(padNumber(finalResult, 3));
+                html += `
+                    <p class="explanation">No overflow: result is negative. Take 10's complement again.</p>
+                    <div class="calculation">
+                        <div class="calculation-row">
+                            <span class="calc-label">10's comp of</span>
+                            ${formatDigits(padNumber(finalResult, 3))}
+                        </div>
+                        <div class="calculation-row">
+                            <span class="calc-label">=</span>
+                            ${formatDigits(recomplement, true)}
+                        </div>
+                    </div>
+                    <p class="explanation">Result is negative: -${parseInt(recomplement)}</p>
+                `;
+            }
+
+            html += `
+                </div>
+
+                <div class="result-box">
+                    <div class="result-label">Final Result:</div>
+                    <div class="result-value">${isNegative ? '-' : ''}${Math.abs(result)}</div>
+                </div>
+            `;
+
+            panel.innerHTML = html;
+        }
+
+        function updateDirectPanel(minuendStr, subtrahendStr, minuend, subtrahend, result, isNegative) {
+            const panel = document.getElementById('directPanel');
+
+            // For direct subtraction, we'll show the traditional column method
+            const m = minuendStr.split('').map(Number);
+            const s = subtrahendStr.split('').map(Number);
+
+            // Track borrows for display
+            let borrows = [false, false, false];
+            let adjustedMinuend = [...m];
+            let differences = [];
+
+            // Calculate with borrowing (right to left)
+            for (let i = 2; i >= 0; i--) {
+                let top = adjustedMinuend[i];
+                let bottom = s[i];
+
+                if (top < bottom && i > 0) {
+                    // Need to borrow
+                    borrows[i] = true;
+                    adjustedMinuend[i] += 10;
+                    adjustedMinuend[i-1] -= 1;
+                    top = adjustedMinuend[i];
+                }
+
+                differences[i] = top - bottom;
+            }
+
+            // Handle case where minuend < subtrahend
+            if (minuend < subtrahend) {
+                // Swap and recalculate
+                const temp = subtrahend - minuend;
+                const tempStr = padNumber(temp, 3);
+
+                let html = `
+                    <div class="formula-box">
+                        <strong>Method:</strong> Column subtraction with borrowing
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">Note</div>
+                        <div class="step-title">Minuend < Subtrahend</div>
+                        <p class="explanation">Since ${minuend} < ${subtrahend}, we compute ${subtrahend} - ${minuend} and negate.</p>
+                    </div>
+
+                    <div class="step">
+                        <div class="step-number">Calculation</div>
+                        <div class="step-title">Subtract larger - smaller</div>
+                        <div class="calculation">
+                            <div class="calculation-row">
+                                <span class="calc-label"></span>
+                                ${formatDigits(subtrahendStr)}
+                            </div>
+                            <div class="calculation-row">
+                                <span class="calc-label">-</span>
+                                ${formatDigits(minuendStr)}
+                            </div>
+                            <div class="addition-line"></div>
+                            <div class="calculation-row">
+                                <span class="calc-label">=</span>
+                                ${formatDigits(tempStr, true)}
+                            </div>
+                        </div>
+                        <p class="explanation">Then negate: -${temp}</p>
+                    </div>
+
+                    <div class="result-box">
+                        <div class="result-label">Final Result:</div>
+                        <div class="result-value">-${temp}</div>
+                    </div>
+                `;
+                panel.innerHTML = html;
+                return;
+            }
+
+            // Build the visual representation with borrows
+            let borrowRow = '';
+            let topRow = '';
+            let bottomRow = '';
+            let resultRow = '';
+
+            for (let i = 0; i < 3; i++) {
+                if (borrows[i]) {
+                    borrowRow += `<span class="digit carry">1</span>`;
+                    topRow += `<span class="digit">${m[i]}<span class="carry">+10</span></span>`;
+                } else {
+                    borrowRow += `<span class="digit"></span>`;
+                    if (i > 0 && borrows[i+1]) {
+                        topRow += `<span class="digit borrow">${m[i]}</span>`;
+                    } else if (adjustedMinuend[i] !== m[i]) {
+                        topRow += `<span class="digit">${adjustedMinuend[i]}</span>`;
+                    } else {
+                        topRow += `<span class="digit">${m[i]}</span>`;
+                    }
+                }
+                bottomRow += `<span class="digit">${s[i]}</span>`;
+                resultRow += `<span class="digit highlight">${differences[i] >= 0 ? differences[i] : 0}</span>`;
+            }
+
+            const finalResultStr = padNumber(Math.abs(result), 3);
+
+            let html = `
+                <div class="formula-box">
+                    <strong>Method:</strong> Column subtraction with borrowing
+                </div>
+
+                <div class="step">
+                    <div class="step-number">Process</div>
+                    <div class="step-title">Subtract column by column (right to left)</div>
+                    <p class="explanation">Borrow from the next column when the top digit is smaller.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">Work</div>
+                    <div class="step-title">Column-by-column subtraction</div>
+                    <div class="calculation" style="line-height: 1.8;">
+            `;
+
+            // Show each column's work
+            for (let i = 2; i >= 0; i--) {
+                const colName = i === 2 ? 'Ones' : (i === 1 ? 'Tens' : 'Hundreds');
+                let top = m[i];
+                let bottom = s[i];
+                let borrowed = false;
+
+                if (borrows[i]) {
+                    html += `<div class="calculation-row"><span class="calc-label">${colName}:</span> ${top} + 10 - ${bottom} = ${top + 10 - bottom} <span class="carry">(borrowed)</span></div>`;
+                } else if (i > 0 && borrows[i]) {
+                    html += `<div class="calculation-row"><span class="calc-label">${colName}:</span> ${top-1} - ${bottom} = ${top - 1 - bottom}</div>`;
+                } else {
+                    // Check if we lent to the right
+                    let actualTop = adjustedMinuend[i];
+                    if (actualTop !== m[i]) {
+                        html += `<div class="calculation-row"><span class="calc-label">${colName}:</span> ${actualTop} - ${bottom} = ${actualTop - bottom} <span class="carry">(after lending)</span></div>`;
+                    } else {
+                        html += `<div class="calculation-row"><span class="calc-label">${colName}:</span> ${top} - ${bottom} = ${top - bottom}</div>`;
+                    }
+                }
+            }
+
+            html += `
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">Result</div>
+                    <div class="step-title">Combine the digits</div>
+                    <div class="calculation">
+                        <div class="calculation-row">
+                            <span class="calc-label"></span>
+                            ${formatDigits(minuendStr)}
+                        </div>
+                        <div class="calculation-row">
+                            <span class="calc-label">-</span>
+                            ${formatDigits(subtrahendStr)}
+                        </div>
+                        <div class="addition-line"></div>
+                        <div class="calculation-row">
+                            <span class="calc-label">=</span>
+                            ${formatDigits(finalResultStr, true)}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-box">
+                    <div class="result-label">Final Result:</div>
+                    <div class="result-value">${result}</div>
+                </div>
+            `;
+
+            panel.innerHTML = html;
+        }
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        initializeResponsive();
+
+        // Initial calculation with default values
+        calculate();
+
+        // Add input event listeners for real-time updates
+        document.getElementById('minuend').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3);
+        });
+
+        document.getElementById('subtrahend').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 3);
+        });
+
+        // Calculate on Enter key
+        document.getElementById('minuend').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') calculate();
+        });
+
+        document.getElementById('subtrahend').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') calculate();
+        });
+    </script>
+</body>
+
+</html>
