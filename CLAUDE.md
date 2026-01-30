@@ -39,6 +39,42 @@ git push         # Auto-deploys to GitHub Pages via GitHub Actions
 └── public/content/         # Copied from content/ at build time
 ```
 
+## Staging Workflow
+
+New content is typically prepared in `staging/[TopicName]/` before being integrated into the content folder.
+
+### Typical Staging-to-Content Workflow
+
+1. **Review staged content**: Check `staging/` folder for new markdown and images
+2. **Rename images**: Replace auto-generated names (e.g., `Gemini_Generated_Image_xxx.png`) with descriptive names (e.g., `streaming-pipeline-detailed.png`)
+3. **Create content structure**:
+   ```
+   content/[chapter]/[section]/[topic-slug]/
+   ├── text.md
+   ├── meta.yaml
+   ├── graphics/    # Side panel images (shown alongside text)
+   └── images/      # Inline images (embedded in markdown)
+   ```
+4. **Move images**:
+   - Side panel graphics → `graphics/` folder
+   - Inline images → `images/` folder
+5. **Prepare text.md**:
+   - Copy/adapt markdown content
+   - Remove section numbering (e.g., "X.1", "X.2") if present
+   - Add inline image references: `![Caption](./images/filename.png)`
+6. **Create meta.yaml** with title, description, and order
+7. **Format review questions**: Convert to multiple choice with randomized answer positions (A, B, C, D distributed evenly)
+8. **Add answer explanations**: Explain why correct answers are correct and why distractors are wrong
+9. **Commit and push**: Changes auto-deploy to GitHub Pages
+10. **Clean up staging**: Remove the staging folder after successful integration
+
+### Image Naming Conventions
+
+Use lowercase with hyphens:
+- `distribution-models-comparison.png` (not `DistributionModels.png`)
+- `analog-digital-cliff-effect.png` (descriptive of content)
+- `streaming-pipeline-detailed.png` (include variant if multiple similar images)
+
 ## Content Authoring
 
 ### Adding a New Topic
@@ -91,6 +127,41 @@ Reference images in `images/` subfolder:
 - LaTeX math: `$inline$` and `$$display$$`
 - Syntax highlighting: ` ```verilog `, ` ```python `, etc.
 
+### Review Questions Format
+
+Multiple choice questions should:
+- Focus on digital logic concepts (noise margin, thresholds, tradeoffs, etc.)
+- Have 4 answer choices (A, B, C, D)
+- Randomize correct answer positions (avoid patterns like all B's)
+- Include an "Answer Explanations" section that:
+  - States the correct answer
+  - Explains why it's correct (tie back to concepts in the text)
+  - Explains why each wrong answer is incorrect
+
+Example format:
+```markdown
+## Review Questions
+
+**1. Question text here?**
+
+- A) First option
+- B) Second option
+- C) Third option
+- D) Fourth option
+
+---
+
+## Answer Explanations
+
+**1. Answer: B) Second option**
+
+Explanation of why B is correct.
+
+- *First option* (A) is wrong because...
+- *Third option* (C) is wrong because...
+- *Fourth option* (D) is wrong because...
+```
+
 ## Key Files for Common Changes
 
 | Task | Files to Modify |
@@ -131,6 +202,12 @@ interface Topic {
 ```
 
 ## Recent Changes
+
+### Blockbuster to Netflix Section (2026-01-29)
+- Added new section `1.0-analog-vs-digital` in foundations chapter
+- Topic `1.0.1-blockbuster-to-netflix` covers why digital systems win
+- Includes 5 inline images and 1 side panel graphic
+- Multiple choice review questions with answer explanations
 
 ### YouTube Timestamp Support (2026-01-26)
 - Added `startTime` field to `GraphicItem` interface
