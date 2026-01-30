@@ -1,4 +1,3 @@
-# Chapter X  
 ## From Blockbuster to Netflix: Why Digital Wins (Eventually)
 
 ### Learning Objectives
@@ -13,7 +12,7 @@ These objectives reflect an important truth about engineering: **a technical imp
 
 ---
 
-## X.1 A Familiar Story That Isn’t Really About Movies
+## A Familiar Story That Isn't Really About Movies
 
 Many students have heard that Blockbuster failed because Netflix “invented streaming.” That explanation is convenient—but incomplete. Streaming video did not appear suddenly. It arrived only after years of intermediate steps, and it required a large and expensive technical ecosystem to become possible.
 
@@ -31,7 +30,7 @@ We will treat each stage as a system—because in engineering, systems win or lo
 
 ---
 
-## X.2 Blockbuster: A System Optimized for the Physical World
+## Blockbuster: A System Optimized for the Physical World
 
 Blockbuster Video was not merely a store. It was a carefully engineered distribution system for an era in which the internet could not reliably deliver large media files. If a household wanted a movie, the fastest and most dependable way to get it was to transport a physical object from a shelf to a living room.
 
@@ -52,11 +51,11 @@ Most importantly, Blockbuster matched the constraints of the era. In the 1990s, 
 
 ---
 
-## X.3 VHS vs DVD: The First Major Digital Quality Leap
+## VHS vs DVD: The First Major Digital Quality Leap
 
 Blockbuster’s business model did not collapse immediately because Netflix had a better idea. It began to erode because the underlying media technology shifted. That shift started with a consumer-facing transition that students may not recognize as a digital logic milestone: the move from VHS to DVD.
 
-### X.3.1 Analog Video: Continuous Signals and Gradual Degradation
+### Analog Video: Continuous Signals and Gradual Degradation
 
 VHS is an analog format. In an analog system, information is represented by continuously varying physical quantities. In the case of VHS, video is stored as variations in a magnetic signal along a tape.
 
@@ -68,7 +67,7 @@ A worn VHS tape still “works,” but the image becomes noisier, less stable, a
 
 From the perspective of engineering, analog systems are intuitive: the signal is a physical object, and its imperfections show up as physical artifacts. But they are difficult to protect against degradation, because small changes in the physical medium become small changes in the reproduced signal.
 
-### X.3.2 Digital Video: Bits, Thresholds, and Consistency
+### Digital Video: Bits, Thresholds, and Consistency
 
 DVDs store video digitally. Instead of recording a continuously varying waveform, a DVD stores bits—discrete symbols such as 0 and 1. A DVD player does not “reproduce the signal” in the analog sense. Instead, it reads data and reconstructs the content algorithmically.
 
@@ -96,7 +95,7 @@ These are the same kinds of tools used in modern networks and computer systems. 
 
 ---
 
-## X.4 Why Digital Quality Alone Didn't Replace Blockbuster
+## Why Digital Quality Alone Didn't Replace Blockbuster
 
 If digital video is more consistent and robust, why didn’t the world instantly move to digital delivery?
 
@@ -117,7 +116,7 @@ This is a key adoption principle:
 
 ---
 
-## X.5 Netflix v1: Digital Convenience, Physical Delivery
+## Netflix v1: Digital Convenience, Physical Delivery
 
 Netflix’s early success did not come from streaming. It came from recognizing that while the internet could not deliver movies efficiently, it could deliver something else extremely valuable: **information**.
 
@@ -140,7 +139,7 @@ In hindsight, Netflix-by-mail looks like a transitional technology. But transiti
 
 ---
 
-## X.6 Streaming Video: A Digital System That Needed the World to Change
+## Streaming Video: A Digital System That Needed the World to Change
 
 Streaming video seems simple: press play, watch instantly. But from an engineering standpoint, streaming is one of the most demanding consumer technologies ever deployed. It requires a complete end-to-end digital pipeline.
 
@@ -154,13 +153,13 @@ Streaming dominance required at least five developments:
 
 Each of these deserves explanation.
 
-### X.6.1 Compression: Trading Computation for Bandwidth
+### Compression: Trading Computation for Bandwidth
 
 Raw video is enormous. If a movie were sent uncompressed, it would overwhelm consumer internet connections. Streaming became practical only because video codecs improved dramatically. These codecs exploit redundancy and perceptual limits: they remove information that the human eye is less likely to notice.
 
 Compression is a quintessential digital idea. Once content becomes bits, it can be transformed algorithmically. The system can trade one resource (computation) for another (bandwidth). This is exactly the kind of tradeoff engineers make in digital design: time vs space, gates vs memory, throughput vs complexity.
 
-### X.6.2 Broadband: The Consumer-Side Constraint
+### Broadband: The Consumer-Side Constraint
 
 Even with compression, streaming depends on consumer connectivity. Streaming could not dominate until broadband was common and reliable. A system that works only for a small fraction of users cannot become the standard. This is why streaming adoption lagged behind the invention of digital video.
 
@@ -168,7 +167,7 @@ In a digital logic course, it is useful to emphasize that "digital" does not mea
 
 ![Comparing media delivery speeds over time, from physical transport to fiber optic networks.](./images/bandwidth-evolution.png)
 
-### X.6.3 CDNs: Digital Caching at Global Scale
+### CDNs: Digital Caching at Global Scale
 
 One of the most important streaming technologies is the content delivery network (CDN). CDNs store copies of popular content near users, reducing load on central servers and reducing network congestion.
 
@@ -180,7 +179,7 @@ This parallel is useful for students because it shows continuity. Streaming did 
 
 ---
 
-## X.7 Digital Quality Improvements—and Digital Failure Modes
+## Digital Quality Improvements—and Digital Failure Modes
 
 Once streaming became viable, it unlocked enormous benefits:
 
@@ -206,7 +205,7 @@ A scratched DVD is visible and understandable. Buffering is invisible and frustr
 
 ---
 
-## X.8 Conclusion: Digital Wins When the Whole System Exists
+## Conclusion: Digital Wins When the Whole System Exists
 
 The transition from Blockbuster to Netflix illustrates a foundational truth of engineering:
 
@@ -221,9 +220,39 @@ That is why digital wins—eventually.
 ---
 
 ## Review Questions
-1. Why does digital video allow perfect copying while analog video does not?  
-2. What is the cliff effect, and why does streaming exhibit it?  
-3. Why did Netflix begin with mailed DVDs instead of streaming?  
-4. How do CDNs function like Blockbuster stores?  
-5. Name three infrastructure developments that were required for streaming dominance.
+
+**1. What digital logic concept allows a DVD player to recover the correct bit value even when the physical signal is slightly degraded?**
+
+- A) Noise margin
+- B) Bandwidth
+- C) Latency
+- D) Compression
+
+**2. The "cliff effect" in digital systems refers to:**
+
+- A) The delay between sending and receiving data
+- B) Gradual degradation of signal quality as noise increases
+- C) Sudden failure when noise exceeds the threshold that distinguishes 0 from 1
+- D) The physical wear on storage media over time
+
+**3. In digital system design, what engineering tradeoff does video compression represent?**
+
+- A) Latency vs. throughput
+- B) Computation vs. bandwidth
+- C) Storage vs. distribution
+- D) Reliability vs. cost
+
+**4. A CDN (Content Delivery Network) implements which fundamental digital system concept?**
+
+- A) Compression algorithms
+- B) Threshold detection
+- C) Error correction coding
+- D) Caching data near the point of demand
+
+**5. Why can digital data be copied perfectly while analog signals cannot?**
+
+- A) Analog systems have higher bandwidth requirements
+- B) Digital copying uses error correction that analog lacks
+- C) Digital systems use threshold detection, so any signal within the noise margin recovers the exact original bit
+- D) Digital storage media are more durable
 
