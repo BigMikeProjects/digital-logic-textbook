@@ -256,3 +256,47 @@ That is why digital wins—eventually.
 - C) Digital systems use threshold detection, so any signal within the noise margin recovers the exact original bit
 - D) Digital storage media are more durable
 
+---
+
+## Answer Explanations
+
+**1. Answer: A) Noise margin**
+
+Noise margin is the fundamental digital logic concept that allows systems to tolerate imperfect signals. It defines how much noise a signal can accumulate while still being correctly interpreted as a 0 or 1.
+
+- *Bandwidth* (B) refers to data transmission capacity, not signal recovery.
+- *Latency* (C) measures delay, not signal integrity.
+- *Compression* (D) reduces data size but doesn't help recover degraded signals.
+
+**2. Answer: C) Sudden failure when noise exceeds the threshold that distinguishes 0 from 1**
+
+The cliff effect describes how digital systems maintain perfect quality until noise crosses a critical threshold, then fail abruptly. This contrasts with analog's gradual degradation.
+
+- *Delay between sending and receiving* (A) describes latency, not failure behavior.
+- *Gradual degradation* (B) is the opposite—this describes analog behavior, not digital.
+- *Physical wear on media* (D) is a mechanical issue, not the threshold-based failure characteristic of digital systems.
+
+**3. Answer: B) Computation vs. bandwidth**
+
+Video compression exemplifies trading computational resources (encoding/decoding) to reduce bandwidth requirements. This is a classic digital systems tradeoff.
+
+- *Latency vs. throughput* (A) is a valid tradeoff but not what compression primarily addresses.
+- *Storage vs. distribution* (C) isn't a direct engineering tradeoff—compression affects both.
+- *Reliability vs. cost* (D) doesn't capture the computational nature of compression.
+
+**4. Answer: D) Caching data near the point of demand**
+
+CDNs store copies of content at edge locations close to users, implementing the same caching principle that made Blockbuster's local stores effective—keeping popular data near where it's needed.
+
+- *Compression algorithms* (A) reduce file sizes but aren't the core CDN concept.
+- *Threshold detection* (B) is about signal interpretation, not content distribution.
+- *Error correction coding* (C) ensures data integrity but isn't the architectural principle behind CDNs.
+
+**5. Answer: C) Digital systems use threshold detection, so any signal within the noise margin recovers the exact original bit**
+
+This is the core reason digital copying is perfect: as long as the signal stays within the noise margin, the receiver recovers exactly 0 or 1—not an approximation. Each copy regenerates the exact original bits.
+
+- *Analog bandwidth requirements* (A) is unrelated to copying fidelity.
+- *Error correction* (B) helps but isn't the fundamental reason—even without error correction, threshold detection enables perfect copying within noise margins.
+- *Media durability* (D) is about physical longevity, not the copying process itself.
+
