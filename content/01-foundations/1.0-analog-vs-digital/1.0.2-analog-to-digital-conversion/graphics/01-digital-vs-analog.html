@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital vs Analog: Audio Signals</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            padding: 40px 50px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        h1 {
+            text-align: center;
+            font-size: 44px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            background: linear-gradient(90deg, #ff9800 0%, #4fc3f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #90a4ae;
+            font-size: 20px;
+            margin-bottom: 24px;
+        }
+
+        /* Main content area */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        /* Three-panel layout */
+        .three-panels {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 0.8fr;
+            gap: 24px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .panel {
+            background: rgba(13, 27, 42, 0.9);
+            border: 3px solid #546e7a;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel.analog {
+            border-color: #ff9800;
+            background: linear-gradient(180deg, rgba(255,152,0,0.1) 0%, rgba(13,27,42,0.95) 100%);
+        }
+
+        .panel.conversion {
+            border-color: #9c27b0;
+            background: linear-gradient(180deg, rgba(156,39,176,0.1) 0%, rgba(13,27,42,0.95) 100%);
+        }
+
+        .panel.digital {
+            border-color: #4fc3f7;
+            background: linear-gradient(180deg, rgba(79,195,247,0.1) 0%, rgba(13,27,42,0.95) 100%);
+        }
+
+        .panel-header {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel.analog .panel-header { color: #ff9800; }
+        .panel.conversion .panel-header { color: #ce93d8; }
+        .panel.digital .panel-header { color: #4fc3f7; }
+
+        .panel-subtitle {
+            font-size: 14px;
+            color: #78909c;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .panel-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Canvas styling */
+        canvas {
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+        }
+
+        /* Info boxes */
+        .info-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            padding: 4px 0;
+        }
+
+        .info-label {
+            color: #78909c;
+        }
+
+        .info-value {
+            font-family: 'Consolas', monospace;
+            font-weight: 600;
+        }
+
+        .info-value.analog { color: #ffb74d; }
+        .info-value.digital { color: #4fc3f7; }
+
+        /* Binary output display */
+        .binary-output {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+            max-height: 520px;
+            overflow-y: auto;
+        }
+
+        .binary-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            font-family: 'Consolas', monospace;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+
+        .binary-row.active {
+            background: rgba(79, 195, 247, 0.2);
+            border: 1px solid #4fc3f7;
+        }
+
+        .sample-num {
+            color: #78909c;
+            width: 24px;
+            text-align: right;
+        }
+
+        .binary-bits {
+            color: #4fc3f7;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+
+        .decimal-value {
+            color: #ce93d8;
+            margin-left: auto;
+        }
+
+        /* Process arrows */
+        .process-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 16px 0;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .process-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .step-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .step-icon.sample { background: linear-gradient(135deg, #ff9800, #f57c00); }
+        .step-icon.quantize { background: linear-gradient(135deg, #9c27b0, #7b1fa2); }
+        .step-icon.encode { background: linear-gradient(135deg, #4fc3f7, #0288d1); }
+
+        .step-label {
+            font-size: 13px;
+            color: #b0bec5;
+            font-weight: 600;
+        }
+
+        .arrow {
+            font-size: 24px;
+            color: #546e7a;
+        }
+
+        /* Key insight box */
+        .key-insight {
+            background: linear-gradient(135deg, rgba(79,195,247,0.15), rgba(156,39,176,0.15));
+            border: 2px solid #546e7a;
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .insight-icon {
+            font-size: 32px;
+        }
+
+        .insight-text {
+            flex: 1;
+        }
+
+        .insight-text h3 {
+            font-size: 18px;
+            color: #4fc3f7;
+            margin-bottom: 4px;
+        }
+
+        .insight-text p {
+            font-size: 15px;
+            color: #b0bec5;
+            line-height: 1.4;
+        }
+
+        .highlight {
+            color: #ffb74d;
+            font-weight: 600;
+        }
+
+        .highlight-blue {
+            color: #4fc3f7;
+            font-weight: 600;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            padding: 8px 0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #90a4ae;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .legend-color.wave { background: #ff9800; }
+        .legend-color.sample { background: #4fc3f7; }
+        .legend-color.quantized { background: #ce93d8; }
+        .legend-color.grid { background: rgba(255,255,255,0.2); }
+    </style>
+</head>
+
+<body>
+    <div class="viewport-container" id="viewportContainer">
+        <div class="design-surface" id="designSurface">
+            
+            <h1>🔊 Digital vs Analog: How Sound Becomes Binary</h1>
+            <p class="subtitle">Understanding the two key steps: <span class="highlight">Sampling</span> (discretize time) and <span class="highlight-blue">Quantization</span> (discretize amplitude)</p>
+
+            <div class="content">
+                <!-- Process flow overview -->
+                <div class="process-flow">
+                    <div class="process-step">
+                        <div class="step-icon sample">🎤</div>
+                        <span class="step-label">Analog Signal</span>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="process-step">
+                        <div class="step-icon sample">📊</div>
+                        <span class="step-label">Sample</span>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="process-step">
+                        <div class="step-icon quantize">📐</div>
+                        <span class="step-label">Quantize</span>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="process-step">
+                        <div class="step-icon encode">💾</div>
+                        <span class="step-label">Binary Output</span>
+                    </div>
+                </div>
+
+                <!-- Three main panels -->
+                <div class="three-panels">
+                    <!-- Analog Panel -->
+                    <div class="panel analog">
+                        <div class="panel-header">
+                            <span>🌊</span> Analog Signal
+                        </div>
+                        <div class="panel-subtitle">Continuous in time & amplitude</div>
+                        <div class="panel-content">
+                            <canvas id="analogCanvas" width="460" height="360"></canvas>
+                            <div class="info-box">
+                                <div class="info-row">
+                                    <span class="info-label">Values:</span>
+                                    <span class="info-value analog">Infinite precision</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Time:</span>
+                                    <span class="info-value analog">Continuous</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Conversion Panel -->
+                    <div class="panel conversion">
+                        <div class="panel-header">
+                            <span>⚡</span> Sampling & Quantization
+                        </div>
+                        <div class="panel-subtitle">3-bit resolution = 8 levels (0–7)</div>
+                        <div class="panel-content">
+                            <canvas id="conversionCanvas" width="580" height="360"></canvas>
+                            <div class="info-box">
+                                <div class="info-row">
+                                    <span class="info-label">Sample Rate:</span>
+                                    <span class="info-value digital">16 samples/cycle</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Bit Depth:</span>
+                                    <span class="info-value digital">3 bits → 2³ = 8 levels</span>
+                                </div>
+                            </div>
+                            <div class="legend">
+                                <div class="legend-item">
+                                    <div class="legend-color wave"></div>
+                                    <span>Original wave</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color sample"></div>
+                                    <span>Sample points</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color quantized"></div>
+                                    <span>Quantized values</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Digital Panel -->
+                    <div class="panel digital">
+                        <div class="panel-header">
+                            <span>💻</span> Binary Output
+                        </div>
+                        <div class="panel-subtitle">Each sample → 3-bit binary number</div>
+                        <div class="panel-content">
+                            <div class="binary-output" id="binaryOutput">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key insight -->
+                <div class="key-insight">
+                    <span class="insight-icon">💡</span>
+                    <div class="insight-text">
+                        <h3>The Key Insight for Digital Logic</h3>
+                        <p>Every analog signal can be represented as a sequence of <span class="highlight-blue">binary numbers</span>. More bits = more levels = better approximation. This is why digital systems work with 1s and 0s: they're the building blocks of <span class="highlight">all</span> digital information.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // RESPONSIVE SCALING
+        // ============================================
+        const DESIGN_WIDTH = 1920;
+        const DESIGN_HEIGHT = 1080;
+        
+        function autoResize() {
+            const container = document.getElementById('viewportContainer');
+            const surface = document.getElementById('designSurface');
+            
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            let containerWidth, containerHeight;
+            
+            if (viewportWidth / viewportHeight > 16 / 9) {
+                containerHeight = viewportHeight;
+                containerWidth = containerHeight * (16 / 9);
+            } else {
+                containerWidth = viewportWidth;
+                containerHeight = containerWidth * (9 / 16);
+            }
+            
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+            
+            const scale = containerWidth / DESIGN_WIDTH;
+            surface.style.transform = `scale(${scale})`;
+        }
+
+        // ============================================
+        // ANIMATION PARAMETERS
+        // ============================================
+        const NUM_SAMPLES = 16;
+        const BIT_DEPTH = 3;
+        const NUM_LEVELS = Math.pow(2, BIT_DEPTH); // 8 levels
+        let animationPhase = 0;
+        let currentHighlight = 0;
+
+        // ============================================
+        // ANALOG CANVAS - Pure sine wave
+        // ============================================
+        function drawAnalogCanvas() {
+            const canvas = document.getElementById('analogCanvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            // Background grid (subtle)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.lineWidth = 1;
+            for (let y = 0; y <= h; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+            
+            // Center line
+            ctx.strokeStyle = 'rgba(255, 152, 0, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, h/2);
+            ctx.lineTo(w, h/2);
+            ctx.stroke();
+            
+            // Draw smooth sine wave
+            ctx.strokeStyle = '#ff9800';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            
+            const amplitude = h * 0.4;
+            const frequency = 1; // 1 cycle across the canvas
+            
+            for (let x = 0; x <= w; x++) {
+                const t = x / w;
+                const y = h/2 - amplitude * Math.sin(2 * Math.PI * frequency * t + animationPhase);
+                if (x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            
+            // Glow effect
+            ctx.strokeStyle = 'rgba(255, 152, 0, 0.3)';
+            ctx.lineWidth = 12;
+            ctx.beginPath();
+            for (let x = 0; x <= w; x++) {
+                const t = x / w;
+                const y = h/2 - amplitude * Math.sin(2 * Math.PI * frequency * t + animationPhase);
+                if (x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            
+            // Labels
+            ctx.fillStyle = '#ffb74d';
+            ctx.font = '14px Segoe UI';
+            ctx.textAlign = 'left';
+            ctx.fillText('∞ values', 10, 25);
+            ctx.fillText('per moment', 10, 42);
+        }
+
+        // ============================================
+        // CONVERSION CANVAS - Sampling & Quantization
+        // ============================================
+        function drawConversionCanvas() {
+            const canvas = document.getElementById('conversionCanvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            const padding = 40;
+            const graphW = w - padding * 2;
+            const graphH = h - padding * 2;
+            const graphTop = padding;
+            const graphLeft = padding;
+            
+            // Draw quantization level grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= NUM_LEVELS; i++) {
+                const y = graphTop + (graphH / NUM_LEVELS) * i;
+                ctx.beginPath();
+                ctx.moveTo(graphLeft, y);
+                ctx.lineTo(graphLeft + graphW, y);
+                ctx.stroke();
+            }
+            
+            // Level labels (0-7)
+            ctx.fillStyle = '#78909c';
+            ctx.font = '12px Consolas';
+            ctx.textAlign = 'right';
+            for (let i = 0; i < NUM_LEVELS; i++) {
+                const y = graphTop + graphH - (graphH / NUM_LEVELS) * (i + 0.5);
+                ctx.fillText(i.toString(), graphLeft - 8, y + 4);
+            }
+            
+            // Draw original sine wave (faded)
+            ctx.strokeStyle = 'rgba(255, 152, 0, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const amplitude = graphH * 0.45;
+            const frequency = 1;
+            
+            for (let x = 0; x <= graphW; x++) {
+                const t = x / graphW;
+                const sineValue = Math.sin(2 * Math.PI * frequency * t + animationPhase);
+                const y = graphTop + graphH/2 - amplitude * sineValue;
+                if (x === 0) {
+                    ctx.moveTo(graphLeft + x, y);
+                } else {
+                    ctx.lineTo(graphLeft + x, y);
+                }
+            }
+            ctx.stroke();
+            
+            // Calculate and draw sample points
+            const samples = [];
+            for (let i = 0; i < NUM_SAMPLES; i++) {
+                const t = i / NUM_SAMPLES;
+                const x = graphLeft + t * graphW;
+                const sineValue = Math.sin(2 * Math.PI * frequency * t + animationPhase);
+                
+                // Normalize to 0-1 range, then quantize to 0-7
+                const normalizedValue = (sineValue + 1) / 2; // 0 to 1
+                const quantizedLevel = Math.round(normalizedValue * (NUM_LEVELS - 1)); // 0 to 7
+                
+                // Y positions
+                const exactY = graphTop + graphH/2 - amplitude * sineValue;
+                const quantizedY = graphTop + graphH - (graphH / NUM_LEVELS) * (quantizedLevel + 0.5);
+                
+                samples.push({ x, exactY, quantizedY, level: quantizedLevel, index: i });
+            }
+            
+            // Draw vertical sample lines
+            ctx.strokeStyle = 'rgba(79, 195, 247, 0.3)';
+            ctx.lineWidth = 1;
+            samples.forEach((s, idx) => {
+                ctx.beginPath();
+                ctx.moveTo(s.x, graphTop);
+                ctx.lineTo(s.x, graphTop + graphH);
+                ctx.stroke();
+            });
+            
+            // Draw quantized stair-step
+            ctx.strokeStyle = '#ce93d8';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            samples.forEach((s, idx) => {
+                const nextX = idx < samples.length - 1 ? samples[idx + 1].x : graphLeft + graphW;
+                if (idx === 0) {
+                    ctx.moveTo(s.x, s.quantizedY);
+                }
+                ctx.lineTo(nextX, s.quantizedY);
+                if (idx < samples.length - 1) {
+                    ctx.lineTo(nextX, samples[idx + 1].quantizedY);
+                }
+            });
+            ctx.stroke();
+            
+            // Draw sample points
+            samples.forEach((s, idx) => {
+                const isActive = idx === currentHighlight;
+                
+                // Exact point on wave
+                ctx.fillStyle = isActive ? '#ffb74d' : 'rgba(255, 152, 0, 0.6)';
+                ctx.beginPath();
+                ctx.arc(s.x, s.exactY, isActive ? 6 : 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Quantized point
+                ctx.fillStyle = isActive ? '#4fc3f7' : 'rgba(79, 195, 247, 0.8)';
+                ctx.beginPath();
+                ctx.arc(s.x, s.quantizedY, isActive ? 8 : 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Connecting line
+                if (isActive) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(s.x, s.exactY);
+                    ctx.lineTo(s.x, s.quantizedY);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            });
+            
+            // Axis labels
+            ctx.fillStyle = '#90a4ae';
+            ctx.font = '13px Segoe UI';
+            ctx.textAlign = 'center';
+            ctx.fillText('Time →', graphLeft + graphW/2, h - 10);
+            
+            ctx.save();
+            ctx.translate(12, graphTop + graphH/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText('Amplitude (levels)', 0, 0);
+            ctx.restore();
+            
+            return samples;
+        }
+
+        // ============================================
+        // BINARY OUTPUT PANEL
+        // ============================================
+        function updateBinaryOutput(samples) {
+            const container = document.getElementById('binaryOutput');
+            
+            // Only rebuild if needed
+            if (container.children.length !== NUM_SAMPLES) {
+                container.innerHTML = '';
+                for (let i = 0; i < NUM_SAMPLES; i++) {
+                    const row = document.createElement('div');
+                    row.className = 'binary-row';
+                    row.innerHTML = `
+                        <span class="sample-num">${i}</span>
+                        <span class="binary-bits">---</span>
+                        <span class="decimal-value">= ?</span>
+                    `;
+                    container.appendChild(row);
+                }
+            }
+            
+            // Update values
+            const rows = container.querySelectorAll('.binary-row');
+            samples.forEach((s, idx) => {
+                const binary = s.level.toString(2).padStart(BIT_DEPTH, '0');
+                const row = rows[idx];
+                row.querySelector('.binary-bits').textContent = binary;
+                row.querySelector('.decimal-value').textContent = `= ${s.level}`;
+                row.className = 'binary-row' + (idx === currentHighlight ? ' active' : '');
+            });
+        }
+
+        // ============================================
+        // ANIMATION LOOP
+        // ============================================
+        function animate() {
+            // Slow phase progression
+            animationPhase += 0.008;
+            
+            // Cycle through highlights
+            currentHighlight = Math.floor((Date.now() / 400) % NUM_SAMPLES);
+            
+            drawAnalogCanvas();
+            const samples = drawConversionCanvas();
+            updateBinaryOutput(samples);
+            
+            requestAnimationFrame(animate);
+        }
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        autoResize();
+        
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(autoResize, 50);
+        });
+        
+        window.addEventListener('orientationchange', () => {
+            setTimeout(autoResize, 100);
+        });
+        
+        animate();
+    </script>
+</body>
+
+</html>
