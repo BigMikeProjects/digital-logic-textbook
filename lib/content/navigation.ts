@@ -111,8 +111,8 @@ export function buildChapterStructure(topics: Topic[]): ChapterGroup[] {
 
 function formatName(name: string): string {
   if (!name) return '';
-  // Remove numeric prefix (e.g., "02-combinational-logic" -> "combinational-logic")
-  const withoutPrefix = name.replace(/^\d+[-.]?/, '');
+  // Remove numeric prefix (e.g., "1.0-analog-vs-digital" -> "analog-vs-digital")
+  const withoutPrefix = name.replace(/^[\d.]+[-]?/, '');
   // Replace hyphens with spaces and capitalize
   return withoutPrefix
     .replace(/-/g, ' ')
