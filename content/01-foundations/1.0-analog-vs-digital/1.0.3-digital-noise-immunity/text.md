@@ -65,7 +65,9 @@ This noise immunity is why digital has replaced analog in so many applications:
 - **Signal processing**: Digital filters and effects can be applied repeatedly without accumulating noise
 - **Copying and distribution**: Digital content can be duplicated and shared without degradation
 
-The practical advantage is enormous. A system that can tolerate noise and regenerate perfect signals is far more reliable than one where every imperfection accumulates.
+![Digital advantages include reliability, noise immunity, easy storage and processing, programmability, and error correction. Trade-offs include quantization errors, power consumption, and bandwidth requirements.](./images/digital-advantages-disadvantages.jpg)
+
+The practical advantage is enormous. A system that can tolerate noise and regenerate perfect signals is far more reliable than one where every imperfection accumulates. Of course, digital systems have their own trade-offs—quantization errors, power consumption, and bandwidth requirements—but for most applications, the benefits of noise immunity far outweigh these costs.
 
 ## Key Takeaways
 
