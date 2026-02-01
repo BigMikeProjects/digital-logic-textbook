@@ -5,3 +5,5 @@ order: 2
 graphics:
   01-digital-vs-analog.html:
     caption: "Interactive visualization of sampling and quantization"
+  02-atod-video.youtube:
+    caption: "Video: Analog to Digital Conversion"
