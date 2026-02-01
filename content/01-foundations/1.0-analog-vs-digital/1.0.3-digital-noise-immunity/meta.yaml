@@ -1,0 +1,9 @@
+title: "Digital Noise Immunity"
+description: "Why digital systems tolerate noise better than analog through threshold-based interpretation and signal regeneration"
+order: 3
+
+graphics:
+  01-noise-immunity-video.youtube:
+    caption: "Video: How digital systems achieve noise immunity through signal regeneration"
+  02-noise-immunity-interactive.html:
+    caption: "Interactive comparison of analog vs digital signal degradation through multiple stages"
