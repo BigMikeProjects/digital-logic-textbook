@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Crimson_Pro, JetBrains_Mono } from 'next/font/google';
 import 'katex/dist/katex.min.css';
-import 'highlight.js/styles/atom-one-dark.css';
+import 'highlight.js/styles/github.css';
 import './globals.css';
 
-const inter = Inter({
+const crimsonPro = Crimson_Pro({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-crimson-pro',
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -27,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="min-h-screen bg-gray-100 font-sans">
+    <html lang="en" className={`${crimsonPro.variable} ${jetbrainsMono.variable}`}>
+      <body className="min-h-screen bg-white font-serif text-gray-900">
         {children}
       </body>
     </html>

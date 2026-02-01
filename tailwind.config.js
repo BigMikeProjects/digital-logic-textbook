@@ -9,7 +9,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', ...defaultTheme.fontFamily.sans],
+        serif: ['var(--font-crimson-pro)', ...defaultTheme.fontFamily.serif],
         mono: ['var(--font-jetbrains-mono)', ...defaultTheme.fontFamily.mono],
       },
       typography: {
@@ -21,7 +21,8 @@ module.exports = {
             // Headings
             'h1, h2, h3, h4': {
               color: 'rgb(17 24 39)', // gray-900
-              fontWeight: '600',
+              fontFamily: 'var(--font-crimson-pro)',
+              fontWeight: '700',
             },
             h1: {
               fontSize: '1.875rem', // 3xl
@@ -45,10 +46,12 @@ module.exports = {
             },
             // Links
             a: {
-              color: 'rgb(37 99 235)', // blue-600
-              textDecoration: 'none',
+              color: 'rgb(30 64 175)', // blue-800
+              textDecoration: 'underline',
+              textDecorationColor: 'rgb(191 219 254)', // blue-200
               '&:hover': {
-                textDecoration: 'underline',
+                color: 'rgb(37 99 235)', // blue-600
+                textDecorationColor: 'rgb(37 99 235)', // blue-600
               },
             },
             // Strong text
@@ -58,12 +61,13 @@ module.exports = {
             },
             // Inline code
             code: {
-              color: 'rgb(219 39 119)', // pink-600
+              color: 'rgb(17 24 39)', // gray-900
               backgroundColor: 'rgb(243 244 246)', // gray-100
               padding: '0.125rem 0.375rem',
               borderRadius: '0.25rem',
               fontSize: '0.875em',
               fontWeight: '400',
+              fontFamily: 'var(--font-jetbrains-mono)',
             },
             'code::before': {
               content: 'none',
