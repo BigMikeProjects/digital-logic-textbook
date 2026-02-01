@@ -3,7 +3,7 @@ description: "How sampling and quantization transform continuous real-world sign
 order: 2
 
 graphics:
-  01-digital-vs-analog.html:
-    caption: "Interactive visualization of sampling and quantization"
-  02-atod-video.youtube:
+  01-atod-video.youtube:
     caption: "Video: Analog to Digital Conversion"
+  02-digital-vs-analog.html:
+    caption: "Interactive visualization of sampling and quantization"
