@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Logic Gates</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 30px 60px;
+        }
+
+        h1 {
+            color: #e8e8e8;
+            font-size: 36px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            padding: 14px 32px;
+            font-size: 20px;
+            font-weight: 500;
+            background: #2d3a5a;
+            color: #a0a0b0;
+            border: 2px solid #3d4a6a;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab:hover {
+            background: #3d4a6a;
+            color: #e0e0e0;
+        }
+
+        .tab.active {
+            background: #4a6fa5;
+            color: #ffffff;
+            border-color: #5a8fc5;
+        }
+
+        /* Content area */
+        .content {
+            flex: 1;
+            display: flex;
+            gap: 80px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gate-display {
+            display: none;
+            flex-direction: row;
+            gap: 100px;
+            align-items: center;
+        }
+
+        .gate-display.active {
+            display: flex;
+        }
+
+        /* Gate symbol area */
+        .gate-symbol {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .gate-name {
+            font-size: 32px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .gate-expression {
+            font-size: 44px;
+            color: #a0c4e8;
+            font-family: 'Courier New', monospace;
+        }
+
+        .gate-svg {
+            width: 400px;
+            height: 300px;
+        }
+
+        /* Signal colors */
+        .signal-low {
+            fill: #3a4a6a;
+            stroke: #5a6a8a;
+        }
+
+        .signal-high {
+            fill: #4ade80;
+            stroke: #22c55e;
+        }
+
+        .wire {
+            stroke: #5a6a8a;
+            stroke-width: 4;
+            fill: none;
+        }
+
+        .wire.high {
+            stroke: #4ade80;
+        }
+
+        .gate-body {
+            fill: #2d3a5a;
+            stroke: #6a8ac0;
+            stroke-width: 3;
+        }
+
+        .input-label, .output-label {
+            font-size: 24px;
+            fill: #c0c0d0;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 500;
+        }
+
+        /* Truth table */
+        .truth-table-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .truth-table-title {
+            font-size: 24px;
+            color: #e0e0e0;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .truth-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #2d3a5a;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .truth-table th {
+            background: #3d4a6a;
+            color: #e0e0e0;
+            padding: 16px 40px;
+            font-size: 22px;
+            font-weight: 600;
+            border-bottom: 2px solid #4a5a7a;
+        }
+
+        .truth-table td {
+            padding: 18px 40px;
+            font-size: 24px;
+            text-align: center;
+            color: #c0c0d0;
+            border-bottom: 1px solid #3a4a6a;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .truth-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .truth-table tr.selected td {
+            background: #4a6fa5;
+            color: #ffffff;
+        }
+
+        .truth-table tr:not(.selected):hover td {
+            background: #3a4a6a;
+        }
+
+        .truth-table .value-0 {
+            color: #8a9ab0;
+        }
+
+        .truth-table .value-1 {
+            color: #4ade80;
+            font-weight: 600;
+        }
+
+        .click-hint {
+            font-size: 16px;
+            color: #7a8a9a;
+            text-align: center;
+            font-style: italic;
+        }
+
+        /* NOT gate special styling for single input */
+        .not-table th:nth-child(2),
+        .not-table td:nth-child(2) {
+            border-left: 3px solid #4a5a7a;
+        }
+    </style>
+</head>
+<body>
+    <div class="viewport-container" id="viewportContainer">
+        <div class="design-surface" id="designSurface">
+            <h1>Basic Logic Gates</h1>
+            
+            <div class="tabs">
+                <button class="tab active" data-gate="not">NOT</button>
+                <button class="tab" data-gate="and">AND</button>
+                <button class="tab" data-gate="or">OR</button>
+                <button class="tab" data-gate="nand">NAND</button>
+                <button class="tab" data-gate="nor">NOR</button>
+                <button class="tab" data-gate="xor">XOR</button>
+                <button class="tab" data-gate="xnor">XNOR</button>
+            </div>
+
+            <div class="content">
+                <!-- AND Gate -->
+                <div class="gate-display" id="and-display">
+                    <div class="gate-symbol">
+                        <div class="gate-name">AND Gate</div>
+                        <svg class="gate-svg" viewBox="0 0 400 300">
+                            <!-- Input A wire -->
+                            <line class="wire" id="and-wireA" x1="40" y1="100" x2="120" y2="100"/>
+                            <text class="input-label" x="20" y="107">A</text>
+                            <circle id="and-inputA" cx="50" cy="100" r="12" class="signal-low"/>
+                            
+                            <!-- Input B wire -->
+                            <line class="wire" id="and-wireB" x1="40" y1="200" x2="120" y2="200"/>
+                            <text class="input-label" x="20" y="207">B</text>
+                            <circle id="and-inputB" cx="50" cy="200" r="12" class="signal-low"/>
+                            
+                            <!-- AND gate body: flat left, curved right -->
+                            <path class="gate-body" d="M120 70 L120 230 L200 230 Q280 230 280 150 Q280 70 200 70 Z"/>
+                            
+                            <!-- Output wire -->
+                            <line class="wire" id="and-wireOut" x1="280" y1="150" x2="360" y2="150"/>
+                            <text class="output-label" x="370" y="157">Y</text>
+                            <circle id="and-output" cx="350" cy="150" r="12" class="signal-low"/>
+                        </svg>
+                        <div class="gate-expression">Y = A · B</div>
+                    </div>
+                    <div class="truth-table-container">
+                        <div class="truth-table-title">Truth Table</div>
+                        <table class="truth-table" id="and-table">
+                            <tr><th>A</th><th>B</th><th>Y</th></tr>
+                            <tr class="selected" data-a="0" data-b="0"><td class="value-0">0</td><td class="value-0">0</td><td class="value-0">0</td></tr>
+                            <tr data-a="0" data-b="1"><td class="value-0">0</td><td class="value-1">1</td><td class="value-0">0</td></tr>
+                            <tr data-a="1" data-b="0"><td class="value-1">1</td><td class="value-0">0</td><td class="value-0">0</td></tr>
+                            <tr data-a="1" data-b="1"><td class="value-1">1</td><td class="value-1">1</td><td class="value-1">1</td></tr>
+                        </table>
+                        <div class="click-hint">Click a row to animate</div>
+                    </div>
+                </div>
+
+                <!-- OR Gate -->
+                <div class="gate-display" id="or-display">
+                    <div class="gate-symbol">
+                        <div class="gate-name">OR Gate</div>
+                        <svg class="gate-svg" viewBox="0 0 400 300">
+                            <line class="wire" id="or-wireA" x1="40" y1="100" x2="135" y2="100"/>
+                            <text class="input-label" x="20" y="107">A</text>
+                            <circle id="or-inputA" cx="50" cy="100" r="12" class="signal-low"/>
+                            
+                            <line class="wire" id="or-wireB" x1="40" y1="200" x2="135" y2="200"/>
+                            <text class="input-label" x="20" y="207">B</text>
+                            <circle id="or-inputB" cx="50" cy="200" r="12" class="signal-low"/>
+                            
+                            <!-- OR gate body: curved left (concave), pointed right -->
+                            <path class="gate-body" d="M100 70 Q140 150 100 230 Q200 230 280 150 Q200 70 100 70 Z"/>
+                            
+                            <line class="wire" id="or-wireOut" x1="280" y1="150" x2="360" y2="150"/>
+                            <text class="output-label" x="370" y="157">Y</text>
+                            <circle id="or-output" cx="350" cy="150" r="12" class="signal-low"/>
+                        </svg>
+                        <div class="gate-expression">Y = A + B</div>
+                    </div>
+                    <div class="truth-table-container">
+                        <div class="truth-table-title">Truth Table</div>
+                        <table class="truth-table" id="or-table">
+                            <tr><th>A</th><th>B</th><th>Y</th></tr>
+                            <tr class="selected" data-a="0" data-b="0"><td class="value-0">0</td><td class="value-0">0</td><td class="value-0">0</td></tr>
+                            <tr data-a="0" data-b="1"><td class="value-0">0</td><td class="value-1">1</td><td class="value-1">1</td></tr>
+                            <tr data-a="1" data-b="0"><td class="value-1">1</td><td class="value-0">0</td><td class="value-1">1</td></tr>
+                            <tr data-a="1" data-b="1"><td class="value-1">1</td><td class="value-1">1</td><td class="value-1">1</td></tr>
+                        </table>
+                        <div class="click-hint">Click a row to animate</div>
+                    </div>
+                </div>
+
+                <!-- NOT Gate -->
+                <div class="gate-display active" id="not-display">
+                    <div class="gate-symbol">
+                        <div class="gate-name">NOT Gate (Inverter)</div>
+                        <svg class="gate-svg" viewBox="0 0 400 300">
+                            <line class="wire" id="not-wireA" x1="40" y1="150" x2="120" y2="150"/>
+                            <text class="input-label" x="20" y="157">A</text>
+                            <circle id="not-inputA" cx="50" cy="150" r="12" class="signal-low"/>
+                            
+                            <!-- NOT gate body: triangle with bubble -->
+                            <polygon class="gate-body" points="120,70 120,230 260,150"/>
+                            <circle class="gate-body" cx="275" cy="150" r="15"/>
+                            
+                            <line class="wire" id="not-wireOut" x1="290" y1="150" x2="360" y2="150"/>
+                            <text class="output-label" x="370" y="157">Y</text>
+                            <circle id="not-output" cx="350" cy="150" r="12" class="signal-high"/>
+                        </svg>
+                        <div class="gate-expression">Y = Ā</div>
+                    </div>
+                    <div class="truth-table-container">
+                        <div class="truth-table-title">Truth Table</div>
+                        <table class="truth-table not-table" id="not-table">
+                            <tr><th>A</th><th>Y</th></tr>
+                            <tr class="selected" data-a="0"><td class="value-0">0</td><td class="value-1">1</td></tr>
+                            <tr data-a="1"><td class="value-1">1</td><td class="value-0">0</td></tr>
+                        </table>
+                        <div class="click-hint">Click a row to animate</div>
+                    </div>
+                </div>
+
+                <!-- NAND Gate -->
+                <div class="gate-display" id="nand-display">
+                    <div class="gate-symbol">
+                        <div class="gate-name">NAND Gate</div>
+                        <svg class="gate-svg" viewBox="0 0 400 300">
+                            <line class="wire" id="nand-wireA" x1="40" y1="100" x2="120" y2="100"/>
+                            <text class="input-label" x="20" y="107">A</text>
+                            <circle id="nand-inputA" cx="50" cy="100" r="12" class="signal-low"/>
+                            
+                            <line class="wire" id="nand-wireB" x1="40" y1="200" x2="120" y2="200"/>
+                            <text class="input-label" x="20" y="207">B</text>
+                            <circle id="nand-inputB" cx="50" cy="200" r="12" class="signal-low"/>
+                            
+                            <!-- NAND: AND shape + bubble -->
+                            <path class="gate-body" d="M120 70 L120 230 L190 230 Q260 230 260 150 Q260 70 190 70 Z"/>
+                            <circle class="gate-body" cx="277" cy="150" r="15"/>
+                            
+                            <line class="wire" id="nand-wireOut" x1="292" y1="150" x2="360" y2="150"/>
+                            <text class="output-label" x="370" y="157">Y</text>
+                            <circle id="nand-output" cx="350" cy="150" r="12" class="signal-high"/>
+                        </svg>
+                        <div class="gate-expression">Y = <span style="text-decoration: overline;">A · B</span></div>
+                    </div>
+                    <div class="truth-table-container">
+                        <div class="truth-table-title">Truth Table</div>
+                        <table class="truth-table" id="nand-table">
+                            <tr><th>A</th><th>B</th><th>Y</th></tr>
+                            <tr class="selected" data-a="0" data-b="0"><td class="value-0">0</td><td class="value-0">0</td><td class="value-1">1</td></tr>
+                            <tr data-a="0" data-b="1"><td class="value-0">0</td><td class="value-1">1</td><td class="value-1">1</td></tr>
+                            <tr data-a="1" data-b="0"><td class="value-1">1</td><td class="value-0">0</td><td class="value-1">1</td></tr>
+                            <tr data-a="1" data-b="1"><td class="value-1">1</td><td class="value-1">1</td><td class="value-0">0</td></tr>
+                        </table>
+                        <div class="click-hint">Click a row to animate</div>
+                    </div>
+                </div>
+
+                <!-- NOR Gate -->
+                <div class="gate-display" id="nor-display">
+                    <div class="gate-symbol">
+                        <div class="gate-name">NOR Gate</div>
+                        <svg class="gate-svg" viewBox="0 0 400 300">
+                            <line class="wire" id="nor-wireA" x1="40" y1="100" x2="135" y2="100"/>
+                            <text class="input-label" x="20" y="107">A</text>
+                            <circle id="nor-inputA" cx="50" cy="100" r="12" class="signal-low"/>
+                            
+                            <line class="wire" id="nor-wireB" x1="40" y1="200" x2="135" y2="200"/>
+                            <text class="input-label" x="20" y="207">B</text>
+                            <circle id="nor-inputB" cx="50" cy="200" r="12" class="signal-low"/>
+                            
+                            <!-- NOR: OR shape + bubble -->
+                            <path class="gate-body" d="M100 70 Q140 150 100 230 Q190 230 260 150 Q190 70 100 70 Z"/>
+                            <circle class="gate-body" cx="277" cy="150" r="15"/>
+                            
+                            <line class="wire" id="nor-wireOut" x1="292" y1="150" x2="360" y2="150"/>
+                            <text class="output-label" x="370" y="157">Y</text>
+                            <circle id="nor-output" cx="350" cy="150" r="12" class="signal-high"/>
+                        </svg>
+                        <div class="gate-expression">Y = <span style="text-decoration: overline;">A + B</span></div>
+                    </div>
+                    <div class="truth-table-container">
+                        <div class="truth-table-title">Truth Table</div>
+                        <table class="truth-table" id="nor-table">
+                            <tr><th>A</th><th>B</th><th>Y</th></tr>
+                            <tr class="selected" data-a="0" data-b="0"><td class="value-0">0</td><td class="value-0">0</td><td class="value-1">1</td></tr>
+                            <tr data-a="0" data-b="1"><td class="value-0">0</td><td class="value-1">1</td><td class="value-0">0</td></tr>
+                            <tr data-a="1" data-b="0"><td class="value-1">1</td><td class="value-0">0</td><td class="value-0">0</td></tr>
+                            <tr data-a="1" data-b="1"><td class="value-1">1</td><td class="value-1">1</td><td class="value-0">0</td></tr>
+                        </table>
+                        <div class="click-hint">Click a row to animate</div>
+                    </div>
+                </div>
+
+                <!-- XOR Gate -->
+                <div class="gate-display" id="xor-display">
+                    <div class="gate-symbol">
+                        <div class="gate-name">XOR Gate</div>
+                        <svg class="gate-svg" viewBox="0 0 400 300">
+                            <line class="wire" id="xor-wireA" x1="40" y1="100" x2="145" y2="100"/>
+                            <text class="input-label" x="20" y="107">A</text>
+                            <circle id="xor-inputA" cx="50" cy="100" r="12" class="signal-low"/>
+                            
+                            <line class="wire" id="xor-wireB" x1="40" y1="200" x2="145" y2="200"/>
+                            <text class="input-label" x="20" y="207">B</text>
+                            <circle id="xor-inputB" cx="50" cy="200" r="12" class="signal-low"/>
+                            
+                            <!-- XOR: OR shape + extra curve on left -->
+                            <path class="gate-body" fill="none" d="M90 70 Q130 150 90 230"/>
+                            <path class="gate-body" d="M110 70 Q150 150 110 230 Q200 230 280 150 Q200 70 110 70 Z"/>
+                            
+                            <line class="wire" id="xor-wireOut" x1="280" y1="150" x2="360" y2="150"/>
+                            <text class="output-label" x="370" y="157">Y</text>
+                            <circle id="xor-output" cx="350" cy="150" r="12" class="signal-low"/>
+                        </svg>
+                        <div class="gate-expression">Y = A ⊕ B</div>
+                    </div>
+                    <div class="truth-table-container">
+                        <div class="truth-table-title">Truth Table</div>
+                        <table class="truth-table" id="xor-table">
+                            <tr><th>A</th><th>B</th><th>Y</th></tr>
+                            <tr class="selected" data-a="0" data-b="0"><td class="value-0">0</td><td class="value-0">0</td><td class="value-0">0</td></tr>
+                            <tr data-a="0" data-b="1"><td class="value-0">0</td><td class="value-1">1</td><td class="value-1">1</td></tr>
+                            <tr data-a="1" data-b="0"><td class="value-1">1</td><td class="value-0">0</td><td class="value-1">1</td></tr>
+                            <tr data-a="1" data-b="1"><td class="value-1">1</td><td class="value-1">1</td><td class="value-0">0</td></tr>
+                        </table>
+                        <div class="click-hint">Click a row to animate</div>
+                    </div>
+                </div>
+
+                <!-- XNOR Gate (Equivalence) -->
+                <div class="gate-display" id="xnor-display">
+                    <div class="gate-symbol">
+                        <div class="gate-name">XNOR Gate (Equivalence)</div>
+                        <svg class="gate-svg" viewBox="0 0 400 300">
+                            <line class="wire" id="xnor-wireA" x1="40" y1="100" x2="145" y2="100"/>
+                            <text class="input-label" x="20" y="107">A</text>
+                            <circle id="xnor-inputA" cx="50" cy="100" r="12" class="signal-low"/>
+                            
+                            <line class="wire" id="xnor-wireB" x1="40" y1="200" x2="145" y2="200"/>
+                            <text class="input-label" x="20" y="207">B</text>
+                            <circle id="xnor-inputB" cx="50" cy="200" r="12" class="signal-low"/>
+                            
+                            <!-- XNOR: XOR shape + bubble -->
+                            <path class="gate-body" fill="none" d="M90 70 Q130 150 90 230"/>
+                            <path class="gate-body" d="M110 70 Q150 150 110 230 Q190 230 255 150 Q190 70 110 70 Z"/>
+                            <circle class="gate-body" cx="272" cy="150" r="15"/>
+                            
+                            <line class="wire" id="xnor-wireOut" x1="287" y1="150" x2="360" y2="150"/>
+                            <text class="output-label" x="370" y="157">Y</text>
+                            <circle id="xnor-output" cx="350" cy="150" r="12" class="signal-high"/>
+                        </svg>
+                        <div class="gate-expression">Y = A ⊙ B</div>
+                    </div>
+                    <div class="truth-table-container">
+                        <div class="truth-table-title">Truth Table</div>
+                        <table class="truth-table" id="xnor-table">
+                            <tr><th>A</th><th>B</th><th>Y</th></tr>
+                            <tr class="selected" data-a="0" data-b="0"><td class="value-0">0</td><td class="value-0">0</td><td class="value-1">1</td></tr>
+                            <tr data-a="0" data-b="1"><td class="value-0">0</td><td class="value-1">1</td><td class="value-0">0</td></tr>
+                            <tr data-a="1" data-b="0"><td class="value-1">1</td><td class="value-0">0</td><td class="value-0">0</td></tr>
+                            <tr data-a="1" data-b="1"><td class="value-1">1</td><td class="value-1">1</td><td class="value-1">1</td></tr>
+                        </table>
+                        <div class="click-hint">Click a row to animate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Responsive scaling
+        const DESIGN_WIDTH = 1920;
+        const DESIGN_HEIGHT = 1080;
+
+        function autoResize() {
+            const container = document.getElementById('viewportContainer');
+            const surface = document.getElementById('designSurface');
+            
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            let containerWidth, containerHeight;
+            if (viewportWidth / viewportHeight > 16 / 9) {
+                containerHeight = viewportHeight;
+                containerWidth = containerHeight * (16 / 9);
+            } else {
+                containerWidth = viewportWidth;
+                containerHeight = containerWidth * (9 / 16);
+            }
+            
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+            
+            const scale = containerWidth / DESIGN_WIDTH;
+            surface.style.transform = `scale(${scale})`;
+        }
+
+        autoResize();
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(autoResize, 50);
+        });
+
+        // Gate logic functions
+        const gateFunctions = {
+            and: (a, b) => a && b,
+            or: (a, b) => a || b,
+            not: (a) => !a,
+            nand: (a, b) => !(a && b),
+            nor: (a, b) => !(a || b),
+            xor: (a, b) => a !== b,
+            xnor: (a, b) => a === b
+        };
+
+        // Tab switching
+        const tabs = document.querySelectorAll('.tab');
+        const displays = document.querySelectorAll('.gate-display');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const gate = tab.dataset.gate;
+                
+                // Update tabs
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Update displays
+                displays.forEach(d => d.classList.remove('active'));
+                document.getElementById(`${gate}-display`).classList.add('active');
+            });
+        });
+
+        // Update gate visualization
+        function updateGate(gate, a, b) {
+            const isNot = gate === 'not';
+            const output = isNot ? gateFunctions[gate](a) : gateFunctions[gate](a, b);
+            
+            // Update input A
+            const inputA = document.getElementById(`${gate}-inputA`);
+            const wireA = document.getElementById(`${gate}-wireA`);
+            inputA.classList.toggle('signal-high', a);
+            inputA.classList.toggle('signal-low', !a);
+            wireA.classList.toggle('high', a);
+            
+            // Update input B (if not NOT gate)
+            if (!isNot) {
+                const inputB = document.getElementById(`${gate}-inputB`);
+                const wireB = document.getElementById(`${gate}-wireB`);
+                inputB.classList.toggle('signal-high', b);
+                inputB.classList.toggle('signal-low', !b);
+                wireB.classList.toggle('high', b);
+            }
+            
+            // Update output
+            const outputEl = document.getElementById(`${gate}-output`);
+            const wireOut = document.getElementById(`${gate}-wireOut`);
+            outputEl.classList.toggle('signal-high', output);
+            outputEl.classList.toggle('signal-low', !output);
+            wireOut.classList.toggle('high', output);
+        }
+
+        // Truth table row selection
+        document.querySelectorAll('.truth-table').forEach(table => {
+            const gate = table.id.replace('-table', '');
+            const rows = table.querySelectorAll('tr[data-a]');
+            
+            rows.forEach(row => {
+                row.addEventListener('click', () => {
+                    // Update selection
+                    rows.forEach(r => r.classList.remove('selected'));
+                    row.classList.add('selected');
+                    
+                    // Get values and update gate
+                    const a = parseInt(row.dataset.a) === 1;
+                    const b = row.dataset.b !== undefined ? parseInt(row.dataset.b) === 1 : false;
+                    updateGate(gate, a, b);
+                });
+            });
+        });
+
+        // Initialize all gates to first row state
+        ['and', 'or', 'not', 'nand', 'nor', 'xor', 'xnor'].forEach(gate => {
+            const isNot = gate === 'not';
+            const output = gateFunctions[gate](false, false);
+            updateGate(gate, false, false);
+        });
+    </script>
+</body>
+</html>
