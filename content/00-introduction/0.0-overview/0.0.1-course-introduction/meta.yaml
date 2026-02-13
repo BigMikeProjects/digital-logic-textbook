@@ -1,0 +1,13 @@
+title: "Introduction to Digital Logic"
+description: "An overview of digital logic as a discipline built on layers of abstraction, from transistors and voltage levels to processors and computing platforms."
+order: 1
+
+graphics:
+  01-silicon-wafer-cleanroom.png:
+    caption: "A processed silicon wafer held in a cleanroom. Every modern digital system begins here — billions of transistors are fabricated on wafers like this one, each acting as a controlled switch that forms the physical foundation of digital logic."
+  02-oscilloscope-digital-logic-signals.png:
+    caption: "A digital signal captured on an oscilloscope. The waveform switches between two defined voltage levels labeled V_IH (logic 1) and V_IL (logic 0). This is the point where continuous electrical behavior becomes discrete binary information — the abstraction that makes Boolean analysis possible."
+  03-traffic-light-state-machine.png:
+    caption: "A traffic light controller represented as a finite state machine. The system transitions between red, yellow, and green states in response to sensor triggers and expired timers. This is a familiar real-world example of sequential logic, where behavior depends on both current inputs and stored state."
+  04-datacenter-performance-growth.png:
+    caption: "A modern data center with an overlay showing the growth of computing performance over time. These racks of processors are built from the same transistor-level abstractions covered in this text — from individual switches on silicon, through gates and subsystems, to platforms that deliver teraflops of computation."
