@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GraphicItem } from '@/lib/types/content';
 import GraphicViewer from './GraphicViewer';
+
+const AUTO_SCROLL_INTERVAL = 6000; // ms between auto-advances
 
 interface GraphicsPanelProps {
   graphics: GraphicItem[];
@@ -10,14 +12,46 @@ interface GraphicsPanelProps {
 
 export default function GraphicsPanel({ graphics }: GraphicsPanelProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [autoScrollActive, setAutoScrollActive] = useState(graphics.length > 1);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const goToPrev = useCallback(() => {
-    setCurrentIndex(prev => (prev > 0 ? prev - 1 : prev));
+  const stopAutoScroll = useCallback(() => {
+    setAutoScrollActive(false);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
   }, []);
 
+  const goToPrev = useCallback(() => {
+    stopAutoScroll();
+    setCurrentIndex(prev => (prev > 0 ? prev - 1 : prev));
+  }, [stopAutoScroll]);
+
   const goToNext = useCallback(() => {
+    stopAutoScroll();
     setCurrentIndex(prev => (prev < graphics.length - 1 ? prev + 1 : prev));
-  }, [graphics.length]);
+  }, [stopAutoScroll, graphics.length]);
+
+  // Auto-scroll through graphics
+  useEffect(() => {
+    if (!autoScrollActive || graphics.length <= 1) return;
+
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex(prev => {
+        if (prev >= graphics.length - 1) {
+          return 0; // Loop back to start
+        }
+        return prev + 1;
+      });
+    }, AUTO_SCROLL_INTERVAL);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [autoScrollActive, graphics.length]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -91,14 +125,31 @@ export default function GraphicsPanel({ graphics }: GraphicsPanelProps) {
         </button>
       </div>
 
-      {/* Caption and counter */}
+      {/* Caption and navigation dots */}
       <div className="p-4 text-center">
         {currentGraphic.caption && (
           <p className="text-gray-300 text-sm mb-2">{currentGraphic.caption}</p>
         )}
-        <p className="text-gray-500 text-xs">
-          {currentIndex + 1} / {graphics.length}
-        </p>
+        {graphics.length > 1 ? (
+          <div className="flex items-center justify-center gap-1.5">
+            {graphics.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => { stopAutoScroll(); setCurrentIndex(index); }}
+                className={`rounded-full transition-all ${
+                  index === currentIndex
+                    ? 'w-2.5 h-2.5 bg-blue-400'
+                    : 'w-2 h-2 bg-gray-500 hover:bg-gray-400'
+                }`}
+                aria-label={`Go to graphic ${index + 1}`}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-xs">
+            {currentIndex + 1} / {graphics.length}
+          </p>
+        )}
       </div>
     </div>
   );
