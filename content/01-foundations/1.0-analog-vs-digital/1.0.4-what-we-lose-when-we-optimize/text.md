@@ -1,3 +1,5 @@
+Every technology advance reshapes the human experience in ways that go beyond the spec sheet. When we move from one system to another, we tend to measure what improves — speed, capacity, cost — and overlook what quietly disappears. Sometimes what disappears is not a limitation but a constraint that shaped how people actually used the technology. The shift from vinyl records to digital music is a case study worth examining, not because it is the most important example, but because it makes the pattern unusually visible.
+
 The vinyl-versus-digital debate is usually presented as a technical argument. People talk about warmth, dynamic range, compression, and whether a needle in a groove can really compete with modern digital audio. And to be fair, there *are* differences. But from a fidelity point of view, I would argue that for most listeners in most real listening environments, those differences are largely in the noise. They are not the main reason vinyl continues to matter to people.
 
 The more important difference is structural.
