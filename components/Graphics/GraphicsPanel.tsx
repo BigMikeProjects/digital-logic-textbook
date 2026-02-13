@@ -53,6 +53,18 @@ export default function GraphicsPanel({ graphics }: GraphicsPanelProps) {
     };
   }, [autoScrollActive, graphics.length]);
 
+  // Stop auto-scroll when user clicks into an iframe (YouTube, HTML interactive)
+  useEffect(() => {
+    if (!autoScrollActive) return;
+
+    const handleBlur = () => {
+      stopAutoScroll();
+    };
+
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, [autoScrollActive, stopAutoScroll]);
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,7 +92,7 @@ export default function GraphicsPanel({ graphics }: GraphicsPanelProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Main content area */}
-      <div className="flex-1 flex items-center justify-center p-4 relative">
+      <div className="flex-1 flex items-center justify-center p-4 relative" onPointerDown={stopAutoScroll}>
         {/* Previous button */}
         <button
           onClick={goToPrev}
