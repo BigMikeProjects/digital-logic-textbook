@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S-R Latch</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 36px 60px;
+            color: #e0e0e0;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            background: linear-gradient(90deg, #4fc3f7 0%, #ab47bc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #90a4ae;
+            font-size: 19px;
+            margin-bottom: 28px;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            gap: 60px;
+            align-items: stretch;
+            min-height: 0;
+        }
+
+        /* Left: Circuit diagram */
+        .circuit-panel {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .circuit-panel canvas {
+            border-radius: 12px;
+        }
+
+        /* Right: Controls + state */
+        .control-panel {
+            flex: 0.8;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            justify-content: center;
+        }
+
+        /* Input buttons */
+        .input-group {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #2d3a5a;
+            border-radius: 12px;
+            padding: 28px;
+        }
+
+        .input-group h2 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .latch-btn {
+            flex: 1;
+            padding: 22px 0;
+            font-size: 26px;
+            font-weight: 700;
+            border: 3px solid;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+            user-select: none;
+        }
+
+        .latch-btn:active {
+            transform: scale(0.96);
+        }
+
+        .btn-set {
+            background: rgba(76, 175, 80, 0.12);
+            border-color: #4caf50;
+            color: #66bb6a;
+        }
+        .btn-set:hover { background: rgba(76, 175, 80, 0.25); }
+        .btn-set.active {
+            background: #4caf50;
+            color: #fff;
+            box-shadow: 0 0 24px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-reset {
+            background: rgba(239, 83, 80, 0.12);
+            border-color: #ef5350;
+            color: #ef5350;
+        }
+        .btn-reset:hover { background: rgba(239, 83, 80, 0.25); }
+        .btn-reset.active {
+            background: #ef5350;
+            color: #fff;
+            box-shadow: 0 0 24px rgba(239, 83, 80, 0.4);
+        }
+
+        /* State display */
+        .state-display {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #2d3a5a;
+            border-radius: 12px;
+            padding: 28px;
+        }
+
+        .state-display h2 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        .output-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+
+        .output-box {
+            flex: 1;
+            text-align: center;
+            padding: 18px 0;
+            border-radius: 10px;
+            border: 2px solid #2d3a5a;
+            background: rgba(0,0,0,0.2);
+            transition: all 0.2s;
+        }
+
+        .output-box .label {
+            font-size: 16px;
+            color: #8b949e;
+            margin-bottom: 6px;
+        }
+
+        .output-box .value {
+            font-size: 44px;
+            font-weight: 700;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            transition: all 0.2s;
+        }
+
+        .output-box.high {
+            border-color: #4fc3f7;
+            background: rgba(79, 195, 247, 0.1);
+        }
+        .output-box.high .value { color: #4fc3f7; }
+
+        .output-box.low {
+            border-color: #3d4a5a;
+        }
+        .output-box.low .value { color: #5a6a7a; }
+
+        /* Memory state indicator */
+        .memory-state {
+            text-align: center;
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .memory-state.storing-1 {
+            background: rgba(76, 175, 80, 0.15);
+            border: 2px solid #4caf50;
+            color: #66bb6a;
+        }
+
+        .memory-state.storing-0 {
+            background: rgba(239, 83, 80, 0.1);
+            border: 2px solid #ef5350;
+            color: #ef5350;
+        }
+
+        .memory-state.invalid {
+            background: rgba(255, 193, 7, 0.1);
+            border: 2px solid #ffc107;
+            color: #ffc107;
+        }
+
+        /* Truth table */
+        .truth-table {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid #2d3a5a;
+            border-radius: 12px;
+            padding: 28px;
+        }
+
+        .truth-table h2 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #ccc;
+            margin-bottom: 16px;
+        }
+
+        .truth-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 18px;
+        }
+
+        .truth-table th {
+            padding: 10px 8px;
+            color: #8b949e;
+            font-weight: 600;
+            border-bottom: 2px solid #2d3a5a;
+            text-align: center;
+        }
+
+        .truth-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid #1e2a3a;
+            color: #c0c8d0;
+            transition: all 0.2s;
+        }
+
+        .truth-table tr.active-row {
+            background: rgba(79, 195, 247, 0.1);
+        }
+        .truth-table tr.active-row td {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Key insight */
+        .key-insight {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: rgba(79, 195, 247, 0.06);
+            border: 1px solid rgba(79, 195, 247, 0.2);
+            border-radius: 12px;
+            padding: 18px 24px;
+            margin-top: 20px;
+        }
+
+        .key-insight .icon {
+            font-size: 28px;
+            flex-shrink: 0;
+        }
+
+        .key-insight p {
+            font-size: 18px;
+            color: #b0bec5;
+            line-height: 1.5;
+        }
+
+        .key-insight .hl { color: #4fc3f7; font-weight: 600; }
+        .key-insight .hl-green { color: #66bb6a; font-weight: 600; }
+        .key-insight .hl-red { color: #ef5350; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<div class="viewport-container" id="viewportContainer">
+    <div class="design-surface" id="designSurface">
+        <h1>S-R Latch</h1>
+        <div class="subtitle">Set-Reset Memory &mdash; The Simplest Storage Element</div>
+
+        <div class="content">
+            <!-- Left: Circuit diagram drawn on canvas -->
+            <div class="circuit-panel">
+                <canvas id="circuit" width="900" height="680"></canvas>
+            </div>
+
+            <!-- Right: Controls and state -->
+            <div class="control-panel">
+                <div class="input-group">
+                    <h2>Inputs</h2>
+                    <div class="btn-row">
+                        <div class="latch-btn btn-set" id="btn-set">SET (S)</div>
+                        <div class="latch-btn btn-reset" id="btn-reset">RESET (R)</div>
+                    </div>
+                </div>
+
+                <div class="state-display">
+                    <h2>Outputs</h2>
+                    <div class="output-row">
+                        <div class="output-box" id="out-q">
+                            <div class="label">Q</div>
+                            <div class="value">0</div>
+                        </div>
+                        <div class="output-box" id="out-qbar">
+                            <div class="label">Q&#x0305;</div>
+                            <div class="value">1</div>
+                        </div>
+                    </div>
+                    <div class="memory-state storing-0" id="memory-state">Memory: Storing 0</div>
+                </div>
+
+                <div class="truth-table">
+                    <h2>Behavior</h2>
+                    <table>
+                        <thead>
+                            <tr><th>S</th><th>R</th><th>Q</th><th>Action</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr id="row-hold"><td>0</td><td>0</td><td>Q</td><td>Hold (memory)</td></tr>
+                            <tr id="row-set"><td>1</td><td>0</td><td>1</td><td>Set</td></tr>
+                            <tr id="row-reset"><td>0</td><td>1</td><td>0</td><td>Reset</td></tr>
+                            <tr id="row-invalid"><td>1</td><td>1</td><td>?</td><td>Invalid</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="key-insight">
+            <div class="icon">💡</div>
+            <p>
+                The S-R latch is <span class="hl">memory</span> built from gates.
+                <span class="hl-green">Set</span> stores a 1,
+                <span class="hl-red">Reset</span> stores a 0, and
+                when both inputs are off the latch <span class="hl">holds</span> its previous value &mdash;
+                this feedback loop is what makes it a storage element.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================
+    // RESPONSIVE SCALING
+    // ============================================
+    const DESIGN_WIDTH = 1920;
+    const DESIGN_HEIGHT = 1080;
+
+    function autoResize() {
+        const container = document.getElementById('viewportContainer');
+        const surface = document.getElementById('designSurface');
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16 / 9) {
+            ch = vh; cw = ch * (16 / 9);
+        } else {
+            cw = vw; ch = cw * (9 / 16);
+        }
+        container.style.width = cw + 'px';
+        container.style.height = ch + 'px';
+        surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+
+    // ============================================
+    // LATCH STATE
+    // ============================================
+    let S = 0, R = 0, Q = 0, Qbar = 1;
+
+    function updateLatch() {
+        // NOR-based S-R latch logic
+        if (S === 1 && R === 0) {
+            Q = 1; Qbar = 0;
+        } else if (S === 0 && R === 1) {
+            Q = 0; Qbar = 1;
+        } else if (S === 1 && R === 1) {
+            // Invalid state — both outputs forced low
+            Q = 0; Qbar = 0;
+        }
+        // S=0, R=0 → hold (Q and Qbar unchanged)
+
+        updateUI();
+        drawCircuit();
+    }
+
+    function updateUI() {
+        // Output boxes
+        const qBox = document.getElementById('out-q');
+        const qbarBox = document.getElementById('out-qbar');
+
+        qBox.querySelector('.value').textContent = Q;
+        qbarBox.querySelector('.value').textContent = Qbar;
+
+        qBox.className = 'output-box ' + (Q ? 'high' : 'low');
+        qbarBox.className = 'output-box ' + (Qbar ? 'high' : 'low');
+
+        // Memory state
+        const mem = document.getElementById('memory-state');
+        if (S === 1 && R === 1) {
+            mem.className = 'memory-state invalid';
+            mem.textContent = 'Invalid State (S=R=1)';
+        } else if (Q === 1) {
+            mem.className = 'memory-state storing-1';
+            mem.textContent = 'Memory: Storing 1';
+        } else {
+            mem.className = 'memory-state storing-0';
+            mem.textContent = 'Memory: Storing 0';
+        }
+
+        // Button states
+        document.getElementById('btn-set').classList.toggle('active', S === 1);
+        document.getElementById('btn-reset').classList.toggle('active', R === 1);
+
+        // Truth table highlight
+        document.getElementById('row-hold').className = (S === 0 && R === 0) ? 'active-row' : '';
+        document.getElementById('row-set').className = (S === 1 && R === 0) ? 'active-row' : '';
+        document.getElementById('row-reset').className = (S === 0 && R === 1) ? 'active-row' : '';
+        document.getElementById('row-invalid').className = (S === 1 && R === 1) ? 'active-row' : '';
+    }
+
+    // ============================================
+    // CIRCUIT DRAWING
+    // ============================================
+    const canvas = document.getElementById('circuit');
+    const ctx = canvas.getContext('2d');
+
+    const HIGH_COLOR = '#4fc3f7';
+    const LOW_COLOR = '#3a4a5a';
+    const GATE_FILL = '#1e2a3e';
+    const GATE_STROKE = '#4a5a7a';
+    const WIRE_HIGH = '#4fc3f7';
+    const WIRE_LOW = '#3a4a5a';
+
+    function wireColor(val) { return val ? WIRE_HIGH : WIRE_LOW; }
+
+    function drawNorGate(x, y, label) {
+        // NOR gate shape — curved body + bubble
+        ctx.save();
+        ctx.translate(x, y);
+
+        const w = 120, h = 80;
+
+        // Gate body
+        ctx.fillStyle = GATE_FILL;
+        ctx.strokeStyle = GATE_STROKE;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        // Left curve (input side)
+        ctx.moveTo(0, -h / 2);
+        ctx.quadraticCurveTo(20, 0, 0, h / 2);
+        // Bottom to tip
+        ctx.quadraticCurveTo(60, h / 2, w, 0);
+        // Tip to top
+        ctx.quadraticCurveTo(60, -h / 2, 0, -h / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Bubble (inversion)
+        ctx.beginPath();
+        ctx.arc(w + 10, 0, 10, 0, Math.PI * 2);
+        ctx.fillStyle = GATE_FILL;
+        ctx.fill();
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = '#8899aa';
+        ctx.font = '18px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('NOR', 55, 0);
+
+        // Gate label above
+        ctx.fillStyle = '#667788';
+        ctx.font = '16px Segoe UI';
+        ctx.fillText(label, 55, -h / 2 - 16);
+
+        ctx.restore();
+    }
+
+    function drawCircuit() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Positions
+        const gateW = 120, bubbleR = 10;
+        const topGateX = 340, topGateY = 220;    // Top NOR gate
+        const botGateX = 340, botGateY = 460;    // Bottom NOR gate
+
+        const inputX = 80;   // Input labels X
+        const outputX = 720; // Output labels X
+
+        // Input values for the NOR gates:
+        // Top NOR: inputs are R and Qbar_feedback → output is Q
+        // Bottom NOR: inputs are S and Q_feedback → output is Qbar
+        // (Active-low NOR-based SR latch)
+
+        const topIn1 = R;
+        const topIn2 = Qbar;  // feedback from bottom gate
+        const topOut = Q;
+
+        const botIn1 = Q;     // feedback from top gate
+        const botIn2 = S;
+        const botOut = Qbar;
+
+        // --- Draw feedback wires first (behind gates) ---
+
+        // Q feedback: top gate output → bottom gate input 1
+        // Route: right of top gate → down → left of bottom gate
+        const topOutX = topGateX + gateW + bubbleR * 2 + 5;
+        const topOutY = topGateY;
+        const botOutX = topGateX + gateW + bubbleR * 2 + 5;
+        const botOutY = botGateY;
+
+        const feedbackRightX = topOutX + 100;
+        const botIn1Y = botGateY - 24;
+        const topIn2Y = topGateY + 24;
+
+        // Q output wire to right + branch down for feedback
+        ctx.strokeStyle = wireColor(topOut);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(topOutX, topOutY);
+        ctx.lineTo(feedbackRightX, topOutY);
+        ctx.stroke();
+
+        // Feedback: Q down to bottom gate input 1
+        const feedbackLeftX = topGateX - 80;
+        ctx.strokeStyle = wireColor(topOut);
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(feedbackRightX, topOutY);
+        ctx.lineTo(feedbackRightX, topOutY + 60);
+        ctx.lineTo(feedbackLeftX, botGateY - 60);
+        ctx.lineTo(feedbackLeftX, botIn1Y);
+        ctx.lineTo(topGateX + 12, botIn1Y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Qbar feedback: bottom gate output → top gate input 2
+        ctx.strokeStyle = wireColor(botOut);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(botOutX, botOutY);
+        ctx.lineTo(feedbackRightX, botOutY);
+        ctx.stroke();
+
+        const feedbackLeftX2 = topGateX - 50;
+        ctx.strokeStyle = wireColor(botOut);
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.moveTo(feedbackRightX, botOutY);
+        ctx.lineTo(feedbackRightX, botOutY - 60);
+        ctx.lineTo(feedbackLeftX2, topGateY + 60);
+        ctx.lineTo(feedbackLeftX2, topIn2Y);
+        ctx.lineTo(topGateX + 12, topIn2Y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // --- Input wires ---
+
+        // R input → top gate input 1
+        const topIn1Y = topGateY - 24;
+        ctx.strokeStyle = wireColor(R);
+        ctx.lineWidth = 4;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(inputX + 40, topIn1Y);
+        ctx.lineTo(topGateX + 12, topIn1Y);
+        ctx.stroke();
+
+        // S input → bottom gate input 2
+        const botIn2Y = botGateY + 24;
+        ctx.strokeStyle = wireColor(S);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(inputX + 40, botIn2Y);
+        ctx.lineTo(topGateX + 12, botIn2Y);
+        ctx.stroke();
+
+        // --- Draw gates ---
+        drawNorGate(topGateX, topGateY, '');
+        drawNorGate(botGateX, botGateY, '');
+
+        // --- Input labels ---
+        ctx.font = 'bold 32px SF Mono, Fira Code, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // R label
+        ctx.fillStyle = R ? '#ef5350' : '#5a6a7a';
+        ctx.fillText('R', inputX, topIn1Y);
+        // Value indicator
+        ctx.font = '22px SF Mono, monospace';
+        ctx.fillText(R ? '= 1' : '= 0', inputX, topIn1Y + 30);
+
+        // S label
+        ctx.font = 'bold 32px SF Mono, Fira Code, monospace';
+        ctx.fillStyle = S ? '#66bb6a' : '#5a6a7a';
+        ctx.fillText('S', inputX, botIn2Y);
+        ctx.font = '22px SF Mono, monospace';
+        ctx.fillText(S ? '= 1' : '= 0', inputX, botIn2Y + 30);
+
+        // --- Output labels ---
+        ctx.font = 'bold 32px SF Mono, Fira Code, monospace';
+
+        // Q label
+        ctx.fillStyle = Q ? HIGH_COLOR : '#5a6a7a';
+        ctx.textAlign = 'left';
+        ctx.fillText('Q', outputX, topOutY);
+        ctx.font = '22px SF Mono, monospace';
+        ctx.fillText('= ' + Q, outputX, topOutY + 30);
+
+        // Draw wire from feedback junction to Q label
+        ctx.strokeStyle = wireColor(Q);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(feedbackRightX, topOutY);
+        ctx.lineTo(outputX - 16, topOutY);
+        ctx.stroke();
+
+        // Qbar label
+        ctx.font = 'bold 32px SF Mono, Fira Code, monospace';
+        ctx.fillStyle = Qbar ? HIGH_COLOR : '#5a6a7a';
+        ctx.fillText('Q\u0305', outputX, botOutY);
+        ctx.font = '22px SF Mono, monospace';
+        ctx.fillText('= ' + Qbar, outputX, botOutY + 30);
+
+        // Wire from feedback junction to Qbar label
+        ctx.strokeStyle = wireColor(Qbar);
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(feedbackRightX, botOutY);
+        ctx.lineTo(outputX - 16, botOutY);
+        ctx.stroke();
+
+        // --- Junction dots on feedback branch points ---
+        function drawDot(x, y, color) {
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+        drawDot(feedbackRightX, topOutY, wireColor(Q));
+        drawDot(feedbackRightX, botOutY, wireColor(Qbar));
+
+        // --- Gate labels inside ---
+        // Already handled in drawNorGate
+    }
+
+    // ============================================
+    // INPUT HANDLERS
+    // ============================================
+    document.getElementById('btn-set').addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        S = 1;
+        updateLatch();
+    });
+    document.getElementById('btn-set').addEventListener('mouseup', () => {
+        S = 0;
+        updateLatch();
+    });
+    document.getElementById('btn-set').addEventListener('mouseleave', () => {
+        if (S === 1) { S = 0; updateLatch(); }
+    });
+
+    document.getElementById('btn-reset').addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        R = 1;
+        updateLatch();
+    });
+    document.getElementById('btn-reset').addEventListener('mouseup', () => {
+        R = 0;
+        updateLatch();
+    });
+    document.getElementById('btn-reset').addEventListener('mouseleave', () => {
+        if (R === 1) { R = 0; updateLatch(); }
+    });
+
+    // Touch support
+    document.getElementById('btn-set').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        S = 1;
+        updateLatch();
+    });
+    document.getElementById('btn-set').addEventListener('touchend', () => {
+        S = 0;
+        updateLatch();
+    });
+
+    document.getElementById('btn-reset').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        R = 1;
+        updateLatch();
+    });
+    document.getElementById('btn-reset').addEventListener('touchend', () => {
+        R = 0;
+        updateLatch();
+    });
+
+    // ============================================
+    // INITIALIZE
+    // ============================================
+    autoResize();
+
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(autoResize, 50);
+    });
+    window.addEventListener('orientationchange', () => {
+        setTimeout(autoResize, 100);
+    });
+
+    updateUI();
+    drawCircuit();
+</script>
+</body>
+</html>
