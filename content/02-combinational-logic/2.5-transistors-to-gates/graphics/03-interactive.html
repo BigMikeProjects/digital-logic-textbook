@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMOS Logic Gates – Interactive Infographic</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #06080f;
+    --bg-subtle: #0b0f1a;
+    --surface: rgba(15, 20, 35, 0.85);
+    --surface-hover: rgba(20, 26, 44, 0.9);
+    --border: rgba(255, 255, 255, 0.06);
+    --border-subtle: rgba(255, 255, 255, 0.03);
+    --vdd-color: #f43f5e;
+    --vdd-dim: #9f1239;
+    --gnd-color: #3b82f6;
+    --gnd-dim: #1e40af;
+    --on-color: #22c55e;
+    --off-color: #475569;
+    --wire: #94a3b8;
+    --wire-dim: #2a3349;
+    --text: #e8ecf4;
+    --text-secondary: #94a3b8;
+    --text-muted: #536280;
+    --accent: #a78bfa;
+    --accent-dim: rgba(167, 139, 250, 0.08);
+    --pmos-fill: rgba(244, 63, 94, 0.06);
+    --nmos-fill: rgba(59, 130, 246, 0.06);
+    --glow-vdd: rgba(244, 63, 94, 0.35);
+    --glow-gnd: rgba(59, 130, 246, 0.35);
+    --glow-on: rgba(34, 197, 94, 0.45);
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  html, body { height: 100%; overflow: hidden; background: var(--bg); }
+
+  .viewport-container {
+    width: 100%; max-width: 100vw;
+    aspect-ratio: 16 / 9; max-height: 100vh;
+    position: relative; overflow: hidden;
+    margin: 0 auto;
+  }
+
+  .design-surface {
+    width: 1920px; height: 1080px;
+    position: absolute; top: 0; left: 0;
+    transform-origin: top left;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 50%, rgba(167, 139, 250, 0.015) 0%, transparent 100%),
+      radial-gradient(ellipse 60% 80% at 80% 50%, rgba(59, 130, 246, 0.01) 0%, transparent 100%),
+      var(--bg);
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── Header ─── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 28px 60px 0;
+  }
+  .header-left h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 30px; font-weight: 700; letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #f8b4c8 0%, var(--accent) 50%, #7dd3fc 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-left .subtitle {
+    font-size: 13px; color: var(--text-muted); font-weight: 400;
+    letter-spacing: 0.3px; margin-top: 2px;
+  }
+  .header-controls {
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  /* ─── Tabs ─── */
+  .tabs {
+    display: flex; gap: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px; border-radius: 14px;
+    border: 1px solid var(--border);
+  }
+  .tab-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 600;
+    padding: 8px 22px; border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.5px;
+    position: relative;
+  }
+  .tab-btn:hover {
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .tab-btn.active {
+    border-color: rgba(167, 139, 250, 0.25);
+    background: rgba(167, 139, 250, 0.1);
+    color: var(--accent);
+    box-shadow: 0 0 20px rgba(167, 139, 250, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  /* ─── Supply loop toggle ─── */
+  .loop-toggle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600;
+    padding: 7px 14px; border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex; align-items: center; gap: 6px;
+    letter-spacing: 0.3px;
+    backdrop-filter: blur(12px);
+  }
+  .loop-toggle:hover { border-color: rgba(139, 157, 195, 0.3); color: var(--text-secondary); }
+  .loop-toggle.active {
+    border-color: rgba(139, 157, 195, 0.25);
+    background: rgba(139, 157, 195, 0.08);
+    color: #a0b4d0;
+  }
+
+  /* ─── Divider ─── */
+  .header-divider {
+    margin: 14px 60px 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--border) 15%, var(--border) 85%, transparent 100%);
+  }
+
+  /* ─── Main layout ─── */
+  .main {
+    flex: 1; display: flex; padding: 14px 60px 24px; gap: 36px;
+    min-height: 0;
+  }
+
+  .gate-view { display: none; width: 100%; }
+  .gate-view.active { display: flex; gap: 36px; height: 100%; min-height: 0; }
+
+  .circuit-panel {
+    flex: 1.3; display: flex; align-items: center; justify-content: center;
+    position: relative; min-height: 0; min-width: 0;
+  }
+  .circuit-panel svg { width: 100%; height: 100%; }
+
+  .info-panel {
+    flex: 0.7; display: flex; flex-direction: column; gap: 12px;
+    padding-top: 4px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
+  }
+  .info-panel::-webkit-scrollbar { width: 4px; }
+  .info-panel::-webkit-scrollbar-track { background: transparent; }
+  .info-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+
+  /* ─── State cards ─── */
+  .state-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--card-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .state-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+  }
+  .state-card.pmos {
+    border-left: 2.5px solid var(--vdd-color);
+  }
+  .state-card.nmos {
+    border-left: 2.5px solid var(--gnd-color);
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .card-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+  .card-title.pmos-t { color: var(--vdd-color); }
+  .card-title.nmos-t { color: var(--gnd-color); }
+
+  .state-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+    letter-spacing: 1.2px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    text-transform: uppercase;
+  }
+  .state-badge.on {
+    background: rgba(34, 197, 94, 0.12);
+    color: var(--on-color);
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+  }
+  .state-badge.off {
+    background: rgba(71, 85, 105, 0.15);
+    color: var(--off-color);
+  }
+
+  .desc {
+    font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;
+    font-weight: 400;
+  }
+
+  /* ─── Output card ─── */
+  .output-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--card-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .output-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+  }
+  .output-card .label, .truth-table .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 2.5px;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .output-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 32px; font-weight: 700;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: -0.5px;
+  }
+  .output-value.high {
+    color: var(--vdd-color);
+    text-shadow: 0 0 30px var(--glow-vdd), 0 0 60px rgba(244, 63, 94, 0.15);
+  }
+  .output-value.low {
+    color: var(--gnd-color);
+    text-shadow: 0 0 30px var(--glow-gnd), 0 0 60px rgba(59, 130, 246, 0.15);
+  }
+  .output-explain {
+    font-size: 12.5px; color: var(--text-secondary); margin-top: 6px;
+    font-weight: 400; line-height: 1.5;
+  }
+
+  /* ─── Truth table ─── */
+  .truth-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    backdrop-filter: blur(16px);
+    box-shadow: var(--card-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .truth-table::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+  }
+  .tt-grid {
+    display: grid;
+    gap: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .tt-grid-3col { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .tt-grid-4col { grid-template-columns: 1fr 1fr 1fr 1fr 1fr; }
+  .tt-cell {
+    padding: 7px 6px; text-align: center;
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.25s ease;
+  }
+  .tt-cell:last-child { border-bottom: none; }
+  .tt-cell.header {
+    color: var(--text-muted); font-weight: 600;
+    font-size: 10px; letter-spacing: 1.5px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tt-cell.active-row {
+    background: rgba(167, 139, 250, 0.06);
+  }
+  .tt-cell .h { color: var(--vdd-color); font-weight: 600; }
+  .tt-cell .l { color: var(--gnd-color); font-weight: 600; }
+  .tt-cell .on-txt { color: var(--on-color); font-weight: 500; }
+  .tt-cell .off-txt { color: var(--off-color); font-weight: 500; }
+
+  /* ─── Logic equations ─── */
+  .logic-eqs {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    backdrop-filter: blur(16px);
+    box-shadow: var(--card-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .logic-eqs::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+  }
+  .logic-eqs .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 2.5px;
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .eq-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 0;
+  }
+  .eq-row + .eq-row {
+    border-top: 1px solid var(--border-subtle);
+  }
+  .eq-network {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 3px 8px; border-radius: 6px;
+    flex-shrink: 0;
+    min-width: 72px;
+    text-align: center;
+  }
+  .eq-network.pullup {
+    color: var(--vdd-color);
+    background: rgba(244, 63, 94, 0.08);
+    border: 1px solid rgba(244, 63, 94, 0.15);
+  }
+  .eq-network.pulldown {
+    color: var(--gnd-color);
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+  }
+  .eq-expr {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 500;
+    color: var(--text);
+    letter-spacing: 0.3px;
+  }
+  .eq-expr .eq-sym { color: var(--accent); }
+  .eq-expr .eq-dim { color: var(--text-muted); font-size: 11px; }
+
+  /* ─── SVG styles ─── */
+  .wire { stroke: var(--wire-dim); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .wire-active { stroke: var(--wire); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .node-dot { fill: var(--wire); }
+  .svg-label { font-family: 'JetBrains Mono', monospace; font-weight: 700; fill: var(--text); }
+  .svg-label-muted { font-family: 'JetBrains Mono', monospace; font-weight: 500; fill: var(--text-muted); }
+
+  .current-path {
+    stroke-width: 4; fill: none;
+    stroke-linecap: round; stroke-linejoin: round;
+    opacity: 0; transition: opacity 0.5s ease;
+  }
+  .current-path.visible { opacity: 1; stroke-dasharray: 12, 8; animation: dash-flow 0.6s linear infinite; }
+  .current-path-vdd { stroke: var(--vdd-color); filter: drop-shadow(0 0 6px var(--glow-vdd)); }
+  .current-path-gnd { stroke: var(--gnd-color); filter: drop-shadow(0 0 6px var(--glow-gnd)); }
+  @keyframes dash-flow { to { stroke-dashoffset: -30; } }
+
+  .transistor-glow { opacity: 0; transition: opacity 0.5s ease; }
+  .transistor-glow.on { opacity: 1; }
+
+  .channel-bar { stroke-width: 4; stroke-linecap: round; transition: all 0.4s ease; }
+  .channel-bar.on { stroke: var(--on-color); filter: drop-shadow(0 0 4px var(--glow-on)); }
+  .channel-bar.off { stroke: var(--off-color); stroke-dasharray: 4, 6; }
+
+  .pmos-bubble { fill: none; stroke-width: 2.5; stroke: var(--vdd-color); }
+
+  /* ─── Toggle buttons ─── */
+  .svg-toggle {
+    width: 110px; height: 42px; border-radius: 21px; border: none; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #fff;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+  }
+  .svg-toggle::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .svg-toggle.low {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  .svg-toggle.high {
+    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    box-shadow: 0 2px 12px rgba(244, 63, 94, 0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+  .svg-toggle:active { transform: scale(0.96); }
+
+  /* ─── Hint label under toggles ─── */
+  .toggle-hint {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+  <div class="header">
+    <div class="header-left">
+      <h1 id="gate-title">CMOS Inverter</h1>
+      <div class="subtitle" id="gate-subtitle">Complementary Metal-Oxide-Semiconductor &middot; NOT Gate</div>
+    </div>
+    <div class="header-controls">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('inv')">NOT</button>
+        <button class="tab-btn" onclick="switchTab('nand')">NAND</button>
+        <button class="tab-btn" onclick="switchTab('nor')">NOR</button>
+      </div>
+      <button class="loop-toggle active" id="loopToggle" onclick="toggleLoop()">
+        <span>&#x23DA;</span> Supply Loop
+      </button>
+    </div>
+  </div>
+  <div class="header-divider"></div>
+
+  <div class="main">
+
+    <!-- ============================================ -->
+    <!-- INVERTER TAB                                 -->
+    <!-- ============================================ -->
+    <div class="gate-view active" id="view-inv">
+      <div class="circuit-panel">
+        <svg preserveAspectRatio="xMidYMid meet" viewBox="-200 -25 1000 1025" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- VDD rail -->
+          <line x1="350" y1="30" x2="350" y2="80" class="wire-active"/>
+          <polygon points="350,10 335,30 365,30" fill="var(--vdd-color)"/>
+          <text x="350" y="5" text-anchor="middle" class="svg-label" font-size="22" fill="var(--vdd-color)">V<tspan font-size="15" dy="4">DD</tspan></text>
+
+          <!-- GND rail -->
+          <line x1="350" y1="770" x2="350" y2="800" class="wire-active"/>
+          <line x1="290" y1="800" x2="410" y2="800" stroke="var(--gnd-color)" stroke-width="4"/>
+          <line x1="310" y1="812" x2="390" y2="812" stroke="var(--gnd-color)" stroke-width="3"/>
+          <line x1="325" y1="824" x2="375" y2="824" stroke="var(--gnd-color)" stroke-width="2"/>
+          <text x="350" y="852" text-anchor="middle" class="svg-label" font-size="22" fill="var(--gnd-color)">GND</text>
+
+          <!-- Supply loop -->
+          <g id="inv-supply-loop" opacity="0.7" style="transition:opacity 0.4s ease;">
+            <line x1="410" y1="30" x2="680" y2="30" stroke="#8b9dc3" stroke-width="2.5" stroke-dasharray="10,6"/>
+            <line x1="680" y1="30" x2="680" y2="370" stroke="#8b9dc3" stroke-width="2.5" stroke-dasharray="10,6"/>
+            <circle cx="680" cy="415" r="28" stroke="#a0b4d0" stroke-width="2.5" fill="none"/>
+            <line x1="680" y1="395" x2="680" y2="407" stroke="#a0b4d0" stroke-width="2.5"/>
+            <line x1="674" y1="401" x2="686" y2="401" stroke="#a0b4d0" stroke-width="2.5"/>
+            <line x1="674" y1="429" x2="686" y2="429" stroke="#a0b4d0" stroke-width="2.5"/>
+            <text x="720" y="420" font-size="16" fill="#a0b4d0" font-family="JetBrains Mono,monospace" font-weight="600">V<tspan font-size="11" dy="2">DD</tspan></text>
+            <line x1="680" y1="443" x2="680" y2="800" stroke="#8b9dc3" stroke-width="2.5" stroke-dasharray="10,6"/>
+            <line x1="680" y1="800" x2="410" y2="800" stroke="#8b9dc3" stroke-width="2.5" stroke-dasharray="10,6"/>
+            <!-- Load resistor -->
+            <line x1="560" y1="430" x2="560" y2="540" stroke="#8b9dc3" stroke-width="2.5" stroke-dasharray="10,6"/>
+            <polyline points="560,540 574,555 546,573 574,591 546,609 574,627 546,645 574,663 560,676" stroke="#a0b4d0" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+            <line x1="560" y1="676" x2="560" y2="800" stroke="#8b9dc3" stroke-width="2.5" stroke-dasharray="10,6"/>
+            <circle cx="560" cy="800" r="4" fill="#a0b4d0"/>
+            <polygon points="560,510 554,496 566,496" fill="#8b9dc3"/>
+            <text x="590" y="612" font-size="16" fill="#a0b4d0" font-family="JetBrains Mono,monospace" font-weight="600">R<tspan font-size="11" dy="2">LOAD</tspan></text>
+            <polygon points="680,64 674,80 686,80" fill="#8b9dc3"/>
+            <polygon points="636,800 620,794 620,806" fill="#8b9dc3"/>
+            <text x="680" y="478" text-anchor="middle" font-size="13" fill="#8b9dc3" font-family="Inter,sans-serif" font-style="italic">power supply</text>
+            <text x="680" y="496" text-anchor="middle" font-size="13" fill="#8b9dc3" font-family="Inter,sans-serif" font-style="italic">(external)</text>
+          </g>
+
+          <!-- PMOS -->
+          <g>
+            <rect id="inv-pmos-glow" class="transistor-glow" x="260" y="100" width="180" height="210" rx="16" fill="var(--pmos-fill)"/>
+            <line x1="350" y1="80" x2="350" y2="160" class="wire-active"/>
+            <line x1="350" y1="250" x2="350" y2="430" class="wire-active"/>
+            <line x1="290" y1="155" x2="290" y2="255" stroke="var(--vdd-color)" stroke-width="3"/>
+            <line x1="160" y1="205" x2="275" y2="205" class="wire-active"/>
+            <circle cx="282" cy="205" r="8" class="pmos-bubble"/>
+            <line id="inv-pmos-ch" x1="310" y1="165" x2="310" y2="245" class="channel-bar off"/>
+            <line x1="310" y1="160" x2="350" y2="160" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <line x1="310" y1="250" x2="350" y2="250" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <text x="395" y="215" class="svg-label" font-size="18" fill="var(--vdd-color)">PMOS</text>
+            <text id="inv-pmos-lbl" x="395" y="238" font-size="14" class="svg-label-muted">OFF</text>
+          </g>
+
+          <!-- NMOS -->
+          <g>
+            <rect id="inv-nmos-glow" class="transistor-glow" x="260" y="490" width="180" height="210" rx="16" fill="var(--nmos-fill)"/>
+            <line x1="350" y1="640" x2="350" y2="770" class="wire-active"/>
+            <line x1="350" y1="430" x2="350" y2="550" class="wire-active"/>
+            <line x1="290" y1="545" x2="290" y2="645" stroke="var(--gnd-color)" stroke-width="3"/>
+            <line x1="160" y1="595" x2="290" y2="595" class="wire-active"/>
+            <line id="inv-nmos-ch" x1="310" y1="555" x2="310" y2="635" class="channel-bar off"/>
+            <line x1="310" y1="550" x2="350" y2="550" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <line x1="310" y1="640" x2="350" y2="640" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <text x="395" y="600" class="svg-label" font-size="18" fill="var(--gnd-color)">NMOS</text>
+            <text id="inv-nmos-lbl" x="395" y="623" font-size="14" class="svg-label-muted">OFF</text>
+          </g>
+
+          <!-- Input wiring -->
+          <line x1="60" y1="205" x2="60" y2="595" class="wire-active"/>
+          <line x1="60" y1="205" x2="160" y2="205" class="wire-active"/>
+          <line x1="60" y1="595" x2="160" y2="595" class="wire-active"/>
+          <line x1="-40" y1="400" x2="60" y2="400" class="wire-active"/>
+          <circle cx="60" cy="400" r="6" class="node-dot"/>
+          <circle cx="-40" cy="400" r="6" class="node-dot"/>
+          <text x="-40" y="380" text-anchor="middle" class="svg-label" font-size="20">V<tspan font-size="14" dy="3">IN</tspan></text>
+          <foreignObject x="-195" y="352" width="145" height="96">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+              <button class="svg-toggle low" id="inv-btn-a" onclick="toggleInv()">LOW (0)</button>
+              <span class="toggle-hint">click to toggle</span>
+            </div>
+          </foreignObject>
+
+          <!-- Output -->
+          <circle cx="350" cy="430" r="6" class="node-dot"/>
+          <line x1="350" y1="430" x2="560" y2="430" class="wire-active"/>
+          <circle cx="560" cy="430" r="6" class="node-dot"/>
+          <text x="590" y="425" class="svg-label" font-size="20">V<tspan font-size="14" dy="3">OUT</tspan></text>
+
+          <!-- Current paths -->
+          <path id="inv-path-vdd" d="M 350 30 L 350 130 L 350 160 L 350 250 L 350 280 L 350 430 L 560 430" class="current-path current-path-vdd visible"/>
+          <path id="inv-path-gnd" d="M 560 430 L 350 430 L 350 520 L 350 550 L 350 640 L 350 670 L 350 800" class="current-path current-path-gnd"/>
+        </svg>
+      </div>
+
+      <div class="info-panel">
+        <div class="state-card pmos">
+          <div class="card-header">
+            <span class="card-title pmos-t">PMOS</span>
+            <span class="state-badge on" id="inv-pmos-badge">ON</span>
+          </div>
+          <div class="desc" id="inv-pmos-desc">Gate LOW &rarr; |V<sub>GS</sub>| &gt; |V<sub>tp</sub>| &rarr; conducts. V<sub>DD</sub> &rarr; output.</div>
+        </div>
+        <div class="state-card nmos">
+          <div class="card-header">
+            <span class="card-title nmos-t">NMOS</span>
+            <span class="state-badge off" id="inv-nmos-badge">OFF</span>
+          </div>
+          <div class="desc" id="inv-nmos-desc">Gate LOW &rarr; V<sub>GS</sub> &lt; V<sub>tn</sub> &rarr; cut off. No path to GND.</div>
+        </div>
+        <div class="output-card">
+          <div class="label">Output</div>
+          <div class="output-value high" id="inv-out-val">HIGH (1)</div>
+          <div class="output-explain" id="inv-out-exp">Pulled to V<sub>DD</sub> through conducting PMOS.</div>
+        </div>
+        <div class="truth-table">
+          <div class="label">Truth Table</div>
+          <div class="tt-grid tt-grid-3col" id="inv-tt">
+            <div class="tt-cell header">IN</div><div class="tt-cell header">PMOS</div><div class="tt-cell header">NMOS</div><div class="tt-cell header">OUT</div>
+            <div class="tt-cell active-row"><span class="l">0</span></div><div class="tt-cell active-row"><span class="on-txt">ON</span></div><div class="tt-cell active-row"><span class="off-txt">OFF</span></div><div class="tt-cell active-row"><span class="h">1</span></div>
+            <div class="tt-cell"><span class="h">1</span></div><div class="tt-cell"><span class="off-txt">OFF</span></div><div class="tt-cell"><span class="on-txt">ON</span></div><div class="tt-cell"><span class="l">0</span></div>
+          </div>
+        </div>
+        <div class="logic-eqs">
+          <div class="label">Network Logic</div>
+          <div class="eq-row">
+            <span class="eq-network pullup">Pull-Up</span>
+            <span class="eq-expr">V<sub>OUT</sub> <span class="eq-sym">=</span> F <span class="eq-sym">=</span> A&#x0305;</span>
+          </div>
+          <div class="eq-row">
+            <span class="eq-network pulldown">Pull-Down</span>
+            <span class="eq-expr">V<sub>OUT</sub> <span class="eq-sym">=</span> F&#x0305; <span class="eq-sym">=</span> A</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- NAND TAB                                     -->
+    <!-- ============================================ -->
+    <div class="gate-view" id="view-nand">
+      <div class="circuit-panel">
+        <svg preserveAspectRatio="xMidYMid meet" viewBox="-40 -25 730 765" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- VDD rail -->
+          <polygon points="350,0 335,20 365,20" fill="var(--vdd-color)"/>
+          <text x="350" y="-5" text-anchor="middle" class="svg-label" font-size="20" fill="var(--vdd-color)">V<tspan font-size="14" dy="3">DD</tspan></text>
+          <line x1="350" y1="20" x2="350" y2="40" class="wire-active"/>
+          <line x1="200" y1="40" x2="500" y2="40" class="wire-active"/>
+
+          <!-- GND rail -->
+          <line x1="350" y1="565" x2="350" y2="590" class="wire-active"/>
+          <line x1="308" y1="590" x2="392" y2="590" stroke="var(--gnd-color)" stroke-width="4"/>
+          <line x1="322" y1="602" x2="378" y2="602" stroke="var(--gnd-color)" stroke-width="3"/>
+          <line x1="333" y1="614" x2="367" y2="614" stroke="var(--gnd-color)" stroke-width="2"/>
+          <text x="350" y="642" text-anchor="middle" class="svg-label" font-size="20" fill="var(--gnd-color)">GND</text>
+
+          <!-- PMOS pair (parallel) -->
+          <line x1="200" y1="40" x2="200" y2="72" class="wire-active"/>
+          <line x1="500" y1="40" x2="500" y2="72" class="wire-active"/>
+
+          <!-- PMOS A (left) -->
+          <g>
+            <rect id="nand-pmos-a-glow" class="transistor-glow" x="118" y="58" width="162" height="110" rx="12" fill="var(--pmos-fill)"/>
+            <line x1="145" y1="68" x2="145" y2="140" stroke="var(--vdd-color)" stroke-width="3"/>
+            <circle cx="138" cy="104" r="6" class="pmos-bubble"/>
+            <line id="nand-pmos-a-ch" x1="165" y1="76" x2="165" y2="130" class="channel-bar off"/>
+            <line x1="165" y1="72" x2="200" y2="72" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <line x1="165" y1="135" x2="200" y2="135" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <text x="120" y="172" class="svg-label" font-size="13" fill="var(--vdd-color)">P1</text>
+          </g>
+
+          <!-- PMOS B (right) -->
+          <g>
+            <rect id="nand-pmos-b-glow" class="transistor-glow" x="418" y="58" width="162" height="110" rx="12" fill="var(--pmos-fill)"/>
+            <line x1="445" y1="68" x2="445" y2="140" stroke="var(--vdd-color)" stroke-width="3"/>
+            <circle cx="438" cy="104" r="6" class="pmos-bubble"/>
+            <line id="nand-pmos-b-ch" x1="465" y1="76" x2="465" y2="130" class="channel-bar off"/>
+            <line x1="465" y1="72" x2="500" y2="72" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <line x1="465" y1="135" x2="500" y2="135" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <text x="540" y="112" class="svg-label" font-size="13" fill="var(--vdd-color)">P2</text>
+          </g>
+
+          <!-- PMOS drains merge to output -->
+          <line x1="200" y1="135" x2="200" y2="200" class="wire-active"/>
+          <line x1="500" y1="135" x2="500" y2="200" class="wire-active"/>
+          <line x1="200" y1="200" x2="500" y2="200" class="wire-active"/>
+          <line x1="350" y1="200" x2="350" y2="245" class="wire-active"/>
+
+          <!-- Output node -->
+          <circle cx="350" cy="245" r="6" class="node-dot"/>
+          <line x1="350" y1="245" x2="570" y2="245" class="wire-active"/>
+          <circle cx="570" cy="245" r="6" class="node-dot"/>
+          <text x="588" y="240" class="svg-label" font-size="18">V<tspan font-size="13" dy="3">OUT</tspan></text>
+
+          <!-- NMOS A (top of series) -->
+          <g>
+            <rect id="nand-nmos-a-glow" class="transistor-glow" x="268" y="278" width="162" height="110" rx="12" fill="var(--nmos-fill)"/>
+            <line x1="350" y1="245" x2="350" y2="302" class="wire-active"/>
+            <line x1="295" y1="298" x2="295" y2="360" stroke="var(--gnd-color)" stroke-width="3"/>
+            <line id="nand-nmos-a-ch" x1="315" y1="306" x2="315" y2="350" class="channel-bar off"/>
+            <line x1="315" y1="302" x2="350" y2="302" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <line x1="315" y1="355" x2="350" y2="355" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <text x="395" y="335" class="svg-label" font-size="13" fill="var(--gnd-color)">N1</text>
+          </g>
+
+          <!-- Internal node -->
+          <line x1="350" y1="355" x2="350" y2="445" class="wire-active"/>
+
+          <!-- NMOS B (bottom of series) -->
+          <g>
+            <rect id="nand-nmos-b-glow" class="transistor-glow" x="268" y="420" width="162" height="110" rx="12" fill="var(--nmos-fill)"/>
+            <line x1="295" y1="440" x2="295" y2="502" stroke="var(--gnd-color)" stroke-width="3"/>
+            <line id="nand-nmos-b-ch" x1="315" y1="449" x2="315" y2="493" class="channel-bar off"/>
+            <line x1="315" y1="445" x2="350" y2="445" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <line x1="315" y1="497" x2="350" y2="497" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <text x="395" y="477" class="svg-label" font-size="13" fill="var(--gnd-color)">N2</text>
+          </g>
+
+          <!-- NMOS B to GND -->
+          <line x1="350" y1="497" x2="350" y2="565" class="wire-active"/>
+
+          <!-- Input A wiring -->
+          <line x1="55" y1="104" x2="132" y2="104" class="wire-active"/>
+          <line x1="55" y1="104" x2="55" y2="329" class="wire-active"/>
+          <line x1="55" y1="329" x2="295" y2="329" class="wire-active"/>
+          <line x1="30" y1="180" x2="55" y2="180" class="wire-active"/>
+          <circle cx="55" cy="180" r="5" class="node-dot"/>
+          <text x="30" y="152" text-anchor="middle" class="svg-label" font-size="16">A</text>
+          <foreignObject x="-30" y="155" width="80" height="54">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+              <button class="svg-toggle low" id="nand-btn-a" onclick="toggleNand('a')" style="width:68px;height:34px;font-size:12px;border-radius:17px;">LOW</button>
+            </div>
+          </foreignObject>
+
+          <!-- Input B wiring -->
+          <line x1="130" y1="245" x2="295" y2="245" class="wire-active"/>
+          <line x1="295" y1="245" x2="295" y2="104" class="wire-active"/>
+          <line x1="295" y1="104" x2="432" y2="104" class="wire-active"/>
+          <line x1="130" y1="245" x2="130" y2="471" class="wire-active"/>
+          <line x1="130" y1="471" x2="295" y2="471" class="wire-active"/>
+          <line x1="105" y1="380" x2="130" y2="380" class="wire-active"/>
+          <circle cx="130" cy="380" r="5" class="node-dot"/>
+          <text x="105" y="352" text-anchor="middle" class="svg-label" font-size="16">B</text>
+          <foreignObject x="45" y="355" width="80" height="54">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+              <button class="svg-toggle low" id="nand-btn-b" onclick="toggleNand('b')" style="width:68px;height:34px;font-size:12px;border-radius:17px;">LOW</button>
+            </div>
+          </foreignObject>
+
+          <!-- Current paths -->
+          <path id="nand-path-vdd-a" d="M 350 20 L 350 40 L 200 40 L 200 55 L 200 72 L 200 135 L 200 150 L 200 200 L 350 200 L 350 245 L 570 245" class="current-path current-path-vdd"/>
+          <path id="nand-path-vdd-b" d="M 350 20 L 350 40 L 500 40 L 500 55 L 500 72 L 500 135 L 500 150 L 500 200 L 350 200 L 350 245 L 570 245" class="current-path current-path-vdd"/>
+          <path id="nand-path-gnd" d="M 570 245 L 350 245 L 350 285 L 350 302 L 350 355 L 350 370 L 350 428 L 350 445 L 350 497 L 350 512 L 350 590" class="current-path current-path-gnd"/>
+
+          <!-- Layout labels -->
+          <text x="350" y="190" text-anchor="middle" font-size="11" fill="var(--text-muted)" font-family="Inter,sans-serif" font-style="italic">parallel</text>
+          <text x="440" y="405" text-anchor="middle" font-size="11" fill="var(--text-muted)" font-family="Inter,sans-serif" font-style="italic">series</text>
+        </svg>
+      </div>
+
+      <div class="info-panel">
+        <div class="state-card pmos">
+          <div class="card-header">
+            <span class="card-title pmos-t">PMOS P1 (input A)</span>
+            <span class="state-badge on" id="nand-p1-badge">ON</span>
+          </div>
+          <div class="desc" id="nand-p1-desc">A is LOW &rarr; P1 conducts.</div>
+        </div>
+        <div class="state-card pmos">
+          <div class="card-header">
+            <span class="card-title pmos-t">PMOS P2 (input B)</span>
+            <span class="state-badge on" id="nand-p2-badge">ON</span>
+          </div>
+          <div class="desc" id="nand-p2-desc">B is LOW &rarr; P2 conducts.</div>
+        </div>
+        <div class="state-card nmos">
+          <div class="card-header">
+            <span class="card-title nmos-t">NMOS N1 (input A)</span>
+            <span class="state-badge off" id="nand-n1-badge">OFF</span>
+          </div>
+          <div class="desc" id="nand-n1-desc">A is LOW &rarr; N1 cut off. Series path broken.</div>
+        </div>
+        <div class="state-card nmos">
+          <div class="card-header">
+            <span class="card-title nmos-t">NMOS N2 (input B)</span>
+            <span class="state-badge off" id="nand-n2-badge">OFF</span>
+          </div>
+          <div class="desc" id="nand-n2-desc">B is LOW &rarr; N2 cut off. Series path broken.</div>
+        </div>
+        <div class="output-card">
+          <div class="label">Output</div>
+          <div class="output-value high" id="nand-out-val">HIGH (1)</div>
+          <div class="output-explain" id="nand-out-exp">Either PMOS conducts &rarr; output pulled to V<sub>DD</sub>.</div>
+        </div>
+        <div class="truth-table">
+          <div class="label">Truth Table</div>
+          <div class="tt-grid tt-grid-4col" id="nand-tt">
+            <div class="tt-cell header">A</div><div class="tt-cell header">B</div><div class="tt-cell header">PMOS</div><div class="tt-cell header">NMOS</div><div class="tt-cell header">OUT</div>
+            <div class="tt-cell active-row"><span class="l">0</span></div><div class="tt-cell active-row"><span class="l">0</span></div><div class="tt-cell active-row"><span class="on-txt">Both ON</span></div><div class="tt-cell active-row"><span class="off-txt">Both OFF</span></div><div class="tt-cell active-row"><span class="h">1</span></div>
+            <div class="tt-cell"><span class="l">0</span></div><div class="tt-cell"><span class="h">1</span></div><div class="tt-cell"><span class="on-txt">P1 ON</span></div><div class="tt-cell"><span class="off-txt">N1 OFF</span></div><div class="tt-cell"><span class="h">1</span></div>
+            <div class="tt-cell"><span class="h">1</span></div><div class="tt-cell"><span class="l">0</span></div><div class="tt-cell"><span class="on-txt">P2 ON</span></div><div class="tt-cell"><span class="off-txt">N2 OFF</span></div><div class="tt-cell"><span class="h">1</span></div>
+            <div class="tt-cell"><span class="h">1</span></div><div class="tt-cell"><span class="h">1</span></div><div class="tt-cell"><span class="off-txt">Both OFF</span></div><div class="tt-cell"><span class="on-txt">Both ON</span></div><div class="tt-cell"><span class="l">0</span></div>
+          </div>
+        </div>
+        <div class="logic-eqs">
+          <div class="label">Network Logic</div>
+          <div class="eq-row">
+            <span class="eq-network pullup">Pull-Up</span>
+            <span class="eq-expr">V<sub>OUT</sub> <span class="eq-sym">=</span> F <span class="eq-sym">=</span> (AB)&#x0305; <span class="eq-sym">=</span> A&#x0305; <span class="eq-sym">+</span> B&#x0305; <span class="eq-dim">&thinsp;(parallel)</span></span>
+          </div>
+          <div class="eq-row">
+            <span class="eq-network pulldown">Pull-Down</span>
+            <span class="eq-expr">V<sub>OUT</sub> <span class="eq-sym">=</span> F&#x0305; <span class="eq-sym">=</span> A <span class="eq-sym">&middot;</span> B <span class="eq-dim">&thinsp;(series)</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- NOR TAB                                      -->
+    <!-- ============================================ -->
+    <div class="gate-view" id="view-nor">
+      <div class="circuit-panel">
+        <svg preserveAspectRatio="xMidYMid meet" viewBox="-40 -25 730 765" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- VDD rail -->
+          <line x1="350" y1="20" x2="350" y2="67" class="wire-active"/>
+          <polygon points="350,0 335,20 365,20" fill="var(--vdd-color)"/>
+          <text x="350" y="-5" text-anchor="middle" class="svg-label" font-size="20" fill="var(--vdd-color)">V<tspan font-size="14" dy="3">DD</tspan></text>
+
+          <!-- GND rail -->
+          <line x1="350" y1="565" x2="350" y2="590" class="wire-active"/>
+          <line x1="308" y1="590" x2="392" y2="590" stroke="var(--gnd-color)" stroke-width="4"/>
+          <line x1="322" y1="602" x2="378" y2="602" stroke="var(--gnd-color)" stroke-width="3"/>
+          <line x1="333" y1="614" x2="367" y2="614" stroke="var(--gnd-color)" stroke-width="2"/>
+          <text x="350" y="642" text-anchor="middle" class="svg-label" font-size="20" fill="var(--gnd-color)">GND</text>
+
+          <!-- PMOS A (top of series) -->
+          <g>
+            <rect id="nor-pmos-a-glow" class="transistor-glow" x="268" y="48" width="162" height="110" rx="12" fill="var(--pmos-fill)"/>
+            <line x1="295" y1="63" x2="295" y2="130" stroke="var(--vdd-color)" stroke-width="3"/>
+            <circle cx="288" cy="96" r="6" class="pmos-bubble"/>
+            <line id="nor-pmos-a-ch" x1="315" y1="71" x2="315" y2="121" class="channel-bar off"/>
+            <line x1="315" y1="67" x2="350" y2="67" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <line x1="315" y1="125" x2="350" y2="125" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <text x="395" y="102" class="svg-label" font-size="13" fill="var(--vdd-color)">P1</text>
+          </g>
+
+          <!-- Internal node between series PMOS -->
+          <line x1="350" y1="125" x2="350" y2="197" class="wire-active"/>
+
+          <!-- PMOS B (bottom of series) -->
+          <g>
+            <rect id="nor-pmos-b-glow" class="transistor-glow" x="268" y="175" width="162" height="110" rx="12" fill="var(--pmos-fill)"/>
+            <line x1="295" y1="193" x2="295" y2="258" stroke="var(--vdd-color)" stroke-width="3"/>
+            <circle cx="288" cy="225" r="6" class="pmos-bubble"/>
+            <line id="nor-pmos-b-ch" x1="315" y1="201" x2="315" y2="249" class="channel-bar off"/>
+            <line x1="315" y1="197" x2="350" y2="197" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <line x1="315" y1="253" x2="350" y2="253" stroke="var(--vdd-color)" stroke-width="2.5"/>
+            <text x="395" y="232" class="svg-label" font-size="13" fill="var(--vdd-color)">P2</text>
+          </g>
+
+          <!-- PMOS to output -->
+          <line x1="350" y1="253" x2="350" y2="320" class="wire-active"/>
+
+          <!-- Output node -->
+          <circle cx="350" cy="320" r="6" class="node-dot"/>
+          <line x1="350" y1="320" x2="570" y2="320" class="wire-active"/>
+          <circle cx="570" cy="320" r="6" class="node-dot"/>
+          <text x="588" y="315" class="svg-label" font-size="18">V<tspan font-size="13" dy="3">OUT</tspan></text>
+
+          <!-- NMOS pair (parallel) -->
+          <line x1="350" y1="320" x2="350" y2="355" class="wire-active"/>
+          <line x1="250" y1="355" x2="450" y2="355" class="wire-active"/>
+          <line x1="250" y1="355" x2="250" y2="397" class="wire-active"/>
+          <line x1="450" y1="355" x2="450" y2="397" class="wire-active"/>
+
+          <!-- NMOS A (left) -->
+          <g>
+            <rect id="nor-nmos-a-glow" class="transistor-glow" x="168" y="375" width="162" height="110" rx="12" fill="var(--nmos-fill)"/>
+            <line x1="195" y1="393" x2="195" y2="458" stroke="var(--gnd-color)" stroke-width="3"/>
+            <line id="nor-nmos-a-ch" x1="215" y1="401" x2="215" y2="449" class="channel-bar off"/>
+            <line x1="215" y1="397" x2="250" y2="397" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <line x1="215" y1="453" x2="250" y2="453" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <text x="170" y="490" class="svg-label" font-size="13" fill="var(--gnd-color)">N1</text>
+          </g>
+
+          <!-- NMOS B (right) -->
+          <g>
+            <rect id="nor-nmos-b-glow" class="transistor-glow" x="368" y="375" width="162" height="110" rx="12" fill="var(--nmos-fill)"/>
+            <line x1="395" y1="393" x2="395" y2="458" stroke="var(--gnd-color)" stroke-width="3"/>
+            <line id="nor-nmos-b-ch" x1="415" y1="401" x2="415" y2="449" class="channel-bar off"/>
+            <line x1="415" y1="397" x2="450" y2="397" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <line x1="415" y1="453" x2="450" y2="453" stroke="var(--gnd-color)" stroke-width="2.5"/>
+            <text x="490" y="432" class="svg-label" font-size="13" fill="var(--gnd-color)">N2</text>
+          </g>
+
+          <!-- NMOS merge to GND -->
+          <line x1="250" y1="453" x2="250" y2="540" class="wire-active"/>
+          <line x1="450" y1="453" x2="450" y2="540" class="wire-active"/>
+          <line x1="250" y1="540" x2="450" y2="540" class="wire-active"/>
+          <line x1="350" y1="540" x2="350" y2="565" class="wire-active"/>
+
+          <!-- Input A wiring -->
+          <line x1="55" y1="96" x2="282" y2="96" class="wire-active"/>
+          <line x1="55" y1="96" x2="55" y2="426" class="wire-active"/>
+          <line x1="55" y1="426" x2="195" y2="426" class="wire-active"/>
+          <line x1="30" y1="190" x2="55" y2="190" class="wire-active"/>
+          <circle cx="55" cy="190" r="5" class="node-dot"/>
+          <text x="30" y="162" text-anchor="middle" class="svg-label" font-size="16">A</text>
+          <foreignObject x="-30" y="165" width="80" height="54">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+              <button class="svg-toggle low" id="nor-btn-a" onclick="toggleNor('a')" style="width:68px;height:34px;font-size:12px;border-radius:17px;">LOW</button>
+            </div>
+          </foreignObject>
+
+          <!-- Input B wiring -->
+          <line x1="130" y1="225" x2="282" y2="225" class="wire-active"/>
+          <line x1="130" y1="225" x2="130" y2="495" class="wire-active"/>
+          <line x1="130" y1="495" x2="340" y2="495" class="wire-active"/>
+          <line x1="340" y1="495" x2="340" y2="426" class="wire-active"/>
+          <line x1="340" y1="426" x2="395" y2="426" class="wire-active"/>
+          <line x1="30" y1="370" x2="130" y2="370" class="wire-active"/>
+          <circle cx="130" cy="370" r="5" class="node-dot"/>
+          <text x="30" y="342" text-anchor="middle" class="svg-label" font-size="16">B</text>
+          <foreignObject x="-30" y="345" width="80" height="54">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+              <button class="svg-toggle low" id="nor-btn-b" onclick="toggleNor('b')" style="width:68px;height:34px;font-size:12px;border-radius:17px;">LOW</button>
+            </div>
+          </foreignObject>
+
+          <!-- Current paths -->
+          <path id="nor-path-vdd" d="M 350 20 L 350 45 L 350 67 L 350 125 L 350 140 L 350 175 L 350 197 L 350 253 L 350 268 L 350 320 L 570 320" class="current-path current-path-vdd"/>
+          <path id="nor-path-gnd-a" d="M 570 320 L 350 320 L 350 355 L 250 355 L 250 375 L 250 397 L 250 453 L 250 468 L 250 540 L 350 540 L 350 590" class="current-path current-path-gnd"/>
+          <path id="nor-path-gnd-b" d="M 570 320 L 350 320 L 350 355 L 450 355 L 450 375 L 450 397 L 450 453 L 450 468 L 450 540 L 350 540 L 350 590" class="current-path current-path-gnd"/>
+
+          <!-- Layout labels -->
+          <text x="440" y="345" text-anchor="middle" font-size="11" fill="var(--text-muted)" font-family="Inter,sans-serif" font-style="italic">parallel</text>
+          <text x="395" y="165" text-anchor="start" font-size="11" fill="var(--text-muted)" font-family="Inter,sans-serif" font-style="italic">series</text>
+        </svg>
+      </div>
+
+      <div class="info-panel">
+        <div class="state-card pmos">
+          <div class="card-header">
+            <span class="card-title pmos-t">PMOS P1 (input A)</span>
+            <span class="state-badge on" id="nor-p1-badge">ON</span>
+          </div>
+          <div class="desc" id="nor-p1-desc">A is LOW &rarr; P1 conducts.</div>
+        </div>
+        <div class="state-card pmos">
+          <div class="card-header">
+            <span class="card-title pmos-t">PMOS P2 (input B)</span>
+            <span class="state-badge on" id="nor-p2-badge">ON</span>
+          </div>
+          <div class="desc" id="nor-p2-desc">B is LOW &rarr; P2 conducts.</div>
+        </div>
+        <div class="state-card nmos">
+          <div class="card-header">
+            <span class="card-title nmos-t">NMOS N1 (input A)</span>
+            <span class="state-badge off" id="nor-n1-badge">OFF</span>
+          </div>
+          <div class="desc" id="nor-n1-desc">A is LOW &rarr; N1 cut off.</div>
+        </div>
+        <div class="state-card nmos">
+          <div class="card-header">
+            <span class="card-title nmos-t">NMOS N2 (input B)</span>
+            <span class="state-badge off" id="nor-n2-badge">OFF</span>
+          </div>
+          <div class="desc" id="nor-n2-desc">B is LOW &rarr; N2 cut off.</div>
+        </div>
+        <div class="output-card">
+          <div class="label">Output</div>
+          <div class="output-value high" id="nor-out-val">HIGH (1)</div>
+          <div class="output-explain" id="nor-out-exp">Both PMOS in series conduct &rarr; output pulled to V<sub>DD</sub>.</div>
+        </div>
+        <div class="truth-table">
+          <div class="label">Truth Table</div>
+          <div class="tt-grid tt-grid-4col" id="nor-tt">
+            <div class="tt-cell header">A</div><div class="tt-cell header">B</div><div class="tt-cell header">PMOS</div><div class="tt-cell header">NMOS</div><div class="tt-cell header">OUT</div>
+            <div class="tt-cell active-row"><span class="l">0</span></div><div class="tt-cell active-row"><span class="l">0</span></div><div class="tt-cell active-row"><span class="on-txt">Both ON</span></div><div class="tt-cell active-row"><span class="off-txt">Both OFF</span></div><div class="tt-cell active-row"><span class="h">1</span></div>
+            <div class="tt-cell"><span class="l">0</span></div><div class="tt-cell"><span class="h">1</span></div><div class="tt-cell"><span class="off-txt">P2 OFF</span></div><div class="tt-cell"><span class="on-txt">N2 ON</span></div><div class="tt-cell"><span class="l">0</span></div>
+            <div class="tt-cell"><span class="h">1</span></div><div class="tt-cell"><span class="l">0</span></div><div class="tt-cell"><span class="off-txt">P1 OFF</span></div><div class="tt-cell"><span class="on-txt">N1 ON</span></div><div class="tt-cell"><span class="l">0</span></div>
+            <div class="tt-cell"><span class="h">1</span></div><div class="tt-cell"><span class="h">1</span></div><div class="tt-cell"><span class="off-txt">Both OFF</span></div><div class="tt-cell"><span class="on-txt">Both ON</span></div><div class="tt-cell"><span class="l">0</span></div>
+          </div>
+        </div>
+        <div class="logic-eqs">
+          <div class="label">Network Logic</div>
+          <div class="eq-row">
+            <span class="eq-network pullup">Pull-Up</span>
+            <span class="eq-expr">V<sub>OUT</sub> <span class="eq-sym">=</span> F <span class="eq-sym">=</span> (A+B)&#x0305; <span class="eq-sym">=</span> A&#x0305; <span class="eq-sym">&middot;</span> B&#x0305; <span class="eq-dim">&thinsp;(series)</span></span>
+          </div>
+          <div class="eq-row">
+            <span class="eq-network pulldown">Pull-Down</span>
+            <span class="eq-expr">V<sub>OUT</sub> <span class="eq-sym">=</span> F&#x0305; <span class="eq-sym">=</span> A <span class="eq-sym">+</span> B <span class="eq-dim">&thinsp;(parallel)</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+  // Responsive scaling
+  const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+  function autoResize() {
+    const c = document.getElementById('viewportContainer');
+    const s = document.getElementById('designSurface');
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let cw, ch;
+    if (vw/vh > 16/9) { ch = vh; cw = ch*16/9; } else { cw = vw; ch = cw*9/16; }
+    c.style.width = cw+'px'; c.style.height = ch+'px';
+    s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+  }
+  autoResize();
+  let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(autoResize,50);});
+
+  // ---- Tab switching ----
+  let currentTab = 'inv';
+  const titles = {
+    inv: ['CMOS Inverter', 'Complementary Metal-Oxide-Semiconductor \u00b7 NOT Gate'],
+    nand: ['CMOS NAND Gate', '2-Input NAND \u00b7 PMOS Parallel, NMOS Series'],
+    nor: ['CMOS NOR Gate', '2-Input NOR \u00b7 PMOS Series, NMOS Parallel'],
+  };
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.gate-view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-'+tab).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach((b,i) => {
+      b.classList.toggle('active', ['inv','nand','nor'][i] === tab);
+    });
+    document.getElementById('gate-title').textContent = titles[tab][0];
+    document.getElementById('gate-subtitle').textContent = titles[tab][1];
+    document.getElementById('loopToggle').style.display = tab === 'inv' ? 'flex' : 'none';
+  }
+
+  // ---- Supply loop toggle ----
+  let loopVisible = true;
+  function toggleLoop() {
+    loopVisible = !loopVisible;
+    document.getElementById('inv-supply-loop').style.opacity = loopVisible ? '0.7' : '0';
+    document.getElementById('loopToggle').classList.toggle('active', loopVisible);
+  }
+
+  // ---- INVERTER ----
+  let invA = false;
+  function toggleInv() {
+    invA = !invA;
+    const btn = document.getElementById('inv-btn-a');
+    btn.textContent = invA ? 'HIGH (1)' : 'LOW (0)';
+    btn.className = 'svg-toggle ' + (invA ? 'high' : 'low');
+
+    setChannel('inv-pmos-ch', !invA); setGlow('inv-pmos-glow', !invA);
+    setChannel('inv-nmos-ch', invA);  setGlow('inv-nmos-glow', invA);
+    document.getElementById('inv-pmos-lbl').textContent = invA ? 'OFF' : 'ON';
+    document.getElementById('inv-pmos-lbl').setAttribute('fill', invA ? 'var(--off-color)' : 'var(--on-color)');
+    document.getElementById('inv-nmos-lbl').textContent = invA ? 'ON' : 'OFF';
+    document.getElementById('inv-nmos-lbl').setAttribute('fill', invA ? 'var(--on-color)' : 'var(--off-color)');
+
+    setBadge('inv-pmos-badge', !invA); setBadge('inv-nmos-badge', invA);
+    document.getElementById('inv-pmos-desc').innerHTML = invA
+      ? 'Gate HIGH \u2192 |V<sub>GS</sub>| &lt; |V<sub>tp</sub>| \u2192 cut off.'
+      : 'Gate LOW \u2192 |V<sub>GS</sub>| &gt; |V<sub>tp</sub>| \u2192 conducts. V<sub>DD</sub> \u2192 output.';
+    document.getElementById('inv-nmos-desc').innerHTML = invA
+      ? 'Gate HIGH \u2192 V<sub>GS</sub> &gt; V<sub>tn</sub> \u2192 conducts. Output \u2192 GND.'
+      : 'Gate LOW \u2192 V<sub>GS</sub> &lt; V<sub>tn</sub> \u2192 cut off. No path to GND.';
+
+    const outH = !invA;
+    setOutput('inv-out-val', outH);
+    document.getElementById('inv-out-exp').innerHTML = outH
+      ? 'Pulled to V<sub>DD</sub> through conducting PMOS.'
+      : 'Pulled to GND through conducting NMOS.';
+
+    setPath('inv-path-vdd', !invA); setPath('inv-path-gnd', invA);
+    highlightTT('inv-tt', 4, invA ? 1 : 0);
+  }
+
+  // ---- NAND ----
+  let nandA = false, nandB = false;
+  function toggleNand(which) {
+    if (which === 'a') nandA = !nandA; else nandB = !nandB;
+    const btnA = document.getElementById('nand-btn-a');
+    const btnB = document.getElementById('nand-btn-b');
+    btnA.textContent = nandA ? 'HIGH' : 'LOW'; btnA.className = 'svg-toggle '+(nandA?'high':'low');
+    btnB.textContent = nandB ? 'HIGH' : 'LOW'; btnB.className = 'svg-toggle '+(nandB?'high':'low');
+
+    const p1on = !nandA, p2on = !nandB, n1on = nandA, n2on = nandB;
+    setChannel('nand-pmos-a-ch', p1on); setGlow('nand-pmos-a-glow', p1on);
+    setChannel('nand-pmos-b-ch', p2on); setGlow('nand-pmos-b-glow', p2on);
+    setChannel('nand-nmos-a-ch', n1on); setGlow('nand-nmos-a-glow', n1on);
+    setChannel('nand-nmos-b-ch', n2on); setGlow('nand-nmos-b-glow', n2on);
+
+    setBadge('nand-p1-badge', p1on); setBadge('nand-p2-badge', p2on);
+    setBadge('nand-n1-badge', n1on); setBadge('nand-n2-badge', n2on);
+
+    document.getElementById('nand-p1-desc').innerHTML = p1on ? 'A is LOW \u2192 P1 conducts.' : 'A is HIGH \u2192 P1 cut off.';
+    document.getElementById('nand-p2-desc').innerHTML = p2on ? 'B is LOW \u2192 P2 conducts.' : 'B is HIGH \u2192 P2 cut off.';
+    document.getElementById('nand-n1-desc').innerHTML = n1on ? 'A is HIGH \u2192 N1 conducts.' : 'A is LOW \u2192 N1 cut off. Series path broken.';
+    document.getElementById('nand-n2-desc').innerHTML = n2on ? 'B is HIGH \u2192 N2 conducts.' : 'B is LOW \u2192 N2 cut off. Series path broken.';
+
+    const outH = !(nandA && nandB);
+    setOutput('nand-out-val', outH);
+    const bothNon = n1on && n2on;
+    document.getElementById('nand-out-exp').innerHTML = bothNon
+      ? 'Both NMOS conduct (series) \u2192 output pulled to GND.'
+      : (p1on || p2on) ? 'At least one PMOS conducts (parallel) \u2192 output pulled to V<sub>DD</sub>.' : 'Output pulled to V<sub>DD</sub>.';
+
+    setPath('nand-path-vdd-a', p1on && outH);
+    setPath('nand-path-vdd-b', p2on && outH);
+    setPath('nand-path-gnd', bothNon);
+
+    const row = (nandA?2:0) + (nandB?1:0);
+    highlightTT('nand-tt', 5, row);
+  }
+
+  // ---- NOR ----
+  let norA = false, norB = false;
+  function toggleNor(which) {
+    if (which === 'a') norA = !norA; else norB = !norB;
+    const btnA = document.getElementById('nor-btn-a');
+    const btnB = document.getElementById('nor-btn-b');
+    btnA.textContent = norA ? 'HIGH' : 'LOW'; btnA.className = 'svg-toggle '+(norA?'high':'low');
+    btnB.textContent = norB ? 'HIGH' : 'LOW'; btnB.className = 'svg-toggle '+(norB?'high':'low');
+
+    const p1on = !norA, p2on = !norB, n1on = norA, n2on = norB;
+    setChannel('nor-pmos-a-ch', p1on); setGlow('nor-pmos-a-glow', p1on);
+    setChannel('nor-pmos-b-ch', p2on); setGlow('nor-pmos-b-glow', p2on);
+    setChannel('nor-nmos-a-ch', n1on); setGlow('nor-nmos-a-glow', n1on);
+    setChannel('nor-nmos-b-ch', n2on); setGlow('nor-nmos-b-glow', n2on);
+
+    setBadge('nor-p1-badge', p1on); setBadge('nor-p2-badge', p2on);
+    setBadge('nor-n1-badge', n1on); setBadge('nor-n2-badge', n2on);
+
+    document.getElementById('nor-p1-desc').innerHTML = p1on ? 'A is LOW \u2192 P1 conducts.' : 'A is HIGH \u2192 P1 cut off. Series path broken.';
+    document.getElementById('nor-p2-desc').innerHTML = p2on ? 'B is LOW \u2192 P2 conducts.' : 'B is HIGH \u2192 P2 cut off. Series path broken.';
+    document.getElementById('nor-n1-desc').innerHTML = n1on ? 'A is HIGH \u2192 N1 conducts.' : 'A is LOW \u2192 N1 cut off.';
+    document.getElementById('nor-n2-desc').innerHTML = n2on ? 'B is HIGH \u2192 N2 conducts.' : 'B is LOW \u2192 N2 cut off.';
+
+    const outH = !(norA || norB);
+    setOutput('nor-out-val', outH);
+    const bothPon = p1on && p2on;
+    document.getElementById('nor-out-exp').innerHTML = outH
+      ? 'Both PMOS conduct (series) \u2192 output pulled to V<sub>DD</sub>.'
+      : (n1on || n2on) ? 'At least one NMOS conducts (parallel) \u2192 output pulled to GND.' : 'Output pulled to GND.';
+
+    setPath('nor-path-vdd', bothPon && outH);
+    setPath('nor-path-gnd-a', n1on && !outH);
+    setPath('nor-path-gnd-b', n2on && !outH);
+
+    const row = (norA?2:0) + (norB?1:0);
+    highlightTT('nor-tt', 5, row);
+  }
+
+  // ---- Helpers ----
+  function setChannel(id, on) {
+    document.getElementById(id).className.baseVal = 'channel-bar ' + (on ? 'on' : 'off');
+  }
+  function setGlow(id, on) {
+    document.getElementById(id).classList.toggle('on', on);
+  }
+  function setBadge(id, on) {
+    const el = document.getElementById(id);
+    el.className = 'state-badge ' + (on ? 'on' : 'off');
+    el.textContent = on ? 'ON' : 'OFF';
+  }
+  function setOutput(id, high) {
+    const el = document.getElementById(id);
+    el.className = 'output-value ' + (high ? 'high' : 'low');
+    el.textContent = high ? 'HIGH (1)' : 'LOW (0)';
+  }
+  function setPath(id, visible) {
+    document.getElementById(id).classList.toggle('visible', visible);
+  }
+  function highlightTT(tableId, cols, activeRow) {
+    const cells = document.getElementById(tableId).querySelectorAll('.tt-cell:not(.header)');
+    cells.forEach((c, i) => {
+      const row = Math.floor(i / cols);
+      c.classList.toggle('active-row', row === activeRow);
+    });
+  }
+
+  // Initialize all views
+  toggleInv(); toggleInv();
+  toggleNand('a'); toggleNand('a');
+  toggleNor('a'); toggleNor('a');
+</script>
+
+</body>
+</html>
