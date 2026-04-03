@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Introduction to FSMD</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 50px 20px;
+        }
+
+        h1 {
+            color: #e8e8e8;
+            font-size: 34px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        h1 span {
+            background: linear-gradient(90deg, #4fc3f7, #ce93d8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #8899aa;
+            font-size: 17px;
+            margin-bottom: 14px;
+        }
+
+        .subtitle em {
+            color: #ff9800;
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        /* ── Tab Bar ── */
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 14px;
+        }
+
+        .tab-btn {
+            padding: 10px 28px;
+            border-radius: 10px 10px 0 0;
+            border: 2px solid #2d3a5a;
+            border-bottom: none;
+            background: rgba(13, 27, 42, 0.5);
+            color: #667788;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.5px;
+        }
+
+        .tab-btn:hover {
+            background: rgba(13, 27, 42, 0.8);
+            color: #8899aa;
+        }
+
+        .tab-btn.active {
+            background: rgba(13, 27, 42, 0.9);
+            border-color: #4fc3f7;
+            color: #4fc3f7;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .tab-content.active {
+            display: flex;
+        }
+
+        .main-layout {
+            display: flex;
+            gap: 28px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* ── Left: State Diagram ── */
+        .left-panel {
+            flex: 1.15;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .panel {
+            background: rgba(13, 27, 42, 0.9);
+            border: 2px solid #2d3a5a;
+            border-radius: 14px;
+            padding: 18px 22px;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4fc3f7;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Diagram area */
+        .diagram-container {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .diagram-container .panel {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .diagram-container svg {
+            flex: 1;
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        /* ── Right: Controls + Info ── */
+        .right-panel {
+            width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Signal controls */
+        .signal-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .signal-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .signal-label {
+            font-size: 22px;
+            font-weight: 700;
+            color: #c0c8d0;
+            width: 55px;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .toggle-track {
+            width: 80px;
+            height: 40px;
+            border-radius: 20px;
+            background: #2d3a5a;
+            border: 2px solid #3d4a6a;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.25s ease;
+        }
+
+        .toggle-track.on {
+            background: rgba(255, 152, 0, 0.25);
+            border-color: #ff9800;
+        }
+
+        .toggle-thumb {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #667788;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        .toggle-track.on .toggle-thumb {
+            left: 44px;
+            background: #ff9800;
+        }
+
+        .signal-value {
+            font-size: 28px;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            width: 30px;
+        }
+
+        .signal-value.off {
+            color: #667788;
+        }
+
+        .signal-value.on {
+            color: #ff9800;
+        }
+
+        .signal-desc {
+            font-size: 14px;
+            color: #667788;
+            flex: 1;
+        }
+
+        /* Buttons */
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .btn {
+            padding: 10px 22px;
+            border-radius: 8px;
+            border: 2px solid;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-primary {
+            background: rgba(255, 152, 0, 0.18);
+            border-color: #ff9800;
+            color: #ff9800;
+        }
+
+        .btn-primary:hover {
+            background: rgba(255, 152, 0, 0.3);
+        }
+
+        .btn-danger {
+            background: rgba(244, 67, 54, 0.12);
+            border-color: #f44336;
+            color: #f44336;
+        }
+
+        .btn-danger:hover {
+            background: rgba(244, 67, 54, 0.22);
+        }
+
+        /* State info cards */
+        .state-info {
+            display: flex;
+            gap: 12px;
+        }
+
+        .state-card {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 14px 16px;
+            border: 1px solid #2d3a5a;
+        }
+
+        .state-card-label {
+            font-size: 12px;
+            color: #667788;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .state-card-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #e0e0e0;
+        }
+
+        .state-card-value.highlight {
+            color: #ff9800;
+        }
+
+        .state-card-desc {
+            font-size: 13px;
+            color: #8899aa;
+            margin-top: 4px;
+        }
+
+        /* Transition history */
+        .history-panel {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-panel .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .history-table-wrap {
+            flex: 1;
+            overflow-y: auto;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .history-table-wrap::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .history-table-wrap::-webkit-scrollbar-thumb {
+            background: #3d4a6a;
+            border-radius: 3px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        th {
+            background: #1a2540;
+            color: #8899aa;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #2d3a5a;
+        }
+
+        td {
+            padding: 9px 14px;
+            color: #c0c8d0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        tr.current-row {
+            background: rgba(255, 152, 0, 0.1);
+        }
+
+        tr.current-row td {
+            color: #ff9800;
+            font-weight: 600;
+        }
+
+        /* Key insight */
+        .key-insight {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, rgba(84, 110, 122, 0.2), rgba(84, 110, 122, 0.08));
+            border: 2px solid #546e7a;
+            border-radius: 10px;
+        }
+
+        .key-insight-icon {
+            font-size: 26px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .key-insight-text {
+            font-size: 14px;
+            color: #b0bec5;
+            line-height: 1.5;
+        }
+
+        .key-insight-text strong {
+            color: #4fc3f7;
+        }
+
+        /* Active transition label on diagram */
+        .active-label {
+            fill: #ff9800;
+            font-weight: 700;
+        }
+
+        /* ── Tab 2: FSM + Datapath Layout ── */
+        .arch-layout {
+            flex: 1;
+            display: flex;
+            gap: 28px;
+            min-height: 0;
+        }
+
+        .arch-left {
+            flex: 1.15;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .arch-diagram-container {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .arch-diagram-container .panel {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .arch-diagram-container svg {
+            flex: 1;
+            width: 100%;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="viewport-container">
+        <div class="design-surface">
+            <h1>Introduction to <span>FSMD</span></h1>
+            <div class="subtitle">Toggle <em>ld</em> and <em>sel</em> to see how input signals control state transitions and datapath operations</div>
+
+            <!-- Tab Bar -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('fsmd')">FSMD State Diagram</button>
+                <button class="tab-btn" onclick="switchTab('arch')">FSM + Datapath Architecture</button>
+            </div>
+
+            <!-- Tab 1: FSMD State Diagram (original view) -->
+            <div class="tab-content active" id="tab-fsmd">
+                <div class="main-layout">
+                    <!-- Left: State Diagram -->
+                    <div class="left-panel">
+                        <div class="diagram-container">
+                            <div class="panel">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                                    <div class="panel-title" style="margin-bottom:0;">State Diagram + Datapath</div>
+                                </div>
+                                <svg id="fsmdDiagram" viewBox="0 0 1000 640"></svg>
+                            </div>
+                        </div>
+
+                        <div class="key-insight">
+                            <div class="key-insight-icon">&#128161;</div>
+                            <div class="key-insight-text">
+                                An <strong>FSMD</strong> (Finite State Machine with Datapath) couples a controller FSM with datapath operations.
+                                Each state issues <strong>control signals</strong> that direct the datapath (load, increment, select),
+                                while <strong>input signals</strong> determine which state transition the FSM takes.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Controls + Info -->
+                    <div class="right-panel">
+                        <!-- Signal toggles -->
+                        <div class="panel">
+                            <div class="panel-title">Input Signals</div>
+                            <div class="signal-controls">
+                                <div class="signal-row">
+                                    <div class="signal-label">ld</div>
+                                    <div class="toggle-track" id="toggleLd" onclick="toggleSignal('ld')">
+                                        <div class="toggle-thumb"></div>
+                                    </div>
+                                    <div class="signal-value off" id="ldValue">0</div>
+                                    <div class="signal-desc" id="ldDesc">Load disabled &mdash; stay in Inc loop</div>
+                                </div>
+                                <div class="signal-row">
+                                    <div class="signal-label">sel</div>
+                                    <div class="toggle-track" id="toggleSel" onclick="toggleSignal('sel')">
+                                        <div class="toggle-thumb"></div>
+                                    </div>
+                                    <div class="signal-value off" id="selValue">0</div>
+                                    <div class="signal-desc" id="selDesc">Select line 0 &mdash; route to L5 (if ld=1)</div>
+                                </div>
+                                <div class="btn-row">
+                                    <button class="btn btn-primary" onclick="clockStep()">Clock Step</button>
+                                    <button class="btn btn-danger" onclick="resetFSMD()">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- State info -->
+                        <div class="state-info">
+                            <div class="state-card">
+                                <div class="state-card-label">Current State</div>
+                                <div class="state-card-value highlight" id="currentStateDisplay">INIT</div>
+                                <div class="state-card-desc" id="currentStateDesc">Reset state</div>
+                            </div>
+                            <div class="state-card">
+                                <div class="state-card-label">Datapath Action</div>
+                                <div class="state-card-value" id="datapathDisplay">Y = 0</div>
+                                <div class="state-card-desc" id="datapathDesc">Initialize output</div>
+                            </div>
+                            <div class="state-card">
+                                <div class="state-card-label">Y Output</div>
+                                <div class="state-card-value" id="yDisplay" style="color:#4fc3f7;">0</div>
+                                <div class="state-card-desc" id="yDesc">[7:0] Y</div>
+                            </div>
+                        </div>
+
+                        <!-- Transition history -->
+                        <div class="history-panel">
+                            <div class="panel">
+                                <div class="panel-title">Transition History</div>
+                                <div class="history-table-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Clk</th>
+                                                <th>ld</th>
+                                                <th>sel</th>
+                                                <th>From</th>
+                                                <th>To</th>
+                                                <th>Y</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="historyBody">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 2: FSM + Datapath Architecture -->
+            <div class="tab-content" id="tab-arch">
+                <div class="arch-layout">
+                    <div class="arch-left">
+                        <div class="arch-diagram-container">
+                            <div class="panel">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                                    <div class="panel-title" style="margin-bottom:0;">FSM Controller &rarr; Datapath</div>
+                                </div>
+                                <svg id="archDiagram" viewBox="0 0 1000 640"></svg>
+                            </div>
+                        </div>
+
+                        <div class="key-insight">
+                            <div class="key-insight-icon">&#128161;</div>
+                            <div class="key-insight-text">
+                                The <strong>FSM controller</strong> reads external inputs (<strong>ld</strong>, <strong>sel</strong>) and its current state
+                                to produce <strong>control signals</strong> (mux_sel, Y_en) that drive the datapath hardware.
+                                The datapath contains the <strong>MUX</strong>, <strong>adder</strong>, and <strong>register</strong> that perform the actual computation.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Controls (shared) -->
+                    <div class="right-panel">
+                        <div class="panel">
+                            <div class="panel-title">Input Signals</div>
+                            <div class="signal-controls">
+                                <div class="signal-row">
+                                    <div class="signal-label">ld</div>
+                                    <div class="toggle-track" id="toggleLd2" onclick="toggleSignal('ld')">
+                                        <div class="toggle-thumb"></div>
+                                    </div>
+                                    <div class="signal-value off" id="ldValue2">0</div>
+                                    <div class="signal-desc" id="ldDesc2">Load disabled &mdash; stay in Inc loop</div>
+                                </div>
+                                <div class="signal-row">
+                                    <div class="signal-label">sel</div>
+                                    <div class="toggle-track" id="toggleSel2" onclick="toggleSignal('sel')">
+                                        <div class="toggle-thumb"></div>
+                                    </div>
+                                    <div class="signal-value off" id="selValue2">0</div>
+                                    <div class="signal-desc" id="selDesc2">Select line 0 &mdash; route to L5 (if ld=1)</div>
+                                </div>
+                                <div class="btn-row">
+                                    <button class="btn btn-primary" onclick="clockStep()">Clock Step</button>
+                                    <button class="btn btn-danger" onclick="resetFSMD()">Reset</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Control signals panel -->
+                        <div class="panel">
+                            <div class="panel-title">Control Signals (FSM &rarr; Datapath)</div>
+                            <div style="display:flex;flex-direction:column;gap:10px;">
+                                <div style="display:flex;align-items:center;gap:14px;">
+                                    <span style="font-family:'Courier New',monospace;font-size:18px;font-weight:700;color:#ce93d8;width:100px;">mux_sel</span>
+                                    <span style="font-family:'Courier New',monospace;font-size:22px;font-weight:700;width:40px;text-align:center;" id="ctrlMuxSel">00</span>
+                                    <span style="font-size:14px;color:#8899aa;" id="ctrlMuxSelDesc">Select 0 (reset)</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:14px;">
+                                    <span style="font-family:'Courier New',monospace;font-size:18px;font-weight:700;color:#4fc3f7;width:100px;">Y_en</span>
+                                    <span style="font-family:'Courier New',monospace;font-size:22px;font-weight:700;width:40px;text-align:center;" id="ctrlYEn">1</span>
+                                    <span style="font-size:14px;color:#8899aa;" id="ctrlYEnDesc">Register enabled</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- State info -->
+                        <div class="state-info">
+                            <div class="state-card">
+                                <div class="state-card-label">Current State</div>
+                                <div class="state-card-value highlight" id="currentStateDisplay2">INIT</div>
+                                <div class="state-card-desc" id="currentStateDesc2">Reset state</div>
+                            </div>
+                            <div class="state-card">
+                                <div class="state-card-label">Y Output</div>
+                                <div class="state-card-value" id="yDisplay2" style="color:#4fc3f7;">0</div>
+                                <div class="state-card-desc">[7:0] Y register</div>
+                            </div>
+                        </div>
+
+                        <!-- Transition history -->
+                        <div class="history-panel">
+                            <div class="panel">
+                                <div class="panel-title">Transition History</div>
+                                <div class="history-table-wrap">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Clk</th>
+                                                <th>ld</th>
+                                                <th>sel</th>
+                                                <th>State</th>
+                                                <th>mux</th>
+                                                <th>Y</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="historyBody2">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ── FSMD State Machine ──
+const STATES = {
+    INIT: { label: 'INIT', desc: 'Reset state', datapath: 'Y = 0', datapathDesc: 'Initialize output' },
+    Inc:  { label: 'Inc',  desc: 'Increment loop', datapath: 'Y = Y + 1', datapathDesc: 'Increment Y each clock' },
+    L5:   { label: 'L5',   desc: 'Load 5', datapath: 'Y = 5', datapathDesc: 'Load constant 5' },
+    L10:  { label: 'L10',  desc: 'Load 10', datapath: 'Y = 10', datapathDesc: 'Load constant 10' },
+};
+
+// Control signal mappings per state
+// mux_sel: 00=0, 01=Y+1, 10=5, 11=10
+const CTRL = {
+    INIT: { mux_sel: '00', mux_desc: 'Select 0 (reset)', y_en: 1, y_en_desc: 'Register loads 0' },
+    Inc:  { mux_sel: '01', mux_desc: 'Select Y+1 (adder)', y_en: 1, y_en_desc: 'Register loads Y+1' },
+    L5:   { mux_sel: '10', mux_desc: 'Select constant 5', y_en: 1, y_en_desc: 'Register loads 5' },
+    L10:  { mux_sel: '11', mux_desc: 'Select constant 10', y_en: 1, y_en_desc: 'Register loads 10' },
+};
+
+// ── App State ──
+let currentState = 'INIT';
+let ld = 0;
+let sel = 0;
+let yValue = 0;
+let clockCount = 0;
+let history = [];
+let activeTab = 'fsmd';
+
+// ── Tab Switching ──
+function switchTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', (i === 0 && tab === 'fsmd') || (i === 1 && tab === 'arch'));
+    });
+    document.getElementById('tab-fsmd').classList.toggle('active', tab === 'fsmd');
+    document.getElementById('tab-arch').classList.toggle('active', tab === 'arch');
+
+    if (tab === 'fsmd') drawDiagram();
+    else drawArchDiagram();
+}
+
+// ── Signal Toggles ──
+function toggleSignal(signal) {
+    if (signal === 'ld') {
+        ld = ld ? 0 : 1;
+    } else {
+        sel = sel ? 0 : 1;
+    }
+    updateSignalUI();
+    drawDiagram();
+    drawArchDiagram();
+}
+
+function updateSignalUI() {
+    // Update both tab copies of the toggles
+    for (const suffix of ['', '2']) {
+        const ldTrack = document.getElementById('toggleLd' + suffix);
+        const selTrack = document.getElementById('toggleSel' + suffix);
+        const ldVal = document.getElementById('ldValue' + suffix);
+        const selVal = document.getElementById('selValue' + suffix);
+        const ldDescEl = document.getElementById('ldDesc' + suffix);
+        const selDescEl = document.getElementById('selDesc' + suffix);
+
+        if (!ldTrack) continue;
+
+        ldTrack.classList.toggle('on', ld === 1);
+        selTrack.classList.toggle('on', sel === 1);
+
+        ldVal.textContent = ld;
+        ldVal.className = 'signal-value ' + (ld ? 'on' : 'off');
+        selVal.textContent = sel;
+        selVal.className = 'signal-value ' + (sel ? 'on' : 'off');
+
+        ldDescEl.textContent = ld ? 'Load enabled \u2014 leave Inc on next clock' : 'Load disabled \u2014 stay in Inc loop';
+        selDescEl.textContent = sel ? 'Select line 1 \u2014 route to L10 (if ld=1)' : 'Select line 0 \u2014 route to L5 (if ld=1)';
+    }
+}
+
+// ── Next-State Logic ──
+function getNextState(state, ldSig, selSig) {
+    switch (state) {
+        case 'INIT':
+            return 'Inc';
+        case 'Inc':
+            if (!ldSig) return 'Inc';
+            return selSig ? 'L10' : 'L5';
+        case 'L5':
+            if (!ldSig) return 'Inc';
+            return 'L5';
+        case 'L10':
+            if (!ldSig) return 'Inc';
+            return 'L10';
+    }
+}
+
+// ── Datapath Logic ──
+function applyDatapath(state) {
+    switch (state) {
+        case 'INIT': yValue = 0; break;
+        case 'Inc':  yValue = yValue + 1; break;
+        case 'L5':   yValue = 5; break;
+        case 'L10':  yValue = 10; break;
+    }
+}
+
+// ── Clock Step ──
+function clockStep() {
+    const fromState = currentState;
+    const nextState = getNextState(currentState, ld, sel);
+
+    currentState = nextState;
+    applyDatapath(currentState);
+    clockCount++;
+
+    history.push({
+        clk: clockCount,
+        ld: ld,
+        sel: sel,
+        from: fromState,
+        to: currentState,
+        y: yValue
+    });
+
+    updateStateDisplay();
+    updateControlDisplay();
+    renderHistory();
+    drawDiagram();
+    drawArchDiagram();
+}
+
+// ── Reset ──
+function resetFSMD() {
+    currentState = 'INIT';
+    yValue = 0;
+    clockCount = 0;
+    history = [];
+    ld = 0;
+    sel = 0;
+
+    updateSignalUI();
+    updateStateDisplay();
+    updateControlDisplay();
+    renderHistory();
+    drawDiagram();
+    drawArchDiagram();
+}
+
+// ── UI Updates ──
+function updateStateDisplay() {
+    const s = STATES[currentState];
+    document.getElementById('currentStateDisplay').textContent = s.label;
+    document.getElementById('currentStateDesc').textContent = s.desc;
+    document.getElementById('datapathDisplay').textContent = s.datapath;
+    document.getElementById('datapathDesc').textContent = s.datapathDesc;
+    document.getElementById('yDisplay').textContent = yValue;
+
+    // Tab 2 state display
+    document.getElementById('currentStateDisplay2').textContent = s.label;
+    document.getElementById('currentStateDesc2').textContent = s.desc;
+    document.getElementById('yDisplay2').textContent = yValue;
+}
+
+function updateControlDisplay() {
+    const c = CTRL[currentState];
+    const muxSelEl = document.getElementById('ctrlMuxSel');
+    const yEnEl = document.getElementById('ctrlYEn');
+
+    muxSelEl.textContent = c.mux_sel;
+    muxSelEl.style.color = '#ce93d8';
+    document.getElementById('ctrlMuxSelDesc').textContent = c.mux_desc;
+
+    yEnEl.textContent = c.y_en;
+    yEnEl.style.color = '#4fc3f7';
+    document.getElementById('ctrlYEnDesc').textContent = c.y_en_desc;
+}
+
+function renderHistory() {
+    // Tab 1 history
+    const tbody = document.getElementById('historyBody');
+    let html = '';
+    for (let i = 0; i < history.length; i++) {
+        const h = history[i];
+        const isCurrent = (i === history.length - 1);
+        html += `<tr class="${isCurrent ? 'current-row' : ''}">
+            <td>${h.clk}</td>
+            <td>${h.ld}</td>
+            <td>${h.sel}</td>
+            <td>${h.from}</td>
+            <td>${h.to}</td>
+            <td>${h.y}</td>
+        </tr>`;
+    }
+    tbody.innerHTML = html;
+
+    // Tab 2 history
+    const tbody2 = document.getElementById('historyBody2');
+    let html2 = '';
+    for (let i = 0; i < history.length; i++) {
+        const h = history[i];
+        const isCurrent = (i === history.length - 1);
+        const c = CTRL[h.to];
+        html2 += `<tr class="${isCurrent ? 'current-row' : ''}">
+            <td>${h.clk}</td>
+            <td>${h.ld}</td>
+            <td>${h.sel}</td>
+            <td>${h.to}</td>
+            <td>${c.mux_sel}</td>
+            <td>${h.y}</td>
+        </tr>`;
+    }
+    tbody2.innerHTML = html2;
+
+    document.querySelectorAll('.history-table-wrap').forEach(wrap => {
+        wrap.scrollTop = wrap.scrollHeight;
+    });
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── TAB 1: SVG State Diagram (original) ──
+// ══════════════════════════════════════════════════════════════
+
+const POS = {
+    INIT: { x: 460, y: 80 },
+    Inc:  { x: 460, y: 270 },
+    L5:   { x: 220, y: 450 },
+    L10:  { x: 720, y: 450 },
+};
+const R = 50;
+
+const DP_POS = {
+    INIT: { x: 680, y: 55 },
+    Inc:  { x: 680, y: 245 },
+    L5:   { x: 130, y: 545 },
+    L10:  { x: 640, y: 545 },
+};
+const DP_W = 150;
+const DP_H = 50;
+
+const STATE_COLORS = {
+    INIT: { fill: '#6ba3d6', stroke: '#4a8ac4', text: '#1a1a2e' },
+    Inc:  { fill: '#e8c85a', stroke: '#d4b044', text: '#1a1a2e' },
+    L5:   { fill: '#6bcf7f', stroke: '#4ab860', text: '#1a1a2e' },
+    L10:  { fill: '#b39ddb', stroke: '#9575cd', text: '#1a1a2e' },
+};
+
+const DP_COLORS = {
+    INIT: { fill: '#6ba3d6', border: '#4a8ac4' },
+    Inc:  { fill: '#e8c85a', border: '#d4b044' },
+    L5:   { fill: '#6bcf7f', border: '#4ab860' },
+    L10:  { fill: '#b39ddb', border: '#9575cd' },
+};
+
+function drawDiagram() {
+    const svg = document.getElementById('fsmdDiagram');
+    if (!svg) return;
+
+    const nextState = getNextState(currentState, ld, sel);
+
+    let svgContent = '';
+
+    svgContent += `
+    <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#3d4a6a"/>
+        </marker>
+        <marker id="arrow-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#ff9800"/>
+        </marker>
+        <marker id="arrow-dim" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#2a3350"/>
+        </marker>
+    </defs>`;
+
+    const edges = [
+        { from: 'INIT', to: 'Inc', labelType: 'plain', labelText: '(always)', condition: () => true },
+        { from: 'Inc', to: 'Inc', labelType: 'overbar', condition: () => !ld, selfLoop: true },
+        { from: 'Inc', to: 'L5', labelType: 'compound-ld-selbar', condition: () => ld && !sel },
+        { from: 'Inc', to: 'L10', labelType: 'compound-sel-ld', condition: () => ld && sel },
+        { from: 'L5', to: 'Inc', labelType: 'overbar', condition: () => !ld },
+        { from: 'L5', to: 'L5', labelType: 'plain', labelText: 'ld', condition: () => !!ld, selfLoop: true },
+        { from: 'L10', to: 'Inc', labelType: 'overbar', condition: () => !ld },
+        { from: 'L10', to: 'L10', labelType: 'plain', labelText: 'ld', condition: () => !!ld, selfLoop: true },
+    ];
+
+    for (const edge of edges) {
+        const isActive = (edge.from === currentState) && (getNextState(currentState, ld, sel) === edge.to) && edge.condition();
+        const isFromCurrent = edge.from === currentState;
+        const isDim = isFromCurrent && !isActive;
+
+        const lineColor = isActive ? '#ff9800' : (isDim ? '#2a3350' : '#3d4a6a');
+        const labelColor = isActive ? '#ff9800' : (isDim ? '#2a3350' : '#8899aa');
+        const lineWidth = isActive ? 3 : 2;
+        const markerEnd = isActive ? 'url(#arrow-active)' : (isDim ? 'url(#arrow-dim)' : 'url(#arrow)');
+
+        if (edge.selfLoop) {
+            svgContent += drawSelfLoop(edge.from, edge.labelType, edge.labelText || '', lineColor, labelColor, lineWidth, markerEnd);
+        } else if (edge.from === 'L5' && edge.to === 'Inc') {
+            svgContent += drawReturnEdge('L5', edge.labelType, edge.labelText || '', lineColor, labelColor, lineWidth, markerEnd);
+        } else if (edge.from === 'L10' && edge.to === 'Inc') {
+            svgContent += drawReturnEdge('L10', edge.labelType, edge.labelText || '', lineColor, labelColor, lineWidth, markerEnd);
+        } else {
+            svgContent += drawEdge(edge.from, edge.to, edge.labelType, edge.labelText || '', lineColor, labelColor, lineWidth, markerEnd);
+        }
+    }
+
+    const rstX = POS.INIT.x;
+    const rstY = POS.INIT.y - R - 40;
+    svgContent += `<line x1="${rstX}" y1="${rstY}" x2="${rstX}" y2="${POS.INIT.y - R - 2}" stroke="#667788" stroke-width="2" marker-end="url(#arrow)"/>`;
+    svgContent += `<text x="${rstX + 10}" y="${rstY + 12}" fill="#8899aa" font-size="14" font-weight="600">rst</text>`;
+
+    for (const stateId of ['INIT', 'Inc', 'L5', 'L10']) {
+        const dp = DP_POS[stateId];
+        const col = DP_COLORS[stateId];
+        const s = STATES[stateId];
+        const isCurrent = currentState === stateId;
+
+        const sp = POS[stateId];
+        let connStartX, connStartY, connEndX, connEndY;
+
+        if (stateId === 'INIT' || stateId === 'Inc') {
+            connStartX = sp.x + R + 4;
+            connStartY = sp.y;
+            connEndX = dp.x;
+            connEndY = dp.y + DP_H / 2;
+        } else {
+            connStartX = sp.x;
+            connStartY = sp.y + R + 4;
+            connEndX = dp.x + DP_W / 2;
+            connEndY = dp.y;
+        }
+
+        svgContent += `<line x1="${connStartX}" y1="${connStartY}" x2="${connEndX}" y2="${connEndY}"
+            stroke="${isCurrent ? col.border : '#3d4a6a'}" stroke-width="1.5" stroke-dasharray="6,4"
+            opacity="${isCurrent ? 1.0 : 0.5}"/>`;
+
+        const fillOpacity = isCurrent ? 0.25 : 0.08;
+        const strokeOpacity = isCurrent ? 1.0 : 0.45;
+        const strokeWidth = isCurrent ? 2.5 : 1.5;
+
+        if (isCurrent) {
+            svgContent += `<rect x="${dp.x - 3}" y="${dp.y - 3}" width="${DP_W + 6}" height="${DP_H + 6}" rx="11"
+                fill="none" stroke="${col.border}" stroke-width="1.5" opacity="0.3">
+                <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2s" repeatCount="indefinite"/>
+            </rect>`;
+        }
+
+        svgContent += `<rect x="${dp.x}" y="${dp.y}" width="${DP_W}" height="${DP_H}" rx="8"
+            fill="${col.fill}" fill-opacity="${fillOpacity}"
+            stroke="${col.border}" stroke-width="${strokeWidth}" stroke-opacity="${strokeOpacity}"/>`;
+
+        svgContent += `<text x="${dp.x + DP_W / 2}" y="${dp.y - 8}" fill="${isCurrent ? '#c0c8d0' : '#556677'}"
+            font-size="12" font-weight="600" text-anchor="middle">Datapath</text>`;
+
+        const textColor = isCurrent ? '#e0e0e0' : '#667788';
+        svgContent += `<text x="${dp.x + DP_W / 2}" y="${dp.y + DP_H / 2 + 5}" fill="${textColor}"
+            font-size="16" font-weight="700" text-anchor="middle" font-family="'Courier New', monospace">${s.datapath}</text>`;
+    }
+
+    for (const stateId of ['INIT', 'Inc', 'L5', 'L10']) {
+        const p = POS[stateId];
+        const col = STATE_COLORS[stateId];
+        const isCurrent = currentState === stateId;
+
+        if (isCurrent) {
+            svgContent += `<circle cx="${p.x}" cy="${p.y}" r="${R + 6}" fill="none" stroke="${col.stroke}" stroke-width="2" opacity="0.4">
+                <animate attributeName="r" values="${R + 4};${R + 10};${R + 4}" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0.4;0.15;0.4" dur="2s" repeatCount="indefinite"/>
+            </circle>`;
+        }
+
+        const fillOpacity = isCurrent ? 0.35 : 0.15;
+        svgContent += `<circle cx="${p.x}" cy="${p.y}" r="${R}" fill="${col.fill}" fill-opacity="${fillOpacity}"
+            stroke="${col.stroke}" stroke-width="${isCurrent ? 3.5 : 2.5}"/>`;
+
+        svgContent += `<text x="${p.x}" y="${p.y + 6}" fill="${isCurrent ? '#ffffff' : col.fill}"
+            font-size="22" font-weight="700" text-anchor="middle">${STATES[stateId].label}</text>`;
+    }
+
+    svgContent += `<text x="30" y="25" fill="#8899aa" font-size="14" font-weight="600">Input: sel, ld</text>`;
+    svgContent += `<text x="30" y="45" fill="#8899aa" font-size="14" font-weight="600">Output: [7:0] Y</text>`;
+
+    svg.innerHTML = svgContent;
+}
+
+// ── Label rendering (shared) ──
+function renderLabel(x, y, labelType, labelText, fillColor) {
+    let svg = '';
+    const fs = 13;
+    const fw = '600';
+
+    if (labelType === 'plain') {
+        svg += `<rect x="${x - 42}" y="${y - 11}" width="84" height="22" rx="4" fill="rgba(26,26,46,0.9)"/>`;
+        svg += `<text x="${x}" y="${y + 4}" fill="${fillColor}" font-size="${fs}" font-weight="${fw}" text-anchor="middle">${labelText}</text>`;
+    } else if (labelType === 'overbar') {
+        svg += `<rect x="${x - 24}" y="${y - 14}" width="48" height="26" rx="4" fill="rgba(26,26,46,0.9)"/>`;
+        svg += `<text x="${x}" y="${y + 5}" fill="${fillColor}" font-size="${fs}" font-weight="${fw}" text-anchor="middle" text-decoration="overline">ld</text>`;
+    } else if (labelType === 'compound-ld-selbar') {
+        const totalW = 80;
+        svg += `<rect x="${x - totalW/2}" y="${y - 14}" width="${totalW}" height="26" rx="4" fill="rgba(26,26,46,0.9)"/>`;
+        svg += `<text x="${x}" y="${y + 5}" fill="${fillColor}" font-size="${fs}" font-weight="${fw}" text-anchor="middle">`;
+        svg += `<tspan>ld \u00b7 </tspan>`;
+        svg += `<tspan text-decoration="overline">sel</tspan>`;
+        svg += `</text>`;
+    } else if (labelType === 'compound-sel-ld') {
+        const totalW = 74;
+        svg += `<rect x="${x - totalW/2}" y="${y - 14}" width="${totalW}" height="26" rx="4" fill="rgba(26,26,46,0.9)"/>`;
+        svg += `<text x="${x}" y="${y + 5}" fill="${fillColor}" font-size="${fs}" font-weight="${fw}" text-anchor="middle">`;
+        svg += `<tspan>sel \u00b7 ld</tspan>`;
+        svg += `</text>`;
+    }
+
+    return svg;
+}
+
+function drawEdge(fromId, toId, labelType, labelText, lineColor, labelColor, lineWidth, markerEnd) {
+    const f = POS[fromId];
+    const t = POS[toId];
+
+    const dx = t.x - f.x;
+    const dy = t.y - f.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    const startX = f.x + nx * R;
+    const startY = f.y + ny * R;
+    const endX = t.x - nx * (R + 8);
+    const endY = t.y - ny * (R + 8);
+
+    const px = -ny;
+    const py = nx;
+    const curvature = 20;
+    const cpX = (startX + endX) / 2 + px * curvature;
+    const cpY = (startY + endY) / 2 + py * curvature;
+
+    let svg = `<path d="M ${startX} ${startY} Q ${cpX} ${cpY} ${endX} ${endY}"
+        fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" marker-end="${markerEnd}"/>`;
+
+    const lx = 0.25 * startX + 0.5 * cpX + 0.25 * endX;
+    const ly = 0.25 * startY + 0.5 * cpY + 0.25 * endY;
+
+    svg += renderLabel(lx, ly, labelType, labelText, labelColor);
+
+    return svg;
+}
+
+function drawReturnEdge(fromId, labelType, labelText, lineColor, labelColor, lineWidth, markerEnd) {
+    const f = POS[fromId];
+    const t = POS['Inc'];
+
+    let svg = '';
+
+    if (fromId === 'L5') {
+        const startX = f.x - R * 0.7;
+        const startY = f.y - R * 0.7;
+        const endX = t.x - R * 0.9;
+        const endY = t.y + R * 0.4;
+
+        const cp1X = f.x - 130;
+        const cp1Y = f.y - 80;
+        const cp2X = t.x - 130;
+        const cp2Y = t.y + 60;
+
+        svg += `<path d="M ${startX} ${startY} C ${cp1X} ${cp1Y} ${cp2X} ${cp2Y} ${endX} ${endY}"
+            fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" marker-end="${markerEnd}"/>`;
+
+        const lx = (cp1X + cp2X) / 2 - 10;
+        const ly = (cp1Y + cp2Y) / 2;
+        svg += renderLabel(lx, ly, labelType, labelText, labelColor);
+    } else {
+        const startX = f.x + R * 0.7;
+        const startY = f.y - R * 0.7;
+        const endX = t.x + R * 0.9;
+        const endY = t.y + R * 0.4;
+
+        const cp1X = f.x + 130;
+        const cp1Y = f.y - 80;
+        const cp2X = t.x + 130;
+        const cp2Y = t.y + 60;
+
+        svg += `<path d="M ${startX} ${startY} C ${cp1X} ${cp1Y} ${cp2X} ${cp2Y} ${endX} ${endY}"
+            fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" marker-end="${markerEnd}"/>`;
+
+        const lx = (cp1X + cp2X) / 2 + 10;
+        const ly = (cp1Y + cp2Y) / 2;
+        svg += renderLabel(lx, ly, labelType, labelText, labelColor);
+    }
+
+    return svg;
+}
+
+function drawSelfLoop(stateId, labelType, labelText, lineColor, labelColor, lineWidth, markerEnd) {
+    const p = POS[stateId];
+    let svg = '';
+
+    let loopAngle;
+    if (stateId === 'Inc') loopAngle = -Math.PI * 0.75;
+    else if (stateId === 'L5') loopAngle = Math.PI;
+    else if (stateId === 'L10') loopAngle = 0;
+    else loopAngle = -Math.PI / 2;
+
+    const spread = 0.4;
+    const startAngle = loopAngle + spread;
+    const endAngle = loopAngle - spread;
+
+    const sx = p.x + Math.cos(startAngle) * R;
+    const sy = p.y + Math.sin(startAngle) * R;
+    const ex = p.x + Math.cos(endAngle) * (R + 6);
+    const ey = p.y + Math.sin(endAngle) * (R + 6);
+
+    const loopRadius = 28;
+
+    const apexX = p.x + Math.cos(loopAngle) * (R + loopRadius * 2);
+    const apexY = p.y + Math.sin(loopAngle) * (R + loopRadius * 2);
+
+    svg += `<path d="M ${sx} ${sy} Q ${apexX} ${apexY} ${ex} ${ey}"
+        fill="none" stroke="${lineColor}" stroke-width="${lineWidth}" marker-end="${markerEnd}"/>`;
+
+    const labelX = p.x + Math.cos(loopAngle) * (R + loopRadius * 2 + 18);
+    const labelY = p.y + Math.sin(loopAngle) * (R + loopRadius * 2 + 18);
+
+    svg += renderLabel(labelX, labelY, labelType, labelText, labelColor);
+
+    return svg;
+}
+
+// ══════════════════════════════════════════════════════════════
+// ── TAB 2: FSM + Datapath Architecture Diagram ──
+// ══════════════════════════════════════════════════════════════
+
+function drawArchDiagram() {
+    const svg = document.getElementById('archDiagram');
+    if (!svg) return;
+
+    const ctrl = CTRL[currentState];
+    const muxSelNum = parseInt(ctrl.mux_sel, 2);
+
+    let s = '';
+
+    // Defs
+    s += `
+    <defs>
+        <marker id="a-arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#556677"/>
+        </marker>
+        <marker id="a-arrow-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#ff9800"/>
+        </marker>
+        <marker id="a-arrow-ctrl" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#ce93d8"/>
+        </marker>
+        <marker id="a-arrow-data" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#4fc3f7"/>
+        </marker>
+    </defs>`;
+
+    // ── FSM Controller Box (left side) ──
+    const fsmX = 40, fsmY = 40, fsmW = 280, fsmH = 560;
+
+    // Outer box
+    s += `<rect x="${fsmX}" y="${fsmY}" width="${fsmW}" height="${fsmH}" rx="14"
+        fill="rgba(79,195,247,0.06)" stroke="#4fc3f7" stroke-width="2.5"/>`;
+    s += `<text x="${fsmX + fsmW/2}" y="${fsmY + 28}" fill="#4fc3f7" font-size="18" font-weight="700" text-anchor="middle">FSM Controller</text>`;
+
+    // Mini state bubbles inside FSM box
+    const miniStates = [
+        { id: 'INIT', x: 180, y: 110, label: 'INIT' },
+        { id: 'Inc',  x: 180, y: 200, label: 'Inc' },
+        { id: 'L5',   x: 110, y: 300, label: 'L5' },
+        { id: 'L10',  x: 250, y: 300, label: 'L10' },
+    ];
+    const miniR = 32;
+
+    // Draw mini transitions (simplified)
+    const miniEdges = [
+        { from: 'INIT', to: 'Inc' },
+        { from: 'Inc', to: 'L5' },
+        { from: 'Inc', to: 'L10' },
+        { from: 'L5', to: 'Inc' },
+        { from: 'L10', to: 'Inc' },
+    ];
+
+    for (const e of miniEdges) {
+        const fr = miniStates.find(ms => ms.id === e.from);
+        const to = miniStates.find(ms => ms.id === e.to);
+        const dx = to.x - fr.x;
+        const dy = to.y - fr.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const nx = dx/dist, ny = dy/dist;
+        const sx = fr.x + nx * miniR;
+        const sy = fr.y + ny * miniR;
+        const ex = to.x - nx * (miniR + 6);
+        const ey = to.y - ny * (miniR + 6);
+
+        const isActiveEdge = (e.from === currentState && e.to === getNextState(currentState, ld, sel));
+        const col = isActiveEdge ? '#ff9800' : '#2d3a5a';
+        const w = isActiveEdge ? 2.5 : 1.5;
+        const mk = isActiveEdge ? 'url(#a-arrow-active)' : 'url(#a-arrow)';
+
+        // Offset for bidirectional edges
+        const px = -ny * 6, py = nx * 6;
+        s += `<line x1="${sx+px}" y1="${sy+py}" x2="${ex+px}" y2="${ey+py}" stroke="${col}" stroke-width="${w}" marker-end="${mk}"/>`;
+    }
+
+    // Self-loops (simplified small arcs)
+    for (const sid of ['Inc', 'L5', 'L10']) {
+        const ms = miniStates.find(m => m.id === sid);
+        const isActiveSelf = (currentState === sid && getNextState(currentState, ld, sel) === sid);
+        const col = isActiveSelf ? '#ff9800' : '#2d3a5a';
+        const w = isActiveSelf ? 2.5 : 1.5;
+
+        let loopDir;
+        if (sid === 'Inc') loopDir = -Math.PI/2;
+        else if (sid === 'L5') loopDir = Math.PI;
+        else loopDir = 0;
+
+        const lsx = ms.x + Math.cos(loopDir + 0.4) * miniR;
+        const lsy = ms.y + Math.sin(loopDir + 0.4) * miniR;
+        const lex = ms.x + Math.cos(loopDir - 0.4) * miniR;
+        const ley = ms.y + Math.sin(loopDir - 0.4) * miniR;
+        const apx = ms.x + Math.cos(loopDir) * (miniR + 30);
+        const apy = ms.y + Math.sin(loopDir) * (miniR + 30);
+
+        s += `<path d="M ${lsx} ${lsy} Q ${apx} ${apy} ${lex} ${ley}" fill="none" stroke="${col}" stroke-width="${w}"/>`;
+    }
+
+    // Draw mini state circles
+    for (const ms of miniStates) {
+        const col = STATE_COLORS[ms.id];
+        const isCur = currentState === ms.id;
+        const fop = isCur ? 0.4 : 0.12;
+        const sw = isCur ? 3 : 2;
+
+        if (isCur) {
+            s += `<circle cx="${ms.x}" cy="${ms.y}" r="${miniR + 4}" fill="none" stroke="${col.stroke}" stroke-width="1.5" opacity="0.4">
+                <animate attributeName="opacity" values="0.4;0.15;0.4" dur="2s" repeatCount="indefinite"/>
+            </circle>`;
+        }
+
+        s += `<circle cx="${ms.x}" cy="${ms.y}" r="${miniR}" fill="${col.fill}" fill-opacity="${fop}" stroke="${col.stroke}" stroke-width="${sw}"/>`;
+        s += `<text x="${ms.x}" y="${ms.y + 5}" fill="${isCur ? '#fff' : col.fill}" font-size="15" font-weight="700" text-anchor="middle">${ms.label}</text>`;
+    }
+
+    // Input signals entering FSM box
+    s += `<text x="${fsmX + fsmW/2}" y="${fsmY + fsmH - 50}" fill="#8899aa" font-size="13" font-weight="600" text-anchor="middle">Inputs</text>`;
+
+    // ld input arrow
+    const inputY1 = fsmY + fsmH - 30;
+    const inputY2 = fsmY + fsmH;
+    s += `<line x1="${fsmX + 80}" y1="${inputY2 + 40}" x2="${fsmX + 80}" y2="${inputY2}" stroke="${ld ? '#ff9800' : '#556677'}" stroke-width="2.5" marker-end="${ld ? 'url(#a-arrow-active)' : 'url(#a-arrow)'}"/>`;
+    s += `<text x="${fsmX + 80}" y="${inputY2 + 55}" fill="${ld ? '#ff9800' : '#8899aa'}" font-size="15" font-weight="700" text-anchor="middle" font-family="'Courier New',monospace">ld=${ld}</text>`;
+
+    // sel input arrow
+    s += `<line x1="${fsmX + 200}" y1="${inputY2 + 40}" x2="${fsmX + 200}" y2="${inputY2}" stroke="${sel ? '#ff9800' : '#556677'}" stroke-width="2.5" marker-end="${sel ? 'url(#a-arrow-active)' : 'url(#a-arrow)'}"/>`;
+    s += `<text x="${fsmX + 200}" y="${inputY2 + 55}" fill="${sel ? '#ff9800' : '#8899aa'}" font-size="15" font-weight="700" text-anchor="middle" font-family="'Courier New',monospace">sel=${sel}</text>`;
+
+    // ── Datapath Box (right side) ──
+    const dpX = 480, dpY = 40, dpW = 490, dpH = 560;
+
+    s += `<rect x="${dpX}" y="${dpY}" width="${dpW}" height="${dpH}" rx="14"
+        fill="rgba(206,147,216,0.06)" stroke="#ce93d8" stroke-width="2.5"/>`;
+    s += `<text x="${dpX + dpW/2}" y="${dpY + 28}" fill="#ce93d8" font-size="18" font-weight="700" text-anchor="middle">Datapath</text>`;
+
+    // ── MUX ──
+    const muxX = 540, muxY = 140, muxW = 90, muxH = 200;
+
+    // Trapezoid shape for MUX
+    const muxPts = `${muxX},${muxY + 20} ${muxX + muxW},${muxY} ${muxX + muxW},${muxY + muxH} ${muxX},${muxY + muxH - 20}`;
+    s += `<polygon points="${muxPts}" fill="rgba(206,147,216,0.12)" stroke="#ce93d8" stroke-width="2.5"/>`;
+    s += `<text x="${muxX + muxW/2}" y="${muxY + muxH/2 + 5}" fill="#ce93d8" font-size="16" font-weight="700" text-anchor="middle">MUX</text>`;
+    s += `<text x="${muxX + muxW/2}" y="${muxY + muxH/2 + 22}" fill="#8899aa" font-size="11" font-weight="600" text-anchor="middle">4:1</text>`;
+
+    // MUX input labels (left side of trapezoid)
+    const muxInputLabels = ['0', 'Y+1', '5', '10'];
+    const muxInputColors = ['#6ba3d6', '#e8c85a', '#6bcf7f', '#b39ddb'];
+    for (let i = 0; i < 4; i++) {
+        const iy = muxY + 35 + i * 42;
+        const isSelected = (muxSelNum === i);
+        const col = isSelected ? '#ff9800' : muxInputColors[i];
+        const lineCol = isSelected ? '#ff9800' : '#3d4a6a';
+        const lw = isSelected ? 3 : 1.5;
+
+        // Input line
+        s += `<line x1="${muxX - 60}" y1="${iy}" x2="${muxX}" y2="${iy}" stroke="${lineCol}" stroke-width="${lw}"/>`;
+
+        // Label
+        s += `<text x="${muxX - 65}" y="${iy + 5}" fill="${col}" font-size="14" font-weight="700" text-anchor="end" font-family="'Courier New',monospace">${muxInputLabels[i]}</text>`;
+
+        // Port number
+        s += `<text x="${muxX + 6}" y="${iy + 4}" fill="${isSelected ? '#ff9800' : '#667788'}" font-size="10" font-weight="600">${i}</text>`;
+
+        // Highlight selected input
+        if (isSelected) {
+            s += `<circle cx="${muxX - 4}" cy="${iy}" r="4" fill="#ff9800"/>`;
+        }
+    }
+
+    // MUX output (right side)
+    const muxOutY = muxY + muxH / 2;
+    s += `<line x1="${muxX + muxW}" y1="${muxOutY}" x2="${muxX + muxW + 60}" y2="${muxOutY}"
+        stroke="#ff9800" stroke-width="3" marker-end="url(#a-arrow-active)"/>`;
+
+    // ── Adder ──
+    const addX = 700, addY = 100, addW = 70, addH = 60;
+    const isAdderActive = (muxSelNum === 1);
+
+    s += `<rect x="${addX}" y="${addY}" width="${addW}" height="${addH}" rx="8"
+        fill="${isAdderActive ? 'rgba(232,200,90,0.2)' : 'rgba(232,200,90,0.06)'}"
+        stroke="${isAdderActive ? '#e8c85a' : '#3d4a6a'}" stroke-width="${isAdderActive ? 2.5 : 1.5}"/>`;
+    s += `<text x="${addX + addW/2}" y="${addY + addH/2 - 4}" fill="${isAdderActive ? '#e8c85a' : '#667788'}" font-size="22" font-weight="700" text-anchor="middle">+</text>`;
+    s += `<text x="${addX + addW/2}" y="${addY + addH/2 + 14}" fill="${isAdderActive ? '#e8c85a' : '#556677'}" font-size="11" font-weight="600" text-anchor="middle">Adder</text>`;
+
+    // "+1" constant into adder from above
+    s += `<line x1="${addX + addW/2}" y1="${addY - 30}" x2="${addX + addW/2}" y2="${addY}" stroke="${isAdderActive ? '#e8c85a' : '#3d4a6a'}" stroke-width="1.5" marker-end="${isAdderActive ? 'url(#a-arrow-active)' : 'url(#a-arrow)'}"/>`;
+    s += `<text x="${addX + addW/2}" y="${addY - 35}" fill="${isAdderActive ? '#e8c85a' : '#667788'}" font-size="14" font-weight="700" text-anchor="middle" font-family="'Courier New',monospace">+1</text>`;
+
+    // Adder output goes down then left to MUX input 1 (Y+1)
+    const adderOutY = addY + addH;
+    const muxIn1Y = muxY + 35 + 1 * 42; // input 1 position
+    s += `<line x1="${addX + addW/2}" y1="${adderOutY}" x2="${addX + addW/2}" y2="${muxIn1Y}"
+        stroke="${isAdderActive ? '#e8c85a' : '#3d4a6a'}" stroke-width="${isAdderActive ? 2 : 1.5}"/>`;
+    s += `<line x1="${addX + addW/2}" y1="${muxIn1Y}" x2="${muxX + muxW + 60}" y2="${muxIn1Y}"
+        stroke="${isAdderActive ? '#e8c85a' : '#3d4a6a'}" stroke-width="${isAdderActive ? 2 : 1.5}"/>`;
+
+    // ── Y Register ──
+    const regX = 700, regY = 380, regW = 140, regH = 70;
+
+    s += `<rect x="${regX}" y="${regY}" width="${regW}" height="${regH}" rx="10"
+        fill="rgba(79,195,247,0.15)" stroke="#4fc3f7" stroke-width="2.5"/>`;
+    s += `<text x="${regX + regW/2}" y="${regY + 22}" fill="#4fc3f7" font-size="14" font-weight="600" text-anchor="middle">Y Register</text>`;
+    s += `<text x="${regX + regW/2}" y="${regY + 50}" fill="#ffffff" font-size="26" font-weight="700" text-anchor="middle" font-family="'Courier New',monospace">${yValue}</text>`;
+
+    // Clock triangle on register
+    s += `<polygon points="${regX + 10},${regY + regH - 5} ${regX + 10},${regY + regH - 18} ${regX + 22},${regY + regH - 11.5}" fill="none" stroke="#4fc3f7" stroke-width="1.5"/>`;
+    s += `<text x="${regX + 28}" y="${regY + regH - 7}" fill="#667788" font-size="10" font-weight="600">clk</text>`;
+
+    // MUX output → Register input (goes right, then down, then to register)
+    const muxOutX = muxX + muxW + 60;
+    // Route: from mux output go right to register area, then down to register
+    s += `<line x1="${muxOutX}" y1="${muxOutY}" x2="${regX + regW/2}" y2="${muxOutY}"
+        stroke="#ff9800" stroke-width="3"/>`;
+    s += `<line x1="${regX + regW/2}" y1="${muxOutY}" x2="${regX + regW/2}" y2="${regY}"
+        stroke="#ff9800" stroke-width="3" marker-end="url(#a-arrow-active)"/>`;
+
+    // Data value label on the line
+    const muxOutputVal = currentState === 'INIT' ? 0 : currentState === 'Inc' ? yValue : currentState === 'L5' ? 5 : 10;
+
+    // Register output goes down, then feedback loop left and up to adder input and also goes right as Y output
+    const regOutY = regY + regH;
+    const feedbackX = regX + regW + 30;
+    const feedbackTopY = addY + addH/2;
+
+    // Y output going right (the actual output)
+    s += `<line x1="${regX + regW}" y1="${regY + regH/2}" x2="${regX + regW + 60}" y2="${regY + regH/2}"
+        stroke="#4fc3f7" stroke-width="3" marker-end="url(#a-arrow-data)"/>`;
+    s += `<text x="${regX + regW + 75}" y="${regY + regH/2 - 10}" fill="#4fc3f7" font-size="16" font-weight="700" text-anchor="start" font-family="'Courier New',monospace">Y</text>`;
+    s += `<text x="${regX + regW + 75}" y="${regY + regH/2 + 12}" fill="#4fc3f7" font-size="22" font-weight="700" text-anchor="start" font-family="'Courier New',monospace">${yValue}</text>`;
+    s += `<text x="${regX + regW + 75}" y="${regY + regH/2 + 30}" fill="#667788" font-size="12" font-weight="600" text-anchor="start">[7:0]</text>`;
+
+    // Feedback: register bottom → down → left along bottom → up to adder left side
+    const fbBottomY = regOutY + 30;
+    const fbLeftX = addX - 10;
+    // Down from register
+    s += `<line x1="${regX + regW/2 - 30}" y1="${regOutY}" x2="${regX + regW/2 - 30}" y2="${fbBottomY}"
+        stroke="${isAdderActive ? '#4fc3f7' : '#3d4a6a'}" stroke-width="${isAdderActive ? 2 : 1.5}"/>`;
+    // Left along bottom
+    s += `<line x1="${regX + regW/2 - 30}" y1="${fbBottomY}" x2="${fbLeftX}" y2="${fbBottomY}"
+        stroke="${isAdderActive ? '#4fc3f7' : '#3d4a6a'}" stroke-width="${isAdderActive ? 2 : 1.5}"/>`;
+    // Up to adder
+    s += `<line x1="${fbLeftX}" y1="${fbBottomY}" x2="${fbLeftX}" y2="${feedbackTopY}"
+        stroke="${isAdderActive ? '#4fc3f7' : '#3d4a6a'}" stroke-width="${isAdderActive ? 2 : 1.5}"/>`;
+    // Into adder left side
+    s += `<line x1="${fbLeftX}" y1="${feedbackTopY}" x2="${addX}" y2="${feedbackTopY}"
+        stroke="${isAdderActive ? '#4fc3f7' : '#3d4a6a'}" stroke-width="${isAdderActive ? 2 : 1.5}" marker-end="${isAdderActive ? 'url(#a-arrow-data)' : 'url(#a-arrow)'}"/>`;
+
+    // Feedback label
+    s += `<text x="${fbLeftX - 5}" y="${fbBottomY - 8}" fill="${isAdderActive ? '#4fc3f7' : '#556677'}" font-size="12" font-weight="600" text-anchor="end">Y feedback</text>`;
+
+    // ── Control Signal Lines (FSM → Datapath) ──
+    const ctrlStartX = fsmX + fsmW;
+    const ctrlEndX = dpX;
+
+    // mux_sel control line
+    const muxSelY = muxY + muxH + 25;
+    s += `<line x1="${ctrlStartX}" y1="${370}" x2="${muxX + muxW/2}" y2="${370}"
+        stroke="#ce93d8" stroke-width="2.5" stroke-dasharray="8,4" marker-end="url(#a-arrow-ctrl)"/>`;
+    // mux_sel connects down to mux bottom
+    s += `<line x1="${muxX + muxW/2}" y1="${370}" x2="${muxX + muxW/2}" y2="${muxY + muxH}"
+        stroke="#ce93d8" stroke-width="2.5" stroke-dasharray="8,4" marker-end="url(#a-arrow-ctrl)"/>`;
+
+    // mux_sel label
+    s += `<rect x="${ctrlStartX + 10}" y="${355}" width="120" height="28" rx="6" fill="rgba(26,26,46,0.95)" stroke="#ce93d8" stroke-width="1.5"/>`;
+    s += `<text x="${ctrlStartX + 70}" y="${374}" fill="#ce93d8" font-size="14" font-weight="700" text-anchor="middle" font-family="'Courier New',monospace">mux_sel=${ctrl.mux_sel}</text>`;
+
+    // "sel" label at mux bottom
+    s += `<text x="${muxX + muxW/2}" y="${muxY + muxH + 16}" fill="#ce93d8" font-size="12" font-weight="600" text-anchor="middle">sel</text>`;
+
+    // Y_en control line
+    s += `<line x1="${ctrlStartX}" y1="${420}" x2="${regX + 60}" y2="${420}"
+        stroke="#4fc3f7" stroke-width="2.5" stroke-dasharray="8,4"/>`;
+    s += `<line x1="${regX + 60}" y1="${420}" x2="${regX + 60}" y2="${regY}"
+        stroke="#4fc3f7" stroke-width="2.5" stroke-dasharray="8,4" marker-end="url(#a-arrow-data)"/>`;
+
+    // Y_en label
+    s += `<rect x="${ctrlStartX + 10}" y="${405}" width="100" height="28" rx="6" fill="rgba(26,26,46,0.95)" stroke="#4fc3f7" stroke-width="1.5"/>`;
+    s += `<text x="${ctrlStartX + 60}" y="${424}" fill="#4fc3f7" font-size="14" font-weight="700" text-anchor="middle" font-family="'Courier New',monospace">Y_en=${ctrl.y_en}</text>`;
+
+    // "en" label at register
+    s += `<text x="${regX + 60}" y="${regY - 6}" fill="#4fc3f7" font-size="12" font-weight="600" text-anchor="middle">en</text>`;
+
+    // ── Legend ──
+    s += `<rect x="${dpX + 10}" y="${dpY + dpH - 58}" width="200" height="48" rx="8" fill="rgba(0,0,0,0.3)" stroke="#2d3a5a" stroke-width="1"/>`;
+    s += `<line x1="${dpX + 22}" y1="${dpY + dpH - 40}" x2="${dpX + 52}" y2="${dpY + dpH - 40}" stroke="#ff9800" stroke-width="3"/>`;
+    s += `<text x="${dpX + 58}" y="${dpY + dpH - 36}" fill="#8899aa" font-size="12">Data flow</text>`;
+    s += `<line x1="${dpX + 22}" y1="${dpY + dpH - 22}" x2="${dpX + 52}" y2="${dpY + dpH - 22}" stroke="#ce93d8" stroke-width="2.5" stroke-dasharray="8,4"/>`;
+    s += `<text x="${dpX + 58}" y="${dpY + dpH - 18}" fill="#8899aa" font-size="12">Control signal</text>`;
+
+    svg.innerHTML = s;
+}
+
+// ── Responsive Scaling ──
+function autoResize() {
+    const container = document.querySelector('.viewport-container');
+    const surface = document.querySelector('.design-surface');
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const scale = Math.min(cw / 1920, ch / 1080);
+    surface.style.transform = `scale(${scale})`;
+}
+
+window.addEventListener('resize', autoResize);
+window.addEventListener('load', () => {
+    autoResize();
+    updateControlDisplay();
+    drawDiagram();
+    drawArchDiagram();
+});
+</script>
+</body>
+</html>
