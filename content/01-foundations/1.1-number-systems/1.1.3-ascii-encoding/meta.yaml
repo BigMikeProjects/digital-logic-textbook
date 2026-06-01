@@ -1,6 +1,6 @@
 title: "ASCII Encoding"
 description: "How computers represent text characters as binary numbers using the ASCII standard"
-order: 3
+order: 10103
 
 graphics:
   01-intro.youtube:

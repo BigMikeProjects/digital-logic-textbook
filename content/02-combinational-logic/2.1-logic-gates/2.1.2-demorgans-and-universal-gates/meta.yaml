@@ -1,6 +1,6 @@
 title: "De Morgan's Theorem and Universal Gates"
 description: "How De Morgan's theorem enables efficient NAND-only and NOR-only circuit implementations"
-order: 2
+order: 20102
 
 graphics:
   01-demorgans-video.youtube:

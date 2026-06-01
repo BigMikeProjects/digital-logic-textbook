@@ -1,6 +1,6 @@
 title: "Gray Codes"
 description: "Understanding Gray code encoding for rotary position sensors and conversion circuits"
-order: 2
+order: 10102
 
 graphics:
   01-intro.youtube:

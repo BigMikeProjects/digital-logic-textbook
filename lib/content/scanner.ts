@@ -111,6 +111,15 @@ export async function loadAllTopics(): Promise<Topic[]> {
     }
   }
 
+  // Order is driven by the planning spreadsheet (meta.yaml `order`, a global
+  // sortable int like 20401 for topic 2.4.1), NOT by folder name. This lets a
+  // topic be re-sequenced by changing a number without renaming its folder/URL.
+  // Fall back to path order for any topic missing an order (order 0).
+  topics.sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
+    return a.contentPath.localeCompare(b.contentPath, undefined, { numeric: true });
+  });
+
   return topics;
 }
 

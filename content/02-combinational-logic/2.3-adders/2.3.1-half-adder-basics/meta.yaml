@@ -1,6 +1,6 @@
 title: "Half Adder Basics"
 description: "Introduction to the half adder circuit and its operation"
-order: 1
+order: 20301
 
 graphics:
   01-block-diagram.svg:
