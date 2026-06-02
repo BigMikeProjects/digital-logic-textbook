@@ -60,10 +60,18 @@ export function buildNavigation(topics: Topic[]): Map<string, NavigationContext>
 
 export function buildChapterStructure(topics: Topic[]): ChapterGroup[] {
   const chapters = new Map<string, ChapterGroup>();
+  // Order chapters/sections by the `order` field (not folder name), so de-numbered folder
+  // names still sequence correctly. Topics arrive pre-sorted by order, so the first time we
+  // see a chapter/section, that topic's order is the minimum for it.
+  const chapterOrder = new Map<string, number>();
+  const sectionOrder = new Map<string, number>();
 
   for (const topic of topics) {
     const chapterId = topic.chapter;
     const sectionId = topic.section;
+    if (!chapterOrder.has(chapterId)) chapterOrder.set(chapterId, topic.order);
+    const secKey = `${chapterId}||${sectionId}`;
+    if (!sectionOrder.has(secKey)) sectionOrder.set(secKey, topic.order);
 
     // Get or create chapter
     if (!chapters.has(chapterId)) {
@@ -95,14 +103,14 @@ export function buildChapterStructure(topics: Topic[]): ChapterGroup[] {
     });
   }
 
-  // Sort chapters and sections
+  // Sort chapters and sections by their `order` (derived from the topics' order field)
   const sortedChapters = Array.from(chapters.values()).sort((a, b) =>
-    a.id.localeCompare(b.id, undefined, { numeric: true })
+    (chapterOrder.get(a.id) ?? 0) - (chapterOrder.get(b.id) ?? 0)
   );
 
   for (const chapter of sortedChapters) {
     chapter.sections.sort((a, b) =>
-      a.id.localeCompare(b.id, undefined, { numeric: true })
+      (sectionOrder.get(`${chapter.id}||${a.id}`) ?? 0) - (sectionOrder.get(`${chapter.id}||${b.id}`) ?? 0)
     );
   }
 
