@@ -1,6 +1,6 @@
 title: "Basic Logic Gates"
 description: "AND, OR, NOT, NAND, NOR, XOR, and XNOR gates with truth tables, symbols, and Boolean expressions"
-order: 20101
+order: 20001
 
 graphics:
   01-basic-gates-video.youtube:
