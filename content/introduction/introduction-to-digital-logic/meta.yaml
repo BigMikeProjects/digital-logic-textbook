@@ -1,6 +1,6 @@
 title: "Introduction to Digital Logic"
 description: "An overview of digital logic as a discipline built on layers of abstraction, from transistors and voltage levels to processors and computing platforms."
-order: 1
+order: 102
 
 graphics:
   01-silicon-wafer-cleanroom.png:
