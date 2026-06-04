@@ -1,8 +1,8 @@
 title: "Transistors to Gates"
 description: ""
-chapter: combinational-logic
+chapter: foundations
 section: transistors-to-gates
-order: 40201
+order: 20300
 
 graphics:
   01-video.youtube:

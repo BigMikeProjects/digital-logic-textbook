@@ -2,7 +2,7 @@ title: "Introduction to Register Transfer Level Design"
 description: ""
 chapter: rtl-design
 section: introduction-to-rtl-design
-order: 60101
+order: 50101
 
 graphics:
   01-video.youtube:

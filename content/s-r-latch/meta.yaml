@@ -2,7 +2,7 @@ title: "S-R Latch"
 description: ""
 chapter: sequential-logic
 section: latches
-order: 50001
+order: 40001
 
 graphics:
   01-video.youtube:

@@ -2,7 +2,7 @@ title: "Unstable Feedback"
 description: ""
 chapter: sequential-logic
 section: unstable-inverter-feedback-circuit
-order: 50101
+order: 40101
 
 graphics:
   01-video.youtube:
