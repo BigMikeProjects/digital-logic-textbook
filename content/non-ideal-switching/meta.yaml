@@ -3,3 +3,7 @@ description: ""
 chapter: foundations
 section: non-ideal-switching
 order: 20303
+
+graphics:
+  01-video.youtube:
+    caption: ""
