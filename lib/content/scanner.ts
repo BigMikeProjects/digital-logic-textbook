@@ -94,6 +94,12 @@ export async function loadAllTopics(): Promise<Topic[]> {
       // Generate slug from folder name
       const slug = folder.name;
 
+      // Chapter/section come from meta.yaml in the flat content model (content/<slug>/),
+      // so a topic's grouping travels with its file. Fall back to the path-derived values
+      // for any legacy topic still nested under chapter/section folders.
+      const chapter = meta.chapter || folder.chapter;
+      const section = meta.section || folder.section;
+
       topics.push({
         slug,
         title: meta.title || folder.name,
@@ -102,8 +108,8 @@ export async function loadAllTopics(): Promise<Topic[]> {
         contentPath: folder.path,
         markdown,
         graphics,
-        chapter: folder.chapter,
-        section: folder.section,
+        chapter,
+        section,
         isSectionIntro: folder.isSectionIntro
       });
     } catch (error) {

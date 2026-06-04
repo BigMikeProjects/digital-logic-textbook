@@ -1,0 +1,11 @@
+title: "Introduction to Register Transfer Level Design"
+description: ""
+chapter: rtl-design
+section: introduction-to-rtl-design
+order: 60101
+
+graphics:
+  01-video.youtube:
+    caption: "Video: Introduction to Register Transfer Level Design"
+  02-interactive.html:
+    caption: "Interactive: Introduction to Register Transfer Level Design"

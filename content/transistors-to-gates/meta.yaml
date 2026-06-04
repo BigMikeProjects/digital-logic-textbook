@@ -1,0 +1,15 @@
+title: "Transistors to Gates"
+description: ""
+chapter: combinational-logic
+section: transistors-to-gates
+order: 40201
+
+graphics:
+  01-video.youtube:
+    caption: "Video: Transistors to Gates"
+  02-interactive.html:
+    caption: "Interactive: Transistors to Gates"
+  03-interactive.html:
+    caption: "Interactive: Transistors to Gates"
+  04-interactive.html:
+    caption: "Interactive: Transistors to Gates"

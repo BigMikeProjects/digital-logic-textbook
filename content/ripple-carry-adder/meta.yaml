@@ -1,0 +1,5 @@
+title: "Ripple Carry Adder"
+description: "Multi-bit addition using chained full adders"
+chapter: combinational-logic
+section: adders
+order: 40404

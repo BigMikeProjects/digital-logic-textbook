@@ -11,6 +11,12 @@ export interface TopicMeta {
   title: string;
   description?: string;
   order?: number;
+  // Chapter/section are authored as meta.yaml fields (the flat content model): a topic's
+  // navigation grouping travels with the file, so re-chaptering/re-sectioning is just a
+  // field edit — no folder move. When absent (legacy nested layout) the scanner falls
+  // back to deriving them from the folder path.
+  chapter?: string;
+  section?: string;
   graphics?: Record<string, { caption?: string }>;
 }
 

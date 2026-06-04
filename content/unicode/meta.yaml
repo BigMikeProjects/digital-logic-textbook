@@ -1,0 +1,11 @@
+title: "Unicode"
+description: "Understanding Unicode and UTF-8 variable-width character encoding"
+chapter: combinational-logic
+section: representing-information
+order: 30203
+
+graphics:
+  01-intro.youtube:
+    caption: "Video explanation of Unicode and UTF-8 encoding"
+  02-unicode-encoding.html:
+    caption: "Interactive Unicode encoding explorer"

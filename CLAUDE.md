@@ -28,16 +28,21 @@ git push         # Auto-deploys to GitHub Pages via GitHub Actions
 │   ├── content/            # Content processing (scanner, parser, graphics, navigation)
 │   ├── types/              # TypeScript interfaces (content.ts)
 │   └── markdown.ts         # Markdown-to-HTML pipeline
-├── content/                # ALL TEXTBOOK CONTENT LIVES HERE
-│   └── [chapter]/
-│       └── [section]/
-│           └── [topic]/
-│               ├── text.md
-│               ├── meta.yaml
-│               ├── graphics/   # Side panel media (01-*.svg, 02-*.html, 03-*.youtube)
-│               └── images/     # Inline images referenced in text.md
+├── content/                # ALL TEXTBOOK CONTENT LIVES HERE (FLAT — one folder per topic)
+│   └── [topic-slug]/        # slug = folder name = URL (/[topic-slug]/)
+│       ├── text.md
+│       ├── meta.yaml        # title, description, chapter, section, order, graphics
+│       ├── graphics/        # Side panel media (01-*.svg, 02-*.html, 03-*.youtube)
+│       └── images/          # Inline images referenced in text.md
 └── public/content/         # Copied from content/ at build time
 ```
+
+**Flat content model:** topics are NOT nested under chapter/section folders. A topic's
+chapter/section are `meta.yaml` fields, and `lib/content/scanner.ts` reads them from there
+(falling back to the folder path only for legacy nested topics). Navigation grouping/order
+is driven entirely by the `chapter`/`section`/`order` fields — so re-chaptering, re-sectioning,
+or reordering a published topic is a field edit, never a folder move. The URL is always
+`/[topic-slug]/` regardless of chapter/section.
 
 ## Content Pipeline
 
@@ -45,26 +50,31 @@ New content is authored in the pipeline repo (`../pipeline/`) and published here
 
 **Publish flow:**
 1. Content is written in `pipeline/topics/NN-slug/content/v01.md`
-2. `publish.ts` copies it to `content/[chapter]/[section]/[topic-slug]/text.md` along with graphics, images, and meta.yaml
+2. `publish.ts` copies it to `content/[topic-slug]/text.md` along with graphics, images, and meta.yaml (with chapter/section/order fields)
 3. Build with `npm run build`, then commit and push to deploy
 
 ## Content Authoring
 
 ### Adding a New Topic
 
-1. Create folder: `content/[chapter]/[section]/[topic-slug]/`
+1. Create folder: `content/[topic-slug]/`
 2. Add `text.md` with markdown content
 3. Add `meta.yaml`:
    ```yaml
    title: "Topic Title"
    description: "Brief description"
-   order: 1  # Controls sort order within section
-
+   chapter: combinational-logic   # nav group (clean, number-free)
+   section: adders                # nav subgroup
+   order: 40401                   # global sort key: ch*10000 + sec*100 + top
    graphics:
      01-diagram.svg:
        caption: "Description shown below graphic"
    ```
 4. Add graphics to `graphics/` folder (prefix with numbers for ordering)
+
+In practice topics are authored in the pipeline and published via `publish.ts`, which
+generates `meta.yaml` (including chapter/section/order) from the pipeline `book_location` —
+you rarely hand-author this.
 
 ### Supported Graphic Types
 

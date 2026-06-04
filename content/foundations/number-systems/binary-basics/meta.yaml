@@ -1,9 +1,0 @@
-title: "Binary Number Basics"
-description: "Introduction to the binary number system and conversions"
-order: 10201
-
-graphics:
-  01-intro.youtube:
-    caption: "Video: Binary Number System Explained"
-  02-analog-digital.png:
-    caption: "Analog vs Digital signal representation"

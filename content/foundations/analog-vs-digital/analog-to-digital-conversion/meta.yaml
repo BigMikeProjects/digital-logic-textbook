@@ -1,9 +1,0 @@
-title: "Analog to Digital Conversion"
-description: "How sampling and quantization transform continuous real-world signals into discrete binary representations that digital systems can process."
-order: 10102
-
-graphics:
-  01-atod-video.youtube:
-    caption: "Video: Analog to Digital Conversion"
-  02-digital-vs-analog.html:
-    caption: "Interactive visualization of sampling and quantization"
