@@ -3,3 +3,7 @@ description: "How the transition from physical to digital media illustrates fund
 chapter: introduction
 section: analog-vs-digital
 order: 10101
+
+graphics:
+  blockbuster2netflix.png:
+    caption: "From Blockbuster video stores to Netflix streaming — the shift from physical media to on-demand digital delivery."
