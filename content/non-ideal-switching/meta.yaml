@@ -7,3 +7,5 @@ order: 20303
 graphics:
   01-video.youtube:
     caption: ""
+  02-interactive.html:
+    caption: "Interactive: the CMOS inverter as a voltage divider — adjust the on/off resistances and watch the output"

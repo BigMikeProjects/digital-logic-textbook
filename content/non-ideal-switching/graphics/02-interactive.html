@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMOS Inverter: From Voltage Divider to Logic Gate</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; overflow: hidden; background: #d7dbe0; }
+body { display: flex; align-items: center; justify-content: center;
+       font-family: 'Inter','Segoe UI',system-ui,sans-serif; }
+
+:root{
+  --bg:#e8e8e8; --card:#ffffff; --navy:#1a2744; --muted:#5a6b85;
+  --line:#cbd2dc; --hi:#00d4ff; --lo:#484f58; --amber:#e08a1e;
+  --hiBg:#e2f8ff; --loBg:#eceef1; --accent:#1a2744;
+}
+
+.viewport-container{
+  width:100%; max-width:100vw; aspect-ratio:16/9; max-height:100vh;
+  position:relative; overflow:hidden;
+}
+.design-surface{
+  width:1920px; height:1080px; position:absolute; top:0; left:0;
+  transform-origin:top left; background:var(--bg);
+  padding:28px 52px; display:flex; flex-direction:column;
+  color:var(--navy);
+}
+
+/* ---------- header ---------- */
+.header{ text-align:center; margin-bottom:14px; flex:0 0 auto; }
+.header h1{ font-size:38px; font-weight:800; letter-spacing:-.5px; }
+.header .sub{ font-size:20px; color:var(--muted); margin-top:3px; }
+
+/* ---------- main ---------- */
+.main{ flex:1 1 auto; display:grid; grid-template-columns:740px 1fr; gap:26px; min-height:0; }
+
+.card{ background:var(--card); border:2px solid var(--line); border-radius:18px;
+       box-shadow:0 4px 18px rgba(26,39,68,.06); padding:18px 24px; }
+
+.circuit-card{ display:flex; flex-direction:column; overflow:hidden; }
+.circuit-card .ctitle{ font-size:23px; font-weight:700; margin-bottom:4px; flex:0 0 auto; }
+.circuit-card svg{ flex:1 1 auto; width:100%; min-height:0; }
+
+.rightcol{ display:flex; flex-direction:column; gap:22px; min-height:0; }
+.panel{ flex:1 1 0; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.panel h2{ font-size:22px; font-weight:700; padding-bottom:8px; margin-bottom:12px;
+           border-bottom:2px solid var(--line); flex:0 0 auto; }
+
+/* ---------- equations ---------- */
+.eq-block{ margin-bottom:13px; }
+.eq-block:last-child{ margin-bottom:0; }
+.eq-label{ font-size:15px; color:var(--muted); font-weight:600; margin-bottom:3px; }
+.eq{ font-size:22px; line-height:1.35; }
+.eq .var{ font-style:italic; }
+.eq .sub{ font-size:.62em; vertical-align:sub; }
+.eq .frac{ display:inline-flex; flex-direction:column; vertical-align:middle;
+           text-align:center; margin:0 4px; font-size:18px; }
+.eq .frac .num{ border-bottom:2px solid var(--navy); padding:0 7px; }
+.eq .frac .den{ padding:0 7px; }
+.eq .num-sub{ color:var(--muted); font-size:18px; }
+.result{ font-weight:800; }
+.result.hi{ color:var(--hi); }
+.result.lo{ color:var(--lo); }
+.result.amber{ color:var(--amber); }
+.bigres{ font-size:24px; }
+
+/* ---------- logic / power ---------- */
+.logic-row{ display:flex; gap:16px; align-items:stretch; margin-bottom:12px; flex:0 0 auto; }
+.ttable{ border-collapse:collapse; font-size:17px; flex:0 0 auto; align-self:flex-start; }
+.ttable th,.ttable td{ border:2px solid var(--line); padding:5px 18px; text-align:center; font-weight:700; }
+.ttable th{ background:#f3f5f8; color:var(--muted); font-size:14px; }
+.ttable tr.active td{ background:var(--hiBg); color:var(--navy); }
+.ttable td.lo{ color:var(--lo); }
+.ttable td.hi{ color:var(--hi); }
+.statebox{ flex:1; display:flex; align-items:center;
+           background:#f5f7f9; border-radius:12px; padding:10px 18px; font-size:18px; line-height:1.5; }
+.statebox .sb-inner{ width:100%; }
+.statebox .nw{ white-space:nowrap; }
+.statebox b.hi{ color:var(--hi); } .statebox b.lo{ color:var(--lo); }
+.insight{ background:var(--hiBg); border-left:5px solid var(--hi); border-radius:10px;
+          padding:12px 16px; font-size:17px; line-height:1.42; }
+.insight.warn{ background:#fff5e6; border-left-color:var(--amber); }
+.insight.bad{ background:#fdeede; border-left-color:#c2410c; }
+.insight .pwr{ font-weight:800; font-size:20px; }
+
+/* ---------- controls ---------- */
+.controls{ flex:0 0 auto; margin-top:16px; display:flex; gap:48px; align-items:flex-start; }
+.ctrl-input{ flex:0 0 300px; }
+.ctrl-case{ flex:1 1 auto; }
+.ctrl-label{ font-size:17px; font-weight:700; color:var(--muted); margin-bottom:8px; display:flex; justify-content:space-between; align-items:baseline; }
+.ctrl-label .val{ color:var(--navy); font-weight:800; }
+.step-hint{ font-size:14px; font-weight:600; color:var(--muted); letter-spacing:.5px; }
+.seg{ display:flex; border:2px solid var(--line); border-radius:12px; overflow:hidden; }
+.seg .opt{ flex:1; text-align:center; padding:13px 0; font-size:19px; font-weight:700;
+           cursor:pointer; color:var(--muted); background:#fff; transition:.12s; user-select:none; }
+.seg3 .opt:not(:last-child){ border-right:2px solid var(--line); }
+.case-desc{ font-size:16px; color:var(--navy); margin-top:8px; min-height:18px; }
+.seg .opt.active{ background:var(--navy); color:#fff; }
+.seg3 .opt.active[data-v="ideal"]{ background:var(--navy); color:#fff; }
+.seg3 .opt.active[data-v="typical"]{ background:var(--amber); color:#3a2300; }
+.seg3 .opt.active[data-v="degraded"]{ background:#c2410c; color:#fff; }
+.seg.lohi .opt.active.is1{ background:var(--hi); color:#06222b; }
+.seg.lohi .opt.active.is0{ background:var(--lo); color:#fff; }
+
+.slider{ height:46px; display:flex; align-items:center; }
+.track{ position:relative; width:100%; height:10px; background:#dfe4ea; border-radius:6px; cursor:pointer; }
+.fill{ position:absolute; left:0; top:0; height:100%; background:var(--navy); border-radius:6px; }
+.thumb{ position:absolute; top:50%; width:26px; height:26px; border-radius:50%;
+        background:#fff; border:3px solid var(--navy); transform:translate(-50%,-50%);
+        box-shadow:0 2px 6px rgba(0,0,0,.18); cursor:grab; }
+.slider.disabled{ opacity:.4; pointer-events:none; }
+.slider.disabled .fill{ background:var(--muted); }
+.slider.disabled .thumb{ border-color:var(--muted); }
+.hint{ font-size:14px; color:var(--muted); margin-top:4px; min-height:16px; }
+.kbd-note{ text-align:center; font-size:15px; color:var(--muted); margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+  <div class="header">
+    <h1>From Voltage Divider to CMOS Inverter</h1>
+    <div class="sub">The two transistors are just switches &mdash; modeled as resistors R<sub>A<sub>p</sub></sub> (pull&#8209;up) and R<sub>A<sub>n</sub></sub> (pull&#8209;down)</div>
+  </div>
+
+  <div class="main">
+    <!-- LEFT: circuit -->
+    <div class="card circuit-card">
+      <div class="ctitle">Resistive Model of the Inverter</div>
+      <svg id="circuit" viewBox="0 0 740 620" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <!-- RIGHT: equations + logic/power -->
+    <div class="rightcol">
+      <div class="card panel">
+        <h2>Circuit Equations</h2>
+        <div id="eqs"></div>
+      </div>
+      <div class="card panel">
+        <h2>Logic &amp; Power</h2>
+        <div class="logic-row">
+          <table class="ttable">
+            <tr><th>A (in)</th><th>V<sub>out</sub></th></tr>
+            <tr id="row0"><td>0</td><td class="hi">1</td></tr>
+            <tr id="row1"><td>1</td><td class="lo">0</td></tr>
+          </table>
+          <div class="statebox" id="statebox"></div>
+        </div>
+        <div class="insight" id="insight"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div>
+    <div class="controls">
+      <div class="ctrl-input">
+        <div class="ctrl-label">Input&nbsp;A</div>
+        <div class="seg lohi" id="segInput">
+          <div class="opt is0" data-v="0">LOW (0)</div>
+          <div class="opt is1" data-v="1">HIGH (1)</div>
+        </div>
+      </div>
+      <div class="ctrl-case">
+        <div class="ctrl-label">Operating case <span class="step-hint">&#9664; click through &#9654;</span></div>
+        <div class="seg seg3" id="segCase">
+          <div class="opt" data-v="ideal">1 &middot; Ideal</div>
+          <div class="opt" data-v="typical">2 &middot; Typical</div>
+          <div class="opt" data-v="degraded">3 &middot; Degraded</div>
+        </div>
+        <div class="hint case-desc" id="caseDesc"></div>
+      </div>
+    </div>
+    <div class="kbd-note">Keyboard: &larr;/&rarr; toggle input &nbsp;&bull;&nbsp; 1 / 2 / 3 (or &uarr;/&darr;) select case</div>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ============ responsive scaling ============ */
+const DESIGN_W=1920, DESIGN_H=1080;
+function autoResize(){
+  const c=document.getElementById('viewportContainer');
+  const s=document.getElementById('designSurface');
+  const vw=window.innerWidth, vh=window.innerHeight;
+  let cw,ch;
+  if(vw/vh > 16/9){ ch=vh; cw=ch*(16/9); } else { cw=vw; ch=cw*(9/16); }
+  c.style.width=cw+'px'; c.style.height=ch+'px';
+  s.style.transform=`scale(${cw/DESIGN_W})`;
+}
+autoResize();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(autoResize,50);});
+
+/* ============ state ============ */
+const VS = 5.0;  // fixed supply for these use cases
+const CASES = {
+  ideal:    { label:'Ideal',    Ron:0,    Roff:Infinity, desc:'R<sub>on</sub> = 0,&nbsp; R<sub>off</sub> = &infin;' },
+  typical:  { label:'Typical',  Ron:1000, Roff:1e9,      desc:'R<sub>on</sub> = 1&#8201;k&Omega;,&nbsp; R<sub>off</sub> = 1&#8201;G&Omega;' },
+  degraded: { label:'Degraded', Ron:1000, Roff:9000,     desc:'R<sub>on</sub> = 1&#8201;k&Omega;,&nbsp; R<sub>off</sub> = 9&#8201;k&Omega; &nbsp;(leaky off&#8209;device)' },
+};
+const CASE_KEYS = ['ideal','typical','degraded'];
+const state = { inputA:0, useCase:'ideal' };
+
+/* ============ formatters ============ */
+function sig(x){ // up to 3 sig figs, trimmed
+  if(x===0) return '0';
+  let s=Number(x.toPrecision(3));
+  return s.toString();
+}
+function fmtR(r){
+  if(!isFinite(r)) return '\u221E';
+  if(r===0) return '0\u202F\u03A9';
+  const u=[[1e9,'G\u03A9'],[1e6,'M\u03A9'],[1e3,'k\u03A9'],[1,'\u03A9']];
+  for(const [f,lab] of u){ if(r>=f) return sig(r/f)+'\u202F'+lab; }
+  return sig(r)+'\u202F\u03A9';
+}
+function fmtV(v){
+  if(v===0) return '0\u202FV';
+  const a=Math.abs(v);
+  if(a>=1) return sig(v)+'\u202FV';
+  if(a>=1e-3) return sig(v*1e3)+'\u202FmV';
+  if(a>=1e-6) return sig(v*1e6)+'\u202F\u00B5V';
+  return sig(v*1e9)+'\u202FnV';
+}
+function fmtI(i){
+  if(i===0) return '0\u202FA';
+  const a=Math.abs(i);
+  if(a>=1) return sig(i)+'\u202FA';
+  if(a>=1e-3) return sig(i*1e3)+'\u202FmA';
+  if(a>=1e-6) return sig(i*1e6)+'\u202F\u00B5A';
+  if(a>=1e-9) return sig(i*1e9)+'\u202FnA';
+  return sig(i*1e12)+'\u202FpA';
+}
+function fmtP(p){
+  if(p===0) return '0\u202FW';
+  const a=Math.abs(p);
+  if(a>=1) return sig(p)+'\u202FW';
+  if(a>=1e-3) return sig(p*1e3)+'\u202FmW';
+  if(a>=1e-6) return sig(p*1e6)+'\u202F\u00B5W';
+  if(a>=1e-9) return sig(p*1e9)+'\u202FnW';
+  if(a>=1e-12) return sig(p*1e12)+'\u202FpW';
+  return sig(p*1e15)+'\u202FfW';
+}
+
+/* ============ physics ============ */
+function compute(){
+  const cs = CASES[state.useCase];
+  const isIdeal = (state.useCase==='ideal');
+  const pOn = (state.inputA===0);   // pMOS conducts when gate is LOW
+  const nOn = (state.inputA===1);   // nMOS conducts when gate is HIGH
+  const Rap = pOn ? cs.Ron : cs.Roff;
+  const Ran = nOn ? cs.Ron : cs.Roff;
+
+  let Vout,I,P,Pup,Pdn;
+  if(isIdeal){
+    Vout = pOn ? VS : 0;  // one R=0, other =inf -> rail
+    I=0; P=0; Pup=0; Pdn=0;
+  } else {
+    Vout = VS * Ran/(Rap+Ran);
+    I = VS/(Rap+Ran);
+    P = VS*I;
+    Pup = I*I*Rap; Pdn = I*I*Ran;
+  }
+  const outHigh = Vout > VS/2;
+  return {isIdeal,pOn,nOn,Rap,Ran,Vout,I,P,Pup,Pdn,outHigh};
+}
+
+/* ============ circuit svg ============ */
+function zig(x,yTop,yBot){
+  const lead=16, amp=14, n=6;
+  const top=yTop+lead, bot=yBot-lead, span=bot-top, step=span/n;
+  let pts=[[x,yTop],[x,top]];
+  for(let i=0;i<n;i++){ pts.push([x+((i%2===0)?amp:-amp), top+step*(i+0.5)]); }
+  pts.push([x,bot],[x,yBot]);
+  return pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+}
+function badge(x,y,on){
+  const c = on? '#1a2744':'#eceef1';
+  const t = on? '#ffffff':'#8a94a6';
+  const lab = on? 'ON':'OFF';
+  return `<rect x="${x}" y="${y}" width="62" height="30" rx="8" fill="${c}" stroke="#cbd2dc"/>
+          <text x="${x+31}" y="${y+21}" text-anchor="middle" font-size="18" font-weight="800" fill="${t}">${lab}</text>`;
+}
+function renderCircuit(c){
+  const NAVY='#1a2744', MUT='#5a6b85';
+  const leftX=100, Rx=440;
+  const railTopY=80, railBotY=540;
+  const node={x:Rx,y:310};
+  const onColor='#1a2744', offColor='#9aa6b8';
+  const apOn=c.pOn, anOn=c.nOn;
+  const nodeColor = c.outHigh? 'var(--hi)' : 'var(--lo)';
+  const apW = apOn?4:3, anW = anOn?4:3;
+  const apDash = apOn?'':'stroke-dasharray="2 6"', anDash = anOn?'':'stroke-dasharray="2 6"';
+
+  let svg=`
+  <!-- rails -->
+  <path d="M${leftX} ${railTopY} H${Rx}" stroke="${NAVY}" stroke-width="3" fill="none"/>
+  <path d="M${leftX} ${railBotY} H560" stroke="${NAVY}" stroke-width="3" fill="none"/>
+  <path d="M${leftX} ${railTopY} V268" stroke="${NAVY}" stroke-width="3" fill="none"/>
+  <path d="M${leftX} 352 V${railBotY}" stroke="${NAVY}" stroke-width="3" fill="none"/>
+
+  <!-- ground symbol on the bottom (return) rail -->
+  <path d="M330 ${railBotY} V554" stroke="${NAVY}" stroke-width="3" fill="none"/>
+  <line x1="310" y1="554" x2="350" y2="554" stroke="${NAVY}" stroke-width="3"/>
+  <line x1="317" y1="562" x2="343" y2="562" stroke="${NAVY}" stroke-width="3"/>
+  <line x1="324" y1="570" x2="336" y2="570" stroke="${NAVY}" stroke-width="3"/>
+
+  <!-- source -->
+  <circle cx="${leftX}" cy="310" r="42" fill="#fff" stroke="${NAVY}" stroke-width="3"/>
+  <text x="${leftX}" y="298" text-anchor="middle" font-size="26" font-weight="800" fill="${NAVY}">+</text>
+  <text x="${leftX}" y="342" text-anchor="middle" font-size="30" font-weight="800" fill="${NAVY}">&minus;</text>
+  <text x="20" y="300" font-size="30" font-weight="800" font-style="italic" fill="${NAVY}">V<tspan font-size="18" dy="6">s</tspan></text>
+  <text x="20" y="326" font-size="18" font-weight="700" fill="${MUT}">${fmtV(VS)}</text>
+
+  <!-- reference current arrow on the wire out of the source (+) terminal -->
+  <line x1="156" y1="62" x2="222" y2="62" stroke="#e08a1e" stroke-width="4" stroke-linecap="round"/>
+  <polygon points="236,62 221,54 221,70" fill="#e08a1e"/>
+  <text x="186" y="48" text-anchor="middle" font-size="27" font-weight="800" font-style="italic" fill="#e08a1e">I</text>
+
+  <!-- pull-up (p-channel) branch -->
+  <path d="M${Rx} ${railTopY} V120" stroke="${apOn?onColor:offColor}" stroke-width="${apW}" fill="none" ${apDash}/>
+  <polyline points="${zig(Rx,120,272)}" fill="none" stroke="${apOn?onColor:offColor}" stroke-width="${apW}" ${apDash}/>
+  <path d="M${Rx} 272 V${node.y}" stroke="${apOn?onColor:offColor}" stroke-width="${apW}" fill="none" ${apDash}/>
+
+  <!-- pull-down (n-channel) branch -->
+  <path d="M${Rx} ${node.y} V348" stroke="${anOn?onColor:offColor}" stroke-width="${anW}" fill="none" ${anDash}/>
+  <polyline points="${zig(Rx,348,500)}" fill="none" stroke="${anOn?onColor:offColor}" stroke-width="${anW}" ${anDash}/>
+  <path d="M${Rx} 500 V${railBotY}" stroke="${anOn?onColor:offColor}" stroke-width="${anW}" fill="none" ${anDash}/>
+
+  <!-- pull-up labels -->
+  <text x="${Rx+38}" y="184" font-size="25" font-weight="800" font-style="italic" fill="${NAVY}">R<tspan font-size="15" dy="6">A</tspan><tspan font-size="12" dy="3">p</tspan></text>
+  <text x="${Rx+38}" y="210" font-size="19" fill="${MUT}">${fmtR(c.Rap)}</text>
+  <text x="${Rx+38}" y="232" font-size="16" fill="${MUT}">p&#8209;channel</text>
+  ${badge(Rx+150,176,apOn)}
+
+  <!-- pull-down labels -->
+  <text x="${Rx+38}" y="418" font-size="25" font-weight="800" font-style="italic" fill="${NAVY}">R<tspan font-size="15" dy="6">A</tspan><tspan font-size="12" dy="3">n</tspan></text>
+  <text x="${Rx+38}" y="444" font-size="19" fill="${MUT}">${fmtR(c.Ran)}</text>
+  <text x="${Rx+38}" y="466" font-size="16" fill="${MUT}">n&#8209;channel</text>
+  ${badge(Rx+150,408,anOn)}
+
+  <!-- output node + tap + terminals -->
+  <path d="M${node.x} ${node.y} H620" stroke="${NAVY}" stroke-width="3" fill="none"/>
+  <path d="M560 ${railBotY} V460 H620" stroke="${NAVY}" stroke-width="3" fill="none"/>
+  <circle cx="${node.x}" cy="${node.y}" r="7" fill="${nodeColor}"/>
+  <circle cx="632" cy="${node.y}" r="9" fill="#fff" stroke="${NAVY}" stroke-width="3"/>
+  <circle cx="632" cy="460" r="9" fill="#fff" stroke="${NAVY}" stroke-width="3"/>
+  <text x="652" y="${node.y-3}" font-size="26" font-weight="800" fill="${NAVY}">+</text>
+  <text x="652" y="470" font-size="30" font-weight="800" fill="${NAVY}">&minus;</text>
+  <text x="648" y="392" font-size="22" font-weight="800" font-style="italic" fill="${NAVY}">V<tspan font-size="14" dy="6">out</tspan></text>
+
+  <!-- Vout value chip (above the tap wire) -->
+  <rect x="465" y="269" width="126" height="32" rx="9" fill="${c.outHigh?'var(--hiBg)':'var(--loBg)'}" stroke="${NAVY}" stroke-width="2"/>
+  <text x="528" y="291" text-anchor="middle" font-size="20" font-weight="800" fill="${c.outHigh?'#0792ad':'var(--lo)'}">${fmtV(c.Vout)}</text>
+
+  <!-- current readout chip (below source) -->
+  <rect x="30" y="558" width="210" height="34" rx="9" fill="#fff" stroke="${c.I>1e-12?'var(--amber)':'#cbd2dc'}" stroke-width="2"/>
+  <text x="135" y="581" text-anchor="middle" font-size="19" font-weight="700" fill="${c.I>1e-12?'var(--amber)':MUT}">I = ${fmtI(c.I)}</text>
+  `;
+  document.getElementById('circuit').innerHTML = svg;
+}
+
+/* ============ equations panel ============ */
+function renderEqs(c){
+  const resCls = c.outHigh?'hi':'lo';
+  let divider, current, power;
+
+  if(c.isIdeal){
+    if(c.pOn){ // HIGH: Rap=0, Ran=inf
+      divider = `= V<span class="sub">s</span> &middot; <span class="num-sub">&infin; / (0 + &infin;)</span> &rarr; <span class="result hi">${fmtV(c.Vout)}</span>`;
+    } else {   // LOW: Rap=inf, Ran=0
+      divider = `= V<span class="sub">s</span> &middot; <span class="num-sub">0 / (&infin; + 0)</span> &rarr; <span class="result lo">${fmtV(c.Vout)}</span>`;
+    }
+    current = `= V<span class="sub">s</span> / &infin; &rarr; <span class="result">0&#8201;A</span>`;
+    power   = `&rarr; <span class="result">0&#8201;W</span>`;
+  } else {
+    divider = `= ${sig(VS)} &middot; <span class="frac"><span class="num">${fmtR(c.Ran)}</span><span class="den">${fmtR(c.Rap)} + ${fmtR(c.Ran)}</span></span> = <span class="result ${resCls} bigres">${fmtV(c.Vout)}</span>`;
+    current = `= <span class="frac"><span class="num">${sig(VS)}&#8201;V</span><span class="den">${fmtR(c.Rap)} + ${fmtR(c.Ran)}</span></span> = <span class="result amber">${fmtI(c.I)}</span>`;
+    power   = `= <span class="frac"><span class="num">${sig(VS)}<tspan>&#178;</tspan></span><span class="den">${fmtR(c.Rap)} + ${fmtR(c.Ran)}</span></span> = <span class="result amber bigres">${fmtP(c.P)}</span>`;
+  }
+
+  document.getElementById('eqs').innerHTML = `
+    <div class="eq-block">
+      <div class="eq-label">Output voltage &mdash; voltage divider</div>
+      <div class="eq">
+        <span class="var">V<span class="sub">out</span></span> =
+        <span class="var">V<span class="sub">s</span></span> &middot;
+        <span class="frac"><span class="num"><span class="var">R<span class="sub">A<sub>n</sub></span></span></span><span class="den"><span class="var">R<span class="sub">A<sub>p</sub></span></span> + <span class="var">R<span class="sub">A<sub>n</sub></span></span></span></span>
+      </div>
+      <div class="eq">${divider}</div>
+    </div>
+    <div class="eq-block">
+      <div class="eq-label">Supply current</div>
+      <div class="eq"><span class="var">I</span> = <span class="frac"><span class="num"><span class="var">V<span class="sub">s</span></span></span><span class="den"><span class="var">R<span class="sub">A<sub>p</sub></span></span> + <span class="var">R<span class="sub">A<sub>n</sub></span></span></span></span> &nbsp;${current}</div>
+    </div>
+    <div class="eq-block">
+      <div class="eq-label">Static power from the supply</div>
+      <div class="eq"><span class="var">P</span> = <span class="var">V<span class="sub">s</span></span> &middot; <span class="var">I</span> = <span class="frac"><span class="num"><span class="var">V<span class="sub">s</span></span><sup>2</sup></span><span class="den"><span class="var">R<span class="sub">A<sub>p</sub></span></span> + <span class="var">R<span class="sub">A<sub>n</sub></span></span></span></span> &nbsp;${power}</div>
+    </div>
+  `;
+}
+
+/* ============ logic / power panel ============ */
+function renderLogic(c){
+  document.getElementById('row0').classList.toggle('active', state.inputA===0);
+  document.getElementById('row1').classList.toggle('active', state.inputA===1);
+
+  const inWord = state.inputA===0? 'LOW (0)':'HIGH (1)';
+  const outWord = c.outHigh? 'HIGH (1)':'LOW (0)';
+  document.getElementById('statebox').innerHTML = `<div class="sb-inner">
+    Input A = <b class="${state.inputA?'hi':'lo'}">${inWord}</b><br>
+    &rarr; p&#8209;channel <b>${c.pOn?'ON':'OFF'}</b>, n&#8209;channel <b>${c.nOn?'ON':'OFF'}</b><br>
+    &rarr; <span class="nw">V<sub>out</sub> = <b class="${c.outHigh?'hi':'lo'}">${outWord}</b></span>
+  </div>`;
+
+  const ins=document.getElementById('insight');
+  const offDev = c.pOn? 'pull&#8209;down (n)':'pull&#8209;up (p)';
+  if(state.useCase==='ideal'){
+    ins.className='insight';
+    ins.innerHTML = `One device is fully <b>OFF</b> (R = &infin;), so there is <b>no path</b> from V<sub>s</sub> to ground.
+      Current is zero, therefore static power is <span class="pwr">exactly 0&#8201;W</span>.
+      <br>This zero standby power is the whole reason CMOS won.`;
+  } else if(state.useCase==='typical'){
+    ins.className='insight warn';
+    ins.innerHTML = `The OFF device is large but <b>not infinite</b> (R<sub>off</sub> = ${fmtR(c.Rap>c.Ran?c.Rap:c.Ran)}),
+      so a tiny leakage current flows and static power is <span class="pwr">${fmtP(c.P)}</span> &mdash; small, but not zero.
+      The output still sits essentially at the rail, and almost all the power is dropped across the OFF ${offDev} transistor.`;
+  } else { // degraded
+    ins.className='insight bad';
+    ins.innerHTML = `Now R<sub>off</sub> is only <b>9&times; R<sub>on</sub></b>, so the divider can no longer pull fully to the rail:
+      V<sub>out</sub> sags to <b class="${c.outHigh?'hi':'lo'}">${fmtV(c.Vout)}</b> (still a valid logic ${c.outHigh?'HIGH':'LOW'}, but the <b>noise margin shrinks</b>).
+      Worse, the leakage path now carries real current &mdash; static power jumps to <span class="pwr">${fmtP(c.P)}</span>.`;
+  }
+}
+
+/* ============ master render ============ */
+function render(){
+  const c = compute();
+  renderCircuit(c);
+  renderEqs(c);
+  renderLogic(c);
+  // segmented active states
+  document.querySelectorAll('#segInput .opt').forEach(o=>{
+    o.classList.toggle('active', (+o.dataset.v)===state.inputA);
+  });
+  document.querySelectorAll('#segCase .opt').forEach(o=>{
+    o.classList.toggle('active', o.dataset.v===state.useCase);
+  });
+  document.getElementById('caseDesc').innerHTML = CASES[state.useCase].desc;
+}
+
+/* ============ segmented controls ============ */
+document.querySelectorAll('#segInput .opt').forEach(o=>{
+  o.addEventListener('click',()=>{ state.inputA=+o.dataset.v; render(); });
+});
+document.querySelectorAll('#segCase .opt').forEach(o=>{
+  o.addEventListener('click',()=>{ state.useCase=o.dataset.v; render(); });
+});
+
+/* ============ keyboard ============ */
+window.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'){ state.inputA = state.inputA?0:1; render(); }
+  else if(e.key==='1'){ state.useCase='ideal'; render(); }
+  else if(e.key==='2'){ state.useCase='typical'; render(); }
+  else if(e.key==='3'){ state.useCase='degraded'; render(); }
+  else if(e.key==='ArrowUp'||e.key==='ArrowDown'){
+    let i=CASE_KEYS.indexOf(state.useCase);
+    i = (e.key==='ArrowUp') ? (i+CASE_KEYS.length-1)%CASE_KEYS.length : (i+1)%CASE_KEYS.length;
+    state.useCase=CASE_KEYS[i]; render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
