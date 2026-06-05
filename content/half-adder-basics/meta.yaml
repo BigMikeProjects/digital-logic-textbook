@@ -9,5 +9,3 @@ graphics:
     caption: "Half Adder Block Diagram showing inputs A and B with outputs Sum and Carry"
   02-interactive.html:
     caption: "Interactive Half Adder - Click inputs to toggle and see outputs change"
-  03-video.youtube:
-    caption: "Video explanation of half adder concepts"
