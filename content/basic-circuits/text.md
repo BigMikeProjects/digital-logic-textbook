@@ -31,7 +31,7 @@ The third part is the **load** — the thing we actually want to operate. Here t
 
 Connecting these three parts end to end forms a single loop:
 
-![Single-loop LED circuit with a +5 V source, current-limiting resistor, LED load, ground, and current arrow.](images/single-loop-led-circuit.svg)
+![Single-loop LED circuit with a +5 V source, current-limiting resistor, LED load, ground, and current arrow.](./images/single-loop-led-circuit.svg)
 
 ---
 
@@ -43,7 +43,7 @@ $$V = I \cdot R$$
 
 Here $V$ is the voltage across a resistor, $I$ is the current through it, and $R$ is its resistance. The second relationship is **Kirchhoff's voltage law (KVL)**, which says that if you travel all the way around a closed loop, the voltage *rises* and *drops* must cancel out — you end up back where you started, at the same potential.
 
-![Ohm's law relationship graphic showing V = I * R, I = V/R, and R = V/I.](images/ohms-law-relationships.svg)
+![Ohm's law relationship graphic showing V = I * R, I = V/R, and R = V/I.](./images/ohms-law-relationships.svg)
 
 Apply KVL to our loop. Starting at the bottom and going up through the source, the voltage **rises** by $V$ (the full $5$ V). Coming back down through the resistor, the voltage **drops** by $I \cdot R$. To keep the example simple, we will assume the LED itself drops $0$ V. (That is not exactly true — a real LED drops something like $1.8$–$3$ V — but it is close enough to see the main idea.) With that simplification, the rise must equal the drop:
 
@@ -51,7 +51,7 @@ $$V = I \cdot R$$
 
 This is the same equation as Ohm's law, which is no accident: in a single loop with one resistor, the source voltage appears entirely across that resistor.
 
-![Kirchhoff voltage loop diagram showing a +5 V rise, an -IR drop, and the loop sum equal to zero.](images/kirchhoff-voltage-loop.svg)
+![Kirchhoff voltage loop diagram showing a +5 V rise, an -IR drop, and the loop sum equal to zero.](./images/kirchhoff-voltage-loop.svg)
 
 The crucial move is to **solve for the current**, because in this circuit the voltage is the fixed quantity and the resistance is the knob we turn:
 
@@ -70,7 +70,7 @@ Now experiment with the resistor. Because $I = V/R$ and $V$ is fixed, the curren
 | Increase $R$  | $I$ decreases       | LED dims          |
 | Decrease $R$  | $I$ increases       | LED brightens     |
 
-![Three LED circuits showing high, medium, and low resistance producing dim, medium, and bright LEDs.](images/led-brightness-vs-resistance.svg)
+![Three LED circuits showing high, medium, and low resistance producing dim, medium, and bright LEDs.](./images/led-brightness-vs-resistance.svg)
 
 Make the resistance large and you choke off the current, and the LED grows dim. Make the resistance small and you let more current through, and the LED glows brighter. This inverse relationship is the whole behavior of the loop.
 
@@ -88,7 +88,7 @@ The single loop had its parts strung one after another. That arrangement — com
 
 Place two resistors, $R_1$ and $R_2$, one after the other in a loop. The same charge that flows through $R_1$ must continue on through $R_2$ — there is nowhere else for it to go. So the defining property of a series connection is a **shared current**:
 
-![Series resistor schematic showing two resistors between A and B with one shared current and separate voltage drops V1 and V2.](images/series-resistors.svg)
+![Series resistor schematic showing two resistors between A and B with one shared current and separate voltage drops V1 and V2.](./images/series-resistors.svg)
 
 The *voltages*, however, are generally **not** the same. By Ohm's law, the drop across each resistor depends on its own resistance:
 
@@ -100,7 +100,7 @@ If $R_1 \neq R_2$, then $V_1 \neq V_2$. In series, the current is common and the
 
 Now connect the same two resistors side by side, both spanning the same two points $A$ and $B$:
 
-![Parallel resistor schematic showing two branches between A and B with split currents I1 and I2 and a shared voltage.](images/parallel-resistors.svg)
+![Parallel resistor schematic showing two branches between A and B with split currents I1 and I2 and a shared voltage.](./images/parallel-resistors.svg)
 
 Here the situation is mirrored. Both resistors are connected to the identical pair of nodes, so the **same voltage** appears across each — that is the defining property of a parallel connection. The *currents* now generally differ, since each branch carries $I = V/R$ for its own resistance. In parallel, the voltage is common and the current divides up among the branches.
 
@@ -111,7 +111,7 @@ A compact way to remember the contrast:
 | Series     | current $I$     | voltage               |
 | Parallel   | voltage $V$     | current               |
 
-![Series versus parallel comparison infographic contrasting shared current and divided voltage with shared voltage and divided current.](images/series-vs-parallel.svg)
+![Series versus parallel comparison infographic contrasting shared current and divided voltage with shared voltage and divided current.](./images/series-vs-parallel.svg)
 
 ---
 
@@ -121,13 +121,13 @@ Series and parallel become far more interesting when we replace the resistors wi
 
 This yes/no view is exactly the world of digital logic, where everything is a 1 or a 0. Watch what the two topologies do to continuity.
 
-![Switch continuity graphic showing a closed switch as continuity and an open switch as a broken path.](images/switch-continuity.svg)
+![Switch continuity graphic showing a closed switch as continuity and an open switch as a broken path.](./images/switch-continuity.svg)
 
 ### Series switches behave like AND
 
 Put two switches, $SW_1$ and $SW_2$, in series between $A$ and $B$:
 
-![Series switches implementing AND logic with an AND gate and truth table.](images/series-switches-and.svg)
+![Series switches implementing AND logic with an AND gate and truth table.](./images/series-switches-and.svg)
 
 Because they are in series, current would have to pass through *both* to get from $A$ to $B$. If either one is open, the path is broken. You get continuity **if and only if** $SW_1$ is closed **AND** $SW_2$ is closed:
 
@@ -144,7 +144,7 @@ This is precisely the truth table of the logical **AND** operation, with "closed
 
 Now put the two switches in parallel, each offering its own path from $A$ to $B$:
 
-![Parallel switches implementing OR logic with an OR gate and truth table.](images/parallel-switches-or.svg)
+![Parallel switches implementing OR logic with an OR gate and truth table.](./images/parallel-switches-or.svg)
 
 Here current can take either branch. As long as *at least one* switch is closed, a path exists. You get continuity when $SW_1$ is closed **OR** $SW_2$ is closed:
 
@@ -165,9 +165,9 @@ We started with three resistors and a battery, and we have arrived at AND and OR
 
 A **transistor** can act as a voltage-controlled switch: a signal on its control terminal closes or opens the path between its other two terminals. Once you can build a switch out of a transistor, the series-means-AND and parallel-means-OR rules tell you how to wire transistors together to compute any logic function. Stringing transistors in series gives you an AND-like condition; placing them in parallel gives you an OR-like condition. Combining these patterns is exactly how the logic gates at the heart of every digital chip — and, eventually, every computer — are built. The humble single-loop LED circuit and the two ways of connecting components turn out to be the foundation of the whole subject.
 
-![Concept map showing the progression from circuit theory to series and parallel circuits, switches, AND/OR logic, transistors as switches, logic gates, and computers.](images/circuits-to-logic-concept-map.svg)
+![Concept map showing the progression from circuit theory to series and parallel circuits, switches, AND/OR logic, transistors as switches, logic gates, and computers.](./images/circuits-to-logic-concept-map.svg)
 
-![NMOS transistor switch preview showing the gate controlling current between drain and source.](images/nmos-transistor-switch.svg)
+![NMOS transistor switch preview showing the gate controlling current between drain and source.](./images/nmos-transistor-switch.svg)
 
 ---
 
