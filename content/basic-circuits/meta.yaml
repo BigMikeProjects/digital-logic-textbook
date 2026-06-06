@@ -3,3 +3,9 @@ description: ""
 chapter: foundations
 section: circuits
 order: 20200
+
+graphics:
+  01-single-loop-circuit.youtube:
+    caption: "Video: a single-loop circuit — Ohm's law, the current-limiting resistor, and how resistance sets the LED brightness"
+  02-series-parallel.youtube:
+    caption: "Video: series vs. parallel — shared current vs. shared voltage, and the series-AND / parallel-OR switch logic"
