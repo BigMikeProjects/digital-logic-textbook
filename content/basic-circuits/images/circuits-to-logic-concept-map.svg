@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 680" width="760" height="680">
+
+  <style>
+    svg { background: #fff; }
+    .wire { fill: none; stroke: #24313f; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .thin { fill: none; stroke: #24313f; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .dash { fill: none; stroke: #64748b; stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 8 8; }
+    .current { fill: none; stroke: #2563eb; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-blue); }
+    .voltage { fill: none; stroke: #f97316; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-orange); }
+    .path { fill: none; stroke: #16a34a; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; opacity: .28; }
+    .break { fill: none; stroke: #dc2626; stroke-width: 4; stroke-linecap: round; }
+    .label { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 23px; fill: #24313f; }
+    .small { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 18px; fill: #64748b; }
+    .tiny { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 15px; fill: #64748b; }
+    .title { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 30px; font-weight: 700; fill: #24313f; }
+    .eq { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 42px; font-weight: 700; fill: #24313f; }
+    .node { fill: #fff; stroke: #24313f; stroke-width: 3; }
+    .box { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 2; rx: 8; }
+    .soft-blue { fill: #eff6ff; stroke: #bfdbfe; stroke-width: 2; rx: 8; }
+    .soft-orange { fill: #fff7ed; stroke: #fed7aa; stroke-width: 2; rx: 8; }
+    .soft-green { fill: #f0fdf4; stroke: #bbf7d0; stroke-width: 2; rx: 8; }
+    .soft-red { fill: #fef2f2; stroke: #fecaca; stroke-width: 2; rx: 8; }
+    .glow-dim { fill: #facc15; opacity: .18; }
+    .glow-med { fill: #facc15; opacity: .34; }
+    .glow-bright { fill: #facc15; opacity: .55; }
+  </style>
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316"/>
+    </marker>
+    <marker id="arrow-dark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#24313f"/>
+    </marker>
+  </defs>
+
+<text class="title" x="202" y="34">From Circuits to Computers</text>
+    <circle class="thin" cx="158" cy="84" r="18"/><text class="tiny" x="151" y="90">V</text>
+    <polyline class="thin" points="143,166 156,154 169,178 182,154 195,166"/>
+    <line class="thin" x1="140" y1="248" x2="184" y2="230"/><circle class="node" cx="135" cy="250" r="5"/><circle class="node" cx="190" cy="250" r="5"/>
+    <text class="label" x="145" y="338">&amp;</text>
+    <path class="thin" d="M 142 390 L 190 390 M 166 390 L 166 438"/><text class="tiny" x="136" y="456">NMOS</text>
+    <path class="thin" d="M 138 500 L 178 500 A 35 35 0 0 1 178 570 L 138 570 Z"/><text class="tiny" x="148" y="540">gate</text>
+    <rect class="thin" x="140" y="604" width="52" height="34"/><line class="thin" x1="150" y1="604" x2="150" y2="638"/><line class="thin" x1="166" y1="604" x2="166" y2="638"/><line class="thin" x1="182" y1="604" x2="182" y2="638"/>
+    <rect class="soft-blue" x="210" y="58" width="340" height="52"/><text class="label" x="268" y="92">Circuit Theory</text>
+<path class="thin" marker-end="url(#arrow-dark)" d="M 380 112 L 380 134"/>
+<rect class="box" x="210" y="140" width="340" height="52"/><text class="label" x="268" y="174">Series / Parallel</text>
+<path class="thin" marker-end="url(#arrow-dark)" d="M 380 194 L 380 216"/>
+<rect class="box" x="210" y="222" width="340" height="52"/><text class="label" x="268" y="256">Switches</text>
+<path class="thin" marker-end="url(#arrow-dark)" d="M 380 276 L 380 298"/>
+<rect class="soft-green" x="210" y="304" width="340" height="52"/><text class="label" x="268" y="338">AND / OR Logic</text>
+<path class="thin" marker-end="url(#arrow-dark)" d="M 380 358 L 380 380"/>
+<rect class="box" x="210" y="386" width="340" height="52"/><text class="label" x="238" y="420">Transistors as Switches</text>
+<path class="thin" marker-end="url(#arrow-dark)" d="M 380 440 L 380 462"/>
+<rect class="soft-orange" x="210" y="468" width="340" height="52"/><text class="label" x="268" y="502">Logic Gates</text>
+<path class="thin" marker-end="url(#arrow-dark)" d="M 380 522 L 380 544"/>
+<rect class="soft-blue" x="210" y="550" width="340" height="52"/><text class="label" x="268" y="584">Computers</text>
+</svg>

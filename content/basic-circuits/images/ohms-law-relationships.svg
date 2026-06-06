@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" width="900" height="540">
+
+  <style>
+    svg { background: #fff; }
+    .wire { fill: none; stroke: #24313f; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .thin { fill: none; stroke: #24313f; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .dash { fill: none; stroke: #64748b; stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 8 8; }
+    .current { fill: none; stroke: #2563eb; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-blue); }
+    .voltage { fill: none; stroke: #f97316; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-orange); }
+    .path { fill: none; stroke: #16a34a; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; opacity: .28; }
+    .break { fill: none; stroke: #dc2626; stroke-width: 4; stroke-linecap: round; }
+    .label { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 23px; fill: #24313f; }
+    .small { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 18px; fill: #64748b; }
+    .tiny { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 15px; fill: #64748b; }
+    .title { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 30px; font-weight: 700; fill: #24313f; }
+    .eq { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 42px; font-weight: 700; fill: #24313f; }
+    .node { fill: #fff; stroke: #24313f; stroke-width: 3; }
+    .box { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 2; rx: 8; }
+    .soft-blue { fill: #eff6ff; stroke: #bfdbfe; stroke-width: 2; rx: 8; }
+    .soft-orange { fill: #fff7ed; stroke: #fed7aa; stroke-width: 2; rx: 8; }
+    .soft-green { fill: #f0fdf4; stroke: #bbf7d0; stroke-width: 2; rx: 8; }
+    .soft-red { fill: #fef2f2; stroke: #fecaca; stroke-width: 2; rx: 8; }
+    .glow-dim { fill: #facc15; opacity: .18; }
+    .glow-med { fill: #facc15; opacity: .34; }
+    .glow-bright { fill: #facc15; opacity: .55; }
+  </style>
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316"/>
+    </marker>
+    <marker id="arrow-dark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#24313f"/>
+    </marker>
+  </defs>
+
+
+    <text class="title" x="60" y="64">Ohm's Law Relationships</text>
+    <circle cx="450" cy="250" r="96" fill="#f8fafc" stroke="#e2e8f0" stroke-width="3"/>
+    <text class="eq" x="363" y="264">V = I * R</text>
+    <rect class="soft-orange" x="80" y="186" width="205" height="104"/>
+    <text class="label" x="128" y="229">Voltage</text><text class="small" x="124" y="260">electrical push</text>
+    <rect class="soft-blue" x="342" y="386" width="216" height="104"/>
+    <text class="label" x="390" y="430">Current</text><text class="small" x="383" y="461">flow of charge</text>
+    <rect class="soft-green" x="615" y="186" width="220" height="104"/>
+    <text class="label" x="660" y="229">Resistance</text><text class="small" x="665" y="260">opposes flow</text>
+    <path class="voltage" d="M 286 238 L 342 248"/>
+    <path class="current" d="M 450 346 L 450 384"/>
+    <path class="voltage" d="M 615 238 L 559 248"/>
+    <text class="label" x="160" y="380">I = V/R</text>
+    <text class="label" x="648" y="380">R = V/I</text>
+    <path class="dash" d="M 252 354 C 330 318, 355 306, 382 290"/>
+    <path class="dash" d="M 706 354 C 630 318, 595 306, 520 292"/>
+    
+</svg>

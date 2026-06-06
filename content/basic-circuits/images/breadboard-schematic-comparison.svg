@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="900" height="520">
+
+  <style>
+    svg { background: #fff; }
+    .wire { fill: none; stroke: #24313f; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .thin { fill: none; stroke: #24313f; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .dash { fill: none; stroke: #64748b; stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 8 8; }
+    .current { fill: none; stroke: #2563eb; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-blue); }
+    .voltage { fill: none; stroke: #f97316; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-orange); }
+    .path { fill: none; stroke: #16a34a; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; opacity: .28; }
+    .break { fill: none; stroke: #dc2626; stroke-width: 4; stroke-linecap: round; }
+    .label { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 23px; fill: #24313f; }
+    .small { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 18px; fill: #64748b; }
+    .tiny { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 15px; fill: #64748b; }
+    .title { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 30px; font-weight: 700; fill: #24313f; }
+    .eq { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 42px; font-weight: 700; fill: #24313f; }
+    .node { fill: #fff; stroke: #24313f; stroke-width: 3; }
+    .box { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 2; rx: 8; }
+    .soft-blue { fill: #eff6ff; stroke: #bfdbfe; stroke-width: 2; rx: 8; }
+    .soft-orange { fill: #fff7ed; stroke: #fed7aa; stroke-width: 2; rx: 8; }
+    .soft-green { fill: #f0fdf4; stroke: #bbf7d0; stroke-width: 2; rx: 8; }
+    .soft-red { fill: #fef2f2; stroke: #fecaca; stroke-width: 2; rx: 8; }
+    .glow-dim { fill: #facc15; opacity: .18; }
+    .glow-med { fill: #facc15; opacity: .34; }
+    .glow-bright { fill: #facc15; opacity: .55; }
+  </style>
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#f97316"/>
+    </marker>
+    <marker id="arrow-dark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#24313f"/>
+    </marker>
+  </defs>
+
+
+    <text class="title" x="54" y="58">LED circuit: schematic to breadboard</text>
+    <rect class="box" x="48" y="94" width="382" height="360"/><text class="label" x="84" y="135">Schematic</text>
+    <line class="wire" x1="240" y1="160" x2="240" y2="195"/><polyline class="wire" points="240.0,195.0 240.0,206.2 222.0,211.9 258.0,223.1 222.0,234.4 258.0,245.6 222.0,256.9 258.0,268.1 240.0,273.8 240.0,285.0"/><text class="small" x="268" y="246.0">R</text>
+    <line class="wire" x1="240" y1="312" x2="240" y2="340"/>
+    <polygon points="212,340 268,340 240,386" fill="none" stroke="#24313f" stroke-width="4" stroke-linejoin="round"/>
+    <line class="wire" x1="210" y1="390" x2="270" y2="390"/>
+    <line class="wire" x1="240" y1="390" x2="240" y2="418"/>
+    <path class="thin" marker-end="url(#arrow-dark)" d="M 278 334 L 308 309"/>
+    <path class="thin" marker-end="url(#arrow-dark)" d="M 293 355 L 323 330"/>
+    
+    <line class="wire" x1="240" y1="418" x2="240" y2="446"/>
+    <line class="wire" x1="206" y1="446" x2="274" y2="446"/>
+    <line class="wire" x1="218" y1="459" x2="262" y2="459"/>
+    <line class="wire" x1="230" y1="472" x2="250" y2="472"/>
+    <text class="small" x="196" y="152">+5 V</text>
+    <rect class="box" x="470" y="94" width="382" height="360"/><text class="label" x="506" y="135">Breadboard</text>
+    <rect x="535" y="170" width="250" height="210" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="3"/>
+    <line class="thin" x1="560" y1="210" x2="760" y2="210"/><line class="thin" x1="560" y1="340" x2="760" y2="340"/>
+    <g fill="#cbd5e1"><circle cx="570" cy="240" r="4"/><circle cx="570" cy="268" r="4"/><circle cx="570" cy="296" r="4"/><circle cx="598" cy="240" r="4"/><circle cx="598" cy="268" r="4"/><circle cx="598" cy="296" r="4"/><circle cx="626" cy="240" r="4"/><circle cx="626" cy="268" r="4"/><circle cx="626" cy="296" r="4"/><circle cx="654" cy="240" r="4"/><circle cx="654" cy="268" r="4"/><circle cx="654" cy="296" r="4"/><circle cx="682" cy="240" r="4"/><circle cx="682" cy="268" r="4"/><circle cx="682" cy="296" r="4"/><circle cx="710" cy="240" r="4"/><circle cx="710" cy="268" r="4"/><circle cx="710" cy="296" r="4"/><circle cx="738" cy="240" r="4"/><circle cx="738" cy="268" r="4"/><circle cx="738" cy="296" r="4"/><circle cx="766" cy="240" r="4"/><circle cx="766" cy="268" r="4"/><circle cx="766" cy="296" r="4"/></g>
+    <line class="wire" x1="585" y1="210" x2="585" y2="240" style="stroke: #dc2626"/><text class="tiny" x="548" y="201">+5V rail</text>
+    <polyline class="wire" points="590,250 625,230 660,250 695,230 730,250"/><text class="tiny" x="625" y="220">resistor</text>
+    <circle class="glow-med" cx="708" cy="306" r="32"/><circle cx="708" cy="306" r="18" fill="#fde68a" stroke="#24313f" stroke-width="3"/><line class="thin" x1="698" y1="326" x2="690" y2="350"/><line class="thin" x1="718" y1="326" x2="738" y2="350"/><text class="tiny" x="738" y="310">LED</text>
+    <line class="wire" x1="690" y1="350" x2="580" y2="350"/><text class="tiny" x="548" y="366">GND rail</text>
+    <path class="dash" d="M 330 238 C 400 180, 492 190, 625 230"/><path class="dash" d="M 330 360 C 430 390, 540 384, 708 306"/>
+    
+</svg>
