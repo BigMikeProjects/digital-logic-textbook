@@ -2,7 +2,7 @@ title: "Binary Number Basics"
 description: "Introduction to the binary number system and conversions"
 chapter: foundations
 section: number-systems
-order: 20000
+order: 30000
 
 graphics:
   01-intro.youtube:
