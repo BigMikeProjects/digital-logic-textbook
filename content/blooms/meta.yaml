@@ -3,3 +3,7 @@ description: ""
 chapter: front-matter
 section: learning-strategies
 order: 100
+
+graphics:
+  01-blooms.youtube:
+    caption: "Video: Bloom’s taxonomy in digital logic — climbing from gates and truth tables up to synthesizing circuits, plus abstraction levels (behavior → Verilog → schematic → transistors)"
