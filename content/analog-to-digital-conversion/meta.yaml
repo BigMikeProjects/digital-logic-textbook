@@ -2,7 +2,7 @@ title: "Analog to Digital Conversion"
 description: "How sampling and quantization transform continuous real-world signals into discrete binary representations that digital systems can process."
 chapter: introduction
 section: analog-vs-digital
-order: 10102
+order: 10202
 
 graphics:
   01-atod-video.youtube:

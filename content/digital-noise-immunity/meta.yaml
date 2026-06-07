@@ -2,7 +2,7 @@ title: "Digital Noise Immunity"
 description: "Why digital systems tolerate noise better than analog through threshold-based interpretation and signal regeneration"
 chapter: introduction
 section: analog-vs-digital
-order: 10103
+order: 10203
 
 graphics:
   01-noise-immunity-video.youtube:

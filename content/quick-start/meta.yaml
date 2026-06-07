@@ -1,0 +1,9 @@
+title: "Fundamentals Quick Start"
+description: ""
+chapter: foundations
+section: quick-start
+order: 10100
+
+graphics:
+  01-quick-start.youtube:
+    caption: "Video: quick start — logic gates (NOT/AND/OR), truth tables, Boolean algebra, and De Morgan's theorem"
