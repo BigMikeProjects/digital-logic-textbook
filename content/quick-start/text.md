@@ -30,7 +30,7 @@ combination of inputs and the resulting output — a **truth table**.
 | 1 | 0 | 0 | 1 |
 | 1 | 1 | 1 | 1 |
 
-To evaluate a larger expression such as $F = \bar{A}C + B\bar{C}$, pick a row, substitute the 0/1
+To evaluate a larger expression such as $F = \bar{A}(C + B\bar{C})$, pick a row, substitute the 0/1
 values, and simplify. Boolean algebra follows an order of operations much like ordinary algebra —
 **complements (NOT) first, then parentheses, then AND, then OR** — with AND behaving like
 multiplication and OR like addition. The one new operation is the complement (the overbar), which
