@@ -7,3 +7,5 @@ order: 100
 graphics:
   01-blooms.youtube:
     caption: "Video: Bloom’s taxonomy in digital logic — climbing from gates and truth tables up to synthesizing circuits, plus abstraction levels (behavior → Verilog → schematic → transistors)"
+  02-blooms.html:
+    caption: "Interactive: Bloom’s taxonomy pyramid mapped to digital-logic skills, from gates and truth tables up to synthesizing circuits"
