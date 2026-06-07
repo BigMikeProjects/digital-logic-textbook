@@ -3,3 +3,7 @@ description: "An overview of digital logic as a discipline built on layers of ab
 chapter: introduction
 section: digital-logic-roadmap
 order: 10000
+
+graphics:
+  01-roadmap.png:
+    caption: "Roadmap of the digital logic course — how the topics build on one another"
