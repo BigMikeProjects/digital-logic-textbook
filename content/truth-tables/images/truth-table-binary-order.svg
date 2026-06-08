@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" width="940" height="560">
+
+  <style>
+    svg { background: #ffffff; }
+    .title { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 32px; font-weight: 700; fill: #24313f; }
+    .label { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 23px; fill: #24313f; }
+    .small { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 18px; fill: #64748b; }
+    .tiny { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 15px; fill: #64748b; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 20px; fill: #24313f; }
+    .mono-small { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 17px; fill: #24313f; }
+    .box { fill: #f8fafc; stroke: #dbe3ee; stroke-width: 2; rx: 8; }
+    .blue { fill: #dbeafe; stroke: #93c5fd; stroke-width: 2.5; rx: 8; }
+    .orange { fill: #ffedd5; stroke: #fdba74; stroke-width: 2.5; rx: 8; }
+    .green { fill: #dcfce7; stroke: #86efac; stroke-width: 2.5; rx: 8; }
+    .red { fill: #fee2e2; stroke: #fca5a5; stroke-width: 2.5; rx: 8; }
+    .line { fill: none; stroke: #24313f; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .thin { fill: none; stroke: #dbe3ee; stroke-width: 2; }
+    .arrow { fill: none; stroke: #24313f; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-dark); }
+    .arrow-blue { fill: none; stroke: #2563eb; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-blue); }
+    .one { fill: #dbeafe; stroke: #93c5fd; stroke-width: 2; }
+    .zero { fill: #ffedd5; stroke: #fdba74; stroke-width: 2; }
+    .hit-one { fill: #bfdbfe; stroke: #2563eb; stroke-width: 2; }
+    .hit-zero { fill: #fed7aa; stroke: #f97316; stroke-width: 2; }
+  </style>
+  <defs>
+    <marker id="arrow-dark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#24313f"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+
+    <text class="title" x="52" y="58">Truth-table rows count in binary</text>
+    <rect class="box" x="72" y="98" width="86" height="44"/><text class="mono-small" x="115.0" y="127.0" text-anchor="middle">row</text>
+<rect class="box" x="158" y="98" width="86" height="44"/><text class="mono-small" x="201.0" y="127.0" text-anchor="middle">A</text>
+<rect class="box" x="244" y="98" width="86" height="44"/><text class="mono-small" x="287.0" y="127.0" text-anchor="middle">B</text>
+<rect class="box" x="330" y="98" width="86" height="44"/><text class="mono-small" x="373.0" y="127.0" text-anchor="middle">C</text>
+<rect class="box" x="72" y="142" width="86" height="44"/><text class="mono-small" x="115.0" y="171.0" text-anchor="middle">0</text>
+<rect class="zero" x="158" y="142" width="86" height="44"/><text class="mono-small" x="201.0" y="171.0" text-anchor="middle">0</text>
+<rect class="zero" x="244" y="142" width="86" height="44"/><text class="mono-small" x="287.0" y="171.0" text-anchor="middle">0</text>
+<rect class="zero" x="330" y="142" width="86" height="44"/><text class="mono-small" x="373.0" y="171.0" text-anchor="middle">0</text>
+<rect class="box" x="72" y="186" width="86" height="44"/><text class="mono-small" x="115.0" y="215.0" text-anchor="middle">1</text>
+<rect class="zero" x="158" y="186" width="86" height="44"/><text class="mono-small" x="201.0" y="215.0" text-anchor="middle">0</text>
+<rect class="zero" x="244" y="186" width="86" height="44"/><text class="mono-small" x="287.0" y="215.0" text-anchor="middle">0</text>
+<rect class="one" x="330" y="186" width="86" height="44"/><text class="mono-small" x="373.0" y="215.0" text-anchor="middle">1</text>
+<rect class="box" x="72" y="230" width="86" height="44"/><text class="mono-small" x="115.0" y="259.0" text-anchor="middle">2</text>
+<rect class="zero" x="158" y="230" width="86" height="44"/><text class="mono-small" x="201.0" y="259.0" text-anchor="middle">0</text>
+<rect class="one" x="244" y="230" width="86" height="44"/><text class="mono-small" x="287.0" y="259.0" text-anchor="middle">1</text>
+<rect class="zero" x="330" y="230" width="86" height="44"/><text class="mono-small" x="373.0" y="259.0" text-anchor="middle">0</text>
+<rect class="box" x="72" y="274" width="86" height="44"/><text class="mono-small" x="115.0" y="303.0" text-anchor="middle">3</text>
+<rect class="zero" x="158" y="274" width="86" height="44"/><text class="mono-small" x="201.0" y="303.0" text-anchor="middle">0</text>
+<rect class="one" x="244" y="274" width="86" height="44"/><text class="mono-small" x="287.0" y="303.0" text-anchor="middle">1</text>
+<rect class="one" x="330" y="274" width="86" height="44"/><text class="mono-small" x="373.0" y="303.0" text-anchor="middle">1</text>
+<rect class="box" x="72" y="318" width="86" height="44"/><text class="mono-small" x="115.0" y="347.0" text-anchor="middle">4</text>
+<rect class="one" x="158" y="318" width="86" height="44"/><text class="mono-small" x="201.0" y="347.0" text-anchor="middle">1</text>
+<rect class="zero" x="244" y="318" width="86" height="44"/><text class="mono-small" x="287.0" y="347.0" text-anchor="middle">0</text>
+<rect class="zero" x="330" y="318" width="86" height="44"/><text class="mono-small" x="373.0" y="347.0" text-anchor="middle">0</text>
+<rect class="box" x="72" y="362" width="86" height="44"/><text class="mono-small" x="115.0" y="391.0" text-anchor="middle">5</text>
+<rect class="one" x="158" y="362" width="86" height="44"/><text class="mono-small" x="201.0" y="391.0" text-anchor="middle">1</text>
+<rect class="zero" x="244" y="362" width="86" height="44"/><text class="mono-small" x="287.0" y="391.0" text-anchor="middle">0</text>
+<rect class="one" x="330" y="362" width="86" height="44"/><text class="mono-small" x="373.0" y="391.0" text-anchor="middle">1</text>
+<rect class="box" x="72" y="406" width="86" height="44"/><text class="mono-small" x="115.0" y="435.0" text-anchor="middle">6</text>
+<rect class="one" x="158" y="406" width="86" height="44"/><text class="mono-small" x="201.0" y="435.0" text-anchor="middle">1</text>
+<rect class="one" x="244" y="406" width="86" height="44"/><text class="mono-small" x="287.0" y="435.0" text-anchor="middle">1</text>
+<rect class="zero" x="330" y="406" width="86" height="44"/><text class="mono-small" x="373.0" y="435.0" text-anchor="middle">0</text>
+<rect class="box" x="72" y="450" width="86" height="44"/><text class="mono-small" x="115.0" y="479.0" text-anchor="middle">7</text>
+<rect class="one" x="158" y="450" width="86" height="44"/><text class="mono-small" x="201.0" y="479.0" text-anchor="middle">1</text>
+<rect class="one" x="244" y="450" width="86" height="44"/><text class="mono-small" x="287.0" y="479.0" text-anchor="middle">1</text>
+<rect class="one" x="330" y="450" width="86" height="44"/><text class="mono-small" x="373.0" y="479.0" text-anchor="middle">1</text>
+    <rect class="blue" x="472" y="112" width="410" height="100"/>
+    <text class="label" x="500" y="150">3 inputs -> 2<tspan baseline-shift="super" font-size="15">3</tspan> = 8 rows</text>
+    <text class="small" x="500" y="184">Each row is one possible input combination.</text>
+    <rect class="green" x="472" y="240" width="410" height="126"/>
+    <text class="label" x="500" y="282">A is the most-significant</text>
+    <text class="label" x="500" y="312">bit</text>
+    <text class="small" x="500" y="342">It changes slowest: four 0s, then four 1s.</text>
+    <rect class="orange" x="472" y="394" width="410" height="126"/>
+    <text class="label" x="500" y="436">C is the least-significant</text>
+    <text class="label" x="500" y="466">bit</text>
+    <text class="small" x="500" y="496">It changes every row: 0, 1, 0, 1, ...</text>
+    
+</svg>

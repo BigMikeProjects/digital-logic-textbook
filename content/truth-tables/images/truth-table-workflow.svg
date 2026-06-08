@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 580" width="920" height="580">
+
+  <style>
+    svg { background: #ffffff; }
+    .title { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 32px; font-weight: 700; fill: #24313f; }
+    .label { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 23px; fill: #24313f; }
+    .small { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 18px; fill: #64748b; }
+    .tiny { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 15px; fill: #64748b; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 20px; fill: #24313f; }
+    .mono-small { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 17px; fill: #24313f; }
+    .box { fill: #f8fafc; stroke: #dbe3ee; stroke-width: 2; rx: 8; }
+    .blue { fill: #eff6ff; stroke: #bfdbfe; stroke-width: 2; rx: 8; }
+    .orange { fill: #fff7ed; stroke: #fed7aa; stroke-width: 2; rx: 8; }
+    .green { fill: #f0fdf4; stroke: #bbf7d0; stroke-width: 2; rx: 8; }
+    .red { fill: #fef2f2; stroke: #fecaca; stroke-width: 2; rx: 8; }
+    .line { fill: none; stroke: #24313f; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .thin { fill: none; stroke: #dbe3ee; stroke-width: 2; }
+    .arrow { fill: none; stroke: #24313f; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-dark); }
+    .arrow-blue { fill: none; stroke: #2563eb; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-blue); }
+    .one { fill: #dbeafe; stroke: #93c5fd; stroke-width: 2; }
+    .zero { fill: #ffedd5; stroke: #fdba74; stroke-width: 2; }
+    .hit-one { fill: #bfdbfe; stroke: #2563eb; stroke-width: 2; }
+    .hit-zero { fill: #fed7aa; stroke: #f97316; stroke-width: 2; }
+  </style>
+  <defs>
+    <marker id="arrow-dark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#24313f"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+
+    <text class="title" x="54" y="58">A reliable truth-table workflow</text>
+    <rect class="blue" x="72" y="122" width="196" height="150"/>
+    <text class="label" x="112" y="166">1. List inputs</text>
+    <text class="small" x="102" y="206">Use binary order</text>
+    <text class="small" x="112" y="236">000 through 111</text>
+    <path class="arrow-blue" d="M 270 196 L 344 196"/>
+    <rect class="green" x="346" y="122" width="214" height="150"/>
+    <text class="label" x="386" y="166">2. Add helper</text>
+    <text class="small" x="392" y="206">Make columns for</text>
+    <text class="small" x="402" y="236">terms or subcircuits</text>
+    <path class="arrow-blue" d="M 562 196 L 636 196"/>
+    <rect class="orange" x="638" y="122" width="216" height="150"/>
+    <text class="label" x="678" y="166">3. Combine</text>
+    <text class="small" x="692" y="206">OR for SOP</text>
+    <text class="small" x="692" y="236">AND for POS</text>
+    <path class="arrow-blue" d="M 456 274 C 456 334, 456 356, 456 386"/>
+    <rect class="box" x="176" y="386" width="562" height="126"/>
+    <text class="label" x="216" y="432">Do not guess from a simplified expression first.</text>
+    <text class="small" x="216" y="468">The table is the complete behavior specification;</text>
+    <text class="small" x="216" y="496">simplification comes after the behavior is correct.</text>
+    
+</svg>
