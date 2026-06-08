@@ -1,0 +1,9 @@
+title: "HDL Hardware Description Languages"
+description: ""
+chapter: verilog
+section: introduction-to-verilog
+order: 60000
+
+graphics:
+  01-history.youtube:
+    caption: "Video: why an HDL, and how Verilog differs from regular code — concurrency (the swap example), no print statement, Verilog vs. SystemVerilog/VHDL, and FPGAs"
