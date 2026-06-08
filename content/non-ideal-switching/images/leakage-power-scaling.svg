@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 520" width="980" height="520">
+
+  <style>
+    svg { background: #fff; }
+    .title { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 32px; font-weight: 700; fill: #24313f; }
+    .label { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 23px; fill: #24313f; }
+    .small { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 18px; fill: #64748b; }
+    .tiny { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 15px; fill: #64748b; }
+    .math { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 20px; fill: #24313f; }
+    .wire { fill: none; stroke: #24313f; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .thin { fill: none; stroke: #dbe3ee; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .dash { fill: none; stroke: #64748b; stroke-width: 2.5; stroke-dasharray: 8 8; stroke-linecap: round; }
+    .current { fill: none; stroke: #2563eb; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-blue); }
+    .arrow { fill: none; stroke: #24313f; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrow-dark); }
+    .box { fill: #f8fafc; stroke: #dbe3ee; stroke-width: 2.5; rx: 8; }
+    .blue { fill: #dbeafe; stroke: #93c5fd; stroke-width: 2.5; rx: 8; }
+    .orange { fill: #ffedd5; stroke: #fdba74; stroke-width: 2.5; rx: 8; }
+    .green { fill: #dcfce7; stroke: #86efac; stroke-width: 2.5; rx: 8; }
+    .red { fill: #fee2e2; stroke: #fca5a5; stroke-width: 2.5; rx: 8; }
+    .node { fill: #fff; stroke: #24313f; stroke-width: 3; }
+    .res { fill: #fff; stroke: #24313f; stroke-width: 3; rx: 7; }
+    .rail { fill: #24313f; }
+    .bar-bg { fill: #e2e8f0; }
+    .bar-good { fill: #16a34a; }
+    .bar-warn { fill: #f97316; }
+    .bar-bad { fill: #dc2626; }
+  </style>
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-dark" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#24313f"/>
+    </marker>
+  </defs>
+
+
+    <text class="title" x="52" y="58">Tiny leakage becomes real power at scale</text>
+    <rect class="blue" x="72" y="112" width="230" height="142"/>
+    <text class="label" x="108" y="158">One idle gate</text>
+    <text class="small" x="104" y="196">finite off resistance</text>
+    <text class="small" x="104" y="226">means tiny current</text>
+    <path class="arrow" d="M 306 184 L 382 184"/>
+    <rect class="green" x="384" y="112" width="230" height="142"/>
+    <text class="label" x="426" y="158">Many gates</text>
+    <text class="small" x="420" y="196">leakage currents</text>
+    <text class="small" x="420" y="226">add together</text>
+    <path class="arrow" d="M 618 184 L 694 184"/>
+    <rect class="orange" x="696" y="112" width="230" height="142"/>
+    <text class="label" x="732" y="158">Chip-level cost</text>
+    <text class="small" x="734" y="196">static power matters</text>
+    <text class="small" x="734" y="226">even when idle</text>
+    <rect class="box" x="118" y="344" width="760" height="98"/>
+    <text class="math" x="154" y="388">I = VDD / (RP + RN)</text>
+    <text class="math" x="520" y="388">Pstatic = VDD * I</text>
+    <text class="small" x="154" y="424">A single leakage path is small; millions or billions of them are not.</text>
+    
+</svg>
