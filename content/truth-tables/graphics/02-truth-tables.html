@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOP &amp; POS Truth Tables</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: radial-gradient(1200px 700px at 50% -10%, #1b2747 0%, #0e1526 55%, #0a0f1c 100%);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  body { display: flex; align-items: center; justify-content: center; }
+
+  /* ---- Colorblind-safe palette (blue vs vermillion) ---- */
+  :root {
+    --bg-surface: transparent;
+    --txt: #e8eef7;
+    --txt-dim: #9aa9c2;
+    --grid: #2b3a5c;
+    --panel: #111b30;
+    --panel-2: #0c1426;
+
+    --one: #38bdf8;          /* the "1" colour (SOP, products) */
+    --one-soft: rgba(56,189,248,.18);
+    --one-soft2: rgba(56,189,248,.34);
+    --zero: #f4843b;         /* the "0" colour (POS, sums) */
+    --zero-soft: rgba(244,132,59,.18);
+    --zero-soft2: rgba(244,132,59,.36);
+  }
+
+  .viewport-container {
+    width: 100%; max-width: 100vw;
+    aspect-ratio: 16 / 9; max-height: 100vh;
+    position: relative; overflow: hidden;
+  }
+  .design-surface {
+    width: 1920px; height: 1080px;
+    position: absolute; top: 0; left: 0;
+    transform-origin: top left;
+    color: var(--txt);
+    padding: 46px 64px 30px;
+    display: flex; flex-direction: column;
+  }
+
+  /* ---------------- Header ---------------- */
+  .topbar { display: flex; align-items: flex-end; justify-content: space-between; }
+  .title-wrap { display: flex; align-items: baseline; gap: 22px; }
+  h1 { font-size: 46px; font-weight: 800; letter-spacing: .3px; }
+  h1 .accent-one { color: var(--one); }
+  h1 .accent-zero { color: var(--zero); }
+  .subtitle { font-size: 23px; color: var(--txt-dim); font-weight: 500; }
+
+  .legend {
+    display: flex; gap: 26px; align-items: center;
+    font-size: 17px; color: var(--txt-dim);
+  }
+  .legend b { color: var(--txt); }
+  .legend .sw {
+    display:inline-block; width: 16px; height:16px; border-radius:4px;
+    vertical-align:-2px; margin-right:6px;
+  }
+  .sw.one { background: var(--one-soft2); border:2px solid var(--one); }
+  .sw.zero { background: var(--zero-soft2); border:2px solid var(--zero); }
+
+  /* ---------------- Slide stage ---------------- */
+  .stage { flex: 1; display: flex; min-height: 0; margin-top: 22px; }
+  .slide { display: none; flex: 1; min-height: 0; }
+  .slide.active { display: flex; gap: 40px; }
+
+  /* Left explanatory column */
+  .left {
+    width: 560px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 22px;
+  }
+  .expr-card {
+    background: linear-gradient(160deg, var(--panel), var(--panel-2));
+    border: 2px solid var(--grid); border-radius: 18px;
+    padding: 28px 30px;
+  }
+  .expr-label { font-size: 18px; color: var(--txt-dim); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 2px; }
+  .expr {
+    font-size: 40px; font-weight: 700; line-height: 1.5;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+    font-family: 'Cambria Math','Segoe UI',serif;
+  }
+  .expr .fx { color: var(--txt); margin-right: 6px; }
+  .expr .op { color: var(--txt-dim); margin: 0 4px; font-weight: 600; }
+
+  .chip {
+    cursor: pointer; padding: 6px 14px; border-radius: 12px;
+    border: 2px solid transparent; transition: all .15s ease;
+    position: relative; user-select: none;
+  }
+  .chip sub { font-size: .6em; }
+  /* prime marks rendered as small superscript apostrophes */
+  .pr { font-size: .72em; vertical-align: super; }
+
+  .slide[data-mode="sop"] .chip { background: var(--one-soft); border-color: var(--one); color: #cdeeff; }
+  .slide[data-mode="sop"] .chip:hover, .slide[data-mode="sop"] .chip.peek { background: var(--one-soft2); box-shadow: 0 0 0 4px var(--one-soft); }
+  .slide[data-mode="pos"] .chip { background: var(--zero-soft); border-color: var(--zero); color: #ffe3cd; }
+  .slide[data-mode="pos"] .chip:hover, .slide[data-mode="pos"] .chip.peek { background: var(--zero-soft2); box-shadow: 0 0 0 4px var(--zero-soft); }
+
+  .keyidea {
+    background: linear-gradient(160deg, var(--panel), var(--panel-2));
+    border-radius: 18px; padding: 26px 30px;
+    border-left: 8px solid var(--one);
+    flex: 1; display: flex; flex-direction: column; justify-content: center;
+  }
+  .slide[data-mode="pos"] .keyidea { border-left-color: var(--zero); }
+  .keyidea .kh { font-size: 20px; letter-spacing: 1px; text-transform: uppercase; color: var(--txt-dim); margin-bottom: 12px; }
+  .keyidea .kt { font-size: 27px; font-weight: 700; line-height: 1.45; }
+  .keyidea .kt em { font-style: normal; }
+  .slide[data-mode="sop"] .keyidea .kt em { color: var(--one); }
+  .slide[data-mode="pos"] .keyidea .kt em { color: var(--zero); }
+  .keyidea .ksub { font-size: 19px; color: var(--txt-dim); margin-top: 14px; line-height: 1.5; }
+
+  .narration {
+    background: rgba(255,255,255,.04); border:1px dashed var(--grid);
+    border-radius: 14px; padding: 16px 22px; font-size: 20px; color: var(--txt);
+    min-height: 64px; display:flex; align-items:center;
+  }
+  .narration b.one { color: var(--one); }
+  .narration b.zero { color: var(--zero); }
+
+  /* Right table column */
+  .right { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  table.tt {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    font-size: 26px; font-variant-numeric: tabular-nums;
+    background: var(--panel-2); border-radius: 16px; overflow: hidden;
+    border: 2px solid var(--grid);
+  }
+  table.tt th, table.tt td {
+    text-align: center; padding: 0; height: 60px;
+    border-bottom: 1px solid var(--grid); border-right: 1px solid var(--grid);
+  }
+  table.tt th:last-child, table.tt td:last-child { border-right: none; }
+  table.tt tr:last-child td { border-bottom: none; }
+  table.tt thead th {
+    background: #16223c; font-size: 24px; font-weight: 700; height: 70px;
+    color: var(--txt);
+  }
+  table.tt thead th.var { color: var(--txt-dim); }
+  table.tt .rownum { color: var(--txt-dim); font-size: 19px; width: 56px; background: rgba(255,255,255,.02); }
+  table.tt .inp { color: #c8d3e6; font-weight: 600; width: 70px; }
+
+  /* term-column header chips */
+  th.termhead { font-size: 22px; cursor: pointer; }
+  .slide[data-mode="sop"] th.termhead { color: var(--one); }
+  .slide[data-mode="pos"] th.termhead { color: var(--zero); }
+  th.fhead { font-size: 28px; font-weight: 800; width: 92px; }
+
+  /* term cells & F cells: hidden until revealed */
+  td.mark, td.fcell { font-weight: 800; font-size: 27px; opacity: 0; transition: opacity .35s ease, background .25s ease, transform .25s ease; }
+  td.mark.shown, td.fcell.shown { opacity: 1; }
+
+  /* SOP: marked 1-cells */
+  .slide[data-mode="sop"] td.mark.hit { background: var(--one-soft2); color: var(--one); }
+  .slide[data-mode="sop"] td.mark.miss { color: #44506a; }
+  .slide[data-mode="sop"] td.fcell.f1 { background: var(--one-soft); color: var(--one); }
+  .slide[data-mode="sop"] td.fcell.f0 { color: #6b7891; }
+
+  /* POS: marked 0-cells */
+  .slide[data-mode="pos"] td.mark.hit { background: var(--zero-soft2); color: var(--zero); }
+  .slide[data-mode="pos"] td.mark.miss { color: #44506a; }
+  .slide[data-mode="pos"] td.fcell.f1 { background: var(--one-soft); color: var(--one); }
+  .slide[data-mode="pos"] td.fcell.f0 { background: var(--zero-soft); color: var(--zero); }
+
+  /* peek (hover a term) highlights its rows */
+  tr.peek-row td.inp, tr.peek-row td.rownum { background: rgba(255,255,255,.07); }
+  td.peek-cell { box-shadow: inset 0 0 0 3px currentColor; border-radius: 4px; }
+
+  /* pulse for final reveal */
+  @keyframes pulse1 { 0%,100%{ box-shadow: inset 0 0 0 0 var(--one);} 50%{ box-shadow: inset 0 0 0 4px var(--one);} }
+  td.fcell.pulse { animation: pulse1 .9s ease 2; }
+
+  /* shape glyph for non-colour redundancy */
+  td.mark .glyph { display:none; font-size:.7em; margin-left:5px; }
+  body.shapes td.mark.hit .glyph { display:inline; }
+
+  /* ---------------- Comparison slide ---------------- */
+  .compare-wrap { flex:1; display:flex; flex-direction:column; gap:18px; }
+  .compare-table { width: 100%; }
+  table.cmp { width:100%; border-collapse:separate; border-spacing:0; font-size:25px;
+    background: var(--panel-2); border:2px solid var(--grid); border-radius:16px; overflow:hidden; }
+  table.cmp th, table.cmp td { padding:0 10px; height:58px; border-bottom:1px solid var(--grid); border-right:1px solid var(--grid); text-align:center; }
+  table.cmp th:last-child, table.cmp td:last-child { border-right:none; }
+  table.cmp tr:last-child td { border-bottom:none; }
+  table.cmp thead th { background:#16223c; height:66px; font-weight:700; }
+  table.cmp .inp { color:#c8d3e6; font-weight:600; width:66px; }
+  table.cmp td.fc { font-weight:800; font-size:28px; width:80px; }
+  table.cmp td.fc.f1 { background: var(--one-soft2); color: var(--one); }
+  table.cmp td.fc.f0 { background: var(--zero-soft2); color: var(--zero); }
+  table.cmp td.owner { text-align:center; }
+  .ownchip { display:inline-block; padding:5px 14px; border-radius:10px; font-weight:700; font-size:23px; font-family:'Cambria Math',serif; }
+  .ownchip.prod { background: var(--one-soft); border:2px solid var(--one); color:#cdeeff; }
+  .ownchip.sum  { background: var(--zero-soft); border:2px solid var(--zero); color:#ffe3cd; }
+  .cmp-note { font-size:21px; color:var(--txt-dim); text-align:center; }
+  .cmp-note b.one{color:var(--one)} .cmp-note b.zero{color:var(--zero)}
+
+  /* ---------------- Intro slide ---------------- */
+  .props { display: flex; flex-direction: column; gap: 18px; flex: 1; }
+  .prop {
+    display: flex; gap: 20px; align-items: flex-start;
+    background: linear-gradient(160deg, var(--panel), var(--panel-2));
+    border: 2px solid var(--grid); border-radius: 16px; padding: 20px 24px;
+  }
+  .prop .pn {
+    flex-shrink: 0; width: 46px; height: 46px; border-radius: 12px;
+    background: var(--one-soft2); border: 2px solid var(--one); color: var(--one);
+    font-size: 26px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  }
+  .prop .pt { font-size: 21px; line-height: 1.5; color: var(--txt); }
+  .prop .pt b { color: var(--txt); }
+  .prop .pt b.hl { color: var(--one); }
+  .prop .pt i { font-style: italic; color: var(--txt-dim); }
+  .mono { font-family: 'Cambria Math', Consolas, monospace; color: #cdeeff; font-weight: 600; }
+
+  .placebar { display: flex; margin-bottom: 14px; }
+  /* align the three weight cells under A, B, C : skip rownum (64) left and value (150) right */
+  .placebar { padding-left: 64px; padding-right: 150px; }
+  .pb-cell {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 8px 0; border-radius: 12px; margin: 0 4px;
+    background: rgba(56,189,248,.07); border: 1px dashed var(--one);
+  }
+  .pb-label { font-size: 19px; font-weight: 800; color: var(--one); letter-spacing: 1px; }
+  .pb-cell:nth-child(2) { background: rgba(255,255,255,.03); border-color: var(--grid); }
+  .pb-weight { font-size: 16px; color: var(--txt-dim); }
+
+  table.intro { width:100%; border-collapse:separate; border-spacing:0; font-size:30px;
+    font-variant-numeric: tabular-nums; background: var(--panel-2);
+    border:2px solid var(--grid); border-radius:16px; overflow:hidden; }
+  table.intro th, table.intro td { text-align:center; height:62px; border-bottom:1px solid var(--grid); border-right:1px solid var(--grid); }
+  table.intro th:last-child, table.intro td:last-child { border-right:none; }
+  table.intro tr:last-child td { border-bottom:none; }
+  table.intro thead th { background:#16223c; height:66px; font-size:26px; font-weight:700; }
+  table.intro .rownum { width:64px; color:var(--txt-dim); font-size:21px; background:rgba(255,255,255,.02); }
+  table.intro .bit { font-weight:700; color:#dce6f5; }
+  table.intro .bit.msb { color: var(--one); }
+  table.intro .val { width:150px; color:var(--txt-dim); font-size:22px; }
+  table.intro .val b { color: var(--one); font-size:26px; }
+  /* counting highlight */
+  table.intro tr.lit td { background: var(--one-soft); }
+  table.intro tr.lit .rownum { color: var(--one); font-weight:800; }
+  table.intro tr.dim td { opacity: .32; transition: opacity .25s; }
+  table.intro tr td { transition: background .25s, opacity .25s; }
+
+  /* ---------------- Footer / controls ---------------- */
+  .footer {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 22px; padding-top: 18px; border-top: 2px solid rgba(255,255,255,.08);
+  }
+  .controls { display: flex; gap: 14px; align-items: center; }
+  .btn {
+    background: linear-gradient(145deg, #1f2c4a, #16213c);
+    color: var(--txt); border: 2px solid var(--grid); border-radius: 12px;
+    padding: 12px 22px; font-size: 18px; font-weight: 600; cursor: pointer;
+    transition: all .15s ease;
+  }
+  .btn:hover { transform: translateY(-2px); border-color: #4a5e8a; box-shadow: 0 6px 16px rgba(0,0,0,.35); }
+  .btn.primary { background: linear-gradient(145deg, #2563eb, #1d4ed8); border-color:#60a5fa; }
+  .btn.toggle.on { background: linear-gradient(145deg,#0e7490,#155e75); border-color:#22d3ee; }
+
+  .nav { display: flex; align-items: center; gap: 18px; }
+  .dots { display: flex; gap: 10px; }
+  .dot { width: 13px; height: 13px; border-radius: 50%; background: #2b3a5c; cursor: pointer; transition: all .15s; }
+  .dot.active { background: var(--one); transform: scale(1.25); }
+  .slidelabel { font-size: 18px; color: var(--txt-dim); min-width: 150px; text-align:center; }
+
+  .notation { font-size: 17px; color: var(--txt-dim); }
+  .notation code { color: var(--txt); background: rgba(255,255,255,.06); padding: 2px 8px; border-radius: 6px; font-size:16px; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+  <div class="design-surface" id="designSurface">
+
+    <!-- HEADER -->
+    <div class="topbar">
+      <div class="title-wrap">
+        <h1 id="mainTitle"></h1>
+        <span class="subtitle" id="subTitle"></span>
+      </div>
+      <div class="legend" id="legend">
+        <span><span class="sw one"></span><b>1</b> from a product</span>
+        <span><span class="sw zero"></span><b>0</b> from a sum</span>
+      </div>
+    </div>
+
+    <!-- STAGE -->
+    <div class="stage" id="stage">
+
+      <!-- SLIDE 0 : INTRO — anatomy of a truth table -->
+      <div class="slide active" data-mode="intro" id="slide-intro">
+        <div class="left">
+          <div class="props">
+            <div class="prop">
+              <div class="pn">1</div>
+              <div class="pt"><b>List every possible case.</b> With <i>n</i> input variables there are <b class="hl">2<sup>n</sup></b> combinations — so 3 variables need <b class="hl">8 rows</b>. None may be skipped or repeated.</div>
+            </div>
+            <div class="prop">
+              <div class="pn">2</div>
+              <div class="pt"><b>Write them in binary counting order.</b> The inputs simply count up: <span class="mono">000, 001, 010, 011 …&nbsp;111</span>. This keeps the table in a fixed, predictable sequence.</div>
+            </div>
+            <div class="prop">
+              <div class="pn">3</div>
+              <div class="pt"><b>Leftmost = MSB, rightmost = LSB.</b> The left column is the <b class="hl">Most Significant Bit</b> (largest place value); the right column is the <b class="hl">Least Significant Bit</b> (smallest).</div>
+            </div>
+            <div class="prop">
+              <div class="pn">4</div>
+              <div class="pt"><b>The row number is the value.</b> Read each row as a binary number and you get its decimal row index: <span class="mono">A·4 + B·2 + C·1</span>.</div>
+            </div>
+          </div>
+          <div class="narration" id="narr-intro">Press <b class="one">Count&nbsp;up</b> to step through all eight rows in binary order, 0 → 7.</div>
+        </div>
+
+        <div class="right">
+          <div class="placebar">
+            <div class="pb-cell"><span class="pb-label">MSB</span><span class="pb-weight">place value 4</span></div>
+            <div class="pb-cell"><span class="pb-weight">place value 2</span></div>
+            <div class="pb-cell"><span class="pb-label">LSB</span><span class="pb-weight">place value 1</span></div>
+          </div>
+          <div id="table-intro"></div>
+        </div>
+      </div>
+
+      <!-- SLIDE 1 : SOP -->
+      <div class="slide" data-mode="sop" id="slide-sop">
+        <div class="left">
+          <div class="expr-card">
+            <div class="expr-label">Sum&nbsp;of&nbsp;Products form</div>
+            <div class="expr" id="expr-sop"></div>
+          </div>
+          <div class="narration" id="narr-sop">Hover a product term, or press <b class="one">Build</b> to fill the table one term at a time.</div>
+          <div class="keyidea">
+            <div class="kh">The big idea</div>
+            <div class="kt">Each <em>product (AND) term</em> says exactly where the <em>1s</em> go.</div>
+            <div class="ksub">A row is <b>1</b> if <b>any</b> product term is true — the terms are OR-ed together.</div>
+          </div>
+        </div>
+        <div class="right"><div id="table-sop"></div></div>
+      </div>
+
+      <!-- SLIDE 2 : POS -->
+      <div class="slide" data-mode="pos" id="slide-pos">
+        <div class="left">
+          <div class="expr-card">
+            <div class="expr-label">Product&nbsp;of&nbsp;Sums form</div>
+            <div class="expr" id="expr-pos"></div>
+          </div>
+          <div class="narration" id="narr-pos">Hover a sum term, or press <b class="zero">Build</b> to knock out the zeros one term at a time.</div>
+          <div class="keyidea">
+            <div class="kh">The big idea</div>
+            <div class="kt">Each <em>sum (OR) term</em> says exactly where the <em>0s</em> go.</div>
+            <div class="ksub">A row is <b>0</b> if <b>any</b> sum term is false — the terms are AND-ed together.</div>
+          </div>
+        </div>
+        <div class="right"><div id="table-pos"></div></div>
+      </div>
+
+      <!-- SLIDE 3 : COMPARISON -->
+      <div class="slide" data-mode="cmp" id="slide-cmp">
+        <div class="compare-wrap">
+          <div class="compare-table" id="table-cmp"></div>
+          <div class="cmp-note">Same function, same F column. Every <b class="one">1</b> is owned by a product term; every <b class="zero">0</b> is owned by a sum term.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div class="controls">
+        <button class="btn primary" id="buildBtn">▶ Build</button>
+        <button class="btn" id="resetBtn">↺ Reset</button>
+        <button class="btn toggle" id="shapesBtn">✓ / ✗ marks</button>
+      </div>
+      <div class="notation">
+        <code>A′</code> = NOT A &nbsp;·&nbsp; <code>AB</code> = A AND B &nbsp;·&nbsp; <code>A+B</code> = A OR B
+      </div>
+      <div class="nav">
+        <button class="btn" id="prevBtn">◀</button>
+        <div class="slidelabel" id="slideLabel"></div>
+        <div class="dots" id="dots"></div>
+        <button class="btn" id="nextBtn">▶</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DATA MODEL — edit term definitions here to change examples
+   ============================================================ */
+
+// 8 input rows for A,B,C
+const ROWS = [];
+for (let i = 0; i < 8; i++) ROWS.push([ (i>>2)&1, (i>>1)&1, i&1 ]); // [A,B,C]
+
+// helper to render a literal with primes
+function lit(v){ return v; }
+
+// SOP product terms: hit(a,b,c) -> true where the term forces a 1
+const SOP = {
+  title: 'Sum of Products',
+  sub: 'product terms mark the 1s',
+  exprHTML: '<span class="fx">F =</span>'
+    + '<span class="chip" data-term="0">AB<span class="pr">′</span></span>'
+    + '<span class="op">+</span>'
+    + '<span class="chip" data-term="1">A<span class="pr">′</span>BC<span class="pr">′</span></span>',
+  terms: [
+    { label: "AB′",   hit: (a,b,c)=> a===1 && b===0 },
+    { label: "A′BC′", hit: (a,b,c)=> a===0 && b===1 && c===0 },
+  ],
+  // F = OR of product-term hits
+  F: (a,b,c)=> SOP.terms.some(t=>t.hit(a,b,c)) ? 1 : 0,
+  narr: [
+    'Start with all eight input combinations. F is unknown until the products fill it in.',
+    'AB<b>′</b> is <b class="one">1</b> wherever <b>A=1</b> and <b>B=0</b> — that lights up rows 4 and 5.',
+    'A<b>′</b>BC<b>′</b> is <b class="one">1</b> only at row 2 (<b>A=0, B=1, C=0</b>).',
+    'F is <b class="one">1</b> if <b>any</b> product is 1. Every other row stays <b>0</b>.'
+  ]
+};
+
+// POS sum terms: val(a,b,c) -> the term's own value (0 means it forces F=0 here)
+const POS = {
+  title: 'Product of Sums',
+  sub: 'sum terms mark the 0s',
+  exprHTML: '<span class="fx">F =</span>'
+    + '<span class="chip" data-term="0">(A+B)</span>'
+    + '<span class="chip" data-term="1">(A<span class="pr">′</span>+B<span class="pr">′</span>)</span>'
+    + '<span class="chip" data-term="2">(B<span class="pr">′</span>+C<span class="pr">′</span>)</span>',
+  terms: [
+    { label: "(A+B)",   val: (a,b,c)=> (a||b) ? 1 : 0 },
+    { label: "(A′+B′)", val: (a,b,c)=> ((1-a)||(1-b)) ? 1 : 0 },
+    { label: "(B′+C′)", val: (a,b,c)=> ((1-b)||(1-c)) ? 1 : 0 },
+  ],
+  // F = AND of sum-term values
+  F: (a,b,c)=> POS.terms.every(t=>t.val(a,b,c)===1) ? 1 : 0,
+  narr: [
+    'Start by assuming every row could be 1. The sum terms will carve out the zeros.',
+    '(A+B) is <b class="zero">0</b> when <b>A=0</b> and <b>B=0</b> — forcing rows 0 and 1 to 0.',
+    '(A<b>′</b>+B<b>′</b>) is <b class="zero">0</b> when <b>A=1</b> and <b>B=1</b> — forcing rows 6 and 7 to 0.',
+    '(B<b>′</b>+C<b>′</b>) is <b class="zero">0</b> when <b>B=1</b> and <b>C=1</b> — forcing rows 3 and 7 to 0.',
+    'F is <b class="zero">0</b> if <b>any</b> sum is 0. The survivors are <b class="one">1</b>.'
+  ]
+};
+
+/* ============================================================
+   TABLE RENDERING
+   ============================================================ */
+
+const state = {
+  current: 0,                 // 0 sop, 1 pos, 2 cmp
+  reveal: { sop: 0, pos: 0, intro: 0 }, // build step per slide
+  timer: null,
+  refs: {}                    // dom references for build control
+};
+
+function bitGlyph(mode, isHit){
+  if(mode==='sop') return isHit ? '✓' : '';
+  return isHit ? '✗' : '';
+}
+
+function buildTable(cfg, mode, containerId){
+  const isSOP = (mode==='sop');
+  const cell = (cls,txt)=>`<td class="${cls}">${txt}</td>`;
+
+  let head = '<tr>'
+    + '<th class="var rownum">#</th>'
+    + '<th class="var">A</th><th class="var">B</th><th class="var">C</th>';
+  cfg.terms.forEach((t,i)=> head += `<th class="termhead" data-term="${i}">${t.label.replace(/′/g,'<span class="pr">′</span>')}</th>`);
+  head += '<th class="fhead">F</th></tr>';
+
+  let body = '';
+  ROWS.forEach((r,ri)=>{
+    const [a,b,c] = r;
+    let tr = `<tr data-row="${ri}">`;
+    tr += `<td class="rownum">${ri}</td>`;
+    tr += `<td class="inp">${a}</td><td class="inp">${b}</td><td class="inp">${c}</td>`;
+    cfg.terms.forEach((t,ti)=>{
+      let isHit, shownVal;
+      if(isSOP){
+        isHit = t.hit(a,b,c);                 // hit = produces a 1
+        shownVal = isHit ? '1' : '';
+      } else {
+        const v = t.val(a,b,c);
+        isHit = (v===0);                      // hit = produces a 0
+        shownVal = (v===0) ? '0' : '1';
+      }
+      const cls = `mark term-${ti} ${isHit?'hit':'miss'}`;
+      const glyph = `<span class="glyph">${bitGlyph(mode,isHit)}</span>`;
+      tr += `<td class="${cls}" data-term="${ti}">${shownVal}${glyph}</td>`;
+    });
+    const f = cfg.F(a,b,c);
+    tr += `<td class="fcell ${f? 'f1':'f0'}">${f}</td>`;
+    tr += '</tr>';
+    body += tr;
+  });
+
+  document.getElementById(containerId).innerHTML =
+    `<table class="tt"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+/* ---- reveal logic for the build animation ---- */
+function applyReveal(mode){
+  const slide = document.getElementById('slide-'+mode);
+  const k = state.reveal[mode];
+  const cfg = (mode==='sop')?SOP:POS;
+  const termCount = cfg.terms.length;
+
+  // term columns: show term i when k > i
+  slide.querySelectorAll('td.mark').forEach(td=>{
+    const ti = +td.dataset.term;
+    td.classList.toggle('shown', k > ti);
+  });
+  // F column shows once all terms revealed (k === termCount+1)
+  const showF = (k >= termCount+1);
+  slide.querySelectorAll('td.fcell').forEach(td=>{
+    td.classList.toggle('shown', showF);
+    if(showF) td.classList.remove('pulse');
+  });
+  if(showF){
+    // pulse the cells matching the slide's "owned" value
+    slide.querySelectorAll('td.fcell').forEach(td=>{
+      const wantPulse = (mode==='sop') ? td.classList.contains('f1') : td.classList.contains('f0');
+      if(wantPulse){ void td.offsetWidth; td.classList.add('pulse'); }
+    });
+  }
+
+  // narration
+  const nIdx = Math.min(k, cfg.narr.length-1);
+  document.getElementById('narr-'+mode).innerHTML = cfg.narr[nIdx];
+
+  // build button label
+  const maxStep = termCount+1;
+  state.refs.buildBtn.textContent = (k>=maxStep) ? '✓ Built' : (k===0? '▶ Build' : '▶ Next step');
+}
+
+function stepBuild(mode){
+  const cfg = (mode==='sop')?SOP:POS;
+  const maxStep = cfg.terms.length+1;
+  if(state.reveal[mode] < maxStep) state.reveal[mode]++;
+  applyReveal(mode);
+  return state.reveal[mode] >= maxStep;
+}
+
+function autoBuild(mode){
+  clearInterval(state.timer);
+  // if already built, reset first
+  const cfg = (mode==='sop')?SOP:POS;
+  if(state.reveal[mode] >= cfg.terms.length+1) state.reveal[mode]=0;
+  applyReveal(mode);
+  state.timer = setInterval(()=>{
+    const done = stepBuild(mode);
+    if(done) clearInterval(state.timer);
+  }, 1100);
+}
+
+function resetSlide(mode){
+  clearInterval(state.timer);
+  if(mode==='sop'||mode==='pos'){ state.reveal[mode]=0; applyReveal(mode); }
+}
+
+/* ---- peek (hover/click a term to highlight its rows) ---- */
+function wirePeek(mode){
+  const slide = document.getElementById('slide-'+mode);
+  function setPeek(ti, on){
+    slide.querySelectorAll('.chip[data-term="'+ti+'"], th.termhead[data-term="'+ti+'"]').forEach(e=>e.classList.toggle('peek', on));
+    slide.querySelectorAll('td.mark.term-'+ti+'.hit').forEach(td=>{
+      td.classList.toggle('peek-cell', on);
+      const tr = td.closest('tr');
+      tr.classList.toggle('peek-row', on);
+      // make sure the cell is visible while peeking even pre-build
+      if(on) td.classList.add('shown');
+      else if(state.reveal[mode] <= +td.dataset.term) td.classList.remove('shown');
+    });
+  }
+  slide.querySelectorAll('.chip, th.termhead').forEach(el=>{
+    const ti = el.dataset.term;
+    el.addEventListener('mouseenter', ()=>setPeek(ti,true));
+    el.addEventListener('mouseleave', ()=>setPeek(ti,false));
+  });
+}
+
+/* ============================================================
+   INTRO SLIDE — table + binary count-up
+   ============================================================ */
+function buildIntroTable(){
+  let head = '<tr><th class="rownum">#</th><th>A</th><th>B</th><th>C</th><th>value</th></tr>';
+  let body = '';
+  ROWS.forEach((r,ri)=>{
+    const [a,b,c]=r;
+    body += `<tr data-row="${ri}">`
+      + `<td class="rownum">${ri}</td>`
+      + `<td class="bit msb">${a}</td><td class="bit">${b}</td><td class="bit">${c}</td>`
+      + `<td class="val">${a}·4 + ${b}·2 + ${c}·1 = <b>${ri}</b></td>`
+      + '</tr>';
+  });
+  document.getElementById('table-intro').innerHTML =
+    `<table class="intro"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+function introHighlight(k){
+  // k = 0 -> static (all rows plain). k = 1..8 -> highlight row k-1, dim later rows.
+  const tbl = document.querySelector('#table-intro table');
+  if(!tbl) return;
+  const rows = tbl.querySelectorAll('tbody tr');
+  rows.forEach((tr,i)=>{
+    tr.classList.remove('lit','dim');
+    if(k>0){
+      if(i === k-1) tr.classList.add('lit');
+      else if(i > k-1) tr.classList.add('dim');
+    }
+  });
+  const nEl = document.getElementById('narr-intro');
+  if(k===0){
+    nEl.innerHTML = 'Press <b class="one">Count&nbsp;up</b> to step through all eight rows in binary order, 0 → 7.';
+  } else {
+    const [a,b,c]=ROWS[k-1];
+    nEl.innerHTML = `Row <b class="one">${k-1}</b> → binary <span class="mono">${a}${b}${c}</span> → ${a}·4 + ${b}·2 + ${c}·1 = <b class="one">${k-1}</b>.`;
+  }
+}
+
+function introCountUp(){
+  clearInterval(state.timer);
+  if(state.reveal.intro >= 8) state.reveal.intro = 0;
+  introHighlight(state.reveal.intro);
+  state.timer = setInterval(()=>{
+    state.reveal.intro++;
+    introHighlight(state.reveal.intro);
+    if(state.reveal.intro >= 8) clearInterval(state.timer);
+  }, 750);
+}
+
+function introStep(){
+  clearInterval(state.timer);
+  if(state.reveal.intro >= 8) state.reveal.intro = 0;
+  else state.reveal.intro++;
+  introHighlight(state.reveal.intro);
+}
+
+/* ============================================================
+   COMPARISON SLIDE
+   ============================================================ */
+function buildCompare(){
+  // for each row, list the product term(s) that own a 1, or the sum term(s) that own a 0
+  let head = '<tr><th class="inp">#</th><th class="inp">A</th><th class="inp">B</th><th class="inp">C</th>'
+    + '<th>F</th><th>Owned by</th></tr>';
+  let body = '';
+  ROWS.forEach((r,ri)=>{
+    const [a,b,c]=r;
+    const f = SOP.F(a,b,c);
+    let owners='';
+    if(f===1){
+      SOP.terms.forEach(t=>{ if(t.hit(a,b,c)) owners += `<span class="ownchip prod">${t.label.replace(/′/g,"<span class='pr'>′</span>")}</span> `; });
+    } else {
+      POS.terms.forEach(t=>{ if(t.val(a,b,c)===0) owners += `<span class="ownchip sum">${t.label.replace(/′/g,"<span class='pr'>′</span>")}</span> `; });
+    }
+    body += `<tr><td class="inp">${ri}</td><td class="inp">${a}</td><td class="inp">${b}</td><td class="inp">${c}</td>`
+      + `<td class="fc ${f?'f1':'f0'}">${f}</td><td class="owner">${owners}</td></tr>`;
+  });
+  document.getElementById('table-cmp').innerHTML =
+    `<table class="cmp"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+/* ============================================================
+   SLIDE NAVIGATION
+   ============================================================ */
+const SLIDES = [
+  { id:'intro', title:'Anatomy of a <span class="accent-one">Truth Table</span>', sub:'every input combination, in binary order', label:'Slide 1 / 4 — Intro' },
+  { id:'sop', title:'Sum of Products <span class="accent-one">(SOP)</span>', sub:'product terms mark the&nbsp;1s', label:'Slide 2 / 4 — SOP' },
+  { id:'pos', title:'Product of Sums <span class="accent-zero">(POS)</span>', sub:'sum terms mark the&nbsp;0s', label:'Slide 3 / 4 — POS' },
+  { id:'cmp', title:'Two forms, <span class="accent-one">one</span> <span class="accent-zero">function</span>', sub:'every 1 from a product, every 0 from a sum', label:'Slide 4 / 4 — Compare' },
+];
+
+function showSlide(idx){
+  clearInterval(state.timer);
+  state.current = (idx+SLIDES.length)%SLIDES.length;
+  const s = SLIDES[state.current];
+  document.querySelectorAll('.slide').forEach(el=>el.classList.remove('active'));
+  document.getElementById('slide-'+s.id).classList.add('active');
+  document.getElementById('mainTitle').innerHTML = s.title;
+  document.getElementById('subTitle').innerHTML = s.sub;
+  document.getElementById('slideLabel').textContent = s.label;
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active', i===state.current));
+
+  const isBuildable = (s.id==='sop'||s.id==='pos'||s.id==='intro');
+  state.refs.buildBtn.style.visibility = isBuildable?'visible':'hidden';
+  state.refs.resetBtn.style.visibility = isBuildable?'visible':'hidden';
+  // legend only relevant on the SOP/POS/compare slides
+  document.getElementById('legend').style.visibility = (s.id==='intro')?'hidden':'visible';
+
+  if(s.id==='sop'||s.id==='pos'){ applyReveal(s.id); state.refs.buildBtn.textContent = (state.reveal[s.id]>0?'▶ Next step':'▶ Build'); }
+  else if(s.id==='intro'){ introHighlight(state.reveal.intro); setIntroBtnLabel(); }
+}
+
+function setIntroBtnLabel(){
+  const k = state.reveal.intro;
+  state.refs.buildBtn.textContent = (k===0) ? '▶ Count up' : (k>=8) ? '↻ Restart' : '▶ Next row';
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init(){
+  buildIntroTable();
+  buildTable(SOP,'sop','table-sop');
+  buildTable(POS,'pos','table-pos');
+  buildCompare();
+  document.getElementById('expr-sop').innerHTML = SOP.exprHTML;
+  document.getElementById('expr-pos').innerHTML = POS.exprHTML;
+
+  // dots
+  const dotsEl = document.getElementById('dots');
+  SLIDES.forEach((s,i)=>{
+    const d=document.createElement('div'); d.className='dot'; d.onclick=()=>showSlide(i);
+    dotsEl.appendChild(d);
+  });
+
+  state.refs.buildBtn = document.getElementById('buildBtn');
+  state.refs.resetBtn = document.getElementById('resetBtn');
+
+  state.refs.buildBtn.onclick = ()=>{
+    const mode = SLIDES[state.current].id;
+    clearInterval(state.timer);
+    if(mode==='sop' || mode==='pos'){
+      const cfg = (mode==='sop')?SOP:POS;
+      const maxStep = cfg.terms.length+1;
+      if(state.reveal[mode] >= maxStep){ state.reveal[mode]=0; applyReveal(mode); } // restart
+      else stepBuild(mode);                                                          // one step
+    } else if(mode==='intro'){
+      introStep();              // one row (wraps back to 0 after the last)
+      setIntroBtnLabel();
+    }
+  };
+  state.refs.resetBtn.onclick = ()=>{
+    const m=SLIDES[state.current].id;
+    if(m==='intro'){ clearInterval(state.timer); state.reveal.intro=0; introHighlight(0); }
+    else resetSlide(m);
+  };
+  document.getElementById('nextBtn').onclick = ()=>showSlide(state.current+1);
+  document.getElementById('prevBtn').onclick = ()=>showSlide(state.current-1);
+
+  const shapesBtn=document.getElementById('shapesBtn');
+  shapesBtn.onclick = ()=>{ document.body.classList.toggle('shapes'); shapesBtn.classList.toggle('on'); };
+
+  wirePeek('sop'); wirePeek('pos');
+
+  document.addEventListener('keydown',(e)=>{
+    if(e.key==='ArrowRight') showSlide(state.current+1);
+    else if(e.key==='ArrowLeft') showSlide(state.current-1);
+    else if(e.key===' '){ e.preventDefault(); const m=SLIDES[state.current].id;
+      if(m==='sop'||m==='pos'){clearInterval(state.timer);stepBuild(m);}
+      else if(m==='intro'){ introStep(); }
+    }
+  });
+
+  showSlide(0);
+}
+
+/* ============================================================
+   RESPONSIVE SCALING (16:9 design surface)
+   ============================================================ */
+const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+function autoResize(){
+  const container=document.getElementById('viewportContainer');
+  const surface=document.getElementById('designSurface');
+  const vw=window.innerWidth, vh=window.innerHeight;
+  let cw,ch;
+  if(vw/vh > 16/9){ ch=vh; cw=ch*(16/9); } else { cw=vw; ch=cw*(9/16); }
+  container.style.width=cw+'px'; container.style.height=ch+'px';
+  surface.style.transform=`scale(${cw/DESIGN_WIDTH})`;
+}
+autoResize();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(autoResize,50);});
+window.addEventListener('orientationchange',()=>setTimeout(autoResize,100));
+
+init();
+</script>
+</body>
+</html>

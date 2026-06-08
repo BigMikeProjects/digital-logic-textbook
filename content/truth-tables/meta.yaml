@@ -7,3 +7,5 @@ order: 30301
 graphics:
   01-truth-tables.youtube:
     caption: "Video: building valid truth tables — binary row ordering and reading sum-of-products (SOP) and product-of-sums (POS) expressions"
+  02-truth-tables.html:
+    caption: "Interactive: reading sum-of-products (SOP) and product-of-sums (POS) off a truth table"
