@@ -1,0 +1,9 @@
+title: "Modules, design, testbenches"
+description: ""
+chapter: verilog
+section: verilog-basics
+order: 60100
+
+graphics:
+  01-modules-design-testbenches.youtube:
+    caption: "Video: the separation between design (RTL) and testbench — describing hardware vs. driving its signals, with a counter example"
