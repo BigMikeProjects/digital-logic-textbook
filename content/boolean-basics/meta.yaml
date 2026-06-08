@@ -1,0 +1,9 @@
+title: "Boolean Basics"
+description: ""
+chapter: combinational-logic
+section: boolean-basics
+order: 30300
+
+graphics:
+  01-boolean-basics.youtube:
+    caption: "Video: the core Boolean identities — identity, null, idempotent, complement, involution, the duality rule, distributive/absorption, and De Morgan's theorem with bubble pushing"
