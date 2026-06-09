@@ -1,5 +1,9 @@
 title: "Number Representations"
-description: ""
+description: "An engineering introduction to how bit patterns acquire meaning through representation rules, including binary, hexadecimal, signed numbers, and encodings."
 chapter: combinational-logic
 section: number-systems
 order: 30001
+
+graphics:
+  01-number-representation-layers.jpg:
+    caption: "Bit patterns become useful only after a representation gives them meaning."
