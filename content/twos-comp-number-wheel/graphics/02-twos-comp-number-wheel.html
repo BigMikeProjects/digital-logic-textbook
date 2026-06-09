@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two's Complement Number Wheel</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ============================================
+           VIEWPORT CONTAINER
+           Maintains 16:9 aspect ratio, fits in window
+           ============================================ */
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ============================================
+           DESIGN SURFACE
+           Fixed 1920x1080 canvas that gets scaled
+           All content uses fixed pixel values
+           ============================================ */
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            padding: 30px 50px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ============================================
+           TYPOGRAPHY
+           ============================================ */
+        h1 {
+            text-align: center;
+            color: #4fc3f7;
+            font-size: 38px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #90a4ae;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        /* ============================================
+           MAIN CONTENT AREA
+           ============================================ */
+        .content {
+            flex: 1;
+            display: flex;
+            gap: 30px;
+            min-height: 0;
+        }
+
+        /* ============================================
+           LEFT PANEL - Circle visualization
+           ============================================ */
+        .circle-panel {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 700px;
+            height: 700px;
+        }
+
+        .wheel-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Number positions around the wheel */
+        .number-node {
+            cursor: pointer;
+        }
+
+        .node-circle {
+            transition: stroke-width 0.2s ease, filter 0.2s ease;
+        }
+
+        .number-node:hover .node-circle {
+            stroke-width: 5px;
+        }
+
+        .node-circle.positive {
+            fill: #1e3a5f;
+            stroke: #4fc3f7;
+        }
+
+        .node-circle.negative {
+            fill: #3d1f1f;
+            stroke: #ff6b6b;
+        }
+
+        .node-circle.zero {
+            fill: #2d4a2d;
+            stroke: #66bb6a;
+        }
+
+        .node-circle.selected {
+            stroke-width: 6px;
+            filter: drop-shadow(0 0 12px currentColor);
+        }
+
+        .node-binary {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            fill: #e0e0e0;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .node-decimal {
+            font-size: 13px;
+            fill: #90a4ae;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        /* Center display */
+        .center-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .center-bits {
+            font-size: 20px;
+            color: #4fc3f7;
+            margin-bottom: 8px;
+        }
+
+        .center-label {
+            font-size: 14px;
+            color: #607d8b;
+        }
+
+        /* Direction arrows */
+        .direction-arrow {
+            fill: none;
+            stroke: #4fc3f7;
+            stroke-width: 2;
+            opacity: 0.6;
+        }
+
+        .arrow-label {
+            font-size: 14px;
+            fill: #4fc3f7;
+            opacity: 0.8;
+        }
+
+        /* Overflow indicator */
+        .overflow-zone {
+            fill: rgba(255, 107, 107, 0.1);
+            stroke: #ff6b6b;
+            stroke-width: 2;
+            stroke-dasharray: 8, 4;
+        }
+
+        /* ============================================
+           RIGHT PANEL - Controls and info
+           ============================================ */
+        .info-panel {
+            width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Bit selector */
+        .controls-section {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #546e7a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: #4fc3f7;
+            margin-bottom: 14px;
+            font-weight: 600;
+        }
+
+        .bit-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .bit-btn {
+            flex: 1;
+            background: #0d1b2a;
+            border: 2px solid #546e7a;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #90a4ae;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .bit-btn:hover {
+            border-color: #4fc3f7;
+            color: #4fc3f7;
+        }
+
+        .bit-btn.active {
+            background: linear-gradient(145deg, #1976d2, #1565c0);
+            border-color: #4fc3f7;
+            color: #fff;
+        }
+
+        /* Selected number info */
+        .selected-info {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #546e7a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #90a4ae;
+            font-size: 15px;
+        }
+
+        .info-value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 16px;
+            color: #e0e0e0;
+        }
+
+        .info-value.positive {
+            color: #4fc3f7;
+        }
+
+        .info-value.negative {
+            color: #ff6b6b;
+        }
+
+        /* Teaching points */
+        .teaching-section {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #546e7a;
+            border-radius: 12px;
+            padding: 20px;
+            flex: 1;
+        }
+
+        .teaching-point {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 14px;
+            align-items: flex-start;
+        }
+
+        .teaching-point:last-child {
+            margin-bottom: 0;
+        }
+
+        .teaching-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .teaching-icon.clockwise {
+            background: rgba(79, 195, 247, 0.2);
+            color: #4fc3f7;
+        }
+
+        .teaching-icon.overflow {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
+        .teaching-icon.underflow {
+            background: rgba(255, 183, 77, 0.2);
+            color: #ffb74d;
+        }
+
+        .teaching-icon.adjacent {
+            background: rgba(102, 187, 106, 0.2);
+            color: #66bb6a;
+        }
+
+        .teaching-text {
+            font-size: 14px;
+            color: #b0bec5;
+            line-height: 1.5;
+        }
+
+        .teaching-text strong {
+            color: #e0e0e0;
+        }
+
+        /* Animation controls */
+        .animation-section {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid #546e7a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .animation-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .anim-btn {
+            flex: 1;
+            background: #0d1b2a;
+            border: 2px solid #546e7a;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 14px;
+            color: #90a4ae;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .anim-btn:hover {
+            border-color: #4fc3f7;
+            color: #4fc3f7;
+        }
+
+        .anim-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .animation-status {
+            font-size: 14px;
+            color: #607d8b;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        .animation-status.active {
+            color: #4fc3f7;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #90a4ae;
+        }
+
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+
+        .legend-dot.positive {
+            background: #1e3a5f;
+            border-color: #4fc3f7;
+        }
+
+        .legend-dot.negative {
+            background: #3d1f1f;
+            border-color: #ff6b6b;
+        }
+
+        .legend-dot.zero {
+            background: #2d4a2d;
+            border-color: #66bb6a;
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+        .footer {
+            text-align: center;
+            color: #607d8b;
+            font-size: 14px;
+            padding-top: 15px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="viewport-container" id="viewportContainer">
+        <div class="design-surface" id="designSurface">
+
+            <h1>Two's Complement Number Wheel</h1>
+            <p class="subtitle">Interactive visualization of signed binary integers arranged in a circle</p>
+
+            <div class="content">
+                <!-- Left panel: Circle visualization -->
+                <div class="circle-panel">
+                    <div class="wheel-container">
+                        <svg class="wheel-svg" id="wheelSvg" viewBox="0 0 700 700">
+                            <!-- Defs for arrows -->
+                            <defs>
+                                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                    <polygon points="0 0, 10 3.5, 0 7" fill="#4fc3f7" opacity="0.7"/>
+                                </marker>
+                            </defs>
+
+                            <!-- Background circles -->
+                            <circle cx="350" cy="350" r="280" fill="none" stroke="#546e7a" stroke-width="1" opacity="0.3"/>
+                            <circle cx="350" cy="350" r="200" fill="none" stroke="#546e7a" stroke-width="1" opacity="0.2"/>
+
+                            <!-- Overflow zone indicator (right side where positive meets negative) -->
+                            <path id="overflowArc" class="overflow-zone" d=""/>
+
+                            <!-- Direction arrow (clockwise) -->
+                            <path class="direction-arrow" d="M 500 120 A 250 250 0 0 1 580 250" marker-end="url(#arrowhead)"/>
+                            <text class="arrow-label" x="560" y="160">+1</text>
+
+                            <!-- Number nodes will be inserted here -->
+                            <g id="numberNodes"></g>
+                        </svg>
+
+                        <!-- Center display -->
+                        <div class="center-display">
+                            <div class="center-bits" id="centerBits">4-bit</div>
+                            <div class="center-label">Range: <span id="rangeDisplay">-8 to +7</span></div>
+                        </div>
+                    </div>
+
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-dot positive"></div>
+                            <span>Positive</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot zero"></div>
+                            <span>Zero</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot negative"></div>
+                            <span>Negative</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right panel: Controls and info -->
+                <div class="info-panel">
+                    <!-- Bit selector -->
+                    <div class="controls-section">
+                        <div class="section-title">Bit Width</div>
+                        <div class="bit-buttons">
+                            <button class="bit-btn" data-bits="3">3-bit</button>
+                            <button class="bit-btn active" data-bits="4">4-bit</button>
+                            <button class="bit-btn" data-bits="5">5-bit</button>
+                        </div>
+                    </div>
+
+                    <!-- Selected number info -->
+                    <div class="selected-info">
+                        <div class="section-title">Selected Number</div>
+                        <div class="info-row">
+                            <span class="info-label">Binary</span>
+                            <span class="info-value" id="infoBinary">0000</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Decimal</span>
+                            <span class="info-value positive" id="infoDecimal">0</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Hex</span>
+                            <span class="info-value" id="infoHex">0x0</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Position</span>
+                            <span class="info-value" id="infoPosition">0 of 16</span>
+                        </div>
+                    </div>
+
+                    <!-- Animation controls -->
+                    <div class="animation-section">
+                        <div class="section-title">Animate Addition</div>
+                        <div class="animation-buttons">
+                            <button class="anim-btn" id="btnAddOne">Add +1</button>
+                            <button class="anim-btn" id="btnSubOne">Subtract 1</button>
+                        </div>
+                        <div class="animation-buttons" style="margin-top: 10px;">
+                            <button class="anim-btn" id="btnShowOverflow">Show Overflow</button>
+                            <button class="anim-btn" id="btnShowUnderflow">Show Underflow</button>
+                        </div>
+                        <div class="animation-status" id="animStatus">Click a number, then animate</div>
+                    </div>
+
+                    <!-- Teaching points -->
+                    <div class="teaching-section">
+                        <div class="section-title">Key Concepts</div>
+                        <div class="teaching-point">
+                            <div class="teaching-icon clockwise">+</div>
+                            <div class="teaching-text"><strong>Increment = Clockwise:</strong> Adding 1 always moves one position clockwise around the wheel.</div>
+                        </div>
+                        <div class="teaching-point">
+                            <div class="teaching-icon overflow">!</div>
+                            <div class="teaching-text"><strong>Overflow:</strong> Adding 1 to the maximum positive (0111) wraps to the most negative (1000).</div>
+                        </div>
+                        <div class="teaching-point">
+                            <div class="teaching-icon underflow">!</div>
+                            <div class="teaching-text"><strong>Underflow:</strong> Subtracting 1 from the most negative wraps to the maximum positive.</div>
+                        </div>
+                        <div class="teaching-point">
+                            <div class="teaching-icon adjacent">=</div>
+                            <div class="teaching-text"><strong>Adjacent Values:</strong> Neighboring positions always differ by exactly 1 in decimal value.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                Hover over numbers to see details. Click to select. Use animation buttons to see how addition and overflow work.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // HIGH-DPI AWARE AUTO-RESIZE SYSTEM
+        // ============================================
+
+        const DESIGN_WIDTH = 1920;
+        const DESIGN_HEIGHT = 1080;
+
+        function autoResize() {
+            const container = document.getElementById('viewportContainer');
+            const surface = document.getElementById('designSurface');
+
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            let containerWidth, containerHeight;
+
+            if (viewportWidth / viewportHeight > 16 / 9) {
+                containerHeight = viewportHeight;
+                containerWidth = containerHeight * (16 / 9);
+            } else {
+                containerWidth = viewportWidth;
+                containerHeight = containerWidth * (9 / 16);
+            }
+
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+
+            const scale = containerWidth / DESIGN_WIDTH;
+            surface.style.transform = `scale(${scale})`;
+        }
+
+        function initializeResponsive() {
+            autoResize();
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(autoResize, 50);
+            });
+
+            window.addEventListener('orientationchange', () => {
+                setTimeout(autoResize, 100);
+            });
+        }
+
+        // ============================================
+        // TWO'S COMPLEMENT WHEEL LOGIC
+        // ============================================
+
+        let currentBits = 4;
+        let selectedIndex = 0;
+        let animating = false;
+
+        const CENTER_X = 350;
+        const CENTER_Y = 350;
+        const RADIUS = 260;
+
+        // Convert unsigned binary position to two's complement decimal
+        function toTwosComplement(value, bits) {
+            const maxPositive = Math.pow(2, bits - 1) - 1;
+            const total = Math.pow(2, bits);
+            if (value > maxPositive) {
+                return value - total;
+            }
+            return value;
+        }
+
+        // Get binary string with leading zeros
+        function toBinary(value, bits) {
+            return value.toString(2).padStart(bits, '0');
+        }
+
+        // Get hex string
+        function toHex(value, bits) {
+            const unsigned = value < 0 ? value + Math.pow(2, bits) : value;
+            return '0x' + unsigned.toString(16).toUpperCase();
+        }
+
+        // Calculate position angle (0 at top, clockwise)
+        function getAngle(index, total) {
+            return (index / total) * 2 * Math.PI - Math.PI / 2;
+        }
+
+        // Get x,y position on circle
+        function getPosition(index, total, radius = RADIUS) {
+            const angle = getAngle(index, total);
+            return {
+                x: CENTER_X + radius * Math.cos(angle),
+                y: CENTER_Y + radius * Math.sin(angle)
+            };
+        }
+
+        // Determine if a value is positive, negative, or zero
+        function getValueClass(decimal) {
+            if (decimal === 0) return 'zero';
+            return decimal > 0 ? 'positive' : 'negative';
+        }
+
+        // Create the wheel visualization
+        function createWheel() {
+            const nodesContainer = document.getElementById('numberNodes');
+            nodesContainer.innerHTML = '';
+
+            const total = Math.pow(2, currentBits);
+            const nodeRadius = currentBits === 5 ? 28 : (currentBits === 3 ? 42 : 34);
+            const fontSize = currentBits === 5 ? 11 : (currentBits === 3 ? 16 : 14);
+
+            for (let i = 0; i < total; i++) {
+                const pos = getPosition(i, total);
+                const decimal = toTwosComplement(i, currentBits);
+                const binary = toBinary(i, currentBits);
+                const valueClass = getValueClass(decimal);
+
+                const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                group.classList.add('number-node');
+                group.setAttribute('data-index', i);
+
+                // Circle background
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.classList.add('node-circle', valueClass);
+                circle.setAttribute('cx', pos.x);
+                circle.setAttribute('cy', pos.y);
+                circle.setAttribute('r', nodeRadius);
+                circle.setAttribute('stroke-width', '3');
+
+                // Binary text
+                const binaryText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                binaryText.classList.add('node-binary');
+                binaryText.setAttribute('x', pos.x);
+                binaryText.setAttribute('y', pos.y - 4);
+                binaryText.setAttribute('font-size', fontSize);
+                binaryText.textContent = binary;
+
+                // Decimal text
+                const decimalText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                decimalText.classList.add('node-decimal');
+                decimalText.setAttribute('x', pos.x);
+                decimalText.setAttribute('y', pos.y + 12);
+                decimalText.setAttribute('font-size', fontSize - 1);
+                decimalText.textContent = decimal >= 0 ? decimal : decimal;
+
+                group.appendChild(circle);
+                group.appendChild(binaryText);
+                group.appendChild(decimalText);
+
+                // Event listeners
+                group.addEventListener('click', () => selectNumber(i));
+                group.addEventListener('mouseenter', () => highlightNumber(i));
+
+                nodesContainer.appendChild(group);
+            }
+
+            // Update overflow arc
+            updateOverflowArc();
+
+            // Update center display
+            document.getElementById('centerBits').textContent = currentBits + '-bit';
+            const minVal = -Math.pow(2, currentBits - 1);
+            const maxVal = Math.pow(2, currentBits - 1) - 1;
+            document.getElementById('rangeDisplay').textContent = minVal + ' to +' + maxVal;
+
+            // Select default
+            selectNumber(selectedIndex < total ? selectedIndex : 0);
+        }
+
+        // Update the overflow zone arc
+        function updateOverflowArc() {
+            const total = Math.pow(2, currentBits);
+            const maxPositiveIndex = Math.pow(2, currentBits - 1) - 1; // e.g., 7 for 4-bit
+            const minNegativeIndex = Math.pow(2, currentBits - 1); // e.g., 8 for 4-bit
+
+            // Arc from max positive to min negative (the overflow boundary)
+            const startAngle = getAngle(maxPositiveIndex, total);
+            const endAngle = getAngle(minNegativeIndex, total);
+
+            const r = RADIUS + 40;
+            const startX = CENTER_X + r * Math.cos(startAngle);
+            const startY = CENTER_Y + r * Math.sin(startAngle);
+            const endX = CENTER_X + r * Math.cos(endAngle);
+            const endY = CENTER_Y + r * Math.sin(endAngle);
+
+            const arcPath = `M ${startX} ${startY} A ${r} ${r} 0 0 1 ${endX} ${endY}`;
+            document.getElementById('overflowArc').setAttribute('d', arcPath);
+        }
+
+        // Select a number
+        function selectNumber(index) {
+            selectedIndex = index;
+
+            // Update visual selection
+            document.querySelectorAll('.node-circle').forEach((circle, i) => {
+                circle.classList.toggle('selected', i === index);
+            });
+
+            // Update info panel
+            updateInfoPanel(index);
+        }
+
+        // Highlight on hover
+        function highlightNumber(index) {
+            updateInfoPanel(index);
+        }
+
+        // Update the info panel
+        function updateInfoPanel(index) {
+            const total = Math.pow(2, currentBits);
+            const decimal = toTwosComplement(index, currentBits);
+            const binary = toBinary(index, currentBits);
+            const hex = toHex(decimal, currentBits);
+            const valueClass = getValueClass(decimal);
+
+            document.getElementById('infoBinary').textContent = binary;
+
+            const decimalEl = document.getElementById('infoDecimal');
+            decimalEl.textContent = decimal >= 0 ? '+' + decimal : decimal;
+            decimalEl.className = 'info-value ' + valueClass;
+
+            document.getElementById('infoHex').textContent = hex;
+            document.getElementById('infoPosition').textContent = index + ' of ' + total;
+        }
+
+        // Animate stepping around the wheel
+        function animateStep(direction, callback) {
+            if (animating) return;
+            animating = true;
+
+            const total = Math.pow(2, currentBits);
+            const newIndex = (selectedIndex + direction + total) % total;
+
+            const fromDecimal = toTwosComplement(selectedIndex, currentBits);
+            const toDecimal = toTwosComplement(newIndex, currentBits);
+
+            // Check for overflow/underflow
+            let statusText = '';
+            if (direction > 0 && fromDecimal > 0 && toDecimal < 0) {
+                statusText = 'OVERFLOW! Positive wrapped to negative';
+                document.getElementById('animStatus').className = 'animation-status active';
+            } else if (direction < 0 && fromDecimal < 0 && toDecimal > 0) {
+                statusText = 'UNDERFLOW! Negative wrapped to positive';
+                document.getElementById('animStatus').className = 'animation-status active';
+            } else {
+                statusText = toBinary(selectedIndex, currentBits) + ' + ' + direction + ' = ' + toBinary(newIndex, currentBits);
+                document.getElementById('animStatus').className = 'animation-status';
+            }
+
+            document.getElementById('animStatus').textContent = statusText;
+
+            // Animate selection
+            selectNumber(newIndex);
+
+            setTimeout(() => {
+                animating = false;
+                if (callback) callback();
+            }, 400);
+        }
+
+        // Show overflow demonstration
+        function showOverflow() {
+            if (animating) return;
+
+            // Jump to max positive
+            const maxPositiveIndex = Math.pow(2, currentBits - 1) - 1;
+            selectNumber(maxPositiveIndex);
+            document.getElementById('animStatus').textContent = 'At maximum positive: ' + toBinary(maxPositiveIndex, currentBits);
+            document.getElementById('animStatus').className = 'animation-status';
+
+            // After a delay, add 1 to show overflow
+            setTimeout(() => {
+                animateStep(1);
+            }, 800);
+        }
+
+        // Show underflow demonstration
+        function showUnderflow() {
+            if (animating) return;
+
+            // Jump to min negative (e.g., index 8 for 4-bit = -8)
+            const minNegativeIndex = Math.pow(2, currentBits - 1);
+            selectNumber(minNegativeIndex);
+            const minDecimal = toTwosComplement(minNegativeIndex, currentBits);
+            document.getElementById('animStatus').textContent = 'At minimum negative: ' + toBinary(minNegativeIndex, currentBits) + ' (' + minDecimal + ')';
+            document.getElementById('animStatus').className = 'animation-status';
+
+            // After a delay, subtract 1 to show underflow
+            setTimeout(() => {
+                animateStep(-1);
+            }, 800);
+        }
+
+        // Initialize bit buttons
+        function initBitButtons() {
+            document.querySelectorAll('.bit-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (animating) return;
+
+                    document.querySelectorAll('.bit-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    currentBits = parseInt(btn.dataset.bits);
+                    selectedIndex = 0;
+                    createWheel();
+
+                    document.getElementById('animStatus').textContent = 'Switched to ' + currentBits + '-bit system';
+                });
+            });
+        }
+
+        // Initialize animation buttons
+        function initAnimationButtons() {
+            document.getElementById('btnAddOne').addEventListener('click', () => {
+                animateStep(1);
+            });
+
+            document.getElementById('btnSubOne').addEventListener('click', () => {
+                animateStep(-1);
+            });
+
+            document.getElementById('btnShowOverflow').addEventListener('click', showOverflow);
+            document.getElementById('btnShowUnderflow').addEventListener('click', showUnderflow);
+        }
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+
+        initializeResponsive();
+        initBitButtons();
+        initAnimationButtons();
+        createWheel();
+    </script>
+</body>
+
+</html>
