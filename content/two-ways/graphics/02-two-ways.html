@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two's Complement Calculator: Two Methods</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ============================================
+           VIEWPORT CONTAINER
+           Maintains 16:9 aspect ratio, fits in window
+           ============================================ */
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ============================================
+           DESIGN SURFACE
+           Fixed 1920x1080 canvas that gets scaled
+           All content uses fixed pixel values
+           ============================================ */
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #e0e0e0;
+            padding: 40px 60px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ============================================
+           TYPOGRAPHY - Fixed pixel sizes
+           ============================================ */
+        h1 {
+            text-align: center;
+            color: #4fc3f7;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #90a4ae;
+            font-size: 20px;
+            margin-bottom: 24px;
+        }
+
+        /* ============================================
+           INPUT CONTROLS
+           ============================================ */
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            margin-bottom: 24px;
+            padding: 20px 40px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            border: 2px solid #546e7a;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-group label {
+            font-size: 18px;
+            color: #90a4ae;
+            font-weight: 600;
+        }
+
+        .control-group input,
+        .control-group select {
+            background: #0d1b2a;
+            border: 2px solid #546e7a;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 18px;
+            color: #e0e0e0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .control-group input:focus,
+        .control-group select:focus {
+            border-color: #4fc3f7;
+        }
+
+        .control-group input {
+            width: 120px;
+            text-align: center;
+        }
+
+        .control-group select {
+            cursor: pointer;
+        }
+
+        .warning {
+            color: #ff8a65;
+            font-size: 16px;
+            font-weight: 600;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        /* ============================================
+           MAIN CONTENT AREA - Two panels
+           ============================================ */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            min-height: 0;
+        }
+
+        .two-panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .panel {
+            background: #0d1b2a;
+            border: 3px solid #546e7a;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+        }
+
+        .panel.left {
+            border-color: #4fc3f7;
+        }
+
+        .panel.right {
+            border-color: #81c784;
+        }
+
+        .panel-header {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .panel.left .panel-header {
+            color: #4fc3f7;
+        }
+
+        .panel.right .panel-header {
+            color: #81c784;
+        }
+
+        .panel-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* ============================================
+           STEP BOXES
+           ============================================ */
+        .step {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 12px 16px;
+            border-left: 4px solid #546e7a;
+        }
+
+        .panel.left .step {
+            border-left-color: #4fc3f7;
+        }
+
+        .panel.right .step {
+            border-left-color: #81c784;
+        }
+
+        .step-label {
+            font-size: 14px;
+            color: #78909c;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .step-content {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 20px;
+            color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .step-description {
+            font-size: 13px;
+            color: #78909c;
+            margin-top: 6px;
+        }
+
+        /* Binary digit styling */
+        .binary-digit {
+            display: inline-block;
+            width: 32px;
+            height: 38px;
+            line-height: 38px;
+            text-align: center;
+            background: #1a2a3a;
+            border-radius: 6px;
+            margin: 0 2px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .binary-digit.flipped {
+            background: #ff7043;
+            color: #fff;
+            animation: flip 0.3s ease;
+        }
+
+        .binary-digit.carry {
+            background: #ffb74d;
+            color: #1a1a2e;
+        }
+
+        .binary-digit.result {
+            background: #4fc3f7;
+            color: #1a1a2e;
+        }
+
+        .panel.right .binary-digit.result {
+            background: #81c784;
+            color: #1a1a2e;
+        }
+
+        @keyframes flip {
+            0% { transform: rotateX(0deg); }
+            50% { transform: rotateX(90deg); }
+            100% { transform: rotateX(0deg); }
+        }
+
+        .operator {
+            font-size: 24px;
+            color: #78909c;
+            margin: 0 8px;
+        }
+
+        .decimal-value {
+            color: #ffb74d;
+            font-size: 16px;
+            margin-left: 12px;
+        }
+
+        /* Vertical addition layout */
+        .vertical-addition {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        .addition-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .addition-row .row-label {
+            font-size: 14px;
+            color: #78909c;
+            min-width: 24px;
+            text-align: right;
+        }
+
+        .addition-row .binary-digits {
+            display: flex;
+        }
+
+        .addition-line {
+            width: 100%;
+            height: 2px;
+            background: #546e7a;
+            margin: 2px 0;
+        }
+
+        .addition-row.sum .binary-digit {
+            background: #4fc3f7;
+            color: #1a1a2e;
+        }
+
+        /* ============================================
+           RESULT COMPARISON
+           ============================================ */
+        .result-box {
+            background: rgba(255,255,255,0.05);
+            border: 3px dashed #546e7a;
+            border-radius: 12px;
+            padding: 12px 20px;
+            margin-top: 8px;
+        }
+
+        .result-box.match {
+            border-color: #81c784;
+            background: rgba(129, 199, 132, 0.1);
+        }
+
+        .result-label {
+            font-size: 14px;
+            color: #78909c;
+            margin-bottom: 6px;
+        }
+
+        .result-value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .panel.left .result-value {
+            color: #4fc3f7;
+        }
+
+        .panel.right .result-value {
+            color: #81c784;
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+        .footer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            padding-top: 16px;
+            border-top: 2px solid rgba(255,255,255,0.1);
+            margin-top: auto;
+        }
+
+        .match-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #81c784;
+            padding: 12px 24px;
+            background: rgba(129, 199, 132, 0.1);
+            border-radius: 12px;
+            border: 2px solid #81c784;
+        }
+
+        .match-indicator.hidden {
+            opacity: 0;
+        }
+
+        .checkmark {
+            width: 28px;
+            height: 28px;
+            background: #81c784;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a1a2e;
+            font-size: 18px;
+        }
+
+        /* ============================================
+           DEBUG INFO (set display:block to show)
+           ============================================ */
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: #4fc3f7;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="viewport-container" id="viewportContainer">
+        <div class="design-surface" id="designSurface">
+
+            <h1>Two's Complement Calculator: Two Methods</h1>
+            <p class="subtitle">Representing negative numbers using two's complement</p>
+
+            <!-- Input Controls -->
+            <div class="controls">
+                <div class="control-group">
+                    <label for="decimalInput">Enter negative number:</label>
+                    <input type="number" id="decimalInput" value="-5" min="-128" max="-1">
+                </div>
+                <div class="control-group">
+                    <label>|X| =</label>
+                    <span id="absValue" style="font-family: 'Consolas', monospace; font-size: 20px; color: #4fc3f7; min-width: 40px;">5</span>
+                </div>
+                <div class="control-group">
+                    <label for="bitWidth">Bit Width (N):</label>
+                    <select id="bitWidth">
+                        <option value="4">4 bits</option>
+                        <option value="5">5 bits</option>
+                        <option value="6">6 bits</option>
+                        <option value="7">7 bits</option>
+                        <option value="8">8 bits</option>
+                    </select>
+                </div>
+                <div class="warning" id="warning"></div>
+            </div>
+
+            <div class="content">
+                <div class="two-panels">
+                    <!-- LEFT PANEL: Flip and Add One Method -->
+                    <div class="panel left">
+                        <div class="panel-header">"Flip and Add One" Method</div>
+                        <div class="panel-content">
+                            <div class="step">
+                                <div class="step-label">Step 1: Positive Binary</div>
+                                <div class="step-content">
+                                    <span id="leftStep1Binary"></span>
+                                    <span class="decimal-value" id="leftStep1Decimal"></span>
+                                </div>
+                                <div class="step-description">Convert X to N-bit binary</div>
+                            </div>
+                            <div class="step">
+                                <div class="step-label">Step 2: Flip All Bits (One's Complement)</div>
+                                <div class="step-content">
+                                    <span id="leftStep2Binary"></span>
+                                    <span class="decimal-value" id="leftStep2Decimal"></span>
+                                </div>
+                                <div class="step-description">Invert each bit: 0 becomes 1, 1 becomes 0</div>
+                            </div>
+                            <div class="step">
+                                <div class="step-label">Step 3: Add 1</div>
+                                <div class="step-content">
+                                    <div class="vertical-addition" id="leftStep3Addition">
+                                        <!-- Generated by JS -->
+                                    </div>
+                                </div>
+                                <div class="step-description">Add 1 to the one's complement with carry propagation</div>
+                            </div>
+                            <div class="result-box" id="leftResultBox">
+                                <div class="result-label">Two's Complement of <span id="leftResultX">-5</span></div>
+                                <div class="result-value" id="leftResult"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT PANEL: 2^N - X Method -->
+                    <div class="panel right">
+                        <div class="panel-header">"2^N - X" Method (Modular Arithmetic)</div>
+                        <div class="panel-content">
+                            <div class="step">
+                                <div class="step-label">Step 1: Calculate 2^N</div>
+                                <div class="step-content" id="rightStep1"></div>
+                                <div class="step-description">The modulus for N-bit two's complement</div>
+                            </div>
+                            <div class="step">
+                                <div class="step-label">Step 2: Subtract X</div>
+                                <div class="step-content" id="rightStep2"></div>
+                                <div class="step-description">2^N - X gives the unsigned equivalent of -X</div>
+                            </div>
+                            <div class="step">
+                                <div class="step-label">Step 3: Convert to Binary</div>
+                                <div class="step-content">
+                                    <span id="rightStep3Binary"></span>
+                                    <span class="decimal-value" id="rightStep3Decimal"></span>
+                                </div>
+                                <div class="step-description">Convert the result to N-bit binary</div>
+                            </div>
+                            <div class="result-box" id="rightResultBox">
+                                <div class="result-label">Two's Complement of <span id="rightResultX">-5</span></div>
+                                <div class="result-value" id="rightResult"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <div class="match-indicator" id="matchIndicator">
+                    <span class="checkmark">&#10003;</span>
+                    <span>Both methods produce identical results!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug display -->
+    <div class="debug-info" id="debugInfo"></div>
+
+    <script>
+        // ============================================
+        // HIGH-DPI AWARE AUTO-RESIZE SYSTEM
+        // ============================================
+
+        const DESIGN_WIDTH = 1920;
+        const DESIGN_HEIGHT = 1080;
+
+        function autoResize() {
+            const container = document.getElementById('viewportContainer');
+            const surface = document.getElementById('designSurface');
+            const debugInfo = document.getElementById('debugInfo');
+
+            const dpr = window.devicePixelRatio || 1;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            let containerWidth, containerHeight;
+
+            if (viewportWidth / viewportHeight > 16 / 9) {
+                containerHeight = viewportHeight;
+                containerWidth = containerHeight * (16 / 9);
+            } else {
+                containerWidth = viewportWidth;
+                containerHeight = containerWidth * (9 / 16);
+            }
+
+            container.style.width = containerWidth + 'px';
+            container.style.height = containerHeight + 'px';
+
+            const scale = containerWidth / DESIGN_WIDTH;
+            surface.style.transform = `scale(${scale})`;
+
+            debugInfo.textContent = `DPR: ${dpr.toFixed(2)} | Scale: ${scale.toFixed(3)} | ${Math.round(containerWidth)}x${Math.round(containerHeight)}`;
+        }
+
+        function initializeResponsive() {
+            autoResize();
+
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(autoResize, 50);
+            });
+
+            window.addEventListener('orientationchange', () => {
+                setTimeout(autoResize, 100);
+            });
+        }
+
+        // ============================================
+        // TWO'S COMPLEMENT CALCULATOR LOGIC
+        // ============================================
+
+        function toBinary(num, bits) {
+            return num.toString(2).padStart(bits, '0');
+        }
+
+        function toHex(num, bits) {
+            const hexDigits = Math.ceil(bits / 4);
+            return '0x' + num.toString(16).toUpperCase().padStart(hexDigits, '0');
+        }
+
+        function flipBits(binaryStr) {
+            return binaryStr.split('').map(b => b === '0' ? '1' : '0').join('');
+        }
+
+        function createBinaryDigits(binaryStr, className = '') {
+            return binaryStr.split('').map(digit => {
+                return `<span class="binary-digit ${className}">${digit}</span>`;
+            }).join('');
+        }
+
+        function calculate() {
+            const inputValue = parseInt(document.getElementById('decimalInput').value) || 0;
+            const x = Math.abs(inputValue);  // Use absolute value for calculations
+            const n = parseInt(document.getElementById('bitWidth').value);
+            const maxValue = Math.pow(2, n - 1);
+            const warningEl = document.getElementById('warning');
+            const matchIndicator = document.getElementById('matchIndicator');
+
+            // Update |X| display
+            document.getElementById('absValue').textContent = x;
+
+            // Validation
+            if (inputValue >= 0) {
+                warningEl.textContent = 'Please enter a negative number';
+                matchIndicator.classList.add('hidden');
+                return;
+            }
+
+            if (x < 1) {
+                warningEl.textContent = 'Please enter a negative integer';
+                matchIndicator.classList.add('hidden');
+                return;
+            }
+
+            if (x > maxValue) {
+                warningEl.textContent = `Warning: ${inputValue} exceeds min value -${maxValue} for ${n}-bit signed range`;
+                matchIndicator.classList.add('hidden');
+            } else {
+                warningEl.textContent = '';
+                matchIndicator.classList.remove('hidden');
+            }
+
+            const twoToN = Math.pow(2, n);
+
+            // ============================================
+            // LEFT PANEL: Flip and Add One Method
+            // ============================================
+
+            // Step 1: Positive binary
+            const positiveBinary = toBinary(x, n);
+            document.getElementById('leftStep1Binary').innerHTML = createBinaryDigits(positiveBinary);
+            document.getElementById('leftStep1Decimal').textContent = `= ${toHex(x, n)}`;
+
+            // Step 2: Flip bits (one's complement)
+            const flippedBinary = flipBits(positiveBinary);
+            document.getElementById('leftStep2Binary').innerHTML = createBinaryDigits(flippedBinary, 'flipped');
+            const onesCompValue = parseInt(flippedBinary, 2);
+            document.getElementById('leftStep2Decimal').textContent = `= ${toHex(onesCompValue, n)}`;
+
+            // Step 3: Add 1 (vertical addition)
+            const twosCompValue = (onesCompValue + 1) % twoToN;
+            const twosCompBinary = toBinary(twosCompValue, n);
+            const oneBinary = toBinary(1, n);
+
+            document.getElementById('leftStep3Addition').innerHTML = `
+                <div class="addition-row">
+                    <span class="row-label"></span>
+                    <div class="binary-digits">${createBinaryDigits(flippedBinary)}</div>
+                </div>
+                <div class="addition-row">
+                    <span class="row-label">+</span>
+                    <div class="binary-digits">${createBinaryDigits(oneBinary, 'carry')}</div>
+                </div>
+                <div class="addition-line"></div>
+                <div class="addition-row sum">
+                    <span class="row-label">=</span>
+                    <div class="binary-digits">${createBinaryDigits(twosCompBinary, 'result')}</div>
+                </div>
+            `;
+
+            // Result
+            document.getElementById('leftResultX').textContent = inputValue;
+            document.getElementById('leftResult').innerHTML = createBinaryDigits(twosCompBinary, 'result') +
+                `<span class="decimal-value">= ${toHex(twosCompValue, n)}</span>`;
+
+            // ============================================
+            // RIGHT PANEL: 2^N - X Method
+            // ============================================
+
+            // Step 1: 2^N
+            document.getElementById('rightStep1').innerHTML =
+                `<span style="color: #81c784; font-weight: 700;">2<sup style="font-size: 14px;">${n}</sup></span> = <span style="color: #81c784; font-weight: 700;">${twoToN}</span>`;
+
+            // Step 2: Subtraction
+            const subtractResult = twoToN - x;
+            document.getElementById('rightStep2').innerHTML =
+                `${twoToN} - ${x} = <span style="color: #81c784; font-weight: 700;">${subtractResult}</span>`;
+
+            // Step 3: Convert to binary
+            const rightResultBinary = toBinary(subtractResult % twoToN, n);
+            document.getElementById('rightStep3Binary').innerHTML = createBinaryDigits(rightResultBinary, 'result');
+            document.getElementById('rightStep3Decimal').textContent = `= ${toHex(subtractResult % twoToN, n)}`;
+
+            // Result
+            document.getElementById('rightResultX').textContent = inputValue;
+            document.getElementById('rightResult').innerHTML = createBinaryDigits(rightResultBinary, 'result') +
+                `<span class="decimal-value">= ${toHex(subtractResult % twoToN, n)}</span>`;
+
+            // Highlight matching results
+            const leftBox = document.getElementById('leftResultBox');
+            const rightBox = document.getElementById('rightResultBox');
+            if (twosCompBinary === rightResultBinary) {
+                leftBox.classList.add('match');
+                rightBox.classList.add('match');
+            } else {
+                leftBox.classList.remove('match');
+                rightBox.classList.remove('match');
+            }
+        }
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+
+        document.getElementById('decimalInput').addEventListener('input', calculate);
+        document.getElementById('bitWidth').addEventListener('change', calculate);
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        initializeResponsive();
+        calculate();
+    </script>
+</body>
+
+</html>

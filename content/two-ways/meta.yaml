@@ -7,3 +7,5 @@ order: 30109
 graphics:
   01-two-ways.youtube:
     caption: "Video: two methods for two's complement of a negative number — flip-the-bits-and-add-one, and 2^n − x — worked for −25 (6-bit) and −34 (7-bit)"
+  02-two-ways.html:
+    caption: "Interactive: two's complement calculator — try both methods (flip-and-add-one and 2^n − x) and check the bit pattern"
