@@ -1,5 +1,9 @@
-title: "Use of AI for this course"
+title: "Use of AI for this Course"
 description: "How AI tools fit into this course — encouraged for practice and learning, not for outsourcing the work the exams measure."
 chapter: front-matter
 section: ai
 order: 0
+
+graphics:
+  01-ai-training-vs-outsourcing.jpg:
+    caption: "AI is useful when it helps you practice — not when it does the reps for you."
