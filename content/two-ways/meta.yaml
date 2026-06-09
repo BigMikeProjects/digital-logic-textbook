@@ -1,0 +1,9 @@
+title: "Two ways to Two's Complement"
+description: ""
+chapter: combinational-logic
+section: number-systems
+order: 30109
+
+graphics:
+  01-two-ways.youtube:
+    caption: "Video: two methods for two's complement of a negative number — flip-the-bits-and-add-one, and 2^n − x — worked for −25 (6-bit) and −34 (7-bit)"
