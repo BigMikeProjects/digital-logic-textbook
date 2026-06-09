@@ -1,0 +1,9 @@
+title: "Schematic Guide"
+description: ""
+chapter: foundations
+section: circuits
+order: 20203
+
+graphics:
+  01-schematics.youtube:
+    caption: "Video: schematic conventions — net lists, orthogonal wiring, fan-in/fan-out, junction dots, inversion bubbles, signal flow, net names, and the shift toward HDL"
