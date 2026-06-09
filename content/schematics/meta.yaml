@@ -7,3 +7,5 @@ order: 20203
 graphics:
   01-schematics.youtube:
     caption: "Video: schematic conventions — net lists, orthogonal wiring, fan-in/fan-out, junction dots, inversion bubbles, signal flow, net names, and the shift toward HDL"
+  02-schematics.html:
+    caption: "Interactive: schematic standards — tidy the wiring, stagger junctions, toggle inversion bubbles, and trace input→output signal flow"
