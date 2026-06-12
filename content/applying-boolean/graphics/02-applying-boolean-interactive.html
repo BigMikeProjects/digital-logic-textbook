@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boolean Algebra Simplification</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: #b8bfc8;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.viewport-container {
+  width: 100%;
+  max-width: 100vw;
+  aspect-ratio: 16 / 9;
+  max-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.design-surface {
+  width: 1920px;
+  height: 1080px;
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: top left;
+  background: #f0f2f5;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Header ── */
+.header {
+  flex-shrink: 0;
+  height: 88px;
+  background: #1a2744;
+  display: flex;
+  align-items: center;
+  padding: 0 48px;
+  gap: 20px;
+}
+.header-title    { color: #fff;    font-size: 32px; font-weight: 700; white-space: nowrap; }
+.header-subtitle { color: #8a9ec0; font-size: 19px; white-space: nowrap; }
+
+/* Example tab switcher */
+.example-tabs {
+  display: flex;
+  gap: 8px;
+  margin-left: 40px;
+}
+.ex-tab {
+  padding: 8px 22px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #2e3f6a;
+  color: #8a9ec0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.ex-tab:hover    { background: #3a5090; color: #c8d8f0; }
+.ex-tab.active   { background: #f0f2f5; color: #1a2744; border-color: #f0f2f5; }
+
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 24px; }
+.key-hint {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 16px; color: #8a9ec0;
+}
+.key-badge {
+  background: #2e3f6a; border: 1.5px solid #4a5e90;
+  border-radius: 5px; padding: 3px 10px;
+  font-size: 14px; font-weight: 700; color: #c8d8f0;
+}
+
+/* ── Body ── */
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Proof chain area ── */
+.proof-area {
+  flex: 1;
+  padding: 28px 44px 16px 44px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ── Step row ── */
+.step-row {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+}
+
+/* Connector */
+.connector {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+}
+
+/* Expression card */
+.expr-block {
+  flex: 1;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.09);
+  padding: 14px 28px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  position: relative;
+  border: 2px solid transparent;
+  transition: background 0.3s, box-shadow 0.3s, border-color 0.3s;
+}
+.expr-block.is-current {
+  box-shadow: 0 4px 22px rgba(26,39,68,0.16);
+}
+.expr-block.is-done {
+  background: #f7f8fa;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.expr-block.is-final {
+  border-color: #2e5de0;
+  box-shadow: 0 0 0 5px rgba(46,93,224,0.10), 0 4px 22px rgba(26,39,68,0.15);
+}
+
+.step-num {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  transition: color 0.3s;
+}
+.is-current .step-num { color: #5a6a8a; }
+.is-done    .step-num { color: #b0bcd0; }
+
+.expression {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-weight: 600;
+  color: #1a2744;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: color 0.3s;
+}
+.is-done .expression { color: #8a98b4; }
+
+/* Tokens */
+.tok { display: inline; }
+.tok.hl {
+  background: #fff3cd;
+  border-bottom: 3px solid #d4830a;
+  border-radius: 3px;
+  padding: 1px 3px;
+  font-weight: 700;
+  color: #7a4500;
+}
+.tok.dm { color: #b8c4d8; }
+.is-done .tok.hl { background: none; border-bottom: none; color: #8a98b4; font-weight: inherit; padding: 0; }
+.is-done .tok.dm { color: #b8c4d8; }
+
+/* Final chip */
+.final-chip {
+  position: absolute;
+  right: 18px; top: 50%;
+  transform: translateY(-50%);
+  background: #2e5de0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 5px 16px;
+  border-radius: 20px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.is-final .final-chip { opacity: 1; }
+
+/* Law badge */
+.law-block {
+  width: 400px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 18px;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+.law-block.visible {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.law-pill {
+  background: #e8f0fe;
+  border: 2px solid #2e5de0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 280px;
+  transition: background 0.3s, border-color 0.3s;
+}
+.law-block.is-done-law .law-pill { background: #f0f2f8; border-color: #c0c8dc; }
+
+.law-name  { font-size: 16px; font-weight: 700; color: #1a2744; transition: color 0.3s; }
+.law-rule  { font-size: 14px; font-family: 'Georgia', serif; color: #3a5090; transition: color 0.3s; }
+.law-explain { font-size: 13px; color: #4a5a7a; margin-top: 2px; line-height: 1.4; transition: color 0.3s; }
+.law-block.is-done-law .law-name    { color: #8a98b8; }
+.law-block.is-done-law .law-rule    { color: #a0aec0; }
+.law-block.is-done-law .law-explain { color: #a0aec0; }
+
+/* ── Nav strip ── */
+.nav-strip {
+  flex-shrink: 0;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  padding: 0 44px;
+  gap: 18px;
+  background: #e8eaf0;
+  border-top: 1px solid #d0d4de;
+}
+.nav-btn {
+  height: 50px;
+  padding: 0 28px;
+  border-radius: 10px;
+  border: none;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  transition: background 0.15s, opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.nav-btn:active { transform: scale(0.97); }
+.nav-btn:disabled { opacity: 0.3; cursor: default; }
+#btnPrev { background: #d4d8e8; color: #1a2744; }
+#btnNext { background: #1a2744; color: #fff; }
+#btnPrev:not(:disabled):hover { background: #bcc2d8; }
+#btnNext:not(:disabled):hover { background: #2e3e6a; }
+
+.step-dots { display: flex; gap: 10px; align-items: center; margin-left: 12px; }
+.dot {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: #b8bfcc;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.dot.done    { background: #5a80d4; }
+.dot.current { background: #1a2744; transform: scale(1.4); }
+
+/* ── Reference panel ── */
+.ref-panel {
+  width: 480px;
+  flex-shrink: 0;
+  background: #fff;
+  border-left: 1px solid #d8dce8;
+  padding: 24px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ref-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a2744;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e0e4ee;
+  flex-shrink: 0;
+}
+.ref-rows { flex: 1; overflow: hidden; }
+.ref-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 8px;
+  border-bottom: 1px solid #eef0f4;
+  border-radius: 6px;
+  border-left: 3px solid transparent;
+  transition: background 0.25s, border-left-color 0.25s;
+}
+.ref-row.active-law {
+  background: #fff3cd;
+  border-left-color: #d4830a;
+}
+.ref-law-name {
+  font-size: 13px; font-weight: 700; color: #1a2744;
+  min-width: 144px; flex-shrink: 0;
+}
+.ref-row.active-law .ref-law-name { color: #7a4500; }
+.ref-law-rule {
+  font-size: 13px; color: #3a5090;
+  font-family: 'Georgia', serif; line-height: 1.5;
+}
+.ref-row.active-law .ref-law-rule { color: #7a4500; }
+</style>
+</head>
+<body>
+
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+  <div class="header">
+    <div class="header-title">Boolean Algebra Simplification</div>
+    <div class="header-subtitle">Step-by-step proof</div>
+    <div class="example-tabs" id="exampleTabs"></div>
+    <div class="header-right">
+      <div class="key-hint"><span class="key-badge">←</span> Back</div>
+      <div class="key-hint"><span class="key-badge">→</span> Next step</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div style="flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0;">
+      <div class="proof-area" id="proofArea"></div>
+      <div class="nav-strip">
+        <button class="nav-btn" id="btnPrev" disabled>← Back</button>
+        <button class="nav-btn" id="btnNext">Next Step →</button>
+        <div class="step-dots" id="stepDots"></div>
+      </div>
+    </div>
+    <div class="ref-panel" id="refPanel">
+      <div class="ref-title">Boolean Properties</div>
+      <div class="ref-rows" id="refRows"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ── Laws dictionary ───────────────────────────────────────────────────────────
+const LAWS = {
+  distributive: {
+    name: 'Distributive Law',
+    rule: 'A\u00b7B + A\u00b7C  =  A\u00b7(B + C)',
+    explain: 'Factor A out from the first two terms.',
+    ref: 'Distributive',
+  },
+  complement: {
+    name: 'Complement Law',
+    rule: 'B + B\u0304  =  1',
+    explain: 'A variable OR\u2019d with its complement is always 1.',
+    ref: 'Complement',
+  },
+  identity: {
+    name: 'Identity Law',
+    rule: 'A \u00b7 1  =  A',
+    explain: 'AND\u2019ing with 1 leaves the expression unchanged.',
+    ref: 'Identity',
+  },
+  demorgan: {
+    name: 'De Morgan\u2019s Law',
+    rule: '(X\u00b7Y)\u2032  =  X\u2032 + Y\u2032',
+    explain: 'Complement of a product equals the sum of complements.',
+    ref: 'De Morgan\u2019s',
+  },
+  dblcomplement: {
+    name: 'Double Complement',
+    rule: '(X\u2032)\u2032  =  X',
+    explain: 'Complementing twice returns the original expression.',
+    ref: 'Double Complement',
+  },
+  complement_mul: {
+    name: 'Complement Law',
+    rule: 'X + X\u2032  =  1',
+    explain: 'Multiply by (B + B\u2032) = 1 to introduce B without changing the value.',
+    ref: 'Complement',
+  },
+  distributive2: {
+    name: 'Distributive Law',
+    rule: 'A\u00b7(B + C)  =  A\u00b7B + A\u00b7C',
+    explain: 'Distribute A\u00b7C across (B + B\u2032) to split into two product terms.',
+    ref: 'Distributive',
+  },
+  null_law: {
+    name: 'Null Law',
+    rule: '1 + X  =  1',
+    explain: 'OR\u2019ing with 1 always gives 1, so (1 + C) = 1 and (1 + A) = 1.',
+    ref: 'Null',
+  },
+  idempotent: {
+    name: 'Idempotent Law',
+    rule: 'A \u00b7 A  =  A',
+    explain: 'A term AND\u2019d with itself is just that term.',
+    ref: 'Idempotent',
+  },
+  absorption: {
+    name: 'Absorption Law',
+    rule: 'A + A\u00b7B  =  A',
+    explain: 'A absorbs any OR term that already contains A.',
+    ref: 'Absorption',
+  },
+  reduction: {
+    name: 'Reduction',
+    rule: 'A + A\u2032\u00b7B  =  A + B',
+    explain: 'When A is already a term, the A\u2032 on the other term is redundant.',
+    ref: 'Reduction',
+  },
+};
+
+// ── Reference panel data ──────────────────────────────────────────────────────
+const REF_LAWS = [
+  { name: 'Identity',          rules: ['A + 0 = A',  'A \u00b7 1 = A'] },
+  { name: 'Null',              rules: ['A + 1 = 1',  'A \u00b7 0 = 0'] },
+  { name: 'Idempotent',        rules: ['A + A = A',  'A \u00b7 A = A'] },
+  { name: 'Complement',        rules: ['A + A\u0304 = 1', 'A \u00b7 A\u0304 = 0'] },
+  { name: 'Double Complement', rules: ['(A\u2032)\u2032 = A'] },
+  { name: 'Commutative',       rules: ['A + B = B + A', 'A \u00b7 B = B \u00b7 A'] },
+  { name: 'Associative',       rules: ['(A+B)+C = A+(B+C)', '(A\u00b7B)\u00b7C = A\u00b7(B\u00b7C)'] },
+  { name: 'Distributive',      rules: ['A\u00b7(B+C) = A\u00b7B + A\u00b7C', 'A+(B\u00b7C) = (A+B)\u00b7(A+C)'] },
+  { name: 'Absorption',        rules: ['A + A\u00b7B = A', 'A \u00b7 (A+B) = A'] },
+  { name: 'Reduction',         rules: ['A + A\u2032\u00b7B = A + B', 'A\u00b7(A\u2032+B) = A\u00b7B'] },
+  { name: 'De Morgan\u2019s',  rules: ['(A\u00b7B)\u2032 = A\u2032+B\u2032', '(A+B)\u2032 = A\u2032\u00b7B\u2032'] },
+];
+
+// ── Examples ──────────────────────────────────────────────────────────────────
+// Token notation:  plain text, use Unicode prime ′ (\u2032) for complement
+// hl = highlight indices, dm = dim indices
+
+const EXAMPLES = [
+  {
+    title: 'Example 1',
+    subtitle: 'F = A\u00b7B + A\u00b7B\u0304 + B\u00b7C',
+    steps: [
+      {
+        stepNum: 'Given', label: 'Original Expression',
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'B\u0304'},{t:' + '},{t:'B'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[], dm:[], law: null,
+      },
+      {
+        stepNum: 'Step 1', label: 'Factor A from first two terms',
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'('},{t:'B'},{t:' + '},{t:'B\u0304'},{t:')'},{t:' + '},{t:'B'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[2,3,4,5,6,7,8], dm:[10,11,12], law:'distributive',
+      },
+      {
+        stepNum: 'Step 2', label: 'Complement Law inside parentheses',
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'('},{t:'1'},{t:')'},{t:' + '},{t:'B'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[4,5,6], dm:[8,9,10], law:'complement',
+      },
+      {
+        stepNum: 'Step 3', label: 'Identity Law — A\u00b7(1) = A',
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:' + '},{t:'B'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[2], dm:[4,5,6], law:'identity', final:true,
+      },
+    ]
+  },
+
+  {
+    title: 'Example 2',
+    subtitle: 'F = ((A\u2032B)\u2032(CD)\u2032)\u2032',
+    steps: [
+      {
+        stepNum: 'Given', label: 'Original Expression',
+        // F = ((A′B)′·(CD)′)′
+        // Tokens: F = ( ( A′ B )′ · ( C D )′ )′
+        tokens: [
+          {t:'F'},{t:' = '},{t:'('},{t:'('},{t:'A\u2032'},{t:'B'},{t:')\u2032'},{t:'\u00b7'},{t:'('},{t:'C'},{t:'D'},{t:')\u2032'},{t:')\u2032'}
+        ],
+        hl:[], dm:[], law:null,
+      },
+      {
+        stepNum: 'Step 1', label: 'Apply De Morgan\'s to outer complement',
+        // F = (A′B)′′ + (CD)′′
+        // De Morgan's: (X·Y)′ = X′ + Y′  applied to outer ( )′
+        tokens: [
+          {t:'F'},{t:' = '},{t:'(A\u2032B)\u2032\u2032'},{t:' + '},{t:'(CD)\u2032\u2032'}
+        ],
+        hl:[2,3,4], dm:[], law:'demorgan',
+      },
+      {
+        stepNum: 'Step 2', label: 'Double Complement on each term',
+        // F = A′B + CD
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A\u2032'},{t:'B'},{t:' + '},{t:'C'},{t:'D'}
+        ],
+        hl:[2,3,5,6], dm:[], law:'dblcomplement', final:true,
+      },
+    ]
+  },
+  ,
+  {
+    title: 'Example 3',
+    subtitle: 'F = A\u00b7B + B\u2032\u00b7C + A\u00b7C',
+    steps: [
+      {
+        stepNum: 'Given', label: 'Original Expression',
+        // F = A·B + B′·C + A·C
+        // indices: 0:F 1:' = ' 2:A 3:· 4:B 5:' + ' 6:B′ 7:· 8:C 9:' + ' 10:A 11:· 12:C
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:' + '},{t:'B\u2032'},{t:'\u00b7'},{t:'C'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[], dm:[], law:null,
+      },
+      {
+        stepNum: 'Step 1', label: 'Multiply last term by (B + B\u2032) = 1',
+        // F = A·B + B′·C + A·C·(B + B′)
+        // indices: 0:F 1:' = ' 2:A 3:· 4:B 5:' + ' 6:B′ 7:· 8:C 9:' + ' 10:A 11:· 12:C 13:· 14:( 15:B 16:' + ' 17:B′ 18:)
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:' + '},{t:'B\u2032'},{t:'\u00b7'},{t:'C'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'C'},{t:'\u00b7'},{t:'('},{t:'B'},{t:' + '},{t:'B\u2032'},{t:')'}
+        ],
+        hl:[10,11,12,13,14,15,16,17,18], dm:[2,3,4,6,7,8], law:'complement_mul',
+      },
+      {
+        stepNum: 'Step 2', label: 'Distribute A\u00b7C across (B + B\u2032)',
+        // F = A·B + B′·C + A·B·C + A·B′·C
+        // indices: 0:F 1:' = ' 2:A 3:· 4:B 5:' + ' 6:B′ 7:· 8:C 9:' + ' 10:A 11:· 12:B 13:· 14:C 15:' + ' 16:A 17:· 18:B′ 19:· 20:C
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:' + '},{t:'B\u2032'},{t:'\u00b7'},{t:'C'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:'\u00b7'},{t:'C'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'B\u2032'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[10,11,12,13,14,15,16,17,18,19,20], dm:[2,3,4,6,7,8], law:'distributive2',
+      },
+      {
+        stepNum: 'Step 3', label: 'Factor: group A\u00b7B terms and B\u2032\u00b7C terms',
+        // F = A·B·(1+C) + B′·C·(1+A)
+        // indices: 0:F 1:' = ' 2:A 3:· 4:B 5:· 6:( 7:1 8:+C 9:) 10:' + ' 11:B′ 12:· 13:C 14:· 15:( 16:1 17:+A 18:)
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:'\u00b7'},{t:'(1+C)'},{t:' + '},{t:'B\u2032'},{t:'\u00b7'},{t:'C'},{t:'\u00b7'},{t:'(1+A)'}
+        ],
+        hl:[2,3,4,5,6,8,9,10,11,12], dm:[], law:'distributive',
+      },
+      {
+        stepNum: 'Step 4', label: 'Null Law: (1+C) = 1 and (1+A) = 1',
+        // F = A·B + B′·C
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:' + '},{t:'B\u2032'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[2,3,4,6,7,8], dm:[], law:'null_law', final:true,
+      },
+    ]
+  },
+
+  {
+    title: 'Example 4',
+    subtitle: 'F = (A + B)\u00b7(A + C)',
+    steps: [
+      {
+        stepNum: 'Given', label: 'Original Expression',
+        // F = (A + B)·(A + C)
+        tokens: [
+          {t:'F'},{t:' = '},{t:'('},{t:'A'},{t:' + '},{t:'B'},{t:')'},{t:'\u00b7'},{t:'('},{t:'A'},{t:' + '},{t:'C'},{t:')'}
+        ],
+        hl:[], dm:[], law:null,
+      },
+      {
+        stepNum: 'Step 1', label: 'Multiply out (distribute)',
+        // F = A·A + A·C + A·B + B·C
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'A'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'C'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:' + '},{t:'B'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[2,3,4,5,6,7,8,9,10,11,12,13,14,15,16], dm:[], law:'distributive',
+        lawRule:'(A+B)\u00b7(A+C) = A\u00b7A + A\u00b7C + A\u00b7B + B\u00b7C',
+        lawExplain:'Multiply every term in the first group by every term in the second.',
+      },
+      {
+        stepNum: 'Step 2', label: 'Idempotent Law: A\u00b7A = A',
+        // F = A + A·C + A·B + B·C
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'C'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:' + '},{t:'B'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[2], dm:[4,5,6,8,9,10,12,13,14], law:'idempotent',
+      },
+      {
+        stepNum: 'Step 3', label: 'Absorption: A + A\u00b7C + A\u00b7B = A',
+        // F = A + B·C
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:' + '},{t:'B'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[2], dm:[4,5,6], law:'absorption',
+        lawExplain:'A absorbs A\u00b7C and A\u00b7B; only the consensus term B\u00b7C survives.',
+        final:true,
+      },
+    ]
+  },
+
+  {
+    title: 'Example 5',
+    subtitle: 'F = A\u00b7B + A\u00b7B\u00b7C + A\u00b7B\u2032',
+    steps: [
+      {
+        stepNum: 'Given', label: 'Original Expression',
+        // F = A·B + A·B·C + A·B′
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:'\u00b7'},{t:'C'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'B\u2032'}
+        ],
+        hl:[], dm:[], law:null,
+      },
+      {
+        stepNum: 'Step 1', label: 'Absorption: A\u00b7B + A\u00b7B\u00b7C = A\u00b7B',
+        // F = A·B + A·B′
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'B'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'B\u2032'}
+        ],
+        hl:[2,3,4], dm:[6,7,8], law:'absorption',
+        lawExplain:'A\u00b7B absorbs A\u00b7B\u00b7C, since the second term already contains A\u00b7B.',
+      },
+      {
+        stepNum: 'Step 2', label: 'Factor A from both terms',
+        // F = A·(B + B′)
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'('},{t:'B'},{t:' + '},{t:'B\u2032'},{t:')'}
+        ],
+        hl:[2,3,4,5,6,7,8], dm:[], law:'distributive',
+        lawExplain:'Both terms share the factor A, so factor it out.',
+      },
+      {
+        stepNum: 'Step 3', label: 'Complement Law: B + B\u2032 = 1',
+        // F = A·(1)
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'('},{t:'1'},{t:')'}
+        ],
+        hl:[4,5,6], dm:[2,3], law:'complement',
+      },
+      {
+        stepNum: 'Step 4', label: 'Identity Law: A\u00b7(1) = A',
+        // F = A
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'}
+        ],
+        hl:[2], dm:[], law:'identity', final:true,
+      },
+    ]
+  },
+
+  {
+    title: 'Example 6',
+    subtitle: 'F = A\u2032\u00b7B\u00b7C + A\u00b7C',
+    steps: [
+      {
+        stepNum: 'Given', label: 'Original Expression',
+        // F = A′·B·C + A·C
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A\u2032'},{t:'\u00b7'},{t:'B'},{t:'\u00b7'},{t:'C'},{t:' + '},{t:'A'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[], dm:[], law:null,
+      },
+      {
+        stepNum: 'Step 1', label: 'Factor C from both terms',
+        // F = C·(A + A′·B)
+        tokens: [
+          {t:'F'},{t:' = '},{t:'C'},{t:'\u00b7'},{t:'('},{t:'A'},{t:' + '},{t:'A\u2032'},{t:'\u00b7'},{t:'B'},{t:')'}
+        ],
+        hl:[2,3,4,5,6,7,8,9,10], dm:[], law:'distributive',
+        lawExplain:'Both terms share the factor C, so factor it out.',
+      },
+      {
+        stepNum: 'Step 2', label: 'Reduction: A + A\u2032\u00b7B = A + B',
+        // F = C·(A + B)
+        tokens: [
+          {t:'F'},{t:' = '},{t:'C'},{t:'\u00b7'},{t:'('},{t:'A'},{t:' + '},{t:'B'},{t:')'}
+        ],
+        hl:[4,5,6,7,8], dm:[2,3], law:'reduction',
+      },
+      {
+        stepNum: 'Step 3', label: 'Distribute C back across (A + B)',
+        // F = A·C + B·C
+        tokens: [
+          {t:'F'},{t:' = '},{t:'A'},{t:'\u00b7'},{t:'C'},{t:' + '},{t:'B'},{t:'\u00b7'},{t:'C'}
+        ],
+        hl:[2,3,4,5,6,7,8], dm:[], law:'distributive',
+        lawExplain:'Distribute C across the simplified sum to get the final form.',
+        final:true,
+      },
+    ]
+  },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentExample = 0;
+let currentStep    = 0;
+
+function activeSteps() { return EXAMPLES[currentExample].steps; }
+
+// ── Font sizing ───────────────────────────────────────────────────────────────
+const FONT_CURRENT = 46;
+const FONT_DONE    = 27;
+const CONN_H       = 32;
+
+// ── Build proof area ──────────────────────────────────────────────────────────
+function buildProofArea() {
+  const area   = document.getElementById('proofArea');
+  area.innerHTML = '';
+  const steps   = activeSteps();
+  const visible = steps.slice(0, currentStep + 1);
+
+  visible.forEach((step, i) => {
+    const isCurrent = (i === visible.length - 1);
+    const isDone    = !isCurrent;
+    const isFinal   = !!step.final && isCurrent;
+
+    // Connector
+    if (i > 0) {
+      const conn = document.createElement('div');
+      conn.className = 'connector';
+      conn.style.height = CONN_H + 'px';
+      conn.style.opacity = isDone ? '0.3' : '1';
+      conn.innerHTML = `<svg width="30" height="${CONN_H}" viewBox="0 0 30 ${CONN_H}">
+        <line x1="15" y1="0" x2="15" y2="${CONN_H-9}"
+              stroke="${isDone ? '#aab4c8' : '#1a2744'}" stroke-width="2.5"
+              stroke-dasharray="${isDone ? '4 3' : 'none'}"/>
+        <polygon points="15,${CONN_H} 8,${CONN_H-10} 22,${CONN_H-10}"
+                 fill="${isDone ? '#aab4c8' : '#1a2744'}"/>
+      </svg>`;
+      area.appendChild(conn);
+    }
+
+    // Row
+    const row = document.createElement('div');
+    row.className = 'step-row';
+
+    // Expr block
+    const eb = document.createElement('div');
+    eb.className = 'expr-block' +
+      (isCurrent ? ' is-current' : ' is-done') +
+      (isFinal   ? ' is-final'   : '');
+
+    const numEl = document.createElement('div');
+    numEl.className = 'step-num';
+    numEl.textContent = step.stepNum +
+      (isFinal   ? '  \u2713  Simplified' :
+       step.law  ? '' :
+                   '  \u2014  ' + step.label);
+    eb.appendChild(numEl);
+
+    const exprEl = document.createElement('div');
+    exprEl.className = 'expression';
+    exprEl.style.fontSize = (isCurrent ? FONT_CURRENT : FONT_DONE) + 'px';
+
+    step.tokens.forEach((tok, ti) => {
+      const sp = document.createElement('span');
+      sp.className = 'tok';
+      sp.textContent = tok.t;
+      if      (isCurrent && step.hl.includes(ti)) sp.classList.add('hl');
+      else if (isCurrent && step.dm.includes(ti)) sp.classList.add('dm');
+      exprEl.appendChild(sp);
+    });
+    eb.appendChild(exprEl);
+
+    const chip = document.createElement('div');
+    chip.className = 'final-chip';
+    chip.textContent = '\u2713 Final Result';
+    eb.appendChild(chip);
+
+    row.appendChild(eb);
+
+    // Law badge
+    const lb = document.createElement('div');
+    lb.className = 'law-block' +
+      (step.law ? ' visible'     : '') +
+      (isDone   ? ' is-done-law' : '');
+
+    if (step.law) {
+      const law  = LAWS[step.law];
+      const pill = document.createElement('div');
+      pill.className = 'law-pill';
+      if (isDone) { pill.style.fontSize = '0.82em'; pill.style.padding = '7px 13px'; }
+
+      const nm = document.createElement('div'); nm.className = 'law-name'; nm.textContent = step.lawName || law.name;
+      const rl = document.createElement('div'); rl.className = 'law-rule'; rl.textContent = step.lawRule || law.rule;
+      pill.appendChild(nm);
+      pill.appendChild(rl);
+
+      if (isCurrent) {
+        const ex = document.createElement('div'); ex.className = 'law-explain'; ex.textContent = step.lawExplain || law.explain;
+        pill.appendChild(ex);
+      }
+      lb.appendChild(pill);
+    }
+    row.appendChild(lb);
+    area.appendChild(row);
+  });
+
+  // Dots
+  const dotsEl = document.getElementById('stepDots');
+  dotsEl.innerHTML = '';
+  steps.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'dot' +
+      (i < currentStep  ? ' done'    : '') +
+      (i === currentStep ? ' current' : '');
+    dot.title = steps[i].label;
+    dot.addEventListener('click', () => goToStep(i));
+    dotsEl.appendChild(dot);
+  });
+
+  document.getElementById('btnPrev').disabled = (currentStep === 0);
+  document.getElementById('btnNext').disabled = (currentStep === steps.length - 1);
+
+  // Highlight ref row
+  const law    = steps[currentStep].law;
+  const refKey = law ? LAWS[law].ref : null;
+  document.querySelectorAll('.ref-row').forEach(row => {
+    const nm = row.querySelector('.ref-law-name');
+    row.classList.toggle('active-law', nm && nm.textContent === refKey);
+  });
+}
+
+// ── Example tabs ──────────────────────────────────────────────────────────────
+function buildTabs() {
+  const tabsEl = document.getElementById('exampleTabs');
+  tabsEl.innerHTML = '';
+  EXAMPLES.forEach((ex, i) => {
+    const tab = document.createElement('button');
+    tab.className = 'ex-tab' + (i === currentExample ? ' active' : '');
+    tab.textContent = ex.title;
+    tab.addEventListener('click', () => {
+      currentExample = i;
+      currentStep    = 0;
+      buildTabs();
+      buildProofArea();
+    });
+    tabsEl.appendChild(tab);
+  });
+}
+
+// ── Reference panel ───────────────────────────────────────────────────────────
+function buildRefPanel() {
+  const c = document.getElementById('refRows');
+  REF_LAWS.forEach(law => {
+    const row = document.createElement('div');
+    row.className = 'ref-row';
+    const nm = document.createElement('div'); nm.className = 'ref-law-name'; nm.textContent = law.name;
+    const rl = document.createElement('div'); rl.className = 'ref-law-rule'; rl.textContent = law.rules.join('   |   ');
+    row.appendChild(nm); row.appendChild(rl);
+    c.appendChild(row);
+  });
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function goToStep(idx) {
+  currentStep = Math.max(0, Math.min(activeSteps().length - 1, idx));
+  buildProofArea();
+}
+
+document.getElementById('btnNext').addEventListener('click', () => goToStep(currentStep + 1));
+document.getElementById('btnPrev').addEventListener('click', () => goToStep(currentStep - 1));
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') goToStep(currentStep + 1);
+  if (e.key === 'ArrowLeft')  goToStep(currentStep - 1);
+});
+
+// ── Scaling ───────────────────────────────────────────────────────────────────
+function autoResize() {
+  const container = document.getElementById('viewportContainer');
+  const surface   = document.getElementById('designSurface');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let cw, ch;
+  if (vw / vh > 16/9) { ch = vh; cw = ch * 16/9; }
+  else                 { cw = vw; ch = cw * 9/16; }
+  container.style.width  = cw + 'px';
+  container.style.height = ch + 'px';
+  surface.style.transform = `scale(${cw / 1920})`;
+}
+autoResize();
+let _rt;
+window.addEventListener('resize', () => { clearTimeout(_rt); _rt = setTimeout(autoResize, 50); });
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildRefPanel();
+buildTabs();
+buildProofArea();
+</script>
+</body>
+</html>

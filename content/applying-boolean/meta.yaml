@@ -1,0 +1,11 @@
+title: "Applying Boolean Properties and Identities"
+description: "Using Boolean identities to simplify expressions into more efficient, equivalent forms—factoring, complement and identity laws, De Morgan's theorem, and involution."
+chapter: combinational-logic
+section: boolean-basics
+order: 30301
+
+graphics:
+  01-applying-boolean-video.youtube:
+    caption: "Video: applying Boolean properties and identities to simplify expressions"
+  02-applying-boolean-interactive.html:
+    caption: "Interactive: step through Boolean simplifications and see which property justifies each step"
