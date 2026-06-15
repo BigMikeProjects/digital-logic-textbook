@@ -1,0 +1,9 @@
+title: "Karnaugh Maps"
+description: ""
+chapter: combinational-logic
+section: karnaugh-maps
+order: 30400
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the historical and modern context of Karnaugh maps"
