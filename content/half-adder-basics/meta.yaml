@@ -2,7 +2,7 @@ title: "Half Adder Basics"
 description: "Introduction to the half adder circuit and its operation"
 chapter: combinational-logic
 section: adders
-order: 30401
+order: 30501
 
 graphics:
   01-block-diagram.svg:

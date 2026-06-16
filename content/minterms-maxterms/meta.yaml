@@ -1,0 +1,11 @@
+title: "Minterms and Maxterms"
+description: ""
+chapter: combinational-logic
+section: truth-tables
+order: 30303
+
+graphics:
+  01-video.youtube:
+    caption: "Video: minterms and maxterms — building canonical SOP and POS from a truth table"
+  02-interactive.html:
+    caption: "Interactive: toggle a 3-variable truth table and watch the canonical SOP/POS and the minterm (Σm) and maxterm (ΠM) lists build in real time"
