@@ -1,0 +1,11 @@
+title: "Karnaugh Map Basics"
+description: ""
+chapter: combinational-logic
+section: karnaugh-maps
+order: 30401
+
+graphics:
+  01-video.youtube:
+    caption: "Video: constructing and reading Karnaugh maps — regions, intersections, and Gray-code layout on 2-, 3-, and 4-variable maps"
+  02-interactive.html:
+    caption: "Interactive: construct and read Karnaugh maps — type product-term expressions on 2-, 3-, and 4-variable maps and watch the groups and the Σm minterm list update live"

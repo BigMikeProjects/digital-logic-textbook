@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karnaugh Maps — Constructing &amp; Reading</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root{
+    --bg:#e8e8e8;
+    --surface:#ffffff;
+    --ink:#0f172a;
+    --ink-soft:#475569;
+    --line:#cbd5e1;
+    --cell-line:#94a3b8;
+    --accent:#1d4ed8;
+    --amber:#b45309;
+    --tint:#fde7bd;      /* covered-cell fill */
+    --tint-line:#e3a008;
+    --zero:#b8c4d4;      /* value 0 text */
+  }
+
+  html, body { height:100%; overflow:hidden; background:var(--bg); }
+  body { display:flex; align-items:center; justify-content:center;
+         font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color:var(--ink); }
+
+  .viewport-container{ width:100%; max-width:100vw; aspect-ratio:16/9; max-height:100vh;
+                       position:relative; overflow:hidden; }
+  .design-surface{ width:1920px; height:1080px; position:absolute; top:0; left:0;
+                   transform-origin:top left; display:flex; flex-direction:column;
+                   padding:34px 50px 14px; }
+
+  /* ---------- header ---------- */
+  .head{ display:flex; align-items:flex-end; justify-content:space-between; gap:24px;
+         border-bottom:3px solid #d2d6dc; padding-bottom:14px; }
+  .title-wrap h1{ font-size:38px; font-weight:800; letter-spacing:.3px; }
+  .title-wrap .step{ font-size:20px; color:var(--ink-soft); margin-top:4px; font-weight:600; }
+  .step b{ color:var(--accent); }
+
+  .nav{ display:flex; align-items:center; gap:18px; }
+  .dots{ display:flex; gap:10px; }
+  .dot{ padding:10px 18px; border-radius:11px; border:2px solid var(--line);
+        background:var(--surface); color:var(--ink-soft); font-size:18px; font-weight:700;
+        cursor:pointer; white-space:nowrap; }
+  .dot.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .arrow{ width:58px; height:58px; border-radius:12px; border:2px solid var(--line);
+          background:var(--surface); color:var(--ink); font-size:28px; font-weight:800;
+          cursor:pointer; line-height:1; }
+  .arrow:active{ background:#eef2f7; }
+
+  /* ---------- body ---------- */
+  .body{ flex:1; display:flex; gap:46px; min-height:0; padding-top:20px; }
+
+  .map-area{ width:980px; display:flex; align-items:center; justify-content:center; }
+  .map-area svg{ display:block; }
+
+  .panel{ flex:1; display:flex; flex-direction:column; gap:16px; min-height:0; }
+  .panel-title{ font-size:24px; font-weight:800; }
+
+  .expr-bar{ background:var(--surface); border:2px solid var(--line); border-radius:14px;
+             padding:18px 22px; min-height:78px; display:flex; align-items:center;
+             font-size:40px; font-weight:700; letter-spacing:1px; }
+  .expr-bar .ph{ color:#9aa6b6; font-weight:600; font-size:26px; letter-spacing:.3px; }
+  .expr-bar .op{ color:var(--amber); padding:0 12px; }
+  .expr-bar .prime{ font-weight:700; }
+  .caret{ display:inline-block; width:3px; height:40px; background:var(--accent);
+          margin-left:4px; animation:blink 1.05s steps(1) infinite; vertical-align:-6px; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .readout{ font-size:24px; font-weight:700; color:var(--ink); }
+  .readout .m{ color:var(--accent); }
+  .readout .none{ color:#9aa6b6; font-weight:600; }
+
+  .btns{ display:flex; flex-wrap:wrap; gap:10px; }
+  .btn{ border:2px solid var(--line); background:var(--surface); color:var(--ink);
+        border-radius:11px; font-size:24px; font-weight:700; padding:12px 0; width:84px;
+        text-align:center; cursor:pointer; }
+  .btn.lit-n{ border-color:#d8b07a; }
+  .btn:active{ background:#eef2f7; }
+  .btn.op{ width:auto; padding:12px 20px; font-size:20px; color:var(--ink-soft); }
+  .btn.op.danger{ color:#b91c1c; border-color:#e7b4b4; }
+
+  .presets{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .presets .lab{ font-size:18px; color:var(--ink-soft); font-weight:700; }
+  .chip{ border:2px dashed #c7ced8; background:#f6f8fb; color:var(--accent);
+         border-radius:20px; padding:9px 18px; font-size:21px; font-weight:700; cursor:pointer; }
+  .chip:active{ background:#e9eef6; }
+
+  .legend{ display:flex; flex-direction:column; gap:9px; }
+  .legend .row{ display:flex; align-items:center; gap:14px; font-size:21px; }
+  .legend .swatch{ width:46px; height:0; border-bottom-width:5px; border-bottom-style:solid;
+                   flex:0 0 auto; border-radius:2px; }
+  .legend .term{ font-weight:700; min-width:120px; }
+  .legend .cells{ color:var(--ink-soft); font-size:19px; }
+  .legend .zero{ color:#b91c1c; font-weight:600; font-size:19px; }
+
+  .note{ margin-top:auto; background:#f3f5f8; border-left:5px solid var(--accent);
+         border-radius:0 12px 12px 0; padding:16px 20px; font-size:19px; line-height:1.5;
+         color:var(--ink); }
+  .note b{ color:var(--accent); }
+
+  /* ---------- footer ---------- */
+  .foot{ display:flex; justify-content:center; gap:28px; padding-top:10px; margin-top:8px;
+         border-top:2px solid #d2d6dc; color:var(--ink-soft); font-size:17px; }
+  .foot kbd{ background:var(--surface); border:1.5px solid var(--line); border-bottom-width:3px;
+             border-radius:6px; padding:2px 9px; font-family:inherit; font-weight:700;
+             color:var(--ink); }
+</style>
+</head>
+<body>
+  <div class="viewport-container" id="viewportContainer">
+    <div class="design-surface" id="designSurface">
+
+      <div class="head">
+        <div class="title-wrap">
+          <h1>Karnaugh Maps — Constructing &amp; Reading</h1>
+          <div class="step" id="stepText"></div>
+        </div>
+        <div class="nav">
+          <button class="arrow" onclick="go(-1)" aria-label="Previous">‹</button>
+          <div class="dots" id="dots"></div>
+          <button class="arrow" onclick="go(1)" aria-label="Next">›</button>
+        </div>
+      </div>
+
+      <div class="body">
+        <div class="map-area" id="mapHost"></div>
+        <div class="panel" id="panelHost"></div>
+      </div>
+
+      <div class="foot">
+        <span><kbd>A</kbd>–<kbd>D</kbd> add variable</span>
+        <span><kbd>'</kbd> toggle NOT</span>
+        <span><kbd>+</kbd> new term</span>
+        <span><kbd>⌫</kbd> delete</span>
+        <span><kbd>Esc</kbd> clear</span>
+        <span><kbd>←</kbd><kbd>→</kbd> change page · <kbd>1</kbd>–<kbd>3</kbd> jump</span>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/* ============================================================
+   MAP DEFINITIONS  (single source of truth)
+   Variables are MSB-first: A is the most-significant bit.
+   Row variables occupy the high bits, column variables the low.
+   minterm = rowValue * 2^(#colVars) + colValue
+   Gray codes:  1-bit -> 0,1     2-bit -> 00,01,11,10
+   ============================================================ */
+const GRAY1 = [0,1];
+const GRAY2 = [0,1,3,2];
+
+const PAGES = [
+  { n:2, vars:['A','B'],         rowVars:['A'],     colVars:['B'],
+    rowGray:GRAY1, colGray:GRAY1, cell:240, mL:150,
+    note:`A 2-variable map has <b>2² = 4 cells</b> — one per input combination (minterm).
+          Rows = A, columns = B. Cells that touch edge-to-edge differ in exactly one
+          variable, so they can be combined.` },
+
+  { n:3, vars:['A','B','C'],     rowVars:['A'],     colVars:['B','C'],
+    rowGray:GRAY1, colGray:GRAY2, cell:190, mL:150,
+    note:`<b>2³ = 8 cells</b>: A on the rows, B C on the columns. Columns follow
+          <b>Gray code 00·01·11·10</b> — neighbours differ in one bit, which makes physical
+          neighbours logical neighbours. The left and right edges <b>wrap</b> (col 10 ↔ 00).` },
+
+  { n:4, vars:['A','B','C','D'], rowVars:['A','B'], colVars:['C','D'],
+    rowGray:GRAY2, colGray:GRAY2, cell:150, mL:160,
+    note:`<b>2⁴ = 16 cells</b>: A B on the rows, C D on the columns, both Gray-coded.
+          Top/bottom <b>and</b> left/right wrap (it's a torus). Each product term you type
+          lands on exactly one rectangle of 1, 2, 4, 8 or 16 cells.` },
+];
+const MARGIN_TOP = 150;
+
+/* loop styles: distinct hue + line pattern (second cue for colour-blind readers) */
+const LOOPS = [
+  { stroke:'#d97706', dash:'' },        /* amber  solid  */
+  { stroke:'#6d28d9', dash:'' },        /* violet solid  */
+  { stroke:'#0e7490', dash:'11 8' },    /* teal   dashed */
+  { stroke:'#1d4ed8', dash:'11 8' },    /* blue   dashed */
+  { stroke:'#a21caf', dash:'2 9' },     /* fuchsia dotted*/
+  { stroke:'#15803d', dash:'15 7 3 7' },/* green  dash-dot */
+];
+
+/* presets per page, defined as term structures (literal = {v, neg}) */
+const L = (v,neg)=>({v,neg:!!neg});
+PAGES[0].presets = [
+  [[L('A',0),L('B',1)]],
+  [[L('A',0)],[L('B',0)]],
+];
+PAGES[1].presets = [
+  [[L('A',0)]],
+  [[L('C',1)]],
+  [[L('A',1),L('C',0)],[L('A',0),L('B',1)]],
+];
+PAGES[2].presets = [
+  [[L('B',1),L('D',1)]],
+  [[L('A',0),L('B',0)],[L('C',1)]],
+  [[L('A',1),L('C',0),L('D',1)],[L('B',1),L('D',1)]],
+];
+
+/* ---------- state ---------- */
+let active = 0;
+const state = PAGES.map(()=>({ terms:[[]] }));
+
+/* ============================================================
+   LOGIC HELPERS
+   ============================================================ */
+function termConstraints(term){
+  const map = {}; let conflict = false;
+  for(const lit of term){
+    const b = lit.neg ? 0 : 1;
+    if(lit.v in map && map[lit.v] !== b) conflict = true;
+    map[lit.v] = b;
+  }
+  return { map, conflict };
+}
+// does row index r satisfy the term's constraints on the row-variables?
+function axisAllowed(vars, grayVals, idx, cons){
+  if(cons.conflict) return false;
+  const val = grayVals[idx];
+  for(let k=0;k<vars.length;k++){
+    const v = vars[k];
+    if(v in cons.map){
+      const bit = (val >> (vars.length-1-k)) & 1;   // vars[0] is MSB of this axis
+      if(bit !== cons.map[v]) return false;
+    }
+  }
+  return true;
+}
+const rowAllowed = (p,r,c)=> axisAllowed(p.rowVars, p.rowGray, r, c);
+const colAllowed = (p,c,co)=> axisAllowed(p.colVars, p.colGray, c, co);
+
+function cellMinterm(p,r,c){
+  return p.rowGray[r] * (1 << p.colVars.length) + p.colGray[c];
+}
+// cells covered by one term -> minterm list + allowed row/col index sets
+function termCells(p, term){
+  const cons = termConstraints(term);
+  const rows=[], cols=[];
+  for(let r=0;r<p.rowGray.length;r++) if(rowAllowed(p,r,cons)) rows.push(r);
+  for(let c=0;c<p.colGray.length;c++) if(colAllowed(p,c,cons)) cols.push(c);
+  const cells=[];
+  for(const r of rows) for(const c of cols) cells.push(cellMinterm(p,r,c));
+  cells.sort((a,b)=>a-b);
+  return { cells, rows, cols, conflict:cons.conflict };
+}
+// find a contiguous (possibly wrapping) run that exactly covers the index set
+function findRun(set, M){
+  const S = new Set(set);
+  for(const s of set){
+    let ok=true;
+    for(let i=0;i<set.length;i++){ if(!S.has((s+i)%M)){ ok=false; break; } }
+    if(ok) return { start:s, len:set.length };
+  }
+  return { start:set[0], len:set.length };
+}
+function runSegments(start,len,M){
+  if(start+len<=M) return [[start, start+len-1]];
+  return [[start, M-1],[0, (start+len-1)%M]];
+}
+
+/* ============================================================
+   SVG MAP
+   ============================================================ */
+const esc = s => String(s);
+function bin(val,width){ return val.toString(2).padStart(width,'0'); }
+
+function buildMapSVG(p, st){
+  const R = p.rowGray.length, C = p.colGray.length, cell = p.cell;
+  const gx = p.mL, gy = MARGIN_TOP;
+  const svgW = gx + C*cell + 20;
+  const svgH = gy + R*cell + 24;
+  const cx = c => gx + c*cell + cell/2;
+  const cy = r => gy + r*cell + cell/2;
+
+  // value of every cell (covered by any non-empty term?)
+  const consAll = st.terms.map(t => t.length ? termConstraints(t) : null);
+  const covered = (r,c)=>{
+    for(let ti=0;ti<st.terms.length;ti++){
+      const t=st.terms[ti]; if(!t.length) continue;
+      const co=consAll[ti]; if(co.conflict) continue;
+      if(rowAllowed(p,r,co) && colAllowed(p,c,co)) return true;
+    }
+    return false;
+  };
+
+  let s = `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}"
+            xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, sans-serif">`;
+
+  /* axis variable labels */
+  s += `<text x="${gx + C*cell/2}" y="42" text-anchor="middle" font-size="30"
+          font-weight="800" fill="#0f172a">${p.colVars.join(' ')}</text>`;
+  s += `<text x="58" y="${gy + R*cell/2}" text-anchor="middle" font-size="30"
+          font-weight="800" fill="#0f172a"
+          transform="rotate(-90 58 ${gy + R*cell/2})">${p.rowVars.join(' ')}</text>`;
+
+  /* function-name corner mark: 45° tick rising from the top-left corner, labelled F */
+  const off = Math.min(cell*0.35, 90);
+  const fSize = Math.min(cell*0.26, 54);
+  s += `<line x1="${gx}" y1="${gy}" x2="${gx-off}" y2="${gy-off}" stroke="#0f172a"
+          stroke-width="3" stroke-linecap="round"/>`;
+  s += `<text x="${gx-off}" y="${gy-off-6}" text-anchor="middle" font-size="${fSize}"
+          font-style="italic" font-weight="700" fill="#0f172a">F</text>`;
+
+  /* gray-code caption */
+  const cap = p.n===2 ? 'columns = value of B'
+                      : 'Gray code — one bit changes between neighbours';
+  s += `<text x="${gx + C*cell/2}" y="80" text-anchor="middle" font-size="18"
+          font-weight="700" fill="#b45309">${cap}</text>`;
+
+  /* column binary headers */
+  for(let c=0;c<C;c++){
+    s += `<text x="${cx(c)}" y="${gy-26}" text-anchor="middle" font-size="26"
+            font-weight="700" font-family="Consolas,monospace" fill="#1e293b"
+            letter-spacing="2">${bin(p.colGray[c], p.colVars.length)}</text>`;
+  }
+  /* row binary headers */
+  for(let r=0;r<R;r++){
+    s += `<text x="${gx-34}" y="${cy(r)+9}" text-anchor="middle" font-size="26"
+            font-weight="700" font-family="Consolas,monospace" fill="#1e293b"
+            letter-spacing="2">${bin(p.rowGray[r], p.rowVars.length)}</text>`;
+  }
+
+  /* cells */
+  for(let r=0;r<R;r++) for(let c=0;c<C;c++){
+    const on = covered(r,c);
+    const m  = cellMinterm(p,r,c);
+    const x = gx + c*cell, y = gy + r*cell;
+    s += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}"
+            fill="${on?'var(--tint)':'#ffffff'}"
+            stroke="${on?'#e3a008':'#94a3b8'}" stroke-width="2"/>`;
+    s += `<text x="${x+cell*0.12}" y="${y+cell*0.20}" font-size="${cell*0.14}"
+            fill="#94a3b8" font-weight="600">m${m}</text>`;
+    s += `<text x="${cx(c)}" y="${cy(r)+cell*0.12}" text-anchor="middle"
+            font-size="${cell*0.34}" font-weight="${on?800:600}"
+            fill="${on?'#0f172a':'#b8c4d4'}">${on?1:0}</text>`;
+  }
+
+  /* group loops */
+  let drawn = 0;
+  st.terms.forEach((t,ti)=>{
+    if(!t.length) return;
+    const co = consAll[ti]; if(co.conflict) return;
+    const rows=[], cols=[];
+    for(let r=0;r<R;r++) if(rowAllowed(p,r,co)) rows.push(r);
+    for(let c=0;c<C;c++) if(colAllowed(p,c,co)) cols.push(c);
+    if(!rows.length || !cols.length) return;
+    const rr = findRun(rows,R), cc = findRun(cols,C);
+    const rsegs = runSegments(rr.start,rr.len,R);
+    const csegs = runSegments(cc.start,cc.len,C);
+    const sty = LOOPS[ti % LOOPS.length];
+    const inset = 12 + drawn*9; drawn++;
+    for(const rs of rsegs) for(const cs of csegs){
+      const x=gx+cs[0]*cell+inset, y=gy+rs[0]*cell+inset;
+      const w=(cs[1]-cs[0]+1)*cell-2*inset, h=(rs[1]-rs[0]+1)*cell-2*inset;
+      s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="20" ry="20"
+              fill="none" stroke="${sty.stroke}" stroke-width="5"
+              ${sty.dash?`stroke-dasharray="${sty.dash}"`:''} stroke-linejoin="round"/>`;
+    }
+  });
+
+  s += `</svg>`;
+  return s;
+}
+
+/* ============================================================
+   PANEL (expression bar, readout, controls, legend, note)
+   ============================================================ */
+function litHTML(lit){
+  return `${lit.v}${lit.neg?'<span class="prime">′</span>':''}`;
+}
+function termHTML(term){ return term.map(litHTML).join(''); }
+
+function buildPanel(p, st){
+  const nonEmpty = st.terms.filter(t=>t.length);
+  // expression bar
+  let expr;
+  if(!nonEmpty.length){
+    expr = `<span class="ph">type a term — e.g. ${p.n>=3?'A′C + AB′':'AB′ + A′'}</span>`;
+  } else {
+    expr = st.terms.filter(t=>t.length).map(termHTML).join('<span class="op">+</span>');
+    if(!st.terms[st.terms.length-1].length) expr += '<span class="op">+</span>';
+    expr += '<span class="caret"></span>';
+  }
+
+  // F = Σ m(...)
+  const ones = new Set();
+  for(const t of nonEmpty){ for(const m of termCells(p,t).cells) ones.add(m); }
+  const list = [...ones].sort((a,b)=>a-b);
+  const readout = list.length
+    ? `F = Σ m(<span class="m">${list.join(', ')}</span>)`
+    : `F = Σ m(<span class="none">∅</span>)`;
+
+  // variable buttons
+  let btns = '';
+  for(const v of p.vars){
+    btns += `<button class="btn" onclick="addLit('${v}',false)">${v}</button>`;
+    btns += `<button class="btn lit-n" onclick="addLit('${v}',true)">${v}′</button>`;
+  }
+
+  // presets
+  let chips = '<span class="lab">try:</span>';
+  p.presets.forEach((pr,i)=>{
+    const label = pr.map(termHTML).join('<span style="color:#b45309"> + </span>');
+    chips += `<button class="chip" onclick="loadPreset(${i})">${label}</button>`;
+  });
+
+  // legend (one row per non-empty term)
+  let legend = '';
+  let di = 0;
+  st.terms.forEach((t,ti)=>{
+    if(!t.length) return;
+    const sty = LOOPS[ti % LOOPS.length];
+    const info = termCells(p,t);
+    let cells;
+    if(info.conflict || !info.cells.length) cells = `<span class="zero">= 0 (no cells)</span>`;
+    else cells = `<span class="cells">m ${info.cells.join(', ')} · ${info.cells.length} cell${info.cells.length>1?'s':''}</span>`;
+    const dash = sty.dash ? `border-bottom-style:dashed;` : '';
+    legend += `<div class="row">
+        <span class="swatch" style="border-bottom-color:${sty.stroke};${dash}"></span>
+        <span class="term">${termHTML(t)||'·'}</span>${cells}</div>`;
+    di++;
+  });
+  if(!legend) legend = `<div class="row"><span class="cells">groups appear here as you add terms</span></div>`;
+
+  return `
+    <div class="panel-title">Build a product-term expression</div>
+    <div class="expr-bar" id="exprBar">${expr}</div>
+    <div class="readout">${readout}</div>
+    <div class="btns">${btns}</div>
+    <div class="btns">
+      <button class="btn op" onclick="newTerm()">+ term</button>
+      <button class="btn op" onclick="backspace()">⌫ delete</button>
+      <button class="btn op danger" onclick="clearExpr()">Clear</button>
+    </div>
+    <div class="presets">${chips}</div>
+    <div class="legend">${legend}</div>
+    <div class="note">${p.note}</div>`;
+}
+
+/* ============================================================
+   RENDER + NAV + INPUT
+   ============================================================ */
+function render(){
+  const p = PAGES[active], st = state[active];
+  document.getElementById('mapHost').innerHTML  = buildMapSVG(p, st);
+  document.getElementById('panelHost').innerHTML = buildPanel(p, st);
+
+  document.getElementById('stepText').innerHTML =
+    `Step <b>${active+1}</b> of 3 · ${['Two variables','Three variables','Four variables'][active]}`;
+  document.querySelectorAll('#dots .dot').forEach((d,i)=>
+    d.classList.toggle('active', i===active));
+}
+
+function buildDots(){
+  const labels = ['2-var','3-var','4-var'];
+  document.getElementById('dots').innerHTML =
+    labels.map((l,i)=>`<button class="dot" onclick="jump(${i})">${l}</button>`).join('');
+}
+
+function go(d){ active = Math.max(0, Math.min(PAGES.length-1, active+d)); render(); }
+function jump(i){ active = i; render(); }
+
+/* editing the current page's expression */
+function lastTerm(){ const t = state[active].terms; return t[t.length-1]; }
+function addLit(v, neg){
+  if(!PAGES[active].vars.includes(v)) return;
+  lastTerm().push({v, neg:!!neg});
+  render();
+}
+function toggleNeg(){
+  const t = lastTerm();
+  if(t.length){ t[t.length-1].neg = !t[t.length-1].neg; render(); }
+}
+function newTerm(){
+  const t = state[active].terms;
+  if(t[t.length-1].length) t.push([]);
+  render();
+}
+function backspace(){
+  const t = state[active].terms;
+  if(t[t.length-1].length) t[t.length-1].pop();
+  else if(t.length>1) t.pop();
+  render();
+}
+function clearExpr(){ state[active].terms = [[]]; render(); }
+function loadPreset(i){
+  const pr = PAGES[active].presets[i];
+  state[active].terms = pr.map(term => term.map(l => ({...l})));
+  render();
+}
+
+window.addEventListener('keydown', e=>{
+  const k = e.key;
+  if(k==='ArrowRight'){ go(1); e.preventDefault(); return; }
+  if(k==='ArrowLeft'){ go(-1); e.preventDefault(); return; }
+  if(k>='1' && k<='3'){ jump(+k-1); e.preventDefault(); return; }
+  if(/^[a-dA-D]$/.test(k)){ addLit(k.toUpperCase(), false); e.preventDefault(); return; }
+  if(k==="'" || k==='/'){ toggleNeg(); e.preventDefault(); return; }
+  if(k==='+' || k==='='){ newTerm(); e.preventDefault(); return; }
+  if(k==='Backspace'){ backspace(); e.preventDefault(); return; }
+  if(k==='Escape'){ clearExpr(); e.preventDefault(); return; }
+});
+
+/* ============================================================
+   RESPONSIVE SCALING (transform-scale design surface)
+   ============================================================ */
+const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+function autoResize(){
+  const container = document.getElementById('viewportContainer');
+  const surface = document.getElementById('designSurface');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let cw, ch;
+  if(vw/vh > 16/9){ ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+  container.style.width = cw+'px';
+  container.style.height = ch+'px';
+  surface.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+}
+buildDots();
+render();
+autoResize();
+let rt; window.addEventListener('resize', ()=>{ clearTimeout(rt); rt=setTimeout(autoResize,50); });
+window.addEventListener('orientationchange', ()=> setTimeout(autoResize,100));
+</script>
+</body>
+</html>
