@@ -2,7 +2,7 @@ title: "Applying Boolean Properties and Identities"
 description: "Using Boolean identities to simplify expressions into more efficient, equivalent forms—factoring, complement and identity laws, De Morgan's theorem, and involution."
 chapter: combinational-logic
 section: boolean-basics
-order: 30301
+order: 30302
 
 graphics:
   01-applying-boolean-video.youtube:

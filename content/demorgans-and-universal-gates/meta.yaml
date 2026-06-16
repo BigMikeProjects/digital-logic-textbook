@@ -2,7 +2,7 @@ title: "De Morgan's Theorem and Universal Gates"
 description: "How De Morgan's theorem enables efficient NAND-only and NOR-only circuit implementations"
 chapter: combinational-logic
 section: logic-gates
-order: 30303
+order: 30304
 
 graphics:
   01-demorgans-video.youtube:
