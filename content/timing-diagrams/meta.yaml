@@ -1,0 +1,11 @@
+title: "Timing Diagrams"
+description: ""
+chapter: foundations
+section: circuits
+order: 20201
+
+graphics:
+  01-video.youtube:
+    caption: "Video: an idealized timing diagram — stepping an AND-into-OR circuit through input transitions to watch the output evolve over time"
+  02-interactive.html:
+    caption: "Interactive: read a timing diagram step by step — a live schematic of Y = A·B + C beside its waveform, advancing one input transition at a time"

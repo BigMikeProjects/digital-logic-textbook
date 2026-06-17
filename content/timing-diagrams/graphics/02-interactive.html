@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reading a Timing Diagram</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #d9dde2;
+  }
+  body { display: flex; align-items: center; justify-content: center; }
+
+  /* ---- responsive scaling surface ---- */
+  .viewport-container {
+    width: 100%;
+    max-width: 100vw;
+    aspect-ratio: 16 / 9;
+    max-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+  .design-surface {
+    width: 1920px;
+    height: 1080px;
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: top left;
+    background: #e8e8e8;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #1e293b;
+    padding: 34px 50px 30px 50px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1 {
+    text-align: center;
+    color: #0f172a;
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #475569;
+    font-size: 21px;
+    margin-top: 4px;
+    margin-bottom: 18px;
+  }
+  .subtitle b { color: #0f172a; }
+
+  .body {
+    flex: 1;
+    display: flex;
+    gap: 26px;
+    min-height: 0;
+  }
+
+  .panel {
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    border-radius: 16px;
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .panel-left  { width: 600px; }
+  .panel-right { flex: 1; }
+
+  .panel-header {
+    font-size: 23px;
+    font-weight: 700;
+    color: #0f172a;
+    padding-bottom: 10px;
+    margin-bottom: 6px;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .panel-header .eq { color: #0e7490; font-weight: 700; }
+
+  .svg-wrap { flex: 1; min-height: 0; display: flex; }
+  .svg-wrap svg { width: 100%; height: 100%; }
+
+  /* current-value chips */
+  .chips {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 8px;
+  }
+  .chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 78px;
+    border: 2px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 6px 4px 8px 4px;
+    background: #f8fafc;
+  }
+  .chip .nm { font-size: 17px; color: #475569; font-weight: 600; }
+  .chip .vl {
+    font-size: 30px; font-weight: 800; line-height: 1.05;
+    font-family: 'Consolas','Courier New',monospace;
+  }
+  .chip.hi { border-color: #00d4ff; background: #e6fbff; }
+  .chip.hi .vl { color: #0e7490; }
+  .chip.lo .vl { color: #64748b; }
+
+  /* caption / narration bar */
+  .caption {
+    margin-top: 16px;
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    border-left: 8px solid #f59e0b;
+    border-radius: 12px;
+    padding: 14px 22px;
+    min-height: 86px;
+    display: flex;
+    align-items: center;
+  }
+  .caption .step-tag {
+    font-size: 17px; font-weight: 700; color: #b45309;
+    background: #fef3c7; border-radius: 8px;
+    padding: 5px 12px; margin-right: 18px; white-space: nowrap;
+  }
+  .caption .txt { font-size: 22px; color: #1e293b; line-height: 1.35; }
+  .caption .txt b { color: #0e7490; }
+
+  /* controls + legend */
+  .footer {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .controls { display: flex; gap: 14px; align-items: center; }
+  .btn {
+    font-size: 18px; font-weight: 600;
+    color: #0f172a; background: #ffffff;
+    border: 2px solid #94a3b8; border-radius: 10px;
+    padding: 11px 22px; cursor: pointer;
+    transition: background .12s, border-color .12s, opacity .12s;
+    user-select: none;
+  }
+  .btn:hover { background: #f1f5f9; border-color: #475569; }
+  .btn.primary { background: #0e7490; color: #fff; border-color: #0e7490; }
+  .btn.primary:hover { background: #155e75; }
+  .btn.disabled { opacity: .35; pointer-events: none; }
+  .progress { font-size: 18px; color: #475569; font-weight: 600; }
+
+  .legend {
+    display: flex; gap: 22px; align-items: center;
+    font-size: 16px; color: #475569;
+  }
+  .legend .k {
+    font-family: 'Consolas','Courier New',monospace;
+    font-weight: 700; color: #0f172a;
+    background: #f1f5f9; border: 1px solid #cbd5e1;
+    border-radius: 6px; padding: 2px 8px; margin-right: 6px;
+  }
+  .legend .sw { width: 26px; height: 6px; border-radius: 3px; display:inline-block; vertical-align: middle; margin-right: 6px;}
+</style>
+</head>
+<body>
+  <div class="viewport-container" id="viewportContainer">
+    <div class="design-surface" id="designSurface">
+
+      <h1>Reading a Timing Diagram</h1>
+      <p class="subtitle">Watching the output of <b>Y = A&middot;B + C</b> respond to its inputs, one moment at a time</p>
+
+      <div class="body">
+        <!-- LEFT: live circuit -->
+        <div class="panel panel-left">
+          <div class="panel-header">The circuit &mdash; <span class="eq">Y = A&middot;B + C</span></div>
+          <div class="svg-wrap"><svg id="schematic" viewBox="0 0 600 560" preserveAspectRatio="xMidYMid meet"></svg></div>
+          <div class="chips" id="chips"></div>
+        </div>
+
+        <!-- RIGHT: timing diagram -->
+        <div class="panel panel-right">
+          <div class="panel-header">The timing diagram</div>
+          <div class="svg-wrap"><svg id="waves" viewBox="0 0 1180 680" preserveAspectRatio="xMidYMid meet"></svg></div>
+        </div>
+      </div>
+
+      <!-- narration -->
+      <div class="caption">
+        <div class="step-tag" id="stepTag">Step 0 of 6</div>
+        <div class="txt" id="captionTxt"></div>
+      </div>
+
+      <!-- controls + legend -->
+      <div class="footer">
+        <div class="controls">
+          <div class="btn" id="btnPrev">&larr; Previous</div>
+          <div class="btn primary" id="btnNext">Next &rarr;</div>
+          <div class="btn" id="btnReset">Reset</div>
+          <div class="progress" id="progress">Step 0 / 6</div>
+        </div>
+        <div class="legend">
+          <span><span class="sw" style="background:#00d4ff"></span>HIGH (1)</span>
+          <span><span class="sw" style="background:#484f58"></span>LOW (0)</span>
+          <span><span class="sw" style="background:#f59e0b"></span>this step's edge</span>
+          <span><span class="k">&rarr;</span>Next</span>
+          <span><span class="k">&larr;</span>Prev</span>
+          <span><span class="k">R</span>Reset</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+/* ============================================================
+   COLOR CONSTANTS
+   ============================================================ */
+const C_HIGH   = '#00d4ff';   // logic 1
+const C_LOW    = '#484f58';   // logic 0
+const C_EDGE   = '#f59e0b';   // the transition that just happened (amber)
+const C_NAVY   = '#1e293b';
+const C_WIRE_LO= '#9aa3ad';
+const C_RAIL   = '#d5dbe1';
+const C_GRID   = '#e2e8f0';
+const C_AXIS   = '#64748b';
+
+/* ============================================================
+   SEQUENCE  (one input flips per step)
+   ============================================================ */
+const RAW = [
+  {A:0,B:0,C:0},
+  {A:1,B:0,C:0},
+  {A:1,B:1,C:0},
+  {A:0,B:1,C:0},
+  {A:0,B:1,C:1},
+  {A:1,B:1,C:1},
+  {A:1,B:1,C:0},
+];
+// derive P = A·B  and  Y = P + C
+const SEQ = RAW.map(s => {
+  const P = s.A & s.B;
+  const Y = P | s.C;
+  return {A:s.A, B:s.B, C:s.C, P, Y};
+});
+const LAST = SEQ.length - 1;   // 6
+
+const CAPTIONS = [
+  `All signals start <b>LOW</b>. Read each waveform left&ndash;to&ndash;right: its <b>height</b> is the value at that moment, the bottom axis is <b>time</b>.`,
+  `<b>A</b> goes HIGH &mdash; but <b>Y doesn't move</b>. With B still 0, the AND term A&middot;B stays 0. An input edge the output ignores.`,
+  `<b>B</b> goes HIGH &mdash; now A&middot;B = 1, so <b>P rises and Y rises with it</b>. Follow the amber edges up the stack: B &rarr; P &rarr; Y.`,
+  `<b>A</b> goes LOW &mdash; A&middot;B drops to 0, and with C also 0 there is nothing to hold Y up, so <b>Y falls</b>.`,
+  `<b>C</b> goes HIGH &mdash; <b>Y rises again</b>, but look: P = A&middot;B is still 0. This time <b>C drives Y</b> through the OR's other input.`,
+  `<b>A</b> goes HIGH &mdash; so A&middot;B is 1 now too, but <b>Y was already HIGH</b>, so it simply stays put.`,
+  `<b>C</b> goes LOW &mdash; yet <b>Y stays HIGH</b>. A&middot;B is still 1, and that one term alone is enough to hold the OR output high.`,
+];
+
+let step = 0;
+
+/* ============================================================
+   TIMING-DIAGRAM GEOMETRY
+   ============================================================ */
+const X0   = 190;            // plot left edge
+const DX    = 126;           // interval width  (7 intervals)
+const NINT  = SEQ.length;    // 7
+const XEND  = X0 + NINT*DX;  // plot right edge
+
+const ROWS = [
+  {key:'A', label:'A',           kind:'in'},
+  {key:'B', label:'B',           kind:'in'},
+  {key:'C', label:'C',           kind:'in'},
+  {key:'P', label:'P = A\u00B7B', kind:'mid'},
+  {key:'Y', label:'Y = A\u00B7B + C', kind:'out'},
+];
+const ROW_TOP = [52, 170, 288, 406, 524];
+const SWING_HI = 30;   // offset of HIGH rail from row top
+const SWING_LO = 96;   // offset of LOW  rail from row top
+
+function yLevel(rowTop, v){ return rowTop + (v===1 ? SWING_HI : SWING_LO); }
+
+/* ---- small SVG helpers ---- */
+function line(x1,y1,x2,y2,stroke,w,dash){
+  return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${w}" ${dash?`stroke-dasharray="${dash}"`:''} stroke-linecap="round"/>`;
+}
+function poly(pts,fill){ return `<polygon points="${pts}" fill="${fill}"/>`; }
+function txt(x,y,s,size,fill,anchor,weight){
+  return `<text x="${x}" y="${y}" font-size="${size}" fill="${fill}" text-anchor="${anchor||'start'}" font-weight="${weight||400}" font-family="Segoe UI, sans-serif">${s}</text>`;
+}
+
+/* ============================================================
+   RENDER THE WAVEFORMS
+   ============================================================ */
+function renderWaves(){
+  const cur = step;                  // intervals 0..cur are drawn
+  let g = '';
+
+  // faint vertical gridlines at every interval boundary (full height)
+  const gridTop = ROW_TOP[0] - 22;
+  const gridBot = ROW_TOP[ROW_TOP.length-1] + SWING_LO + 26;
+  for(let i=0;i<=NINT;i++){
+    const x = X0 + i*DX;
+    g += line(x, gridTop, x, gridBot, C_GRID, 1.5, '4 6');
+  }
+
+  // "now" marker at the right edge of the current interval
+  const xNow = X0 + (cur+1)*DX;
+  g += line(xNow, gridTop, xNow, gridBot, C_EDGE, 2, '2 7');
+  g += txt(xNow, gridTop - 5, 'now', 16, C_EDGE, 'middle', 700);
+
+  // per-row
+  ROWS.forEach((row, ri) => {
+    const top  = ROW_TOP[ri];
+    const yHi  = top + SWING_HI;
+    const yLo  = top + SWING_LO;
+    const vals = SEQ.map(s => s[row.key]);
+
+    // row separator tint band for the OUTPUT row to set it apart
+    if(row.kind==='out'){
+      g += `<rect x="2" y="${top-14}" width="${XEND+86}" height="${SWING_LO+30}" fill="#f1faff" rx="8"/>`;
+    }
+
+    // guide rails (dotted) across whole plot
+    g += line(X0, yHi, XEND, yHi, C_RAIL, 1.2, '2 7');
+    g += line(X0, yLo, XEND, yLo, C_RAIL, 1.2, '2 7');
+
+    // left labels: signal name + 1/0 rail markers
+    g += txt(24, top + 52, row.label, row.kind==='in'?26:19,
+             row.kind==='out'?'#0e7490':C_NAVY, 'start', 700);
+    g += txt(X0-14, yHi+6, '1', 15, C_AXIS, 'end', 700);
+    g += txt(X0-14, yLo+6, '0', 15, C_AXIS, 'end', 700);
+
+    // draw drawn intervals
+    for(let i=0;i<=cur;i++){
+      const xs = X0 + i*DX, xe = X0 + (i+1)*DX;
+      const hi = vals[i]===1;
+      const y  = hi ? yHi : yLo;
+      // horizontal level segment
+      g += line(xs, y, xe, y, hi?C_HIGH:C_LOW, hi?6:5);
+
+      // vertical edge at left boundary
+      if(i>=1 && vals[i]!==vals[i-1]){
+        const yPrev = vals[i-1]===1 ? yHi : yLo;
+        const active = (i===cur);
+        const col = active ? C_EDGE : C_NAVY;
+        const w   = active ? 5 : 3;
+        g += line(xs, yPrev, xs, y, col, w);
+        if(active){
+          // arrowhead in direction of travel
+          const rising = vals[i]===1;      // low->high : y decreases : point up
+          const ax = xs;
+          if(rising){
+            g += poly(`${ax-9},${yHi+16} ${ax+9},${yHi+16} ${ax},${yHi+2}`, C_EDGE);
+          } else {
+            g += poly(`${ax-9},${yLo-16} ${ax+9},${yLo-16} ${ax},${yLo-2}`, C_EDGE);
+          }
+        }
+      }
+    }
+  });
+
+  // time axis
+  const axisY = gridBot + 10;
+  g += line(X0, axisY, XEND+8, axisY, C_AXIS, 2.5);
+  g += poly(`${XEND+8},${axisY-7} ${XEND+8},${axisY+7} ${XEND+22},${axisY}`, C_AXIS);
+  g += txt(XEND+30, axisY+6, 'time', 18, C_AXIS, 'start', 600);
+
+  document.getElementById('waves').innerHTML = g;
+}
+
+/* ============================================================
+   RENDER THE LIVE SCHEMATIC  (distinctive-shape gates)
+   ============================================================ */
+function wireColor(v){ return v===1 ? C_HIGH : C_WIRE_LO; }
+function wireW(v){ return v===1 ? 5 : 3; }
+
+function renderSchematic(){
+  const s = SEQ[step];
+  let g = '';
+
+  /* ---- node / gate coordinates ---- */
+  const A = {x:42, y:130}, B = {x:42, y:200}, Cn = {x:42, y:470};
+  // AND gate (D-shape): back at x=180 (y 100..230), tip at (305,165)
+  const andTip = {x:305, y:165};
+  const P = andTip;
+  // OR gate: back at x=380 (y 250..400), tip (510,325)
+  const orTip = {x:510, y:325};
+  const Y = {x:560, y:325};
+  const orInTop = {x:396, y:290};   // P enters here
+  const orInBot = {x:396, y:360};   // C enters here
+
+  /* ---- wires (drawn first, behind gates) ---- */
+  // A -> AND top input (180,130)
+  g += line(A.x, A.y, 180, 130, wireColor(s.A), wireW(s.A));
+  // B -> AND bottom input (180,200)
+  g += line(B.x, B.y, 180, 200, wireColor(s.B), wireW(s.B));
+  // P : AND tip -> down -> OR top input  (orthogonal route)
+  g += `<polyline points="${andTip.x},${andTip.y} 345,${andTip.y} 345,${orInTop.y} ${orInTop.x},${orInTop.y}"
+          fill="none" stroke="${wireColor(s.P)}" stroke-width="${wireW(s.P)}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // C : node -> right -> up -> OR bottom input
+  g += `<polyline points="${Cn.x},${Cn.y} 360,${Cn.y} 360,${orInBot.y} ${orInBot.x},${orInBot.y}"
+          fill="none" stroke="${wireColor(s.C)}" stroke-width="${wireW(s.C)}" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // Y : OR tip -> output node
+  g += line(orTip.x, orTip.y, Y.x, Y.y, wireColor(s.Y), wireW(s.Y));
+
+  /* ---- connection dots ---- */
+  [[A.x,A.y,s.A],[B.x,B.y,s.B],[Cn.x,Cn.y,s.C],[Y.x,Y.y,s.Y]].forEach(d=>{
+    g += `<circle cx="${d[0]}" cy="${d[1]}" r="6" fill="${d[2]===1?C_HIGH:'#64748b'}"/>`;
+  });
+
+  /* ---- AND gate (distinctive D shape) ---- */
+  const andFill = s.P===1 ? '#e6fbff' : '#ffffff';
+  g += `<path d="M 180 100 L 240 100 A 65 65 0 0 1 240 230 L 180 230 Z"
+          fill="${andFill}" stroke="${C_NAVY}" stroke-width="3.5" stroke-linejoin="round"/>`;
+  g += txt(218, 172, 'AND', 19, '#475569', 'middle', 700);
+
+  /* ---- OR gate (distinctive curved-back shape) ---- */
+  const orFill = s.Y===1 ? '#e6fbff' : '#ffffff';
+  g += `<path d="M 380 250 C 440 255 490 290 510 325
+                 C 490 360 440 395 380 400
+                 Q 430 325 380 250 Z"
+          fill="${orFill}" stroke="${C_NAVY}" stroke-width="3.5" stroke-linejoin="round"/>`;
+  g += txt(440, 332, 'OR', 19, '#475569', 'middle', 700);
+
+  /* ---- terminal labels ---- */
+  g += txt(A.x-12, A.y+7, 'A', 24, C_NAVY, 'end', 700);
+  g += txt(B.x-12, B.y+7, 'B', 24, C_NAVY, 'end', 700);
+  g += txt(Cn.x-12, Cn.y+7, 'C', 24, C_NAVY, 'end', 700);
+  g += txt(Y.x+14, Y.y+7, 'Y', 26, '#0e7490', 'start', 800);
+  // P label on its wire
+  g += txt(325, 150, 'P', 20, '#475569', 'start', 700);
+
+  /* ---- live 1/0 tags floating on each net ---- */
+  function tag(x,y,v){
+    return `<rect x="${x-13}" y="${y-30}" width="26" height="22" rx="5"
+              fill="${v===1?C_HIGH:'#eef2f5'}" stroke="${v===1?'#0e7490':'#cbd5e1'}" stroke-width="1.5"/>`
+         + txt(x, y-13, v, 16, v===1?'#0f172a':'#64748b', 'middle', 800);
+  }
+  g += tag(110, A.y, s.A);
+  g += tag(110, B.y, s.B);
+  g += tag(110, Cn.y, s.C);
+  g += tag(540, Y.y, s.Y);
+
+  document.getElementById('schematic').innerHTML = g;
+}
+
+/* ============================================================
+   CHIPS + CAPTION + CONTROLS
+   ============================================================ */
+function renderChips(){
+  const s = SEQ[step];
+  const items = [['A',s.A],['B',s.B],['C',s.C],['P = A\u00B7B',s.P],['Y',s.Y]];
+  document.getElementById('chips').innerHTML = items.map(([nm,v])=>
+    `<div class="chip ${v===1?'hi':'lo'}"><span class="nm">${nm}</span><span class="vl">${v}</span></div>`
+  ).join('');
+}
+function renderText(){
+  document.getElementById('stepTag').textContent = `Step ${step} of ${LAST}`;
+  document.getElementById('captionTxt').innerHTML = CAPTIONS[step];
+  document.getElementById('progress').textContent = `Step ${step} / ${LAST}`;
+  document.getElementById('btnPrev').classList.toggle('disabled', step===0);
+  document.getElementById('btnNext').classList.toggle('disabled', step===LAST);
+}
+
+function render(){
+  renderWaves();
+  renderSchematic();
+  renderChips();
+  renderText();
+}
+
+/* ---- navigation ---- */
+function next(){ if(step<LAST){ step++; render(); } }
+function prev(){ if(step>0){ step--; render(); } }
+function reset(){ step=0; render(); }
+
+document.getElementById('btnNext').addEventListener('click', next);
+document.getElementById('btnPrev').addEventListener('click', prev);
+document.getElementById('btnReset').addEventListener('click', reset);
+
+window.addEventListener('keydown', e=>{
+  if(e.key==='ArrowRight' || e.key==='n' || e.key==='N'){ next(); e.preventDefault(); }
+  else if(e.key==='ArrowLeft' || e.key==='p' || e.key==='P'){ prev(); e.preventDefault(); }
+  else if(e.key==='r' || e.key==='R' || e.key==='Home'){ reset(); e.preventDefault(); }
+});
+
+/* ============================================================
+   RESPONSIVE SCALING
+   ============================================================ */
+const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+function autoResize(){
+  const container = document.getElementById('viewportContainer');
+  const surface = document.getElementById('designSurface');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let cw, ch;
+  if(vw/vh > 16/9){ ch = vh; cw = ch*(16/9); }
+  else { cw = vw; ch = cw*(9/16); }
+  container.style.width = cw+'px';
+  container.style.height = ch+'px';
+  surface.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+}
+autoResize();
+let rt;
+window.addEventListener('resize', ()=>{ clearTimeout(rt); rt=setTimeout(autoResize,50); });
+window.addEventListener('orientationchange', ()=>setTimeout(autoResize,100));
+
+render();
+</script>
+</body>
+</html>
