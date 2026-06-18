@@ -1,0 +1,11 @@
+title: "Karnaugh Maps - Minimization Process"
+description: ""
+chapter: combinational-logic
+section: karnaugh-maps
+order: 30403
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the formal minimization vocabulary — literal, product term, don't-care, implicant, prime implicant, and essential prime implicant"
+  02-interactive.html:
+    caption: "Interactive: step through the minimization vocabulary on a 4-variable map — F = Σm(1,3,5,7,9,11,13,14,15) + d(4,6) reducing to F = D + BC via its essential prime implicants"
