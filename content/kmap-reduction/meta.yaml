@@ -1,0 +1,9 @@
+title: "Relating K-Map Grouping to Algebraic Reduction"
+description: ""
+chapter: combinational-logic
+section: karnaugh-maps
+order: 30402
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the Boolean-algebra reduction behind K-map grouping — factoring and the complement law that collapse adjacent terms"
