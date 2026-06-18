@@ -7,3 +7,5 @@ order: 30402
 graphics:
   01-video.youtube:
     caption: "Video: the Boolean-algebra reduction behind K-map grouping — factoring and the complement law that collapse adjacent terms"
+  02-interactive.html:
+    caption: "Interactive: the algebraic derivation beside the K-map for F = Σm(1,3,5,7) — watch factoring and X + X̄ = 1 collapse the four product terms down to Z"
