@@ -7,3 +7,5 @@ order: 30404
 graphics:
   01-video.youtube:
     caption: "Video: product-of-sums minimization on a Karnaugh map by circling the zeros to minimize F-bar, then applying DeMorgan's theorem to convert the SOP into a minimal POS"
+  02-interactive.html:
+    caption: "Interactive: step through POS minimization on the K-map for F = ΠM(0,1,2,8,10) with don't-cares — circle the zero groups (A′B′ and the wrapping corners B′D′) to get F̄, then apply DeMorgan's theorem line by line to reach the minimal POS F = (A+B)(B+D)"

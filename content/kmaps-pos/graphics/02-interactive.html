@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>K-Map POS Minimization</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #0f172a;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .viewport-container {
+    width: 100%;
+    max-width: 100vw;
+    aspect-ratio: 16 / 9;
+    max-height: 100vh;
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto;
+  }
+
+  .design-surface {
+    width: 1920px;
+    height: 1080px;
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: top left;
+    background: #f0f4f8;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 88px;
+    background: #1e293b;
+    display: flex;
+    align-items: center;
+    padding: 0 52px;
+    gap: 32px;
+  }
+  .header-title {
+    color: #f8fafc;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .header-sub {
+    color: #94a3b8;
+    font-size: 22px;
+    font-weight: 400;
+  }
+  .step-badge {
+    margin-left: auto;
+    background: #334155;
+    color: #e2e8f0;
+    font-size: 20px;
+    font-weight: 600;
+    padding: 6px 22px;
+    border-radius: 24px;
+    letter-spacing: 0.5px;
+    min-width: 220px;
+    text-align: center;
+  }
+
+  /* ── Main layout ── */
+  .main {
+    position: absolute;
+    top: 88px; left: 0; right: 0; bottom: 60px;
+    display: flex;
+  }
+
+  /* ── K-map panel ── */
+  .kmap-panel {
+    width: 840px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 10px 10px 20px;
+  }
+
+  /* ── Right panel ── */
+  .right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 44px 16px 32px;
+    gap: 18px;
+  }
+
+  /* ── Explanation card ── */
+  .explain-card {
+    background: white;
+    border-radius: 16px;
+    padding: 26px 30px;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    min-height: 170px;
+  }
+  .explain-card .step-label {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #64748b;
+    margin-bottom: 10px;
+  }
+  .explain-card .headline {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+  .explain-card .body {
+    font-size: 18px;
+    color: #475569;
+    line-height: 1.55;
+  }
+
+  /* ── Expression card ── */
+  .expr-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px 30px;
+    border: 2px solid #e2e8f0;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .expr-card .expr-title {
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #64748b;
+    margin-bottom: 2px;
+  }
+
+  .expr-line {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    transition: background 0.35s, opacity 0.35s;
+    opacity: 0.18;
+    min-height: 52px;
+  }
+  .expr-line.active    { opacity: 1; background: #f1f5f9; }
+  .expr-line.done      { opacity: 0.65; }
+  .expr-line.highlight { opacity: 1; background: #fef9c3; }
+
+  .expr-tag {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #94a3b8;
+    width: 76px;
+    flex-shrink: 0;
+  }
+  .expr-math {
+    font-size: 22px;
+    font-family: 'Cambria', 'Georgia', serif;
+    color: #1e293b;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  .expr-reason {
+    margin-left: auto;
+    font-size: 15px;
+    color: #64748b;
+    font-style: italic;
+    max-width: 290px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .amber  { color: #d97706; font-weight: 700; }
+  .violet { color: #7c3aed; font-weight: 700; }
+
+  /* ── Legend bar ── */
+  .legend-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: #1e293b;
+    display: flex;
+    align-items: center;
+    padding: 0 52px;
+    gap: 38px;
+  }
+  .key-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #94a3b8;
+    font-size: 17px;
+  }
+  .key-box {
+    background: #334155;
+    color: #e2e8f0;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid #475569;
+  }
+  .swatch {
+    display: inline-block;
+    width: 22px; height: 12px;
+    border-radius: 3px;
+    vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title">K-Map POS Minimization</div>
+    <div class="header-sub">F(A,B,C,D) = ΠM(0,1,2,8,10) · d(3,9,11)</div>
+    <div class="step-badge" id="stepBadge">Overview</div>
+  </div>
+
+  <div class="main">
+
+    <!-- ══ K-MAP PANEL ══ -->
+    <div class="kmap-panel">
+      <!--
+        Grid geometry (all in SVG units):
+          Corner box: 0,0 → 120,120
+          Grid origin: (120, 120)
+          Cell size: 140 × 140
+          4 cols → grid width  = 560  (right edge x=680)
+          4 rows → grid height = 560  (bottom edge y=680)
+          Col centers x: 190, 330, 470, 610
+          Row centers y: 190, 330, 470, 610
+          Internal vert  lines x: 260, 400, 540
+          Internal horiz lines y: 260, 400, 540
+      -->
+      <svg id="kmapSvg" viewBox="0 0 760 760"
+           style="width:780px; height:780px; display:block;">
+
+        <!-- ── Corner label box ── -->
+        <!-- Diagonal starts at grid corner (118,118) and extends up-left, stopping short to leave room for F -->
+        <line x1="118" y1="118" x2="10" y2="34"
+              stroke="#475569" stroke-width="2"/>
+        <!-- F label: just above the tip; baseline at 28 puts the cap-height clear of the line end -->
+        <text x="10" y="28" text-anchor="middle" font-size="22" font-style="italic"
+              font-family="Cambria,Georgia,serif" fill="#1e293b">F</text>
+        <!-- AB label: row axis — below the diagonal, right side (near grid corner) -->
+        <text x="62" y="114" font-size="19" font-style="italic"
+              font-family="Cambria,Georgia,serif" fill="#475569">AB</text>
+        <!-- CD label: col axis — above the diagonal, right side -->
+        <text x="76" y="40" font-size="19" font-style="italic"
+              font-family="Cambria,Georgia,serif" fill="#475569">CD</text>
+
+        <!-- ── Column header values (Gray code: 00 01 11 10) ── -->
+        <text x="190" y="95" text-anchor="middle" font-size="22" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#1e293b">00</text>
+        <text x="330" y="95" text-anchor="middle" font-size="22" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#1e293b">01</text>
+        <text x="470" y="95" text-anchor="middle" font-size="22" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#1e293b">11</text>
+        <text x="610" y="95" text-anchor="middle" font-size="22" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#1e293b">10</text>
+
+        <!-- ── Row header values (Gray code: 00 01 11 10) ── -->
+        <text x="95" y="196" text-anchor="end" font-size="22" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#1e293b">00</text>
+        <text x="95" y="336" text-anchor="end" font-size="22" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#1e293b">01</text>
+        <text x="95" y="476" text-anchor="end" font-size="22" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#1e293b">11</text>
+        <text x="95" y="616" text-anchor="end" font-size="22" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#1e293b">10</text>
+
+        <!-- ── Outer grid frame ── -->
+        <rect x="120" y="120" width="560" height="560"
+              fill="white" stroke="#1e293b" stroke-width="3" rx="0"/>
+
+        <!-- ── Internal vertical lines ── -->
+        <!-- All run full height of grid: y=120 to y=680 -->
+        <line x1="260" y1="120" x2="260" y2="680" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="400" y1="120" x2="400" y2="680" stroke="#1e293b"  stroke-width="2.5"/>
+        <line x1="540" y1="120" x2="540" y2="680" stroke="#94a3b8" stroke-width="1.5"/>
+
+        <!-- ── Internal horizontal lines ── -->
+        <!-- All run full width of grid: x=120 to x=680 -->
+        <line x1="120" y1="260" x2="680" y2="260" stroke="#94a3b8" stroke-width="1.5"/>
+        <line x1="120" y1="400" x2="680" y2="400" stroke="#1e293b"  stroke-width="2.5"/>
+        <line x1="120" y1="540" x2="680" y2="540" stroke="#94a3b8" stroke-width="1.5"/>
+
+        <!-- ════════════════════════════════════════
+             CELL VALUES
+             Row 0 (AB=00, y=190): m0 m1 m3 m2
+             Row 1 (AB=01, y=330): m4 m5 m7 m6
+             Row 2 (AB=11, y=470): m12 m13 m15 m14
+             Row 3 (AB=10, y=610): m8 m9 m11 m10
+             Col x: 190 330 470 610
+        ════════════════════════════════════════ -->
+
+        <!-- Row 0: zeros = m0,m1,m3,m2 (all blue) -->
+        <text x="190" y="178" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#0891b2">0</text>
+        <text x="190" y="244" text-anchor="middle" font-size="13"
+              fill="#94a3b8">0</text>
+
+        <text x="330" y="178" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#0891b2">0</text>
+        <text x="330" y="244" text-anchor="middle" font-size="13"
+              fill="#94a3b8">1</text>
+
+        <!-- m3 = don't care -->
+        <text x="470" y="178" text-anchor="middle" font-size="36" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#9ca3af">×</text>
+        <text x="470" y="244" text-anchor="middle" font-size="13"
+              fill="#94a3b8">3</text>
+
+        <text x="610" y="178" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#0891b2">0</text>
+        <text x="610" y="244" text-anchor="middle" font-size="13"
+              fill="#94a3b8">2</text>
+
+        <!-- Row 1: ones = m4,m5,m7,m6 -->
+        <text x="190" y="318" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
+        <text x="190" y="384" text-anchor="middle" font-size="13"
+              fill="#94a3b8">4</text>
+
+        <text x="330" y="318" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
+        <text x="330" y="384" text-anchor="middle" font-size="13"
+              fill="#94a3b8">5</text>
+
+        <text x="470" y="318" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
+        <text x="470" y="384" text-anchor="middle" font-size="13"
+              fill="#94a3b8">7</text>
+
+        <text x="610" y="318" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
+        <text x="610" y="384" text-anchor="middle" font-size="13"
+              fill="#94a3b8">6</text>
+
+        <!-- Row 2: ones = m12,m13,m15,m14 -->
+        <text x="190" y="458" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
+        <text x="190" y="524" text-anchor="middle" font-size="13"
+              fill="#94a3b8">12</text>
+
+        <text x="330" y="458" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
+        <text x="330" y="524" text-anchor="middle" font-size="13"
+              fill="#94a3b8">13</text>
+
+        <text x="470" y="458" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
+        <text x="470" y="524" text-anchor="middle" font-size="13"
+              fill="#94a3b8">15</text>
+
+        <text x="610" y="458" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
+        <text x="610" y="524" text-anchor="middle" font-size="13"
+              fill="#94a3b8">14</text>
+
+        <!-- Row 3: m8=zero, m9=DC, m11=DC, m10=zero -->
+        <text x="190" y="598" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#0891b2">0</text>
+        <text x="190" y="664" text-anchor="middle" font-size="13"
+              fill="#94a3b8">8</text>
+
+        <!-- Don't care × -->
+        <text x="330" y="598" text-anchor="middle" font-size="36" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#9ca3af">×</text>
+        <text x="330" y="664" text-anchor="middle" font-size="13"
+              fill="#94a3b8">9</text>
+
+        <text x="470" y="598" text-anchor="middle" font-size="36" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#9ca3af">×</text>
+        <text x="470" y="664" text-anchor="middle" font-size="13"
+              fill="#94a3b8">11</text>
+
+        <text x="610" y="598" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#0891b2">0</text>
+        <text x="610" y="664" text-anchor="middle" font-size="13"
+              fill="#94a3b8">10</text>
+
+        <!-- ════════════════════════════════════════
+             GROUP OVERLAYS
+             Group 1 (amber): top row  m0,m1,m3,m2  → A′B′
+             Group 2 (violet): corners m0,m2,m8,m10 → B′D′
+        ════════════════════════════════════════ -->
+
+        <!-- Group 1: full top row  x=120 y=120 w=560 h=140, inset 5px -->
+        <rect id="grp1" x="125" y="125" width="550" height="130"
+              rx="22" fill="rgba(217,119,6,0.12)"
+              stroke="#d97706" stroke-width="5"
+              opacity="0" style="transition:opacity 0.5s;"/>
+
+        <!-- Group 2: four corner pieces, each 140×140, inset 5px -->
+        <!-- top-left  (m0)  col0 row0 -->
+        <rect id="g2tl" x="125" y="125" width="130" height="130"
+              rx="22" fill="rgba(124,58,237,0.12)"
+              stroke="#7c3aed" stroke-width="5"
+              opacity="0" style="transition:opacity 0.5s;"/>
+        <!-- top-right (m2)  col3 row0 -->
+        <rect id="g2tr" x="545" y="125" width="130" height="130"
+              rx="22" fill="rgba(124,58,237,0.12)"
+              stroke="#7c3aed" stroke-width="5"
+              opacity="0" style="transition:opacity 0.5s;"/>
+        <!-- bot-left  (m8)  col0 row3 -->
+        <rect id="g2bl" x="125" y="545" width="130" height="130"
+              rx="22" fill="rgba(124,58,237,0.12)"
+              stroke="#7c3aed" stroke-width="5"
+              opacity="0" style="transition:opacity 0.5s;"/>
+        <!-- bot-right (m10) col3 row3 -->
+        <rect id="g2br" x="545" y="545" width="130" height="130"
+              rx="22" fill="rgba(124,58,237,0.12)"
+              stroke="#7c3aed" stroke-width="5"
+              opacity="0" style="transition:opacity 0.5s;"/>
+
+        <!-- Wrap arrows for group 2 -->
+        <!-- Top edge: arc connecting TL and TR corner tops -->
+        <g id="wrapTop" opacity="0" style="transition:opacity 0.5s;">
+          <path d="M190,122 C190,76 610,76 610,122"
+                fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="9,5"/>
+          <!-- arrowhead pointing down at right end -->
+          <polygon points="610,124 602,106 618,106" fill="#7c3aed"/>
+        </g>
+        <!-- Bottom edge: arc connecting BL and BR corner bottoms -->
+        <g id="wrapBot" opacity="0" style="transition:opacity 0.5s;">
+          <path d="M190,678 C190,724 610,724 610,678"
+                fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="9,5"/>
+          <!-- arrowhead pointing up at left end -->
+          <polygon points="190,676 182,694 198,694" fill="#7c3aed"/>
+        </g>
+        <!-- Left edge: arc connecting TL and BL corner lefts -->
+        <g id="wrapLeft" opacity="0" style="transition:opacity 0.5s;">
+          <path d="M122,190 C76,190 76,610 122,610"
+                fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="9,5"/>
+          <!-- arrowhead pointing right at bottom end -->
+          <polygon points="124,610 106,602 106,618" fill="#7c3aed"/>
+        </g>
+        <!-- Right edge: arc connecting TR and BR corner rights -->
+        <g id="wrapRight" opacity="0" style="transition:opacity 0.5s;">
+          <path d="M678,190 C724,190 724,610 678,610"
+                fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="9,5"/>
+          <!-- arrowhead pointing left at bottom end -->
+          <polygon points="676,610 694,602 694,618" fill="#7c3aed"/>
+        </g>
+
+        <!-- Group labels -->
+        <text id="lbl1" x="400" y="107" text-anchor="middle"
+              font-size="22" font-weight="700" font-style="italic"
+              font-family="Cambria,Georgia,serif" fill="#d97706"
+              opacity="0" style="transition:opacity 0.5s;">A′B′</text>
+
+        <text id="lbl2" x="400" y="748" text-anchor="middle"
+              font-size="22" font-weight="700" font-style="italic"
+              font-family="Cambria,Georgia,serif" fill="#7c3aed"
+              opacity="0" style="transition:opacity 0.5s;">B′D′</text>
+
+      </svg>
+    </div><!-- /kmap-panel -->
+
+    <!-- ══ RIGHT PANEL ══ -->
+    <div class="right-panel">
+
+      <div class="explain-card">
+        <div class="step-label"  id="cardLabel">Overview</div>
+        <div class="headline"    id="cardHeadline">POS Minimization via K-Map</div>
+        <div class="body"        id="cardBody">
+          For Product of Sums (POS) form, we minimize <strong>F′</strong> using the K-map —
+          circling <strong>zeros</strong> exactly as SOP circles ones. Each group of zeros
+          yields a product term in F′. DeMorgan's theorem then converts F′ → F as a
+          product of sum terms.
+        </div>
+      </div>
+
+      <div class="expr-card">
+        <div class="expr-title">Derivation</div>
+
+        <div class="expr-line" id="el0">
+          <div class="expr-tag">Step 1</div>
+          <div class="expr-math">F′ = <span class="amber">A′B′</span> + <span class="violet">B′D′</span></div>
+          <div class="expr-reason">Read groups from K-map</div>
+        </div>
+
+        <div class="expr-line" id="el1">
+          <div class="expr-tag">Step 2</div>
+          <div class="expr-math">(F′)′ = (<span class="amber">A′B′</span> + <span class="violet">B′D′</span>)′</div>
+          <div class="expr-reason">Complement both sides</div>
+        </div>
+
+        <div class="expr-line" id="el2">
+          <div class="expr-tag">Step 3</div>
+          <div class="expr-math">F = (<span class="amber">A′B′</span> + <span class="violet">B′D′</span>)′</div>
+          <div class="expr-reason">(F′)′ = F</div>
+        </div>
+
+        <div class="expr-line" id="el3">
+          <div class="expr-tag">Step 4</div>
+          <div class="expr-math">F = (<span class="amber">A′B′</span>)′ · (<span class="violet">B′D′</span>)′</div>
+          <div class="expr-reason">(P+Q)′ = P′·Q′</div>
+        </div>
+
+        <div class="expr-line" id="el4">
+          <div class="expr-tag">Step 5</div>
+          <div class="expr-math">F = (<span class="amber">A+B</span>) · (<span class="violet">B+D</span>)</div>
+          <div class="expr-reason">(P·Q)′ = P′+Q′  per term</div>
+        </div>
+
+        <div class="expr-line" id="el5">
+          <div class="expr-tag">Result</div>
+          <div class="expr-math" style="font-size:26px; font-weight:700;">
+            F = (<span class="amber">A+B</span>)(<span class="violet">B+D</span>)
+          </div>
+          <div class="expr-reason" style="color:#16a34a; font-style:normal; font-weight:700;">✓ Minimal POS</div>
+        </div>
+      </div>
+
+    </div><!-- /right-panel -->
+  </div><!-- /main -->
+
+  <!-- Legend bar -->
+  <div class="legend-bar">
+    <div class="key-hint"><span class="key-box">←</span><span class="key-box">→</span>&nbsp;Navigate</div>
+    <div class="key-hint"><span class="key-box">R</span>&nbsp;Reset</div>
+    <div class="key-hint"><span style="color:#0891b2; font-size:20px; font-weight:700; font-family:Cambria,serif;">0</span>&nbsp;Zero (maxterm)</div>
+    <div class="key-hint"><span style="color:#9ca3af; font-size:20px; font-weight:700; font-family:Cambria,serif;">×</span>&nbsp;Don't care</div>
+    <div class="key-hint"><span style="color:#334155; font-size:20px; font-weight:700; font-family:Cambria,serif;">1</span>&nbsp;One (minterm)</div>
+    <div class="key-hint"><span class="swatch" style="background:#d97706;"></span>&nbsp;Group 1: A′B′</div>
+    <div class="key-hint"><span class="swatch" style="background:#7c3aed;"></span>&nbsp;Group 2: B′D′</div>
+  </div>
+
+</div><!-- /design-surface -->
+</div><!-- /viewport-container -->
+
+<script>
+// ── Responsive scaling ──
+function autoResize() {
+  const container = document.getElementById('viewportContainer');
+  const surface   = document.getElementById('designSurface');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let cw, ch;
+  if (vw / vh > 16 / 9) { ch = vh; cw = ch * 16 / 9; }
+  else { cw = vw; ch = cw * 9 / 16; }
+  container.style.width  = cw + 'px';
+  container.style.height = ch + 'px';
+  surface.style.transform = `scale(${cw / 1920})`;
+}
+autoResize();
+let rto;
+window.addEventListener('resize', () => { clearTimeout(rto); rto = setTimeout(autoResize, 50); });
+
+// ── Step definitions ──
+const steps = [
+  {
+    badge: 'Overview',
+    label: 'POS vs SOP',
+    headline: 'Why Circle Zeros?',
+    body: 'In POS minimization we minimize <strong>F′</strong> using the K-map, grouping <strong>zeros</strong> (maxterms) exactly as SOP groups ones. Each group becomes a product term in F′. DeMorgan\'s theorem then converts the full SOP expression for F′ into a POS expression for F.',
+    grp1:false, grp2:false, wrap:false, expr:[]
+  },
+  {
+    badge: 'Step 1 — Identify Zeros',
+    label: 'Reading the K-Map',
+    headline: 'Locate Zeros & Don\'t Cares',
+    body: 'Zeros (maxterms) appear at cells 0, 1, 2 in the top row and at cells 8 and 10 in the bottom row. Cells 3, 9, and 11 are <strong>don\'t cares</strong> — they may be treated as 0 to enlarge a group, but are not required to be covered.',
+    grp1:false, grp2:false, wrap:false, expr:[]
+  },
+  {
+    badge: 'Step 2 — Group 1 (amber)',
+    label: 'Group 1',
+    headline: 'Top Row: m0, m1, m3, m2 → A′B′',
+    body: 'The top row (AB = 00) has zeros at m0, m1, m2, and a <strong>don\'t care at m3</strong> — we treat it as 0 to complete a group of <strong>4</strong>. A = 0 and B = 0 are constant; C and D vary freely. The product term is <strong class="amber">A′B′</strong>.',
+    grp1:true, grp2:false, wrap:false, expr:[]
+  },
+  {
+    badge: 'Step 3 — Group 2 (violet)',
+    label: 'Group 2',
+    headline: 'Four Corners: m0, m2, m8, m10 → B′D′',
+    body: 'The four corner cells wrap toroidally — left and right edges connect, top and bottom edges connect. B = 0 and D = 0 are constant in all four; A and C vary. Don\'t cares at m9 and m11 sit adjacent but aren\'t needed to complete this group of 4. The term is <strong class="violet">B′D′</strong>.',
+    grp1:true, grp2:true, wrap:true, expr:[]
+  },
+  {
+    badge: 'Step 4 — Write F′',
+    label: 'F′ from the Map',
+    headline: 'F′ = A′B′ + B′D′',
+    body: 'Both groups together cover every zero. Cell m0 is shared between groups — perfectly acceptable. The don\'t care at m3 was used to fill out group 1; m9 and m11 were left unused. We OR the two product terms to form the minimized SOP expression for <strong>F′</strong>.',
+    grp1:true, grp2:true, wrap:true, expr:[0]
+  },
+  {
+    badge: 'Step 5 — Complement',
+    label: 'DeMorgan Step 1 & 2',
+    headline: 'Complement Both Sides',
+    body: 'To find F, complement both sides of F′ = A′B′ + B′D′. The left side: <strong>(F′)′ = F</strong> by the double complement law. The right side still needs to be simplified using DeMorgan\'s theorem.',
+    grp1:true, grp2:true, wrap:true, expr:[0,1,2]
+  },
+  {
+    badge: 'Step 6 — DeMorgan Outer',
+    label: 'DeMorgan on the Sum',
+    headline: '(P + Q)′ = P′ · Q′',
+    body: 'The complement of a sum is the <em>product of the complements</em>. Each product term in F′ becomes its own factor: <strong>(A′B′)′</strong> and <strong>(B′D′)′</strong>, multiplied together.',
+    grp1:false, grp2:false, wrap:false, expr:[0,1,2,3]
+  },
+  {
+    badge: 'Step 7 — DeMorgan Inner',
+    label: 'DeMorgan on Each Factor',
+    headline: 'F = (A+B)(B+D)',
+    body: 'The complement of each product: <strong>(A′B′)′ = A+B</strong> and <strong>(B′D′)′ = B+D</strong>. The complement of a product is the sum of the complements of the complements — i.e. the sum of the original literals. This is the minimal POS expression.',
+    grp1:false, grp2:false, wrap:false, expr:[0,1,2,3,4,5]
+  }
+];
+
+let step = 0;
+
+function show(id, on) {
+  document.getElementById(id).style.opacity = on ? '1' : '0';
+}
+
+function render() {
+  const s = steps[step];
+  document.getElementById('stepBadge').textContent = s.badge;
+  document.getElementById('cardLabel').textContent  = s.label;
+  document.getElementById('cardHeadline').textContent = s.headline;
+  document.getElementById('cardBody').innerHTML       = s.body;
+
+  show('grp1', s.grp1);
+  show('lbl1', s.grp1);
+  show('g2tl', s.grp2); show('g2tr', s.grp2);
+  show('g2bl', s.grp2); show('g2br', s.grp2);
+  show('lbl2', s.grp2);
+  show('wrapTop',  s.wrap); show('wrapBot',  s.wrap);
+  show('wrapLeft', s.wrap); show('wrapRight', s.wrap);
+
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById('el' + i);
+    if (s.expr.includes(i)) {
+      const isNewest = s.expr[s.expr.length - 1] === i;
+      el.className = 'expr-line ' + (isNewest ? 'highlight' : 'done');
+    } else {
+      el.className = 'expr-line';
+    }
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+    step = Math.min(steps.length - 1, step + 1);
+  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+    step = Math.max(0, step - 1);
+  } else if (e.key === 'r' || e.key === 'R') {
+    step = 0;
+  }
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
