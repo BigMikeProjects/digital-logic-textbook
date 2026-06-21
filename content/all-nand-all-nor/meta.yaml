@@ -1,0 +1,9 @@
+title: "All Nand and all Nor realizations"
+description: ""
+chapter: combinational-logic
+section: logic-gates
+order: 30306
+
+graphics:
+  01-video.youtube:
+    caption: "Video: four worked examples converting AND/OR/inverter circuits into all-NAND and all-NOR realizations by bubble pushing, with transistor-count comparisons"
