@@ -1,0 +1,9 @@
+title: "POS Minimization with Karnaugh Maps"
+description: ""
+chapter: combinational-logic
+section: karnaugh-maps
+order: 30404
+
+graphics:
+  01-video.youtube:
+    caption: "Video: product-of-sums minimization on a Karnaugh map by circling the zeros to minimize F-bar, then applying DeMorgan's theorem to convert the SOP into a minimal POS"
