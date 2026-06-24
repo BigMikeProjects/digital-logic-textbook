@@ -3,9 +3,3 @@ description: ""
 chapter: combinational-logic
 section: number-systems
 order: 30002
-
-graphics:
-  01-video.youtube:
-    caption: "Video: converting between binary and decimal — why hardware uses binary, binary→decimal by place value, and decimal→binary by the division and powers-of-two methods"
-  02-interactive.html:
-    caption: "Interactive: tabbed walkthrough of binary⇄decimal — why binary, binary→decimal place values, and the two decimal→binary methods (division remainders read bottom-up, and subtracting powers of 2), worked on the examples 13, 22, 37, 31"
