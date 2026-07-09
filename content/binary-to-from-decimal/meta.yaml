@@ -1,5 +1,5 @@
 title: "Binary To/From Decimal"
-description: ""
+description: "Convert between binary and decimal in both directions: why hardware uses binary, reading binary by power-of-two place values, and two decimal-to-binary methods (repeated division for remainders, and subtracting powers of two)."
 chapter: combinational-logic
 section: number-systems
 order: 30002
