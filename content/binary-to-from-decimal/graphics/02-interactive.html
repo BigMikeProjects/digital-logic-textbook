@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Number Systems · Binary ⇄ Decimal</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(120% 120% at 50% 0%, #16223b 0%, #0b1120 60%, #070b14 100%);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body { display: flex; align-items: center; justify-content: center; }
+
+    .viewport-container {
+        width: 100%; max-width: 100vw;
+        aspect-ratio: 16 / 9; max-height: 100vh;
+        position: relative; overflow: hidden;
+    }
+
+    .design-surface {
+        width: 1920px; height: 1080px;
+        position: absolute; top: 0; left: 0;
+        transform-origin: top left;
+        color: #e2e8f0;
+        padding: 26px 56px 20px;
+        display: flex; flex-direction: column;
+    }
+
+    /* ===== Top bar ===== */
+    .topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding-bottom: 14px; margin-bottom: 4px;
+        border-bottom: 2px solid rgba(148,163,184,0.18);
+    }
+    .brand { display: flex; align-items: baseline; gap: 16px; }
+    .brand .logo {
+        font-family: ui-monospace, 'Consolas', monospace;
+        font-size: 26px; font-weight: 800; letter-spacing: 1px;
+        color: #38bdf8; padding: 6px 12px; border: 2px solid #38bdf8;
+        border-radius: 10px; background: rgba(56,189,248,0.08);
+    }
+    .brand .course { font-size: 18px; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px; }
+
+    .tabs { display: flex; gap: 10px; }
+    .tab {
+        font-size: 16px; font-weight: 600; color: #94a3b8;
+        padding: 9px 18px; border-radius: 999px; cursor: pointer;
+        border: 2px solid transparent; background: rgba(148,163,184,0.07);
+        transition: all 0.15s ease; white-space: nowrap;
+    }
+    .tab:hover { color: #e2e8f0; background: rgba(148,163,184,0.16); }
+    .tab.active { color: #0b1120; background: #38bdf8; border-color: #7dd3fc; }
+
+    /* ===== Stage / pages ===== */
+    .stage { flex: 1; position: relative; min-height: 0; }
+    .page {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column;
+        opacity: 0; visibility: hidden;
+        transition: opacity 0.3s ease; padding-top: 16px;
+    }
+    .page.active { opacity: 1; visibility: visible; }
+
+    .page-title { font-size: 38px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.5px; }
+    .page-title .accent { color: #38bdf8; }
+    .page-title .amber  { color: #fbbf24; }
+    .page-sub { font-size: 20px; color: #94a3b8; margin-top: 6px; font-weight: 500; }
+
+    /* ===== Example tab bar ===== */
+    .ex-caption { font-size: 14px; color: #64748b; margin: 14px 0 6px; font-weight: 600; letter-spacing: 0.3px; }
+    .ex-caption b { color: #a78bfa; }
+    .etabs { display: flex; gap: 12px; margin-bottom: 6px; }
+    .etab {
+        font-family: ui-monospace, 'Consolas', monospace;
+        font-size: 19px; font-weight: 700; color: #cbd5e1;
+        padding: 9px 22px; border-radius: 12px; cursor: pointer;
+        background: rgba(148,163,184,0.08); border: 2px solid rgba(148,163,184,0.2);
+        transition: all 0.15s ease; display: flex; align-items: center; gap: 9px;
+    }
+    .etab:hover { background: rgba(148,163,184,0.18); }
+    .etab.active { color: #0b1120; background: #fbbf24; border-color: #fde68a; }
+    .etab .num { font-size: 13px; font-weight: 700; opacity: 0.7; font-family: 'Segoe UI', sans-serif; }
+    .etab.walk::after { content: "walk-through"; font-size: 11px; background: rgba(167,139,250,0.25); color: #c4b5fd; padding: 2px 8px; border-radius: 6px; font-family: 'Segoe UI', sans-serif; font-weight: 700; }
+    .etab.walk.active::after { background: rgba(11,17,32,0.18); color: #0b1120; }
+
+    .example-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+    /* ===== Reveal animation ===== */
+    .reveal { opacity: 0; transform: translateY(12px); transition: opacity 0.4s ease, transform 0.4s ease; }
+    .reveal.shown { opacity: 1; transform: translateY(0); }
+
+    /* ===== Page 1 cards ===== */
+    .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 26px; margin-top: 30px; }
+    .card {
+        background: linear-gradient(160deg, rgba(30,41,59,0.85), rgba(15,23,42,0.85));
+        border: 2px solid rgba(148,163,184,0.22);
+        border-radius: 18px; padding: 26px 28px; display: flex; flex-direction: column;
+    }
+    .card .ic { font-size: 34px; margin-bottom: 10px; }
+    .card h3 { font-size: 24px; color: #38bdf8; margin-bottom: 12px; }
+    .card p { font-size: 18px; line-height: 1.55; color: #cbd5e1; }
+    .card p .hi { color: #fbbf24; font-weight: 700; }
+
+    .bands-wrap { display: flex; gap: 30px; margin-top: 14px; }
+    .band-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
+    .band-label { font-size: 15px; color: #94a3b8; margin-bottom: 8px; font-weight: 600; }
+    .band { width: 100%; height: 150px; border-radius: 10px; overflow: hidden; border: 2px solid rgba(148,163,184,0.25); display: flex; flex-direction: column; }
+    .seg { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; font-family: ui-monospace, monospace; color: #0b1120; font-weight: 700; }
+    .band.two .hi { background: #34d399; }
+    .band.two .gap { background: repeating-linear-gradient(45deg,#1e293b,#1e293b 8px,#334155 8px,#334155 16px); color:#94a3b8; flex: 0.7; }
+    .band.two .lo { background: #38bdf8; }
+    .band-note { font-size: 14px; color: #64748b; margin-top: 8px; text-align: center; }
+
+    .banner {
+        margin-top: 26px; padding: 20px 30px; border-radius: 16px;
+        background: linear-gradient(120deg, rgba(56,189,248,0.14), rgba(167,139,250,0.12));
+        border: 2px solid rgba(56,189,248,0.4);
+        font-size: 22px; line-height: 1.5; color: #e2e8f0; text-align: center;
+    }
+    .banner b { color: #fbbf24; }
+    .banner code { font-family: ui-monospace, monospace; color: #7dd3fc; font-size: 22px; }
+
+    /* ===== Binary → Decimal ===== */
+    .split { display: grid; grid-template-columns: 1.55fr 1fr; gap: 36px; flex: 1; min-height: 0; align-items: center; }
+    .work-area { display: flex; flex-direction: column; justify-content: center; }
+    .bit-strip { display: flex; gap: 16px; justify-content: center; align-items: flex-end; }
+    .bcol { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .bdigit {
+        font-family: ui-monospace, 'Consolas', monospace; font-size: 58px; font-weight: 800;
+        width: 88px; height: 88px; display: flex; align-items: center; justify-content: center;
+        border-radius: 14px; border: 3px solid;
+    }
+    .bdigit.one  { color: #fbbf24; border-color: #fbbf24; background: rgba(251,191,36,0.12); }
+    .bdigit.zero { color: #64748b; border-color: #334155; background: rgba(51,65,85,0.30); }
+    .bpow { font-family: ui-monospace, monospace; font-size: 20px; color: #94a3b8; }
+    .bval { font-family: ui-monospace, monospace; font-size: 24px; color: #38bdf8; font-weight: 700; }
+    .bprod { font-family: ui-monospace, monospace; font-size: 24px; font-weight: 700; height: 30px; }
+    .bprod.on { color: #fbbf24; } .bprod.off { color: #475569; }
+
+    .sumline { text-align: center; margin-top: 28px; font-family: ui-monospace, monospace; font-size: 32px; color: #cbd5e1; }
+    .sumline .res { color: #34d399; font-weight: 800; }
+
+    .result-box {
+        margin: 24px auto 0; padding: 15px 34px; border-radius: 16px;
+        background: rgba(52,211,153,0.12); border: 2px solid rgba(52,211,153,0.5);
+        font-family: ui-monospace, monospace; font-size: 36px; font-weight: 800;
+        color: #e2e8f0; text-align: center; width: fit-content;
+    }
+    .result-box .d { color: #34d399; }
+    .sub { font-size: 0.55em; vertical-align: sub; color: #94a3b8; }
+
+    .keybox { background: rgba(15,23,42,0.7); border: 2px solid rgba(148,163,184,0.22); border-radius: 16px; padding: 24px 26px; }
+    .keybox h4 { font-size: 20px; color: #a78bfa; margin-bottom: 12px; }
+    .keybox p { font-size: 18px; line-height: 1.55; color: #cbd5e1; }
+    .keybox .mono { font-family: ui-monospace, monospace; color: #7dd3fc; }
+    .keybox .amber { color: #fbbf24; font-weight: 700; }
+
+    /* ===== Division / powers tables ===== */
+    .method-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 44px; flex: 1; min-height: 0; align-items: center; }
+    .steptable { display: flex; flex-direction: column; gap: 11px; font-family: ui-monospace, 'Consolas', monospace; }
+    .srow {
+        display: grid; grid-template-columns: 1fr auto; align-items: center;
+        font-size: 28px; padding: 11px 20px; border-radius: 12px;
+        background: rgba(30,41,59,0.55); border: 2px solid rgba(148,163,184,0.16);
+    }
+    .srow .calc { color: #cbd5e1; }
+    .srow .calc .q { color: #7dd3fc; font-weight: 800; }
+    .srow .calc b { color: #f1f5f9; }
+    .srow .calc .dividend { display: inline-block; min-width: 2.3ch; text-align: right; }
+    .srow .rem { font-weight: 800; padding-left: 22px; white-space: nowrap; }
+    .srow .rem .lab { font-size: 18px; color: #94a3b8; font-weight: 500; }
+    .srow .rem .one { color: #fbbf24; } .srow .rem .zero { color: #64748b; }
+    .order-tag { font-size: 14px; color: #a78bfa; font-weight: 700; margin-left: 12px; }
+
+    .assemble { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .arrow-note { font-size: 19px; color: #94a3b8; display: flex; align-items: center; gap: 10px; }
+    .arrow-note .ar { font-size: 28px; color: #a78bfa; }
+    .check { font-size: 21px; color: #34d399; font-family: ui-monospace, monospace; }
+    .leftover { font-family: ui-monospace, monospace; font-size: 20px; color: #94a3b8; text-align: center; }
+    .leftover b { color: #f1f5f9; }
+    .tie { margin-top: 6px; padding: 15px 26px; border-radius: 14px; background: rgba(167,139,250,0.12); border: 2px solid rgba(167,139,250,0.4); font-size: 19px; line-height: 1.5; color: #e2e8f0; text-align: center; }
+    .tie b { color: #fbbf24; }
+
+    /* ===== Bottom bar ===== */
+    .bottombar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding-top: 12px; margin-top: 4px; border-top: 2px solid rgba(148,163,184,0.18);
+    }
+    .nav-btn {
+        display: flex; align-items: center; gap: 10px;
+        background: rgba(56,189,248,0.12); color: #e2e8f0;
+        border: 2px solid rgba(56,189,248,0.45); border-radius: 12px;
+        padding: 11px 22px; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.15s ease;
+    }
+    .nav-btn:hover:not(:disabled) { background: rgba(56,189,248,0.25); transform: translateY(-1px); }
+    .nav-btn:disabled { opacity: 0.3; cursor: default; }
+    .dots { display: flex; gap: 12px; align-items: center; }
+    .dot { width: 13px; height: 13px; border-radius: 50%; background: rgba(148,163,184,0.3); cursor: pointer; transition: all 0.2s ease; }
+    .dot.active { background: #38bdf8; transform: scale(1.25); }
+    .step-hint { font-size: 15px; color: #64748b; font-family: ui-monospace, monospace; min-width: 130px; text-align: right; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== TOP BAR ===== -->
+    <div class="topbar">
+        <div class="brand">
+            <span class="logo">01</span>
+            <span class="course">Digital Logic · Number Systems</span>
+        </div>
+        <div class="tabs" id="tabs">
+            <div class="tab" data-go="0">Why Binary?</div>
+            <div class="tab" data-go="1">Binary → Decimal</div>
+            <div class="tab" data-go="2">Decimal → Binary: Division</div>
+            <div class="tab" data-go="3">Decimal → Binary: Powers</div>
+        </div>
+    </div>
+
+    <!-- ===== STAGE ===== -->
+    <div class="stage" id="stage">
+
+        <!-- ===== PAGE 1: WHY BINARY ===== -->
+        <section class="page" id="p0">
+            <div class="page-title">Why do computers count in <span class="amber">binary</span>?</div>
+            <div class="page-sub">Hardware is built from switches — and a switch only has two states.</div>
+            <div class="cards">
+                <div class="card reveal">
+                    <div class="ic">🔌</div>
+                    <h3>Two states are easy to build</h3>
+                    <p>A transistor acts like a switch: <span class="hi">OFF (≈0 V)</span> or <span class="hi">ON (≈ supply V)</span>. Two states are cheap, fast, and rock-solid to manufacture by the billion.</p>
+                </div>
+                <div class="card reveal">
+                    <div class="ic">🛡️</div>
+                    <h3>Two states resist noise</h3>
+                    <div class="bands-wrap">
+                        <div class="band-col">
+                            <div class="band-label">Binary (2 levels)</div>
+                            <div class="band two">
+                                <div class="seg hi">1 · HIGH</div>
+                                <div class="seg gap">forbidden</div>
+                                <div class="seg lo">0 · LOW</div>
+                            </div>
+                            <div class="band-note">Wide margins → noise ignored</div>
+                        </div>
+                        <div class="band-col">
+                            <div class="band-label">Decimal (10 levels)</div>
+                            <div class="band" id="tenBand"></div>
+                            <div class="band-note">Cramped → a little noise flips the digit</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card reveal">
+                    <div class="ic">🔢</div>
+                    <h3>Everything becomes bits</h3>
+                    <p>Numbers, text, images, audio — all encoded as <span class="hi">1</span>s and <span class="hi">0</span>s. Each bit answers one yes/no question, and <span class="hi">n</span> bits represent <span class="hi">2ⁿ</span> distinct values.</p>
+                </div>
+            </div>
+            <div class="banner reveal">
+                One bit = one <b>binary digit</b>. To use these machines we constantly translate between the
+                <code>decimal</code> we think in and the <code>binary</code> the hardware runs on — that's what the rest of this video covers.
+            </div>
+        </section>
+
+        <!-- ===== PAGE 2: BINARY → DECIMAL ===== -->
+        <section class="page" id="p1">
+            <div class="page-title"><span class="amber">Binary</span> → <span class="accent">Decimal</span></div>
+            <div class="page-sub">Each bit has a place value (a power of 2). Multiply, then add.</div>
+            <div class="ex-caption">WORKED EXAMPLES — we do <b>Example 1</b> together, then you practice 2–4 on your own</div>
+            <div class="etabs" data-tabs="1"></div>
+            <div class="example-body"></div>
+        </section>
+
+        <!-- ===== PAGE 3: DECIMAL → BINARY (DIVISION) ===== -->
+        <section class="page" id="p2">
+            <div class="page-title"><span class="accent">Decimal</span> → <span class="amber">Binary</span> &nbsp;·&nbsp; the division method</div>
+            <div class="page-sub">Repeatedly divide by 2. The remainders <i>are</i> the bits — read them bottom-up.</div>
+            <div class="ex-caption">WORKED EXAMPLES — we do <b>Example 1</b> together, then you practice 2–4 on your own</div>
+            <div class="etabs" data-tabs="2"></div>
+            <div class="example-body"></div>
+        </section>
+
+        <!-- ===== PAGE 4: DECIMAL → BINARY (POWERS) ===== -->
+        <section class="page" id="p3">
+            <div class="page-title"><span class="accent">Decimal</span> → <span class="amber">Binary</span> &nbsp;·&nbsp; pushing in powers of 2</div>
+            <div class="page-sub">Take the biggest power of 2 that fits, subtract it, place a 1. Repeat down the line.</div>
+            <div class="ex-caption">WORKED EXAMPLES — we do <b>Example 1</b> together, then you practice 2–4 on your own</div>
+            <div class="etabs" data-tabs="3"></div>
+            <div class="example-body"></div>
+        </section>
+
+    </div>
+
+    <!-- ===== BOTTOM BAR ===== -->
+    <div class="bottombar">
+        <button class="nav-btn" id="prevBtn">‹ Back</button>
+        <div class="dots" id="dots"></div>
+        <div style="display:flex;align-items:center;gap:18px;">
+            <span class="step-hint" id="stepHint"></span>
+            <button class="nav-btn" id="nextBtn">Next ›</button>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+const SUP = ['⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'];
+
+/* ===== shared example numbers (closed loop across all 3 methods) ===== */
+const NUMS = [
+    { dec: 13, bin: '1101'   },
+    { dec: 22, bin: '10110'  },
+    { dec: 37, bin: '100101' },
+    { dec: 31, bin: '11111'  },
+];
+
+/* ===== Page 1: ten-band decimal diagram ===== */
+const colors = ['#f87171','#fb923c','#fbbf24','#a3e635','#34d399','#22d3ee','#38bdf8','#818cf8','#c084fc','#f472b6'];
+const tb = document.getElementById('tenBand');
+for (let i=9;i>=0;i--){ const s=document.createElement('div'); s.className='seg'; s.style.background=colors[i]; s.textContent=i; tb.appendChild(s); }
+
+/* ===== Builders ===== */
+function onTerms(bin){
+    const parts=[];
+    bin.split('').forEach((c,i)=>{ if(c==='1') parts.push(2**(bin.length-1-i)); });
+    return parts.join(' + ');
+}
+
+function buildB2D(num){
+    const bin = num.bin, dec = num.dec;
+    const cols = bin.split('').map((c,i)=>{
+        const pw = bin.length-1-i, val = 2**pw, on = c==='1';
+        return `<div class="bcol">
+            <div class="bprod ${on?'on':'off'} reveal">${on?val:'0'}</div>
+            <div class="bdigit ${on?'one':'zero'}">${c}</div>
+            <div class="bpow">2${SUP[pw]}</div>
+            <div class="bval">${val}</div>
+        </div>`;
+    }).join('');
+    const sumParts = bin.split('').map((c,i)=> c==='1' ? 2**(bin.length-1-i) : 0).join(' + ');
+    return `<div class="split">
+        <div class="work-area">
+            <div class="bit-strip">${cols}</div>
+            <div class="sumline reveal">${sumParts} = <span class="res">${dec}</span></div>
+            <div class="result-box reveal">${bin}<span class="sub">2</span> = <span class="d">${dec}</span><span class="sub">10</span></div>
+        </div>
+        <div class="keybox">
+            <h4>The key idea</h4>
+            <p>Each bit's weight is a power of 2. The rightmost bit is <span class="mono">2⁰ = 1</span>, the <span class="amber">LSB</span>; every step left doubles the weight.</p>
+            <p style="margin-top:14px;color:#94a3b8">Multiply each bit by its weight, then add the columns where the bit is <span class="amber">1</span>.</p>
+        </div>
+    </div>`;
+}
+
+function buildDiv(num){
+    const n = num.dec;
+    let rows=[], x=n;
+    while(x>0){ rows.push({x:x, q:Math.floor(x/2), r:x%2}); x=Math.floor(x/2); }
+    const bin = rows.map(r=>r.r).reverse().join('');
+    const rowsHtml = rows.map((r,i)=>{
+        const tag = i===0 ? '← LSB (first)' : (i===rows.length-1 ? '← MSB (last)' : '');
+        const cls = r.r ? 'one':'zero';
+        return `<div class="srow reveal">
+            <div class="calc"><span class="dividend">${r.x}</span> ÷ 2 = <span class="q">${r.q}</span></div>
+            <div class="rem"><span class="lab">r</span> <span class="${cls}">${r.r}</span><span class="order-tag">${tag}</span></div>
+        </div>`;
+    }).join('');
+    return `<div class="method-grid">
+        <div class="steptable">${rowsHtml}</div>
+        <div class="assemble">
+            <div class="arrow-note reveal"><span class="ar">↑</span> Read remainders <b style="color:#fbbf24;margin:0 6px">bottom → top</b></div>
+            <div class="result-box reveal"><span class="d">${n}</span><span class="sub">10</span> = ${bin}<span class="sub">2</span></div>
+            <div class="check reveal">✓ check: ${onTerms(bin)} = ${n}</div>
+            <div class="tie reveal">The <b>first</b> remainder is the <b>LSB</b>, so division builds the answer right-to-left.</div>
+        </div>
+    </div>`;
+}
+
+function buildPow(num){
+    const n = num.dec;
+    let p=1; while(p*2<=n) p*=2; if(n===0) p=1;
+    let rows=[], x=n, seq=[n], bits='';
+    for(let w=p; w>=1; w=w/2){
+        const fits = x>=w;
+        const before = x;
+        if(fits) x-=w;
+        bits += fits ? '1':'0';
+        rows.push({w, fits, before});
+        seq.push(x);
+    }
+    const bin = bits;
+    const rowsHtml = rows.map(r=>{
+        const cls = r.fits ? 'one':'zero';
+        const txt = r.fits
+            ? `Does <b>${r.w}</b> fit in ${r.before}?&nbsp; yes → ${r.before} − ${r.w} = <span class="q">${r.before-r.w}</span>`
+            : `Does <b>${r.w}</b> fit in ${r.before}?&nbsp; no &nbsp;→ keep <span class="q">${r.before}</span>`;
+        return `<div class="srow reveal">
+            <div class="calc" style="font-size:23px">${txt}</div>
+            <div class="rem"><span class="${cls}">${r.fits?1:0}</span></div>
+        </div>`;
+    }).join('');
+    return `<div class="method-grid">
+        <div class="steptable">${rowsHtml}</div>
+        <div class="assemble">
+            <div class="leftover reveal">amount left: <b>${seq.join(' → ')}</b></div>
+            <div class="result-box reveal"><span class="d">${n}</span><span class="sub">10</span> = ${bin}<span class="sub">2</span></div>
+            <div class="check reveal">✓ same answer as the division method</div>
+            <div class="tie reveal">This is <b>binary → decimal in reverse</b>: it fills place values directly, building left-to-right (MSB first).</div>
+        </div>
+    </div>`;
+}
+
+const BUILDERS = { 1: buildB2D, 2: buildDiv, 3: buildPow };
+const EXPAGES = { 1:true, 2:true, 3:true };
+const selected = { 1:0, 2:0, 3:0 };
+
+/* ===== Build example tab bars ===== */
+document.querySelectorAll('.etabs').forEach(bar=>{
+    const pageIdx = +bar.dataset.tabs;
+    NUMS.forEach((num,i)=>{
+        const t = document.createElement('div');
+        t.className = 'etab' + (i===0?' walk':'');
+        const label = pageIdx===1 ? `${num.bin}` : `${num.dec}`;
+        const subscr = pageIdx===1 ? '₂' : '₁₀';
+        t.innerHTML = `<span class="num">Ex ${i+1}</span> ${label}${subscr}`;
+        t.addEventListener('click', ()=>{ selected[pageIdx]=i; showPage(pageIdx,false); });
+        bar.appendChild(t);
+    });
+});
+
+function renderExample(pageIdx){
+    const ex = selected[pageIdx];
+    const body = pages[pageIdx].querySelector('.example-body');
+    body.innerHTML = BUILDERS[pageIdx](NUMS[ex]);
+    pages[pageIdx].querySelectorAll('.etab').forEach((t,i)=>t.classList.toggle('active', i===ex));
+}
+
+/* ===== Navigation engine ===== */
+const pages = [...document.querySelectorAll('.page')];
+const tabs  = [...document.querySelectorAll('.tab')];
+const dotsWrap = document.getElementById('dots');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const stepHint = document.getElementById('stepHint');
+let current = 0;
+
+pages.forEach((_,i)=>{ const d=document.createElement('div'); d.className='dot'; d.addEventListener('click',()=>showPage(i,false)); dotsWrap.appendChild(d); });
+const dots = [...document.querySelectorAll('.dot')];
+
+const steps = p => [...pages[p].querySelectorAll('.reveal')];
+
+function showPage(idx, revealAll){
+    pages.forEach((p,i)=>p.classList.toggle('active', i===idx));
+    current = idx;
+    if (EXPAGES[idx]) renderExample(idx);
+    const s = steps(idx);
+    s.forEach(el=>el.classList.toggle('shown', revealAll));
+    pages[idx].dataset.step = revealAll ? s.length : 0;
+    updateChrome();
+}
+function next(){
+    const s = steps(current); let st = +(pages[current].dataset.step||0);
+    if (st < s.length){ s[st].classList.add('shown'); pages[current].dataset.step = st+1; }
+    else if (current < pages.length-1){ showPage(current+1,false); }
+    updateChrome();
+}
+function prev(){
+    const s = steps(current); let st = +(pages[current].dataset.step||0);
+    if (st > 0){ st--; s[st].classList.remove('shown'); pages[current].dataset.step = st; }
+    else if (current > 0){ showPage(current-1,true); }
+    updateChrome();
+}
+function updateChrome(){
+    tabs.forEach((t,i)=>t.classList.toggle('active', i===current));
+    dots.forEach((d,i)=>d.classList.toggle('active', i===current));
+    const total = steps(current).length, st = +(pages[current].dataset.step||0);
+    stepHint.textContent = total ? `step ${st} / ${total}` : '';
+    prevBtn.disabled = (current===0 && st===0);
+    nextBtn.disabled = (current===pages.length-1 && st===total);
+}
+
+prevBtn.addEventListener('click', prev);
+nextBtn.addEventListener('click', next);
+tabs.forEach(t=>t.addEventListener('click', ()=>showPage(+t.dataset.go,false)));
+document.addEventListener('keydown', e=>{
+    if (['ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); next(); }
+    if (['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); prev(); }
+});
+
+showPage(0,false);
+
+/* ===== Responsive scaling ===== */
+const DESIGN_WIDTH=1920, DESIGN_HEIGHT=1080;
+function autoResize(){
+    const container=document.getElementById('viewportContainer'), surface=document.getElementById('designSurface');
+    const vw=window.innerWidth, vh=window.innerHeight; let cw,ch;
+    if (vw/vh > 16/9){ ch=vh; cw=ch*(16/9); } else { cw=vw; ch=cw*(9/16); }
+    container.style.width=cw+'px'; container.style.height=ch+'px';
+    surface.style.transform=`scale(${cw/DESIGN_WIDTH})`;
+}
+autoResize();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(autoResize,50);});
+window.addEventListener('orientationchange',()=>setTimeout(autoResize,100));
+</script>
+</body>
+</html>
