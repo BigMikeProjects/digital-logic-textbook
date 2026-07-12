@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary ⇄ Hexadecimal</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  }
+  body { display: flex; align-items: center; justify-content: center; }
+
+  .viewport-container {
+    width: 100%; max-width: 100vw;
+    aspect-ratio: 16 / 9; max-height: 100vh;
+    position: relative; overflow: hidden;
+  }
+  .design-surface {
+    width: 1920px; height: 1080px;
+    position: absolute; top: 0; left: 0;
+    transform-origin: top left;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #e0e0e0;
+  }
+  .page {
+    position: absolute; inset: 0;
+    padding: 34px 60px 24px;
+    display: flex; flex-direction: column;
+  }
+  .page.inactive { display: none; }
+
+  /* ---- intro page ---- */
+  .intro-body {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 40px; min-height: 0;
+  }
+  .intro-block { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .intro-label {
+    font-size: 21px; color: #90a4ae; text-align: center; max-width: 1200px; line-height: 1.45;
+  }
+  .intro-label .hl-bin { color: #4fc3f7; font-weight: 700; }
+  .intro-label .hl-hex { color: #b388ff; font-weight: 700; }
+
+  /* mini preview strip (static) */
+  .ministrip { display: flex; gap: 20px; }
+  .mininib { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 180px; }
+  .minibits { display: flex; gap: 4px; }
+  .minibit {
+    width: 42px; height: 54px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Consolas, 'SF Mono', monospace; font-size: 28px; font-weight: 700;
+  }
+  .minibit.one  { background: #29b6f6; color: #06202e; }
+  .minibit.zero { background: #263445; color: #6b8296; border: 1px solid #33475c; }
+  .minihex {
+    width: 100%; text-align: center;
+    font-family: Consolas, 'SF Mono', monospace; font-size: 40px; font-weight: 700;
+    color: #d1c4ff;
+  }
+  .lengthtag {
+    font-family: Consolas, monospace; font-size: 17px;
+    color: #607d8b; margin-top: 2px;
+  }
+  .lengthtag b.bin { color: #4fc3f7; }
+  .lengthtag b.hex { color: #b388ff; }
+
+  /* spot the difference */
+  .spot {
+    background: rgba(255,255,255,.04); border: 2px solid #37506a; border-radius: 16px;
+    padding: 20px 34px; display: flex; flex-direction: column; gap: 12px; align-items: center;
+  }
+  .spot .cap { font-size: 19px; color: #cfd8dc; }
+  .spot .cap b { color: #ffb300; }
+  .spot .rowset { display: flex; flex-direction: column; gap: 10px; }
+  .spot .drow {
+    display: flex; align-items: center; gap: 26px;
+    font-family: Consolas, 'SF Mono', monospace; font-size: 30px;
+  }
+  .spot .dbin { color: #4fc3f7; letter-spacing: 2px; }
+  .spot .deq { color: #546e7a; font-size: 22px; }
+  .spot .dhex { color: #d1c4ff; letter-spacing: 4px; }
+  .spot .dhex .diff { color: #ffb300; text-shadow: 0 0 14px rgba(255,179,0,.7); }
+
+  .pagehint {
+    text-align: center; color: #607d8b; font-size: 17px;
+    padding-top: 14px; border-top: 2px solid rgba(255,255,255,.08); margin-top: auto;
+  }
+  .pagehint .k {
+    font-family: Consolas, monospace; background: #0d1b2a;
+    border: 1px solid #37506a; border-radius: 6px; padding: 2px 9px; color: #9fd4ef;
+  }
+
+  /* ---- digit-definition page ---- */
+  .digits-body {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 40px; min-height: 0;
+  }
+  .digit-group { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .digit-grouplabel { font-size: 21px; color: #90a4ae; }
+  .digit-grouplabel b { color: #4fc3f7; }
+  .digit-grouplabel.new { color: #ffb300; }
+  .digit-grouplabel.new b { color: #ffd54f; }
+  .digit-row { display: flex; gap: 15px; }
+  .dcard {
+    width: 150px; padding: 14px 6px; border-radius: 12px;
+    background: rgba(255,255,255,.03); border: 2px solid #2c3e50;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .dcard.new { border-color: #ffb300; background: rgba(255,179,0,.07); }
+  .dglyph {
+    font-family: Consolas, 'SF Mono', monospace;
+    font-size: 50px; font-weight: 700; color: #d1c4ff; line-height: 1;
+  }
+  .dcard.new .dglyph { color: #ffb300; text-shadow: 0 0 16px rgba(255,179,0,.4); }
+  .ddec { font-family: Consolas, monospace; font-size: 20px; color: #90a4ae; }
+  .dcard.new .ddec { color: #ffd54f; }
+  .dbits { display: flex; gap: 3px; margin-top: 2px; }
+  .dbit {
+    width: 26px; height: 32px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Consolas, monospace; font-size: 18px; font-weight: 700;
+  }
+  .dbit.one  { background: #29b6f6; color: #06202e; }
+  .dbit.zero { background: #263445; color: #6b8296; border: 1px solid #33475c; }
+
+  h1 {
+    text-align: center; color: #4fc3f7;
+    font-size: 40px; font-weight: 700; letter-spacing: 1px;
+  }
+  .subtitle {
+    text-align: center; color: #90a4ae;
+    font-size: 19px; margin-top: 4px;
+  }
+
+  /* ---- control + readout bar ---- */
+  .topbar {
+    display: flex; align-items: center; justify-content: center;
+    gap: 46px; margin-top: 18px;
+  }
+  .nctl { display: flex; align-items: center; gap: 14px; }
+  .nctl .lbl { font-size: 20px; color: #90a4ae; }
+  .nbtn {
+    width: 48px; height: 48px; border-radius: 10px;
+    background: #0d1b2a; border: 2px solid #546e7a;
+    color: #cfe8f7; font-size: 28px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    user-select: none; transition: all .12s ease;
+  }
+  .nbtn:hover { border-color: #4fc3f7; color: #fff; }
+  .nbtn.disabled { opacity: .3; cursor: not-allowed; }
+  .nval {
+    font-family: Consolas, 'SF Mono', monospace;
+    font-size: 30px; font-weight: 700; color: #4fc3f7;
+    min-width: 92px; text-align: center;
+  }
+
+  .readout {
+    font-family: Consolas, 'SF Mono', monospace;
+    font-size: 24px; display: flex; gap: 22px; align-items: baseline;
+  }
+  .readout .grp { display: flex; align-items: baseline; gap: 6px; }
+  .readout .num { font-weight: 700; }
+  .readout .bin { color: #4fc3f7; }
+  .readout .hex { color: #b388ff; }
+  .readout .dec { color: #cfd8dc; }
+  .readout .sub { font-size: 15px; color: #607d8b; }
+
+  /* ---- main strip ---- */
+  .stage {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    gap: 30px; min-height: 0;
+  }
+  .sidecol {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    width: 118px;
+  }
+  .sidecol .arrow { font-size: 34px; line-height: 1; }
+  .sidecol .txt { font-size: 16px; text-align: center; letter-spacing: .5px; }
+  .sidecol.down .arrow { color: #b388ff; }
+  .sidecol.down .txt { color: #b388ff; }
+  .sidecol.up .arrow { color: #4fc3f7; }
+  .sidecol.up .txt { color: #4fc3f7; }
+
+  #strip { display: flex; align-items: flex-start; gap: 46px; }
+
+  .nibble { display: flex; flex-direction: column; align-items: center; }
+  .cells { display: flex; gap: 8px; }
+
+  .cellwrap { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .idx {
+    font-family: Consolas, 'SF Mono', monospace;
+    font-size: 15px; color: #607d8b; height: 18px; line-height: 18px;
+  }
+  .bit {
+    width: 84px; height: 108px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Consolas, 'SF Mono', monospace;
+    font-size: 56px; font-weight: 700;
+    cursor: pointer; user-select: none;
+    transition: background .12s ease, box-shadow .12s ease, transform .08s ease;
+    border: 2px solid transparent;
+  }
+  .bit.one  { background: #29b6f6; color: #06202e; box-shadow: 0 0 18px rgba(41,182,246,.35); }
+  .bit.zero { background: #263445; color: #6b8296; border-color: #33475c; }
+  .bit:hover { transform: translateY(-2px); }
+  .bit.phantom {
+    background: rgba(255,179,0,.12); color: #ffb300;
+    border: 2px dashed #ffb300; cursor: not-allowed; box-shadow: none;
+  }
+  .bit.phantom:hover { transform: none; }
+  .bit.pulse { animation: pulseAmber .5s ease; }
+  @keyframes pulseAmber {
+    0%,100% { box-shadow: 0 0 0 rgba(255,179,0,0); }
+    50% { box-shadow: 0 0 26px rgba(255,179,0,.9); background: rgba(255,179,0,.3); }
+  }
+
+  /* weights */
+  .weights { display: flex; gap: 8px; margin-top: 8px; height: 22px; }
+  .wt {
+    width: 84px; text-align: center;
+    font-family: Consolas, 'SF Mono', monospace;
+    font-size: 17px; color: #55697c;
+  }
+  .wt.lit { color: #4fc3f7; font-weight: 700; }
+  .wt.pad { color: #ffb300; }
+
+  /* bracket connecting nibble -> hex digit */
+  .bracket {
+    width: 100%; height: 26px; position: relative; margin-top: 10px;
+  }
+  .bracket .line {
+    position: absolute; left: 6px; right: 6px; top: 0; height: 3px;
+    background: #5b7286; border-radius: 2px;
+  }
+  .bracket .stem {
+    position: absolute; left: 50%; top: 0; width: 3px; height: 26px;
+    background: #5b7286; transform: translateX(-50%);
+  }
+  .nibble.padded .bracket .line,
+  .nibble.padded .bracket .stem { background: #ffb300; }
+
+  .hexbox {
+    margin-top: 8px; width: 116px; min-height: 116px;
+    border-radius: 14px; background: #1c1636;
+    border: 2px solid #7e57c2;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .12s ease; padding: 6px;
+  }
+  .hexbox:hover { border-color: #b388ff; }
+  .hexbox.sel { border-color: #b388ff; box-shadow: 0 0 22px rgba(179,136,255,.5); background: #241a44; }
+  .hexchar {
+    font-family: Consolas, 'SF Mono', monospace;
+    font-size: 64px; font-weight: 700; color: #d1c4ff; line-height: 1;
+  }
+  .hexsum {
+    font-family: Consolas, 'SF Mono', monospace;
+    font-size: 15px; color: #8a7bb8; margin-top: 4px;
+  }
+
+  /* reveal-stage visibility */
+  .hidden-soft { visibility: hidden; }
+  .hidden-hard { display: none; }
+
+  /* ---- legend ---- */
+  .legend {
+    display: flex; justify-content: center; gap: 26px; flex-wrap: wrap;
+    font-size: 16px; color: #7d94a8; margin-top: 6px;
+    border-top: 2px solid rgba(255,255,255,.08); padding-top: 14px;
+  }
+  .legend b { color: #cfe8f7; }
+  .legend .k {
+    font-family: Consolas, monospace; background: #0d1b2a;
+    border: 1px solid #37506a; border-radius: 6px;
+    padding: 2px 9px; color: #9fd4ef; margin-right: 5px;
+  }
+  .stagepips { display: flex; gap: 7px; align-items: center; }
+  .pip { width: 11px; height: 11px; border-radius: 50%; background: #33475c; }
+  .pip.on { background: #4fc3f7; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+  <div class="design-surface" id="designSurface">
+
+    <!-- ============ PAGE 0 : motivation ============ -->
+    <div class="page" id="page0">
+      <h1>Why Hexadecimal?</h1>
+      <p class="subtitle">Binary is how machines store numbers — but it's tedious for humans to read, write, and copy.</p>
+
+      <div class="intro-body">
+        <div class="intro-block">
+          <div class="ministrip" id="miniBin"></div>
+          <div class="ministrip" id="miniHex"></div>
+          <div class="lengthtag" id="lenTag"></div>
+          <div class="intro-label" id="introLbl"></div>
+        </div>
+
+        <div class="intro-block" id="spotBlock">
+          <div class="spot" id="spot"></div>
+        </div>
+      </div>
+
+      <div class="pagehint">
+        <span class="k">Space</span> / <span class="k">→</span> to advance
+        &nbsp;·&nbsp; <span class="k">←</span> back
+        &nbsp;·&nbsp; continues into the live converter
+      </div>
+    </div>
+
+    <!-- ============ PAGE 1 : hex digit definitions ============ -->
+    <div class="page inactive" id="page1">
+      <h1>Meet the Hex Digits</h1>
+      <p class="subtitle">Decimal counts with ten digits, 0–9. Hexadecimal needs sixteen — so after 9 it borrows the letters A–F to stand for ten through fifteen.</p>
+
+      <div class="digits-body">
+        <div class="digit-group">
+          <div class="digit-grouplabel">The ten you already know — decimal digits <b>0–9</b></div>
+          <div class="digit-row" id="rowFamiliar"></div>
+        </div>
+        <div class="digit-group" id="newGroup">
+          <div class="digit-grouplabel new">Six new letter-digits — <b>A–F = 10–15</b></div>
+          <div class="digit-row" id="rowNew"></div>
+        </div>
+      </div>
+
+      <div class="pagehint">
+        <span class="k">Space</span> / <span class="k">→</span> to reveal &amp; advance
+        &nbsp;·&nbsp; <span class="k">←</span> back
+      </div>
+    </div>
+
+    <!-- ============ PAGE 2 : interactive ============ -->
+    <div class="page inactive" id="page2">
+      <h1>Binary&nbsp;&nbsp;⇄&nbsp;&nbsp;Hexadecimal</h1>
+      <p class="subtitle">Every 4 bits = 1 hex digit — grouped from the right. When N isn't a multiple of 4, the top nibble borrows leading zeros.</p>
+
+      <div class="topbar">
+        <div class="nctl">
+          <span class="lbl">N =</span>
+          <div class="nbtn" id="nMinus">−</div>
+          <div class="nval" id="nVal">8 bits</div>
+          <div class="nbtn" id="nPlus">+</div>
+        </div>
+        <div class="readout" id="readout"></div>
+      </div>
+
+      <div class="stage">
+        <div class="sidecol down">
+          <div class="arrow">↓</div>
+          <div class="txt">read down<br>= HEX</div>
+        </div>
+
+        <div id="strip"></div>
+
+        <div class="sidecol up">
+          <div class="arrow">↑</div>
+          <div class="txt">read up<br>= BINARY</div>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span><span class="k">← →</span><b>N</b> (1–16)</span>
+        <span><span class="k">↑ ↓</span>nudge selected hex</span>
+        <span><span class="k">1 2 3 4</span>reveal
+          <span class="stagepips" id="pips" style="display:inline-flex;margin-left:6px;vertical-align:middle;">
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </span>
+        </span>
+        <span><span class="k">W</span>weights (8-4-2-1)</span>
+        <span>click a <b style="color:#29b6f6">bit</b> or <b style="color:#b388ff">hex digit</b> to edit</span>
+        <span><span class="k">R</span>reset</span>
+        <span><span class="k">⌫</span>back</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ state ============ */
+const HEX = "0123456789ABCDEF";
+const DEFAULT_N = 8, DEFAULT_VAL = 0xB5;
+let state = { page: 0, introR: 0, digitR: 0, N: DEFAULT_N, value: DEFAULT_VAL, stage: 4, weights: false, sel: -1 };
+
+/* intro page data (verified in Node) */
+const INTRO_VAL = 0xB5C2A94F;        // 32-bit contrast example
+const INTRO_BITS = 32;
+const SPOT_P = 0x9D3F, SPOT_Q = 0x9D7F, SPOT_BITS = 16;  // differ by exactly one bit
+const INTRO_MAX_R = 2;               // motivation reveal beats: 0,1,2
+const DIGIT_MAX_R = 1;               // digit-slide reveal beats: 0,1
+
+/* ---- helpers (verified in Node across all N=1..16) ---- */
+const nibbleCount = N => Math.ceil(N / 4);
+const padCount    = N => nibbleCount(N) * 4 - N;
+const topDigitMax = N => (1 << (4 - padCount(N))) - 1;
+
+function clampValue() {
+  const max = (1 << state.N) - 1;
+  state.value &= max;
+}
+
+/* ---- derive per-cell / per-nibble data ---- */
+function build() {
+  const N = state.N, pad = padCount(N), L = nibbleCount(N) * 4;
+  // padded bit array, MSB first, length L (leading `pad` are phantom zeros)
+  const real = [];
+  for (let i = N - 1; i >= 0; i--) real.push((state.value >> i) & 1);
+  const padded = Array(pad).fill(0).concat(real);
+  const cells = padded.map((b, i) => ({
+    bit: b,
+    phantom: i < pad,
+    idx: i < pad ? null : (N - 1 - (i - pad))   // bit index from MSB, e.g. b7
+  }));
+  const nibbles = [];
+  for (let g = 0; g < L / 4; g++) {
+    const grp = cells.slice(g * 4, g * 4 + 4);
+    const val = grp.reduce((a, c) => a * 2 + c.bit, 0);
+    nibbles.push({ cells: grp, val, hasPad: grp.some(c => c.phantom) });
+  }
+  return { nibbles };
+}
+
+/* ============ render ============ */
+function render() {
+  clampValue();
+  const { N, value, stage, weights, sel } = state;
+  const { nibbles } = build();
+  const strip = document.getElementById('strip');
+  strip.innerHTML = '';
+
+  const WT = [8, 4, 2, 1];
+
+  nibbles.forEach((nib, g) => {
+    const nEl = document.createElement('div');
+    nEl.className = 'nibble' + (nib.hasPad ? ' padded' : '');
+
+    // --- cells row ---
+    const cellsEl = document.createElement('div');
+    cellsEl.className = 'cells';
+    nib.cells.forEach((c, j) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'cellwrap';
+      // phantom cell + its label appear only once the nibble is padded (stage >= 3);
+      // kept in the layout (invisible) so the real bits never shift position
+      if (c.phantom && stage < 3) wrap.classList.add('hidden-soft');
+
+      const idx = document.createElement('div');
+      idx.className = 'idx';
+      idx.textContent = c.phantom ? 'pad' : ('b' + c.idx);
+      wrap.appendChild(idx);
+
+      const bit = document.createElement('div');
+      bit.className = 'bit ' + (c.phantom ? 'phantom' : (c.bit ? 'one' : 'zero'));
+      bit.textContent = c.bit;
+      if (!c.phantom) {
+        const bitIndex = c.idx;
+        bit.addEventListener('click', () => {
+          state.value ^= (1 << bitIndex);
+          state.stage = 4; state.sel = -1;
+          render();
+        });
+      }
+      bit.dataset.g = g; bit.dataset.j = j;
+      wrap.appendChild(bit);
+      cellsEl.appendChild(wrap);
+    });
+    nEl.appendChild(cellsEl);
+
+    // --- weights row ---
+    if (weights && stage >= 3) {
+      const wEl = document.createElement('div');
+      wEl.className = 'weights';
+      nib.cells.forEach(c => {
+        const w = document.createElement('div');
+        w.className = 'wt' + (c.phantom ? ' pad' : (c.bit ? ' lit' : ''));
+        w.textContent = WT[/* position within nibble */ nib.cells.indexOf(c)];
+        wEl.appendChild(w);
+      });
+      nEl.appendChild(wEl);
+    }
+
+    // --- bracket (grouping) : stage >= 2 ---
+    if (stage >= 2) {
+      const br = document.createElement('div');
+      br.className = 'bracket';
+      br.innerHTML = '<div class="line"></div><div class="stem"></div>';
+      nEl.appendChild(br);
+    }
+
+    // --- hex digit : stage >= 4 ---
+    if (stage >= 4) {
+      const hx = document.createElement('div');
+      hx.className = 'hexbox' + (sel === g ? ' sel' : '');
+      const ch = document.createElement('div');
+      ch.className = 'hexchar';
+      ch.textContent = HEX[nib.val];
+      hx.appendChild(ch);
+      if (weights) {
+        const litW = nib.cells.map((c, i) => c.bit ? WT[i] : 0).filter(x => x);
+        const sum = litW.length ? litW.join('+') + '=' + nib.val : '0';
+        const sEl = document.createElement('div');
+        sEl.className = 'hexsum';
+        sEl.textContent = sum;
+        hx.appendChild(sEl);
+      }
+      hx.addEventListener('click', () => {
+        state.sel = (state.sel === g ? -1 : g);
+        render();
+      });
+      nEl.appendChild(hx);
+    }
+
+    strip.appendChild(nEl);
+  });
+
+  // N control
+  document.getElementById('nVal').textContent = N + (N === 1 ? ' bit' : ' bits');
+  document.getElementById('nMinus').classList.toggle('disabled', N <= 1);
+  document.getElementById('nPlus').classList.toggle('disabled', N >= 16);
+
+  // readout line
+  const binStr = value.toString(2).padStart(N, '0').replace(/(?=(?:.{4})+$)/g, ' ').trim();
+  const hexStr = nibbles.map(nb => HEX[nb.val]).join('');
+  document.getElementById('readout').innerHTML =
+    `<span class="grp"><span class="num bin">${binStr}</span><span class="sub">two</span></span>` +
+    `<span class="sub">=</span>` +
+    `<span class="grp"><span class="num hex">${hexStr}</span><span class="sub">hex</span></span>` +
+    `<span class="sub">=</span>` +
+    `<span class="grp"><span class="num dec">${value}</span><span class="sub">dec</span></span>`;
+
+  // pips
+  document.querySelectorAll('#pips .pip').forEach((p, i) => {
+    p.classList.toggle('on', i < stage);
+  });
+}
+
+/* ============ hex digit editing ============ */
+function setDigit(g, digit) {
+  const { nibbles } = build();
+  const nc = nibbles.length;
+  // top nibble (g===0) is constrained when N is not a multiple of 4
+  if (g === 0) {
+    const max = topDigitMax(state.N);
+    if (digit > max) {
+      digit = max;
+      pulsePhantom();
+    }
+  }
+  // rebuild padded value from all nibble digits
+  const digits = nibbles.map((nb, i) => (i === g ? digit : nb.val));
+  let paddedVal = 0;
+  digits.forEach(d => { paddedVal = paddedVal * 16 + d; });
+  state.value = paddedVal;   // already fits N bits given the top-digit clamp
+  state.stage = 4;
+  render();
+}
+
+function nudgeDigit(g, delta) {
+  const { nibbles } = build();
+  let d = nibbles[g].val + delta;
+  const cap = (g === 0) ? topDigitMax(state.N) : 15;
+  if (d > cap) { d = cap; if (g === 0) pulsePhantom(); }
+  if (d < 0) d = 0;
+  setDigit(g, d);
+}
+
+function pulsePhantom() {
+  document.querySelectorAll('.bit.phantom').forEach(el => {
+    el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+  });
+}
+
+/* ============ intro page ============ */
+function binOf(v, N) { return v.toString(2).padStart(N, '0'); }
+function grp4(s) { return s.replace(/(?=(?:.{4})+$)/g, ' ').trim(); }
+function nibblesOf(v, N) {
+  const s = binOf(v, N), out = [];
+  for (let i = 0; i < s.length; i += 4) {
+    const bits = s.slice(i, i + 4).split('').map(Number);
+    out.push({ bits, hex: HEX[bits.reduce((a, b) => a * 2 + b, 0)] });
+  }
+  return out;
+}
+
+function renderIntro() {
+  const r = state.introR;
+  const nibs = nibblesOf(INTRO_VAL, INTRO_BITS);
+
+  const miniBin = document.getElementById('miniBin');
+  miniBin.innerHTML = '';
+  nibs.forEach(nb => {
+    const col = document.createElement('div'); col.className = 'mininib';
+    const bitsEl = document.createElement('div'); bitsEl.className = 'minibits';
+    nb.bits.forEach(b => {
+      const d = document.createElement('div');
+      d.className = 'minibit ' + (b ? 'one' : 'zero'); d.textContent = b;
+      bitsEl.appendChild(d);
+    });
+    col.appendChild(bitsEl); miniBin.appendChild(col);
+  });
+
+  const miniHex = document.getElementById('miniHex');
+  miniHex.innerHTML = '';
+  miniHex.style.visibility = r >= 1 ? 'visible' : 'hidden';
+  nibs.forEach(nb => {
+    const col = document.createElement('div'); col.className = 'mininib';
+    const h = document.createElement('div'); h.className = 'minihex'; h.textContent = nb.hex;
+    col.appendChild(h); miniHex.appendChild(col);
+  });
+
+  const lenTag = document.getElementById('lenTag');
+  const lbl = document.getElementById('introLbl');
+  if (r === 0) {
+    lenTag.innerHTML = `<b class="bin">${INTRO_BITS} binary digits</b> to read and transcribe`;
+    lbl.innerHTML = `Miss or swap a single bit anywhere in that row and the value is silently wrong.`;
+  } else {
+    lenTag.innerHTML = `<b class="bin">${INTRO_BITS} binary digits</b> &nbsp;→&nbsp; <b class="hex">${INTRO_BITS / 4} hex digits</b>`;
+    lbl.innerHTML = `Because <span class="hl-hex">16 = 2⁴</span>, every group of 4 bits collapses to one digit <span class="hl-hex">0–F</span>. Same value, one-quarter the length.`;
+  }
+
+  const spotBlock = document.getElementById('spotBlock');
+  spotBlock.style.visibility = r >= 2 ? 'visible' : 'hidden';
+  const spot = document.getElementById('spot');
+  if (r >= 2 && !spot.dataset.built) {
+    const pHex = SPOT_P.toString(16).toUpperCase().padStart(SPOT_BITS / 4, '0');
+    const qHex = SPOT_Q.toString(16).toUpperCase().padStart(SPOT_BITS / 4, '0');
+    const hexSpan = s => [...s].map((c, i) => `<span class="${pHex[i] !== qHex[i] ? 'diff' : ''}">${c}</span>`).join('');
+    spot.innerHTML =
+      `<div class="cap">Same values, one bit apart — <b>hard to detect in binary, more obvious in hex</b></div>
+       <div class="rowset">
+         <div class="drow"><span class="dbin">${grp4(binOf(SPOT_P, SPOT_BITS))}</span><span class="deq">=</span><span class="dhex">${hexSpan(pHex)}</span></div>
+         <div class="drow"><span class="dbin">${grp4(binOf(SPOT_Q, SPOT_BITS))}</span><span class="deq">=</span><span class="dhex">${hexSpan(qHex)}</span></div>
+       </div>`;
+    spot.dataset.built = '1';
+  }
+}
+
+/* ============ digit-definition page ============ */
+function digitCard(v, isNew) {
+  const card = document.createElement('div');
+  card.className = 'dcard' + (isNew ? ' new' : '');
+  const g = document.createElement('div'); g.className = 'dglyph'; g.textContent = HEX[v];
+  const dec = document.createElement('div'); dec.className = 'ddec'; dec.textContent = '= ' + v;
+  const bits = document.createElement('div'); bits.className = 'dbits';
+  [...v.toString(2).padStart(4, '0')].forEach(ch => {
+    const c = document.createElement('div');
+    c.className = 'dbit ' + (ch === '1' ? 'one' : 'zero'); c.textContent = ch;
+    bits.appendChild(c);
+  });
+  card.appendChild(g); card.appendChild(dec); card.appendChild(bits);
+  return card;
+}
+function renderDigits() {
+  const rowF = document.getElementById('rowFamiliar'); rowF.innerHTML = '';
+  for (let v = 0; v <= 9; v++) rowF.appendChild(digitCard(v, false));
+  const rowN = document.getElementById('rowNew'); rowN.innerHTML = '';
+  for (let v = 10; v <= 15; v++) rowN.appendChild(digitCard(v, true));
+  document.getElementById('newGroup').style.visibility = state.digitR >= 1 ? 'visible' : 'hidden';
+}
+
+/* ============ page navigation ============ */
+function showPage(p) {
+  state.page = p;
+  [0, 1, 2].forEach(i =>
+    document.getElementById('page' + i).classList.toggle('inactive', i !== p));
+  if (p === 0) renderIntro();
+  else if (p === 1) renderDigits();
+  else render();
+}
+function advance() {
+  if (state.page === 0) {
+    if (state.introR < INTRO_MAX_R) { state.introR++; renderIntro(); }
+    else { state.digitR = 0; showPage(1); }
+  } else if (state.page === 1) {
+    if (state.digitR < DIGIT_MAX_R) { state.digitR++; renderDigits(); }
+    else { showPage(2); }
+  }
+}
+function back() {
+  if (state.page === 0) {
+    if (state.introR > 0) { state.introR--; renderIntro(); }
+  } else if (state.page === 1) {
+    if (state.digitR > 0) { state.digitR--; renderDigits(); }
+    else { state.introR = INTRO_MAX_R; showPage(0); }
+  }
+}
+
+/* ============ input ============ */
+document.getElementById('nMinus').addEventListener('click', () => changeN(-1));
+document.getElementById('nPlus').addEventListener('click',  () => changeN(1));
+
+function changeN(delta) {
+  const nn = Math.min(16, Math.max(1, state.N + delta));
+  if (nn === state.N) return;
+  state.N = nn;
+  state.sel = -1;
+  clampValue();
+  render();
+}
+
+function resetAll() {
+  state = { page: 0, introR: 0, digitR: 0, N: DEFAULT_N, value: DEFAULT_VAL, stage: 4, weights: false, sel: -1 };
+  showPage(0);
+}
+
+document.addEventListener('keydown', (e) => {
+  const k = e.key;
+
+  // ---- global: R restarts the whole walkthrough at slide 1 ----
+  if (k === 'r' || k === 'R') { resetAll(); e.preventDefault(); return; }
+
+  // ---- PAGE 0 & 1 : linear slide walkthrough ----
+  if (state.page === 0 || state.page === 1) {
+    if (k === 'ArrowRight' || k === ' ' || k === 'Enter' || k === 'PageDown') { advance(); e.preventDefault(); return; }
+    if (k === 'ArrowLeft' || k === 'PageUp' || k === 'Backspace') { back(); e.preventDefault(); return; }
+    return;
+  }
+
+  // ---- PAGE 2 : interactive ----
+  if (k === 'PageUp' || k === 'Backspace') { state.digitR = DIGIT_MAX_R; showPage(1); e.preventDefault(); return; }
+  if (k === 'ArrowLeft')  { changeN(-1); e.preventDefault(); return; }
+  if (k === 'ArrowRight') { changeN(1);  e.preventDefault(); return; }
+  if (k === 'ArrowUp')   { if (state.sel >= 0) { nudgeDigit(state.sel, +1); e.preventDefault(); } return; }
+  if (k === 'ArrowDown') { if (state.sel >= 0) { nudgeDigit(state.sel, -1); e.preventDefault(); } return; }
+  // hex entry into the selected digit takes priority (1-4 are valid hex, not stage keys, while a digit is selected)
+  if (state.sel >= 0) {
+    if (k === 'Escape') { state.sel = -1; render(); return; }
+    const hv = HEX.indexOf(k.toUpperCase());
+    if (hv >= 0) { setDigit(state.sel, hv); return; }
+  }
+  if (k >= '1' && k <= '4') { state.stage = parseInt(k, 10); if (state.stage < 4) state.sel = -1; render(); return; }
+  if (k === 'w' || k === 'W') { state.weights = !state.weights; render(); return; }
+});
+
+/* ============ responsive scaling ============ */
+const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+function autoResize() {
+  const container = document.getElementById('viewportContainer');
+  const surface = document.getElementById('designSurface');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let cw, ch;
+  if (vw / vh > 16 / 9) { ch = vh; cw = ch * (16 / 9); }
+  else { cw = vw; ch = cw * (9 / 16); }
+  container.style.width = cw + 'px';
+  container.style.height = ch + 'px';
+  surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+}
+autoResize();
+let rt;
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+window.addEventListener('orientationchange', () => setTimeout(autoResize, 100));
+
+render();
+showPage(0);
+</script>
+</body>
+</html>

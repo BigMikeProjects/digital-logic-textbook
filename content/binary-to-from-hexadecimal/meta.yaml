@@ -1,0 +1,11 @@
+title: "Binary To/From Hexadecimal"
+description: ""
+chapter: combinational-logic
+section: number-systems
+order: 30003
+
+graphics:
+  01-video.youtube:
+    caption: "Video: why hexadecimal is used to represent binary — grouping bits into nibbles and converting both ways, including non-multiple-of-four widths"
+  02-interactive.html:
+    caption: "Interactive: a binary ⇄ hexadecimal converter — flip bits or nudge hex digits and watch the nibbles regroup, with a live view of how a non-multiple-of-four width pads the top nibble"
