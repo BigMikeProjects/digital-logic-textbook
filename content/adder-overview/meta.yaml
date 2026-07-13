@@ -1,0 +1,11 @@
+title: "Adder Circuits: A Hierarchical Approach"
+description: ""
+chapter: combinational-logic
+section: adders
+order: 30500
+
+graphics:
+  01-video.youtube:
+    caption: "Video: an overview of the adders section — binary addition as a carry-dependent process, the hierarchy from transistors to gates to full adders to processors, and the speed/size/power trade-offs that lead from ripple-carry to carry look-ahead adders"
+  02-interactive.html:
+    caption: "Interactive: the big picture of adders — a stepped 0111 + 0001 = 1000 addition showing carries ripple column to column, the transistor→gate→adder→processor hierarchy, and the speed/size/power trade-off between a ripple adder and a look-ahead adder"
