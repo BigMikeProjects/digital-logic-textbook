@@ -1,0 +1,11 @@
+title: "Hexadecimal To/From Decimal"
+description: ""
+chapter: combinational-logic
+section: number-systems
+order: 30004
+
+graphics:
+  01-video.youtube:
+    caption: "Video: converting between hexadecimal and decimal — base-16 place-value expansion for hex→decimal and repeated division by 16 for decimal→hex, with a live calculator"
+  02-interactive.html:
+    caption: "Interactive: a hexadecimal ⇄ decimal converter — worked place-value and division examples plus a two-way calculator showing the division sequence and the base-16 expansion side by side"
