@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building a Full Adder</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; overflow:hidden; background:#080d1a; }
+  body { display:flex; align-items:center; justify-content:center;
+         font-family:'Segoe UI',system-ui,sans-serif; }
+
+  .viewport-container { width:100%; max-width:100vw; aspect-ratio:16/9;
+                        max-height:100vh; position:relative; overflow:hidden; }
+  .design-surface { width:1920px; height:1080px; position:absolute; top:0; left:0;
+                    transform-origin:top left; background:#0d1526; color:#e8edf7; }
+
+  /* palette: navy bg / cyan HIGH / gray LOW / amber carry / violet accent */
+  .slide { position:absolute; inset:0; display:none; padding:48px 64px; }
+  .slide.active { display:block; }
+
+  .title { font-size:38px; font-weight:600; color:#f0f4fc; letter-spacing:.5px; }
+  .subtitle { font-size:20px; color:#8fa0bd; margin-top:6px; }
+  .rule { height:3px; width:120px; background:#22d3ee; margin-top:14px; border-radius:2px; }
+
+  .step { opacity:0; transition:opacity .28s ease; }
+  .step.on { opacity:1; }
+
+  .badge { position:absolute; bottom:26px; right:64px; font-size:15px; color:#5c6b87; }
+  .hint  { position:absolute; bottom:26px; left:64px;  font-size:15px; color:#5c6b87; }
+
+  /* ---------- input switches ---------- */
+  .switchbar { display:flex; gap:26px; align-items:center; }
+  .sw { width:96px; height:96px; border-radius:14px; border:3px solid #34405c;
+        background:#141d33; display:flex; flex-direction:column; align-items:center;
+        justify-content:center; cursor:pointer; user-select:none;
+        transition:all .16s ease; }
+  .sw .lbl { font-size:16px; color:#8fa0bd; letter-spacing:1px; }
+  .sw .val { font-size:40px; font-weight:700; color:#5c6b87; line-height:1.05;
+             font-family:'Consolas',monospace; }
+  .sw.hi { border-color:#22d3ee; background:#0e3b45; box-shadow:0 0 22px rgba(34,211,238,.28); }
+  .sw.hi .val { color:#22d3ee; }
+  .sw.hi .lbl { color:#22d3ee; }
+
+  /* ---------- truth tables ---------- */
+  table.tt { border-collapse:collapse; font-family:'Consolas',monospace; }
+  table.tt th { font-size:20px; color:#8fa0bd; padding:10px 20px; font-weight:600;
+                border-bottom:2px solid #34405c; }
+  table.tt td { font-size:24px; text-align:center; padding:9px 20px; color:#6b7a99;
+                border-bottom:1px solid #1e2942; }
+  
+  table.tt tr.lit td { color:#e8edf7; }
+  table.tt tr.cur { background:#16304a; }
+  table.tt tr.cur td { color:#f0f4fc; }
+  table.tt td.s   { color:#22d3ee; font-weight:700; }
+  table.tt td.c   { color:#f5a524; font-weight:700; }
+  table.tt td.hide { color:transparent; }
+  th.sep, td.sep { border-left:2px solid #34405c; }
+
+  .eq { font-family:'Consolas',monospace; font-size:26px; color:#e8edf7; }
+  .eq .x { color:#22d3ee; }
+  .eq .y { color:#f5a524; }
+  .note { font-size:19px; color:#a8b6d1; line-height:1.55; }
+  .callout { border-left:4px solid #a78bfa; background:#171f38; padding:14px 20px;
+             border-radius:0 8px 8px 0; }
+  .kicker { color:#a78bfa; font-weight:600; }
+  /* Unicode subscripts sit on inconsistent baselines; control HTML subs explicitly */
+  sub { font-size:.62em; line-height:0; position:relative; bottom:-.28em;
+        vertical-align:baseline; margin-left:.5px; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+<!-- ================= SLIDE 1 ================= -->
+<section class="slide active" id="s1">
+  <div class="title">Why a Full Adder?</div>
+  <div class="subtitle">Every column of a binary addition takes three bits in, and puts two bits out.</div>
+  <div class="rule"></div>
+
+  <svg width="1792" height="880" style="position:absolute;left:64px;top:150px;">
+    <!-- stage 0: column addition -->
+    <g class="step" id="s1a">
+      <text x="60" y="40" fill="#8fa0bd" font-size="19">Add two 4-bit numbers, column by column:</text>
+      <g font-family="Consolas,monospace" font-size="44" text-anchor="middle">
+        <text x="130" y="150" fill="#f5a524" font-size="26">carries</text>
+        <text x="270" y="152" fill="#f5a524">1</text>
+        <text x="330" y="152" fill="#f5a524">1</text>
+        <text x="390" y="152" fill="#f5a524">0</text>
+        <text x="450" y="152" fill="#f5a524">0</text>
+
+        <text x="150" y="210" fill="#8fa0bd" font-size="26">A</text>
+        <text x="270" y="212" fill="#e8edf7">1</text>
+        <text x="330" y="212" fill="#e8edf7">0</text>
+        <text x="390" y="212" fill="#e8edf7">1</text>
+        <text x="450" y="212" fill="#e8edf7">1</text>
+
+        <text x="150" y="268" fill="#8fa0bd" font-size="26">B</text>
+        <text x="205" y="270" fill="#8fa0bd">+</text>
+        <text x="270" y="270" fill="#e8edf7">0</text>
+        <text x="330" y="270" fill="#e8edf7">1</text>
+        <text x="390" y="270" fill="#e8edf7">1</text>
+        <text x="450" y="270" fill="#e8edf7">0</text>
+
+        <line x1="185" y1="292" x2="485" y2="292" stroke="#34405c" stroke-width="3"/>
+        <text x="210" y="350" fill="#22d3ee">1</text>
+        <text x="270" y="350" fill="#22d3ee">0</text>
+        <text x="330" y="350" fill="#22d3ee">0</text>
+        <text x="390" y="350" fill="#22d3ee">0</text>
+        <text x="450" y="350" fill="#22d3ee">1</text>
+      </g>
+    </g>
+
+    <!-- stage 1: isolate one column -->
+    <g class="step" id="s1b">
+      <rect x="300" y="105" width="62" height="265" rx="8" fill="none"
+            stroke="#a78bfa" stroke-width="3" stroke-dasharray="7 5"/>
+      <text x="600" y="150" fill="#a78bfa" font-size="21" font-weight="600">One column</text>
+      <text x="600" y="186" fill="#a8b6d1" font-size="19">3 bits in:  A<tspan dy="5" font-size="13">i</tspan><tspan dy="-5">, B</tspan><tspan dy="5" font-size="13">i</tspan><tspan dy="-5">, and the carry from the right</tspan></text>
+      <text x="600" y="220" fill="#a8b6d1" font-size="19">2 bits out: the sum bit S, and the carry out</text>
+      <text x="600" y="262" fill="#f5a524" font-size="19">1 + 0 + 1 = 10<tspan dy="5" font-size="13">2</tspan><tspan dy="-5">  →  S = 0, carry out = 1</tspan></text>
+      <text x="600" y="312" fill="#22d3ee" font-size="21" font-weight="600">That circuit is the FULL ADDER.</text>
+    </g>
+
+    <!-- stage 2+: truth table + switches -->
+    <g class="step" id="s1c">
+      <line x1="60" y1="400" x2="1700" y2="400" stroke="#1e2942" stroke-width="2"/>
+      <text x="60" y="448" fill="#8fa0bd" font-size="19">Click the inputs (or press A / B / C) — the table fills in as you explore.</text>
+    </g>
+  </svg>
+
+  <div class="step" id="s1sw" style="position:absolute;left:124px;top:640px;">
+    <div class="switchbar">
+      <div class="sw" data-bit="a"><div class="lbl">A</div><div class="val" id="v1a">0</div></div>
+      <div class="sw" data-bit="b"><div class="lbl">B</div><div class="val" id="v1b">0</div></div>
+      <div class="sw" data-bit="c"><div class="lbl">C<sub>in</sub></div><div class="val" id="v1c">0</div></div>
+    </div>
+    <div class="eq" style="margin-top:34px;font-size:30px;" id="s1arith"></div>
+    <div class="note" style="margin-top:14px;width:520px;" id="s1seen">Rows revealed: 1 of 8</div>
+  </div>
+
+  <div class="step" id="s1tbl" style="position:absolute;left:820px;top:600px;"></div>
+
+  <div class="step callout" id="s1pun"
+       style="position:absolute;left:820px;top:960px;width:820px;">
+    <span class="kicker">Read it as counting.</span>
+    <span class="note">S and C<sub>out</sub> are just the 2-bit count of how many inputs are 1.
+    S is odd parity; C<sub>out</sub> is majority.</span>
+  </div>
+
+  <div class="hint">Space / → advance · ← back · A B C toggle · R restart</div>
+  <div class="badge">1 / 7</div>
+</section>
+
+<!-- ================= SLIDE 2 ================= -->
+<section class="slide" id="s2">
+  <div class="title">Step Back: the Half Adder</div>
+  <div class="subtitle">Drop the carry in. Two bits in, two bits out.</div>
+  <div class="rule"></div>
+
+  <div class="step" id="s2a" style="position:absolute;left:110px;top:230px;">
+    <table class="tt">
+      <tr><th>A</th><th>B</th><th class="sep">S</th><th>C</th></tr>
+      <tr class="lit"><td>0</td><td>0</td><td class="sep s">0</td><td class="c">0</td></tr>
+      <tr class="lit"><td>0</td><td>1</td><td class="sep s">1</td><td class="c">0</td></tr>
+      <tr class="lit"><td>1</td><td>0</td><td class="sep s">1</td><td class="c">0</td></tr>
+      <tr class="lit"><td>1</td><td>1</td><td class="sep s">0</td><td class="c">1</td></tr>
+    </table>
+  </div>
+
+  <div class="step" id="s2b" style="position:absolute;left:110px;top:610px;">
+    <div class="eq" style="margin-bottom:18px;">S = A <span class="x">⊕</span> B</div>
+    <div class="eq">C = A <span class="y">·</span> B</div>
+    <div class="note" style="margin-top:26px;width:420px;">
+      No minimization needed — one XOR, one AND.
+    </div>
+  </div>
+
+  <svg width="1180" height="720" class="step" id="s2c"
+       style="position:absolute;left:600px;top:220px;"></svg>
+
+  <div class="step callout" id="s2d"
+       style="position:absolute;left:640px;top:880px;width:1000px;">
+    <span class="kicker">Why "half"?</span>
+    <span class="note">It can <em>produce</em> a carry but cannot <em>accept</em> one.
+    It only works in the rightmost column, where nothing carries in.</span>
+  </div>
+
+  <div class="hint">Space / → advance · ← back · R restart</div>
+  <div class="badge">2 / 7</div>
+</section>
+
+<!-- ================= SLIDE 3 ================= -->
+<section class="slide" id="s3">
+  <div class="title">Two-Level Minimization of the Full Adder</div>
+  <div class="subtitle">Three variables, two outputs, two very different stories.</div>
+  <div class="rule"></div>
+
+  <svg width="1792" height="900" style="position:absolute;left:64px;top:150px;" id="s3svg"></svg>
+
+  <div class="hint">Space / → advance · ← back · R restart</div>
+  <div class="badge">3 / 7</div>
+</section>
+
+<!-- ================= SLIDE 4 ================= -->
+<section class="slide" id="s4">
+  <div class="title">A Full Adder from Two Half Adders</div>
+  <div class="subtitle">Add A + B. Then add the carry in. Then merge the two carries.</div>
+  <div class="rule"></div>
+
+  <svg width="1792" height="620" style="position:absolute;left:64px;top:140px;" id="s4svg"></svg>
+
+  <div class="step" id="s4sw" style="position:absolute;left:110px;top:790px;">
+    <div class="switchbar">
+      <div class="sw" data-bit="a"><div class="lbl">A</div><div class="val" id="v4a">0</div></div>
+      <div class="sw" data-bit="b"><div class="lbl">B</div><div class="val" id="v4b">0</div></div>
+      <div class="sw" data-bit="c"><div class="lbl">C<sub>in</sub></div><div class="val" id="v4c">0</div></div>
+    </div>
+    <div class="note" style="margin-top:22px;width:460px;" id="s4chk">
+      Checked against slide 1: <span style="color:#22d3ee">1 of 8 rows</span>
+    </div>
+  </div>
+
+  <div class="step" id="s4alg" style="position:absolute;left:700px;top:770px;width:1020px;">
+    <div class="callout">
+      <span class="kicker">The carries never collide.</span>
+      <span class="note">C<sub>1</sub> = A·B and C<sub>2</sub> = (A⊕B)·C<sub>in</sub> are never 1 at the same time,
+      so OR is safe (XOR would work too).</span>
+    </div>
+    <div class="eq" style="margin-top:22px;line-height:1.75;font-size:24px;">
+      <span class="y">C<sub>out</sub></span> = AB + (A⊕B)·C<sub>in</sub><br>
+      <span style="opacity:0">C<sub>out</sub></span> = AB + AB′C<sub>in</sub> + A′BC<sub>in</sub><br>
+      <span style="opacity:0">C<sub>out</sub></span> = AB + AC<sub>in</sub> + BC<sub>in</sub> &nbsp;
+      <span style="color:#22d3ee">✓ matches the K-map</span>
+    </div>
+  </div>
+
+  <div class="hint">Space / → advance · ← back · A B C toggle · R restart</div>
+  <div class="badge">4 / 7</div>
+</section>
+
+<!-- ================= SLIDE 5 : TRANSISTOR COST ================= -->
+<section class="slide" id="s5t">
+  <div class="title">The Cost in Transistors</div>
+  <div class="subtitle">Static CMOS: an n-input NAND costs 2n transistors. An inverter costs 2.</div>
+  <div class="rule"></div>
+
+  <svg width="1792" height="860" style="position:absolute;left:64px;top:150px;" id="stsvg"></svg>
+
+  <div class="hint">Space / &rarr; advance &middot; &larr; back &middot; R restart</div>
+  <div class="badge">5 / 7</div>
+</section>
+
+<!-- ================= SLIDE 5 ================= -->
+<section class="slide" id="s5">
+  <div class="title">Closing the Loop: 4-Bit Ripple-Carry Adder</div>
+  <div class="subtitle">A half adder in the rightmost column. Full adders everywhere else.</div>
+  <div class="rule"></div>
+
+  <svg width="1792" height="560" style="position:absolute;left:64px;top:170px;" id="s5svg"></svg>
+
+  <div class="step" id="s5b" style="position:absolute;left:64px;top:790px;width:1000px;">
+    <div class="note">Click any A or B bit to change the operands. Watch the carry ripple left.</div>
+    <div class="eq" style="margin-top:26px;font-size:34px;" id="s5arith"></div>
+  </div>
+
+  <div class="step callout" id="s5c"
+       style="position:absolute;left:1120px;top:800px;width:660px;">
+    <span class="kicker">The cost of rippling.</span>
+    <span class="note">Column 3 cannot settle until column 0 has. Delay grows with width —
+    which is exactly what carry-lookahead exists to fix.</span>
+  </div>
+
+  <div class="hint">Space / → advance · ← back · R restart</div>
+  <div class="badge">6 / 7</div>
+</section>
+
+
+<!-- ================= SLIDE 7 : BEYOND THE GATE LEVEL ================= -->
+<section class="slide" id="s7">
+  <div class="title">Why This One Cell Gets Special Treatment</div>
+  <div class="subtitle">The full adder is a primitive. Primitives get replicated — thousands of times.</div>
+  <div class="rule"></div>
+
+  <svg width="1792" height="860" style="position:absolute;left:64px;top:150px;" id="s7svg"></svg>
+
+  <div class="hint">Space / &rarr; advance &middot; &larr; back &middot; R restart</div>
+  <div class="badge">7 / 7</div>
+</section>
+
+</div>
+</div>
+
+<script>
+/* ===================== scaling ===================== */
+const DESIGN_WIDTH=1920, DESIGN_HEIGHT=1080;
+function autoResize(){
+  const c=document.getElementById('viewportContainer'), s=document.getElementById('designSurface');
+  const vw=window.innerWidth, vh=window.innerHeight;
+  let cw,ch;
+  if(vw/vh > 16/9){ ch=vh; cw=ch*(16/9); } else { cw=vw; ch=cw*(9/16); }
+  c.style.width=cw+'px'; c.style.height=ch+'px';
+  s.style.transform=`scale(${cw/DESIGN_WIDTH})`;
+}
+autoResize();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(autoResize,50);});
+
+/* ===================== gate primitives (IEEE distinctive) ===================== */
+const NS='http://www.w3.org/2000/svg';
+const GW=72, GH=58;                       // gate body box
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function orPath(x,y,w,h){
+  return `M ${x},${y} `
+       + `C ${x+w*0.46},${y} ${x+w*0.78},${y+h*0.12} ${x+w},${y+h/2} `
+       + `C ${x+w*0.78},${y+h*0.88} ${x+w*0.46},${y+h} ${x},${y+h} `
+       + `Q ${x+w*0.30},${y+h/2} ${x},${y} Z`;
+}
+function andPath(x,y,w,h){
+  return `M ${x},${y} L ${x+w*0.48},${y} `
+       + `A ${h/2},${h/2} 0 0 1 ${x+w*0.48},${y+h} L ${x},${y+h} Z`;
+}
+/* returns {node, inA:[x,y], inB:[x,y], out:[x,y]} */
+function gate(kind,x,y,label){
+  const g=el('g',{});
+  const st={fill:'#141d33','stroke':'#8fa0bd','stroke-width':3,'stroke-linejoin':'round'};
+  let bodyX=x, outX=x+GW;
+  if(kind==='xor'||kind==='xnor'){ bodyX=x+11; outX=x+11+GW; }
+  if(kind==='and'||kind==='nand') g.appendChild(el('path',{...st,d:andPath(bodyX,y,GW,GH)}));
+  else                            g.appendChild(el('path',{...st,d:orPath (bodyX,y,GW,GH)}));
+  if(kind==='xor'||kind==='xnor')
+    g.appendChild(el('path',{fill:'none',stroke:'#8fa0bd','stroke-width':3,
+      d:`M ${x},${y} Q ${x+GW*0.30},${y+GH/2} ${x},${y+GH}`}));
+  const bub=(kind==='nand'||kind==='nor'||kind==='xnor');
+  if(bub){ g.appendChild(el('circle',{cx:outX+6,cy:y+GH/2,r:6,fill:'#141d33',stroke:'#8fa0bd','stroke-width':3})); outX+=12; }
+  if(label) g.appendChild(el('text',{x:bodyX+GW*0.34,y:y+GH/2+7,'text-anchor':'middle',
+      fill:'#5c6b87','font-size':15,'font-family':'Segoe UI'} )).textContent=label;
+  const inx = (kind==='and'||kind==='nand') ? x : x+ (kind==='xor'?11:0) + GW*0.13;
+  return {node:g, inA:[x,y+GH*0.27], inB:[x,y+GH*0.73], out:[outX,y+GH/2]};
+}
+function wire(pts,id){
+  const p=el('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',
+    'stroke-width':3.5,'stroke-linejoin':'round','stroke-linecap':'round'});
+  p.setAttribute('stroke','#3a465e');
+  if(id) p.setAttribute('data-w',id);
+  return p;
+}
+function dot(x,y,id){const c=el('circle',{cx:x,cy:y,r:5.5,fill:'#3a465e'}); if(id)c.setAttribute('data-w',id); return c;}
+/* Subscripts via <tspan dy> — Unicode subscript glyphs sit on inconsistent
+   baselines across fonts, so we shift explicitly. Syntax: "C_{out} = A_{1}" */
+function txt(x,y,s,o={}){
+  const t=el('text',{x,y,fill:o.fill||'#8fa0bd','font-size':o.size||18,
+    'font-family':o.mono?'Consolas,monospace':'Segoe UI','text-anchor':o.anchor||'start',
+    'font-weight':o.weight||400});
+  const parts=[]; const re=/_\{([^}]*)\}/g; let m,last=0;
+  while((m=re.exec(s))!==null){
+    if(m.index>last) parts.push([s.slice(last,m.index),0]);
+    parts.push([m[1],1]); last=re.lastIndex;
+  }
+  if(last<s.length) parts.push([s.slice(last),0]);
+  if(parts.length<=1 && !/_\{/.test(s)){ t.textContent=s; }
+  else {
+    let prevSub=false;
+    parts.forEach(([str,sub])=>{
+      const ts=el('tspan',{});
+      if(sub && !prevSub) ts.setAttribute('dy','0.30em');
+      if(!sub && prevSub) ts.setAttribute('dy','-0.30em');
+      if(sub) ts.setAttribute('font-size','0.66em');
+      ts.textContent=str; t.appendChild(ts); prevSub=sub;
+    });
+  }
+  if(o.id)t.setAttribute('data-t',o.id);
+  return t;}
+
+const HI='#22d3ee', LO='#3a465e';
+function paint(svg,map){
+  svg.querySelectorAll('[data-w]').forEach(n=>{
+    const v=map[n.getAttribute('data-w')];
+    const col = v===1?HI:LO;
+    if(n.tagName==='circle') n.setAttribute('fill',col); else n.setAttribute('stroke',col);
+  });
+  svg.querySelectorAll('[data-t]').forEach(n=>{
+    const k=n.getAttribute('data-t');
+    if(!(k in map)) return;
+    n.textContent=map[k];
+  });
+}
+
+/* ===================== slide 2 circuit ===================== */
+(function(){
+  const svg=document.getElementById('s2c');
+  const X=el('g',{}); svg.appendChild(X);
+  const xo=gate('xor',420,120,''), an=gate('and',420,320,'');
+  // input rails
+  svg.appendChild(txt(150,168,'A',{size:26,fill:'#e8edf7'}));
+  svg.appendChild(txt(150,258,'B',{size:26,fill:'#e8edf7'}));
+  svg.appendChild(wire([[180,160],[300,160],[300,136],[431,136]]));
+  svg.appendChild(wire([[180,250],[340,250],[340,162],[431,162]]));
+  svg.appendChild(wire([[300,160],[300,336],[420,336]]));
+  svg.appendChild(wire([[340,250],[340,362],[420,362]]));
+  svg.appendChild(dot(300,160)); svg.appendChild(dot(340,250));
+  svg.appendChild(xo.node); svg.appendChild(an.node);
+  svg.appendChild(wire([[xo.out[0],xo.out[1]],[640,xo.out[1]]]));
+  svg.appendChild(wire([[an.out[0],an.out[1]],[640,an.out[1]]]));
+  svg.appendChild(txt(660,157,'S',{size:26,fill:HI,weight:700}));
+  svg.appendChild(txt(660,357,'C',{size:26,fill:'#f5a524',weight:700}));
+  svg.appendChild(txt(700,157,'= A ⊕ B',{size:20,mono:true}));
+  svg.appendChild(txt(700,357,'= A · B',{size:20,mono:true}));
+  // block outline
+  svg.insertBefore(el('rect',{x:380,y:80,width:230,height:340,rx:12,fill:'none',
+    stroke:'#a78bfa','stroke-width':2.5,'stroke-dasharray':'8 6'}),X);
+  svg.appendChild(txt(495,64,'HALF ADDER',{size:16,fill:'#a78bfa',anchor:'middle',weight:600}));
+})();
+
+/* ===================== slide 3 K-maps ===================== */
+(function(){
+  const svg=document.getElementById('s3svg');
+  const CELL=110;
+  // truth values
+  const COUT=(a,b,c)=>((a&b)|(a&c)|(b&c));
+  const SUM =(a,b,c)=>(a^b^c);
+  const gray=[[0,0],[0,1],[1,1],[1,0]];   // B,Cin
+
+  function kmap(ox,oy,fn,name,stepGroup){
+    const g=el('g',{class:'step'}); g.id=stepGroup; svg.appendChild(g);
+    // grid
+    for(let r=0;r<2;r++)for(let col=0;col<4;col++){
+      const [b,c]=gray[col];
+      g.appendChild(el('rect',{x:ox+col*CELL,y:oy+r*CELL,width:CELL,height:CELL,
+        fill:'#141d33',stroke:'#34405c','stroke-width':2}));
+      const v=fn(r,b,c);
+      g.appendChild(txt(ox+col*CELL+CELL/2, oy+r*CELL+CELL/2+13, String(v),
+        {size:34,mono:true,anchor:'middle',fill: v? (name==='S'?HI:'#f5a524') : '#4a5670',weight:700}));
+      g.appendChild(txt(ox+col*CELL+CELL-9, oy+r*CELL+18, 'm'+(r*4 + (b*2+c)),
+        {size:12,fill:'#4a5670',anchor:'end'}));
+    }
+    // column labels (B Cin gray order)
+    gray.forEach(([b,c],i)=>g.appendChild(txt(ox+i*CELL+CELL/2, oy-14, `${b}${c}`,
+      {size:20,mono:true,anchor:'middle'})));
+    for(let r=0;r<2;r++) g.appendChild(txt(ox-18, oy+r*CELL+CELL/2+8, String(r),
+      {size:20,mono:true,anchor:'end'}));
+    // corner: 45° diagonal tick, F above endpoint, "B Cin" above diagonal, A below-right
+    g.appendChild(el('line',{x1:ox,y1:oy,x2:ox-52,y2:oy-52,stroke:'#8fa0bd','stroke-width':2}));
+    const t=el('text',{x:ox-58,y:oy-58,fill:'#e8edf7','font-size':24,'font-style':'italic',
+      'text-anchor':'end','font-family':'Georgia,serif'}); t.textContent=name; g.appendChild(t);
+    g.appendChild(txt(ox-30,oy-60,'B C_{in}',{size:17,fill:'#8fa0bd'}));
+    g.appendChild(txt(ox-46,oy-6,'A',{size:17,fill:'#8fa0bd',anchor:'end'}));
+    return g;
+  }
+
+  const KX=110, KY=180;
+  kmap(KX,KY,(a,b,c)=>COUT(a,b,c),'Cout','s3a');
+  kmap(KX+790,KY,(a,b,c)=>SUM(a,b,c),'S','s3c');
+
+  // ---- Cout groups (stage 2)
+  const gg=el('g',{class:'step'}); gg.id='s3b'; svg.appendChild(gg);
+  const grp=(x,y,w,h,col)=>gg.appendChild(el('rect',{x,y,width:w,height:h,rx:16,fill:'none',
+      stroke:col,'stroke-width':4,opacity:.95}));
+  // AB : row A=1, cols index 2(11) & 3(10)
+  grp(KX+2*CELL+8, KY+CELL+8, 2*CELL-16, CELL-16, '#f5a524');
+  // A·Cin : row A=1, cols 1(01) & 2(11)
+  grp(KX+1*CELL+18, KY+CELL+18, 2*CELL-36, CELL-36, '#a78bfa');
+  // B·Cin : col 2(11), both rows
+  grp(KX+2*CELL+28, KY+8, CELL-56, 2*CELL-16, '#22d3ee');
+  gg.appendChild(txt(KX, KY+2*CELL+62,'C_{out} = ',{size:26,mono:true,fill:'#e8edf7'}));
+  gg.appendChild(txt(KX+92, KY+2*CELL+62,'A·B',{size:26,mono:true,fill:'#f5a524',weight:700}));
+  gg.appendChild(txt(KX+156,KY+2*CELL+62,'+',{size:26,mono:true,fill:'#e8edf7'}));
+  gg.appendChild(txt(KX+186,KY+2*CELL+62,'A·C_{in}',{size:26,mono:true,fill:'#a78bfa',weight:700}));
+  gg.appendChild(txt(KX+286,KY+2*CELL+62,'+',{size:26,mono:true,fill:'#e8edf7'}));
+  gg.appendChild(txt(KX+316,KY+2*CELL+62,'B·C_{in}',{size:26,mono:true,fill:'#22d3ee',weight:700}));
+  gg.appendChild(txt(KX, KY+2*CELL+104,'3 product terms · 6 literals · clean two-level SOP',
+    {size:18,fill:'#8fa0bd'}));
+
+  // ---- S: no groups (stage 4)
+  const sg=el('g',{class:'step'}); sg.id='s3d'; svg.appendChild(sg);
+  const SX=KX+790;
+  // circle each isolated 1 with a violet ring
+  [[0,1],[0,3],[1,0],[1,2]].forEach(([r,ci])=>{
+    sg.appendChild(el('circle',{cx:SX+ci*CELL+CELL/2, cy:KY+r*CELL+CELL/2, r:42,
+      fill:'none',stroke:'#a78bfa','stroke-width':3.5,'stroke-dasharray':'6 5'}));
+  });
+  sg.appendChild(txt(SX, KY+2*CELL+62,'No two 1s are adjacent. Every group has size 1.',
+    {size:21,fill:'#a78bfa',weight:600}));
+  sg.appendChild(txt(SX, KY+2*CELL+100,"S = A′B′C_{in} + A′BC′_{in} + AB′C′_{in} + ABC_{in}",
+    {size:23,mono:true,fill:'#e8edf7'}));
+  sg.appendChild(txt(SX, KY+2*CELL+136,'4 product terms · 12 literals · the K-map cannot help.',
+    {size:18,fill:'#8fa0bd'}));
+
+  // ---- stage 5: factor to XOR
+  const xg=el('g',{class:'step'}); xg.id='s3e'; svg.appendChild(xg);
+  xg.appendChild(el('rect',{x:KX,y:KY+2*CELL+170,width:1560,height:150,rx:10,
+    fill:'#171f38',stroke:'#a78bfa','stroke-width':0}));
+  xg.appendChild(el('rect',{x:KX,y:KY+2*CELL+170,width:5,height:150,fill:'#a78bfa'}));
+  xg.appendChild(txt(KX+28,KY+2*CELL+212,'The checkerboard is the signature of XOR.',
+    {size:22,fill:'#a78bfa',weight:600}));
+  xg.appendChild(txt(KX+28,KY+2*CELL+256,'S = (A ⊕ B) ⊕ C_{in}   — 2 gates, not 4 AND gates and a 4-input OR.',
+    {size:24,mono:true,fill:'#e8edf7'}));
+  xg.appendChild(txt(KX+28,KY+2*CELL+296,'Two-level SOP is minimal, but it is not cheap. Factoring beats it.',
+    {size:18,fill:'#8fa0bd'}));
+})();
+
+/* ===================== slide 4 circuit ===================== */
+let s4paint=()=>{};
+(function(){
+  const svg=document.getElementById('s4svg');
+  const ha1x=440, ha2x=900, ha1y=120, ha2y=190;
+
+  // HA blocks
+  [[ha1x,ha1y,'HALF ADDER 1'],[ha2x,ha2y,'HALF ADDER 2']].forEach(([x,y,l])=>{
+    svg.appendChild(el('rect',{x:x-40,y:y-56,width:300,height:300,rx:12,fill:'none',
+      stroke:'#a78bfa','stroke-width':2.5,'stroke-dasharray':'8 6'}));
+    svg.appendChild(txt(x+110,y-70,l,{size:15,fill:'#a78bfa',anchor:'middle',weight:600}));
+  });
+
+  const x1=gate('xor',ha1x,ha1y,''),   a1=gate('and',ha1x,ha1y+130,'');
+  const x2=gate('xor',ha2x,ha2y,''),   a2=gate('and',ha2x,ha2y+130,'');
+  const orC=gate('or',1330,330,'');
+
+  // input labels + rails
+  svg.appendChild(txt(60,150,'A',{size:26,fill:'#e8edf7',weight:700}));
+  svg.appendChild(txt(60,240,'B',{size:26,fill:'#e8edf7',weight:700}));
+  svg.appendChild(txt(60,470,'C_{in}',{size:26,fill:'#e8edf7',weight:700}));
+
+  svg.appendChild(wire([[100,142],[220,142],[220,136],[451,136]],'A'));
+  svg.appendChild(wire([[220,142],[220,250],[440,250]],'A'));
+  svg.appendChild(wire([[100,232],[260,232],[260,162],[451,162]],'B'));
+  svg.appendChild(wire([[260,232],[260,276],[440,276]],'B'));
+  svg.appendChild(dot(220,142,'A')); svg.appendChild(dot(260,232,'B'));
+
+  svg.appendChild(x1.node); svg.appendChild(a1.node);
+
+  // S1 = A^B  -> HA2 xor inA and and inA
+  svg.appendChild(wire([[x1.out[0],x1.out[1]],[790,149],[790,206],[911,206]],'S1'));
+  svg.appendChild(wire([[790,206],[790,346],[900,346]],'S1'));
+  svg.appendChild(dot(790,206,'S1'));
+  svg.appendChild(txt(806,138,'S_{1} = A⊕B',{size:16,fill:'#5c6b87'}));
+
+  // Cin rail -> HA2 xor inB and and inB
+  svg.appendChild(wire([[100,462],[840,462],[840,232],[911,232]],'Cin'));
+  svg.appendChild(wire([[840,372],[900,372]],'Cin'));
+  svg.appendChild(dot(840,372,'Cin'));
+  svg.appendChild(x2.node); svg.appendChild(a2.node);
+
+  // C1 = A.B -> OR
+  svg.appendChild(wire([[a1.out[0],a1.out[1]],[1240,279],[1240,344],[1330,344]],'C1'));
+  svg.appendChild(txt(1120,268,'C_{1} = A·B',{size:16,fill:'#5c6b87'}));
+
+  // C2 = S1.Cin -> OR
+  svg.appendChild(wire([[a2.out[0],a2.out[1]],[1280,349],[1280,375],[1330,375]],'C2'));
+  svg.appendChild(txt(1090,412,'C_{2} = S_{1}·C_{in}',{size:16,fill:'#5c6b87'}));
+
+  svg.appendChild(orC.node);
+
+  // outputs
+  svg.appendChild(wire([[x2.out[0],x2.out[1]],[1560,219]],'S'));
+  svg.appendChild(wire([[orC.out[0],orC.out[1]],[1560,359]],'Cout'));
+  svg.appendChild(txt(1580,228,'S',{size:28,fill:HI,weight:700,id:null}));
+  svg.appendChild(txt(1580,368,'C_{out}',{size:28,fill:'#f5a524',weight:700}));
+  svg.appendChild(txt(1640,228,'=',{size:24,fill:'#5c6b87'}));
+  const sv=txt(1680,228,'0',{size:30,mono:true,fill:HI,weight:700}); sv.setAttribute('data-t','SV'); svg.appendChild(sv);
+  svg.appendChild(txt(1640,368,'=',{size:24,fill:'#5c6b87'}));
+  const cv=txt(1680,368,'0',{size:30,mono:true,fill:'#f5a524',weight:700}); cv.setAttribute('data-t','CV'); svg.appendChild(cv);
+
+  s4paint=function(a,b,c){
+    const S1=a^b, C1=a&b, S=S1^c, C2=S1&c, Cout=C1|C2;
+    paint(svg,{A:a,B:b,Cin:c,S1:S1,C1:C1,C2:C2,S:S,Cout:Cout,SV:String(S),CV:String(Cout)});
+    // amber for carry-ish wires when high
+    svg.querySelectorAll('[data-w]').forEach(n=>{
+      const k=n.getAttribute('data-w');
+      const on = ({A:a,B:b,Cin:c,S1:S1,C1:C1,C2:C2,S:S,Cout:Cout})[k]===1;
+      if(on && (k==='C1'||k==='C2'||k==='Cout')){
+        if(n.tagName==='circle') n.setAttribute('fill','#f5a524');
+        else n.setAttribute('stroke','#f5a524');
+      }
+    });
+  };
+})();
+
+/* ===================== slide 5 ripple ===================== */
+let s5paint=()=>{};
+const rippleA=[1,1,0,1], rippleB=[0,1,1,0];  // index 0 = LSB -> 1011 + 0110
+(function(){
+  const svg=document.getElementById('s5svg');
+  const BW=280, BH=210, GAP=70, BY=170;
+  const xs=[]; // left x of each block, i=0 is LSB drawn rightmost
+  for(let i=0;i<4;i++){ xs[i] = 1280 - i*(BW+GAP); }
+
+  for(let i=3;i>=0;i--){
+    const x=xs[i], isHA=(i===0);
+    svg.appendChild(el('rect',{x,y:BY,width:BW,height:BH,rx:14,fill:'#141d33',
+      stroke:isHA?'#a78bfa':'#34405c','stroke-width':3}));
+    svg.appendChild(txt(x+BW/2,BY+BH/2+2,isHA?'HALF':'FULL',
+      {size:26,anchor:'middle',fill:isHA?'#a78bfa':'#8fa0bd',weight:600}));
+    svg.appendChild(txt(x+BW/2,BY+BH/2+34,'ADDER',
+      {size:26,anchor:'middle',fill:isHA?'#a78bfa':'#8fa0bd',weight:600}));
+    svg.appendChild(txt(x+BW/2,BY+BH-14,'column '+i,{size:14,anchor:'middle',fill:'#5c6b87'}));
+
+    // A / B input bit boxes (clickable)
+    ['A','B'].forEach((nm,j)=>{
+      const bx=x+56+j*120, by=BY-92;
+      const r=el('rect',{x:bx,y:by,width:72,height:64,rx:8,fill:'#141d33',
+        stroke:'#34405c','stroke-width':2.5,style:'cursor:pointer'});
+      r.setAttribute('data-w',nm+i); svg.appendChild(r);
+      r.addEventListener('click',()=>{ (nm==='A'?rippleA:rippleB)[i]^=1; s5paint(); });
+      const t=txt(bx+36,by+45,'0',{size:32,mono:true,anchor:'middle',weight:700});
+      t.setAttribute('data-t',nm+i+'v'); t.setAttribute('style','cursor:pointer;pointer-events:none');
+      svg.appendChild(t);
+      svg.appendChild(txt(bx+36,by-12,nm+'_{'+i+'}',{size:15,anchor:'middle',fill:'#5c6b87'}));
+      svg.appendChild(wire([[bx+36,by+64],[bx+36,BY]],nm+i));
+    });
+
+    // sum output
+    const sx=x+BW/2;
+    svg.appendChild(wire([[sx,BY+BH],[sx,BY+BH+52]],'S'+i));
+    const st=txt(sx,BY+BH+96,'0',{size:36,mono:true,anchor:'middle',weight:700,fill:HI});
+    st.setAttribute('data-t','S'+i+'v'); svg.appendChild(st);
+    svg.appendChild(txt(sx,BY+BH+124,'S_{'+i+'}',{size:15,anchor:'middle',fill:'#5c6b87'}));
+
+    // carry wire to the left neighbour
+    if(i<3){
+      const from=x, to=xs[i+1]+BW;
+      svg.appendChild(wire([[from,BY+BH/2],[from-GAP/2,BY+BH/2],[from-GAP/2,BY+BH/2],[to,BY+BH/2]],'K'+i));
+      // arrowhead (explicit polygon — markers are unreliable under transform)
+      const p=el('polygon',{points:`${to},${BY+BH/2} ${to+16},${BY+BH/2-9} ${to+16},${BY+BH/2+9}`,
+        fill:LO}); p.setAttribute('data-w','K'+i); svg.appendChild(p);
+      svg.appendChild(txt((from+to)/2+8,BY+BH/2-18,'c_{'+(i+1)+'}',{size:14,anchor:'middle',fill:'#5c6b87'}));
+    }
+  }
+  // final carry out
+  const fx=xs[3];
+  svg.appendChild(wire([[fx,BY+BH/2],[fx-90,BY+BH/2]],'K3'));
+  svg.appendChild(el('polygon',{points:`${fx-90},${BY+BH/2} ${fx-74},${BY+BH/2-9} ${fx-74},${BY+BH/2+9}`,
+    fill:LO,'data-w':'K3'}));
+  const co=txt(fx-110,BY+BH/2+12,'0',{size:36,mono:true,anchor:'end',weight:700,fill:'#f5a524'});
+  co.setAttribute('data-t','COv'); svg.appendChild(co);
+  svg.appendChild(txt(fx-110,BY+BH/2-24,'C_{out}',{size:15,anchor:'end',fill:'#5c6b87'}));
+
+  s5paint=function(){
+    const map={}, sBits=[]; let carry=0;
+    for(let i=0;i<4;i++){
+      const a=rippleA[i], b=rippleB[i];
+      let s;
+      if(i===0){ s=a^b; carry=a&b; }
+      else { const s1=a^b, c1=a&b, c2=s1&carry; s=s1^carry; carry=c1|c2; }
+      sBits[i]=s;
+      map['A'+i]=a; map['B'+i]=b; map['S'+i]=s;
+      map['A'+i+'v']=String(a); map['B'+i+'v']=String(b); map['S'+i+'v']=String(s);
+      map['K'+i]=carry;
+    }
+    map['COv']=String(carry);
+    paint(svg,map);
+    // carries in amber
+    for(let i=0;i<4;i++) if(map['K'+i]===1)
+      svg.querySelectorAll(`[data-w="K${i}"]`).forEach(n=>{
+        if(n.tagName==='polygon') n.setAttribute('fill','#f5a524');
+        else n.setAttribute('stroke','#f5a524');
+      });
+    // A/B boxes: highlight border
+    for(let i=0;i<4;i++) ['A','B'].forEach(nm=>{
+      svg.querySelectorAll(`rect[data-w="${nm}${i}"]`).forEach(r=>{
+        const on=map[nm+i]===1;
+        r.setAttribute('stroke',on?HI:'#34405c'); r.setAttribute('fill',on?'#0e3b45':'#141d33');
+      });
+      svg.querySelectorAll(`[data-t="${nm}${i}v"]`).forEach(t=>t.setAttribute('fill',map[nm+i]?HI:'#5c6b87'));
+    });
+    // arithmetic readout
+    const av=rippleA.reduce((s,b,i)=>s+(b<<i),0), bv=rippleB.reduce((s,b,i)=>s+(b<<i),0);
+    const sv=sBits.reduce((s,b,i)=>s+(b<<i),0) + (carry<<4);
+    const bin=v=>v.toString(2).padStart(4,'0');
+    document.getElementById('s5arith').innerHTML =
+      `<span class="x">${bin(av)}</span> + <span class="x">${bin(bv)}</span> = ` +
+      `<span class="y">${carry}</span><span class="x">${sBits.slice().reverse().join('')}</span>` +
+      `<span style="color:#8fa0bd;font-size:24px">&nbsp;&nbsp;(${av} + ${bv} = ${sv})</span>`;
+  };
+})();
+
+/* ===================== slide 1 truth table ===================== */
+const seen=new Set(['000']);
+let A=0,B=0,C=0;
+(function(){
+  const host=document.getElementById('s1tbl');
+  let h='<table class="tt"><tr><th>A</th><th>B</th><th>C<sub>in</sub></th>'
+       +'<th class="sep">C<sub>out</sub></th><th>S</th></tr>';
+  for(let i=0;i<8;i++){
+    const a=i>>2&1,b=i>>1&1,c=i&1, t=a+b+c;
+    h+=`<tr data-row="${a}${b}${c}"><td>${a}</td><td>${b}</td><td>${c}</td>`
+      +`<td class="sep c hide">${t>>1}</td><td class="s hide">${t&1}</td></tr>`;
+  }
+  host.innerHTML=h+'</table>';
+})();
+
+function renderS1(){
+  const key=`${A}${B}${C}`, t=A+B+C;
+  ['a','b','c'].forEach((k,i)=>{
+    const v=[A,B,C][i];
+    document.getElementById('v1'+k).textContent=v;
+    document.getElementById('v4'+k).textContent=v;
+  });
+  document.querySelectorAll('.sw').forEach(sw=>{
+    const v={a:A,b:B,c:C}[sw.dataset.bit];
+    sw.classList.toggle('hi', v===1);
+  });
+  document.querySelectorAll('#s1tbl tr[data-row]').forEach(tr=>{
+    const k=tr.dataset.row, on = seen.has(k) || allRevealed;
+    tr.classList.toggle('cur', k===key);
+    tr.classList.toggle('lit', on);
+    tr.querySelectorAll('td.s,td.c').forEach(td=>td.classList.toggle('hide', !on));
+  });
+  document.getElementById('s1arith').innerHTML =
+    `${A} + ${B} + ${C} = <span class="y">${t>>1}</span><span class="x">${t&1}</span>` +
+    `<span style="color:#8fa0bd;font-size:20px">&nbsp;&nbsp;(${t} in binary)</span>`;
+  const n = allRevealed?8:seen.size;
+  document.getElementById('s1seen').textContent = `Rows revealed: ${n} of 8`;
+  s4paint(A,B,C);
+  const n4 = allRevealed?8:seen.size;
+  document.getElementById('s4chk').innerHTML =
+    `Checked against slide 1: <span style="color:#22d3ee">${n4} of 8 rows</span>`;
+}
+let allRevealed=false;
+
+document.querySelectorAll('.sw').forEach(sw=>{
+  sw.addEventListener('click',()=>{ toggle(sw.dataset.bit); });
+});
+function toggle(bit){
+  if(bit==='a')A^=1; else if(bit==='b')B^=1; else C^=1;
+  seen.add(`${A}${B}${C}`);
+  renderS1();
+}
+
+/* ===================== slide 5: the trade ===================== */
+(function(){
+  const svg=document.getElementById('stsvg');
+  const AM='#f5a524', VI='#a78bfa', CY='#22d3ee', DIM='#8fa0bd', FG='#e8edf7', MUT='#6b7a99';
+  const mk=(id)=>{const g=el('g',{class:'step'}); g.id=id; svg.appendChild(g); return g;};
+
+  function card(g,x,title,titleCol,border,rows,tT,tD,note){
+    g.appendChild(el('rect',{x,y:0,width:840,height:376,rx:12,fill:'#141d33',
+      stroke:border,'stroke-width':2}));
+    g.appendChild(txt(x+28,44,title,{size:19,fill:titleCol,weight:600}));
+    rows.forEach((r,i)=>{
+      const y=104+i*40;
+      g.appendChild(txt(x+28,y,r[0],{size:18,mono:true,fill:r[3]||FG}));
+      g.appendChild(txt(x+250,y,r[1],{size:16,mono:true,fill:DIM}));
+      g.appendChild(txt(x+812,y,r[2],{size:18,mono:true,fill:r[3]||FG,anchor:'end',weight:700}));
+    });
+    const yl=104+rows.length*40-14;
+    g.appendChild(el('line',{x1:x+28,y1:yl,x2:x+812,y2:yl,stroke:'#34405c','stroke-width':2}));
+    // the two headline numbers
+    g.appendChild(el('rect',{x:x+28,y:yl+22,width:376,height:96,rx:8,fill:'#0d1526'}));
+    g.appendChild(txt(x+216,yl+52,'TRANSISTORS',{size:14,fill:MUT,anchor:'middle'}));
+    g.appendChild(txt(x+216,yl+100,tT,{size:38,mono:true,fill:CY,anchor:'middle',weight:700}));
+    g.appendChild(el('rect',{x:x+436,y:yl+22,width:376,height:96,rx:8,fill:'#0d1526'}));
+    g.appendChild(txt(x+624,yl+52,'CRITICAL PATH',{size:14,fill:MUT,anchor:'middle'}));
+    g.appendChild(txt(x+624,yl+100,tD,{size:38,mono:true,fill:AM,anchor:'middle',weight:700}));
+    g.appendChild(txt(x+28,364,note,{size:15,fill:MUT}));
+  }
+
+  /* stage 1 — two-level */
+  card(mk('st1'),0,'TWO-LEVEL SOP, ALL NAND',DIM,'#34405c',[
+    ['C_{out}','3 × NAND2 + 1 × NAND3','18 T',AM],
+    ['S','4 × NAND3 + 1 × NAND4','32 T',CY],
+    ['A′ B′ C′','3 × INV','6 T',VI],
+  ],'56 T','3','Shallow: only two NAND levels — but wide gates and 3 inverters.');
+
+  /* stage 2 — half adders */
+  card(mk('st2'),920,'TWO HALF ADDERS, ALL NAND',VI,VI,[
+    ['2 × XOR','8 × NAND2','32 T',CY],
+    ['C_{out}','1 × NAND2 (merge)','4 T',AM],
+    ['inverters','none needed','0 T',VI],
+  ],'36 T','6','Lean: nine NAND2, no inverters — but the XORs stack up 6 deep.');
+
+  /* stage 3 — the two bar charts */
+  const g3=mk('st3');
+  const chart=(x,label,vals,unit,max)=>{
+    g3.appendChild(txt(x,452,label,{size:17,fill:MUT,weight:600}));
+    vals.forEach((v,i)=>{
+      const y=478+i*54, W=460*(v[1]/max);
+      g3.appendChild(txt(x,y+25,v[0],{size:16,anchor:'start',fill:DIM}));
+      g3.appendChild(el('rect',{x:x+230,y:y,width:W,height:34,rx:5,fill:v[2],opacity:.85}));
+      g3.appendChild(txt(x+230+W+14,y+25,v[1]+unit,{size:19,mono:true,fill:v[2],weight:700}));
+    });
+  };
+  chart(0,'TRANSISTORS  (fewer is better)',
+    [['two-level',56,'#6b7a99'],['half adders',36,CY]],' T',56);
+  chart(920,'CRITICAL PATH  (fewer is better)',
+    [['two-level',3,AM],['half adders',6,'#6b7a99']],' gate delays',6);
+
+  /* stage 4 — the trade */
+  const g4=mk('st4');
+  g4.appendChild(el('rect',{x:0,y:646,width:1760,height:190,rx:10,fill:'#171f38'}));
+  g4.appendChild(el('rect',{x:0,y:646,width:5,height:190,fill:AM}));
+  g4.appendChild(txt(28,690,'Neither one wins.',{size:22,fill:AM,weight:600}));
+  g4.appendChild(txt(28,732,'Two-level SOP is FASTER  (3 gate delays vs 6).   Half adders are SMALLER  (36 T vs 56 T).',
+    {size:19,fill:FG}));
+  g4.appendChild(txt(28,772,'This is the area–delay trade, and it is the whole reason both circuits exist.',
+    {size:17,fill:'#a8b6d1'}));
+  g4.appendChild(txt(28,812,'Footnote: C_{in} → C_{out} is 2 gate delays in BOTH. That is the number the ripple adder cares about.',
+    {size:16,fill:MUT}));
+})();
+
+/* ===================== slide 7: beyond the gate level ===================== */
+(function(){
+  const svg=document.getElementById('s7svg');
+  const AM='#f5a524', VI='#a78bfa', CY='#22d3ee', DIM='#8fa0bd', FG='#e8edf7', MUT='#6b7a99';
+  const mk=(id)=>{const g=el('g',{class:'step'}); g.id=id; svg.appendChild(g); return g;};
+
+  /* stage 1 — the multiplier argument */
+  const g1=mk('sv1');
+  g1.appendChild(el('rect',{x:0,y:0,width:1760,height:150,rx:10,fill:'#141d33',
+    stroke:'#34405c','stroke-width':2}));
+  g1.appendChild(txt(28,50,'A 32 × 32 multiplier contains roughly a THOUSAND full adders.',
+    {size:24,fill:FG,weight:600}));
+  g1.appendChild(txt(28,96,'Save 4 transistors in the cell → save 4,000 on the chip.',
+    {size:20,fill:CY}));
+  g1.appendChild(txt(28,130,'Shave one gate delay off the carry → every add, multiply, and compare gets faster.',
+    {size:18,fill:MUT}));
+
+  /* stage 2 — go below the gate level */
+  const g2=mk('sv2');
+  g2.appendChild(txt(0,222,'So designers stop composing gates — and draw the transistors directly.',
+    {size:23,fill:VI,weight:600}));
+  g2.appendChild(txt(0,266,'Nothing says a circuit must be built from AND / OR / NAND symbols. Those are a convenience for us,',
+    {size:18,fill:'#a8b6d1'}));
+  g2.appendChild(txt(0,298,'not a constraint on the silicon. Working straight in transistors buys back both area and speed.',
+    {size:18,fill:'#a8b6d1'}));
+
+  const box=(x,col,title,val,sub,detail)=>{
+    g2.appendChild(el('rect',{x,y:340,width:560,height:210,rx:12,fill:'#141d33',
+      stroke:col,'stroke-width':2}));
+    g2.appendChild(txt(x+28,382,title,{size:17,fill:col,weight:600}));
+    g2.appendChild(txt(x+28,448,val,{size:44,mono:true,fill:col,weight:700}));
+    g2.appendChild(txt(x+28,486,sub,{size:16,fill:DIM}));
+    g2.appendChild(txt(x+28,524,detail,{size:15,fill:MUT}));
+  };
+  box(0,   VI, 'TRANSMISSION-GATE XOR','24 T','in the half-adder structure',
+       'A 6-transistor XOR, not 16.');
+  box(600, AM, 'MIRROR ADDER','28 T','the industry standard cell',
+       'C_{in} → C_{out} crosses ONE gate.');
+  box(1200,MUT,'AND THE RESEARCH GOES ON','< 20 T','pass-transistor, hybrid, GDI',
+       'At the cost of clean logic levels.');
+
+  /* stage 3 — full scoreboard */
+  const g3=mk('sv3');
+  g3.appendChild(txt(0,616,'THE SCOREBOARD',{size:17,fill:MUT,weight:600}));
+  const bars=[['two-level SOP, all NAND',56,'#6b7a99'],
+              ['two half adders, all NAND',36,CY],
+              ['mirror adder (transistor level)',28,AM],
+              ['half adders + TG-XOR',24,VI]];
+  bars.forEach((b,i)=>{
+    const y=648+i*48, W=900*(b[1]/56);
+    g3.appendChild(txt(0,y+24,b[0],{size:16,fill:DIM}));
+    g3.appendChild(el('rect',{x:420,y:y,width:W,height:30,rx:5,fill:b[2],opacity:.85}));
+    g3.appendChild(txt(420+W+14,y+24,b[1]+' T',{size:19,mono:true,fill:b[2],weight:700}));
+  });
+  g3.appendChild(el('rect',{x:1420,y:642,width:340,height:196,rx:10,fill:'#171f38'}));
+  g3.appendChild(el('rect',{x:1420,y:642,width:5,height:196,fill:VI}));
+  g3.appendChild(txt(1448,686,'Beyond this course —',{size:17,fill:VI,weight:600}));
+  g3.appendChild(txt(1448,722,'but this is why the full',{size:16,fill:'#a8b6d1'}));
+  g3.appendChild(txt(1448,750,'adder appears in every',{size:16,fill:'#a8b6d1'}));
+  g3.appendChild(txt(1448,778,'VLSI textbook ever',{size:16,fill:'#a8b6d1'}));
+  g3.appendChild(txt(1448,806,'written.',{size:16,fill:'#a8b6d1'}));
+})();
+
+/* ===================== navigation ===================== */
+const SLIDES=[
+  {id:'s1', steps:['s1a','s1b',['s1c','s1sw','s1tbl'],'s1pun']},
+  {id:'s2', steps:['s2a','s2b','s2c','s2d']},
+  {id:'s3', steps:['s3a','s3b','s3c','s3d','s3e']},
+  {id:'s4', steps:[['s4svg'],'s4sw','s4alg']},
+  {id:'s5t',steps:['st1','st2','st3','st4']},
+  {id:'s5', steps:['s5svg',['s5b'],'s5c']},
+  {id:'s7', steps:['sv1','sv2','sv3']},
+];
+let si=0, st=-1;   // st = index of last-shown step
+
+function apply(){
+  SLIDES.forEach((s,i)=>document.getElementById(s.id).classList.toggle('active', i===si));
+  SLIDES.forEach((s,i)=>{
+    s.steps.forEach((grp,j)=>{
+      const ids=Array.isArray(grp)?grp:[grp];
+      ids.forEach(id=>{
+        const n=document.getElementById(id);
+        if(!n) return;
+        n.classList.add('step');
+        n.classList.toggle('on', i<si || (i===si && j<=st));
+      });
+    });
+  });
+  // slide 1 punchline forces full reveal
+  allRevealed = (si>0) || (si===0 && st>=3);
+  renderS1();
+}
+function next(){
+  if(st < SLIDES[si].steps.length-1){ st++; }
+  else if(si < SLIDES.length-1){ si++; st=0; }
+  apply();
+}
+function prev(){
+  if(st>0){ st--; }
+  else if(si>0){ si--; st=SLIDES[si].steps.length-1; }
+  apply();
+}
+function restart(){ si=0; st=-1; A=B=C=0; seen.clear(); seen.add('000'); allRevealed=false; 
+  rippleA.splice(0,4,1,1,0,1); rippleB.splice(0,4,0,1,1,0); s5paint(); apply(); }
+
+document.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if(k===' '||e.key==='ArrowRight'||e.key==='ArrowDown'){ e.preventDefault(); next(); }
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'||e.key==='Backspace'){ e.preventDefault(); prev(); }
+  else if(k==='r'){ restart(); }
+  else if(k==='a'||k==='b'||k==='c'){
+    if(si===0||si===3) toggle(k);
+  }
+  else if(e.key>='1'&&e.key<='7'){ si=+e.key-1; st=SLIDES[si].steps.length-1; apply(); }
+});
+
+s5paint();
+apply();
+</script>
+</body>
+</html>

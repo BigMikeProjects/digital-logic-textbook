@@ -1,0 +1,11 @@
+title: "Full and Half Adders"
+description: "Half and full adder circuits — single-bit binary addition with and without a carry input"
+chapter: combinational-logic
+section: adders
+order: 30501
+
+graphics:
+  01-video.youtube:
+    caption: "Video: developing the full adder and its half-adder special case — truth tables read as counting, two implementations (two-level K-map SOP vs. two half adders) and their transistor/delay trade-off, and cascading into a ripple adder"
+  02-interactive.html:
+    caption: "Interactive: building a full adder — from the half adder and full-adder truth tables to the two implementations (two-level SOP vs. two half adders) with their 56- vs 36-transistor / delay-3 vs 6 trade-off, and cascading into a ripple adder"
