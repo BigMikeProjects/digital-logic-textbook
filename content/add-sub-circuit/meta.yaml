@@ -1,0 +1,9 @@
+title: "Add/Sub Circuit"
+description: ""
+chapter: combinational-logic
+section: adders
+order: 30503
+
+graphics:
+  01-video.youtube:
+    caption: "Video: turning a 4-bit adder into an add/subtract circuit — XOR gates as programmable inverters on the B vector, driven by a sub line that also feeds the carry-in to form the two's-complement negative"
