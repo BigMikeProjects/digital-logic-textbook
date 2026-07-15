@@ -7,3 +7,5 @@ order: 30600
 graphics:
   01-video.youtube:
     caption: "Video: an overview of the building block circuits covered in this section — mux, demux, decoder, encoder, comparator, parity, BCD-to-seven-segment, and tri-state — and the four-part cadence (functionality, gate/transistor build, applications, Verilog) used for each"
+  02-interactive.html:
+    caption: "Interactive: the eight building blocks of the section — the mux/demux and decoder/encoder dual pairs, comparator, parity, BCD-to-seven-segment, and tri-state — and the shared four-beat cadence (schematic symbol, functionality, hardware realization, applications, Verilog) walked through beat by beat"

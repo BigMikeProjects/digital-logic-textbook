@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building-Block Circuits — Overview Cadence</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+        height: 100%;
+        overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    }
+    body { display: flex; align-items: center; justify-content: center; }
+
+    .viewport-container {
+        width: 100%; max-width: 100vw;
+        aspect-ratio: 16 / 9; max-height: 100vh;
+        position: relative; overflow: hidden;
+    }
+
+    .design-surface {
+        width: 1920px; height: 1080px;
+        position: absolute; top: 0; left: 0;
+        transform-origin: top left;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0;
+        padding: 32px 56px;
+        display: flex; flex-direction: column;
+    }
+
+    /* ---------- COLOR TOKENS ----------
+       cyan   #4fc3f7  active beat
+       amber  #ffb74d  fixed-anchor ghost (beat 0)
+       violet #b388ff  duality grouping / Verilog idiom tag
+       navy   #0d1b2a  panel bg
+    ------------------------------------ */
+
+    /* ---------- HEADER ---------- */
+    .header { text-align: center; margin-bottom: 16px; }
+    h1 { color: #4fc3f7; font-size: 44px; font-weight: 700; letter-spacing: .5px; }
+    .subtitle { color: #90a4ae; font-size: 20px; margin-top: 6px; }
+
+    /* ---------- LINEUP STRIP ---------- */
+    .lineup {
+        display: flex; justify-content: center; align-items: flex-end;
+        gap: 30px; margin-bottom: 18px;
+    }
+    .chip-group { display: flex; flex-direction: column; align-items: center; }
+    .group-cap { height: 34px; display: flex; flex-direction: column;
+                 align-items: center; justify-content: flex-end; width: 100%; }
+    .duals-label { color: #b388ff; font-size: 13px; letter-spacing: 2px;
+                   font-weight: 600; margin-bottom: 3px; text-transform: uppercase; }
+    .bracket {
+        width: 100%; height: 12px;
+        border: 2px solid #b388ff; border-bottom: none;
+        border-top-left-radius: 5px; border-top-right-radius: 5px;
+        opacity: .85;
+    }
+    .chip-pair { display: flex; gap: 14px; margin-top: 8px; }
+
+    .chip {
+        width: 132px;
+        background: #0d1b2a; border: 2px solid #37506a;
+        border-radius: 12px; padding: 8px 6px 6px;
+        display: flex; flex-direction: column; align-items: center;
+    }
+    .chip svg { width: 112px; height: 72px; color: #7fb7d4; }
+    .chip-name { color: #cfd8dc; font-size: 14px; font-weight: 600;
+                 margin-top: 4px; letter-spacing: .3px; }
+
+    /* ---------- TEMPLATE CARD ---------- */
+    .card {
+        flex: 1;
+        background: rgba(255,255,255,0.03);
+        border: 2px solid #37506a; border-radius: 18px;
+        padding: 20px 26px;
+        display: flex; flex-direction: column;
+        min-height: 0;
+    }
+    .card-head {
+        display: flex; align-items: baseline; justify-content: center;
+        gap: 14px; margin-bottom: 12px;
+    }
+    .card-title { color: #e0e0e0; font-size: 24px; font-weight: 700; letter-spacing: 1px; }
+    .card-sub { color: #607d8b; font-size: 16px; }
+
+    /* beat-0 anchor band */
+    .anchor-band {
+        display: flex; align-items: center; gap: 22px;
+        background: rgba(255,183,77,0.06);
+        border: 2px dashed #ffb74d; border-radius: 12px;
+        padding: 10px 22px; margin-bottom: 14px;
+        height: 96px;
+    }
+    .anchor-svg { color: #ffb74d; flex-shrink: 0; }
+    .anchor-svg svg { width: 200px; height: 78px; display: block; }
+    .anchor-text .a-label { color: #ffb74d; font-size: 15px; font-weight: 700;
+                            letter-spacing: 2px; text-transform: uppercase; }
+    .anchor-text .a-desc { color: #b0873f; font-size: 17px; margin-top: 4px; }
+
+    /* beat rows */
+    .beats { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .beat-row {
+        flex: 1; display: flex; align-items: center; gap: 24px;
+        border: 2px solid #24384c; border-radius: 12px;
+        padding: 10px 22px; min-height: 0;
+        opacity: .30; color: #4a6274;
+        transition: opacity .12s ease, color .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .beat-row.revealed { opacity: 1; color: #90a4ae; border-color: #37506a; }
+    .beat-row.active {
+        color: #4fc3f7; border-color: #4fc3f7;
+        background: rgba(79,195,247,0.07);
+    }
+
+    .beat-num {
+        width: 54px; height: 54px; flex-shrink: 0;
+        border: 2px solid currentColor; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 28px; font-weight: 700; color: currentColor;
+    }
+    .beat-row.active .beat-num { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .beat-body { flex: 1; min-width: 0; }
+    .beat-title { font-size: 25px; font-weight: 700; color: currentColor; }
+    .beat-title .real-note { font-size: 16px; font-weight: 500; color: #607d8b; margin-left: 10px; }
+    .beat-desc { font-size: 17px; color: #90a4ae; margin-top: 3px; }
+    .beat-tag {
+        display: inline-block; margin-top: 7px;
+        color: #b388ff; border: 1px solid #6a4fa0; border-radius: 999px;
+        padding: 2px 12px; font-size: 14px; font-weight: 600;
+        background: rgba(179,136,255,0.08);
+        opacity: 0; transition: opacity .12s ease;
+    }
+    .beat-tag .mono { font-family: 'Consolas','Courier New',monospace; color: #cbb4ff; }
+    .beat-row.revealed .beat-tag { opacity: 1; }
+
+    .beat-glyph { flex-shrink: 0; color: currentColor; }
+    .beat-glyph svg { width: 150px; height: 84px; display: block; }
+
+    /* ---------- FOOTER ---------- */
+    .footer {
+        display: flex; align-items: center; justify-content: center; gap: 28px;
+        margin-top: 14px; height: 40px;
+    }
+    .progress { display: flex; gap: 9px; align-items: center; }
+    .dot { width: 12px; height: 12px; border-radius: 50%;
+           border: 2px solid #4a6274; background: transparent; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k {
+        display: inline-block; color: #90a4ae;
+        border: 1px solid #37506a; border-radius: 6px;
+        padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace;
+    }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="header">
+        <h1>Building-Block Circuits</h1>
+        <div class="subtitle">Eight blocks &middot; one four-beat cadence for every single one</div>
+    </div>
+
+    <!-- ===================== LINEUP STRIP ===================== -->
+    <div class="lineup">
+
+        <!-- Pair: Mux / Demux -->
+        <div class="chip-group">
+            <div class="group-cap"><div class="duals-label">duals</div><div class="bracket"></div></div>
+            <div class="chip-pair">
+                <div class="chip">
+                    <!-- MUX: trapezoid wide-left -->
+                    <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22,10 22,54 58,42 58,22"/>
+                        <line x1="8" y1="20" x2="22" y2="20"/><line x1="8" y1="32" x2="22" y2="32"/><line x1="8" y1="44" x2="22" y2="44"/>
+                        <line x1="58" y1="32" x2="80" y2="32"/>
+                        <line x1="40" y1="47" x2="40" y2="60"/>
+                    </svg>
+                    <div class="chip-name">MUX</div>
+                </div>
+                <div class="chip">
+                    <!-- DEMUX: trapezoid narrow-left -->
+                    <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="38,22 38,42 74,54 74,10"/>
+                        <line x1="16" y1="32" x2="38" y2="32"/>
+                        <line x1="74" y1="20" x2="88" y2="20"/><line x1="74" y1="32" x2="88" y2="32"/><line x1="74" y1="44" x2="88" y2="44"/>
+                        <line x1="56" y1="48" x2="56" y2="60"/>
+                    </svg>
+                    <div class="chip-name">DEMUX</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pair: Decoder / Encoder -->
+        <div class="chip-group">
+            <div class="group-cap"><div class="duals-label">duals</div><div class="bracket"></div></div>
+            <div class="chip-pair">
+                <div class="chip">
+                    <!-- DECODER: 2 in, 4 out -->
+                    <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="28" y="8" width="34" height="48" rx="3"/>
+                        <line x1="14" y1="22" x2="28" y2="22"/><line x1="14" y1="42" x2="28" y2="42"/>
+                        <line x1="62" y1="16" x2="78" y2="16"/><line x1="62" y1="28" x2="78" y2="28"/><line x1="62" y1="40" x2="78" y2="40"/><line x1="62" y1="52" x2="78" y2="52"/>
+                    </svg>
+                    <div class="chip-name">DECODER</div>
+                </div>
+                <div class="chip">
+                    <!-- ENCODER: 4 in, 2 out -->
+                    <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="34" y="8" width="34" height="48" rx="3"/>
+                        <line x1="18" y1="16" x2="34" y2="16"/><line x1="18" y1="28" x2="34" y2="28"/><line x1="18" y1="40" x2="34" y2="40"/><line x1="18" y1="52" x2="34" y2="52"/>
+                        <line x1="68" y1="22" x2="84" y2="22"/><line x1="68" y1="42" x2="84" y2="42"/>
+                    </svg>
+                    <div class="chip-name">ENCODER</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single: Comparator -->
+        <div class="chip-group">
+            <div class="group-cap"></div>
+            <div class="chip-pair">
+                <div class="chip">
+                    <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="28" y="10" width="36" height="44" rx="3"/>
+                        <line x1="10" y1="26" x2="28" y2="26"/><line x1="10" y1="42" x2="28" y2="42"/>
+                        <line x1="64" y1="20" x2="80" y2="20"/><line x1="64" y1="32" x2="80" y2="32"/><line x1="64" y1="44" x2="80" y2="44"/>
+                        <text x="46" y="37" font-size="15" fill="currentColor" stroke="none" text-anchor="middle" font-family="serif">&lt;=&gt;</text>
+                    </svg>
+                    <div class="chip-name">COMPARATOR</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single: Parity -->
+        <div class="chip-group">
+            <div class="group-cap"></div>
+            <div class="chip-pair">
+                <div class="chip">
+                    <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="30" y="10" width="34" height="44" rx="3"/>
+                        <line x1="14" y1="20" x2="30" y2="20"/><line x1="14" y1="32" x2="30" y2="32"/><line x1="14" y1="44" x2="30" y2="44"/>
+                        <line x1="64" y1="32" x2="80" y2="32"/>
+                        <circle cx="47" cy="32" r="9"/>
+                        <line x1="47" y1="25" x2="47" y2="39"/><line x1="40" y1="32" x2="54" y2="32"/>
+                    </svg>
+                    <div class="chip-name">PARITY</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single: BCD-7seg -->
+        <div class="chip-group">
+            <div class="group-cap"></div>
+            <div class="chip-pair">
+                <div class="chip">
+                    <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="40" y1="14" x2="56" y2="14"/>
+                        <line x1="58" y1="16" x2="58" y2="30"/>
+                        <line x1="58" y1="34" x2="58" y2="48"/>
+                        <line x1="40" y1="50" x2="56" y2="50"/>
+                        <line x1="38" y1="34" x2="38" y2="48"/>
+                        <line x1="38" y1="16" x2="38" y2="30"/>
+                        <line x1="40" y1="32" x2="56" y2="32"/>
+                    </svg>
+                    <div class="chip-name">BCD&rarr;7-SEG</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single: Tri-state -->
+        <div class="chip-group">
+            <div class="group-cap"></div>
+            <div class="chip-pair">
+                <div class="chip">
+                    <svg viewBox="0 0 96 64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="28,12 28,52 64,32"/>
+                        <line x1="10" y1="32" x2="28" y2="32"/>
+                        <line x1="64" y1="32" x2="82" y2="32"/>
+                        <line x1="45" y1="22" x2="45" y2="8"/>
+                    </svg>
+                    <div class="chip-name">TRI-STATE</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===================== TEMPLATE CARD ===================== -->
+    <div class="card">
+        <div class="card-head">
+            <div class="card-title">THE FOUR-BEAT CADENCE</div>
+            <div class="card-sub">&mdash; the same rhythm on every block above</div>
+        </div>
+
+        <!-- Beat 0 anchor band (always visible) -->
+        <div class="anchor-band">
+            <div class="anchor-svg">
+                <svg viewBox="0 0 200 78" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="70" y="16" width="60" height="46" rx="6" stroke-dasharray="6 5"/>
+                    <line x1="44" y1="30" x2="70" y2="30"/><line x1="44" y1="39" x2="70" y2="39"/><line x1="44" y1="48" x2="70" y2="48"/>
+                    <line x1="130" y1="34" x2="156" y2="34"/><line x1="130" y1="44" x2="156" y2="44"/>
+                    <text x="100" y="44" font-size="13" fill="currentColor" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif" letter-spacing="1">SYMBOL</text>
+                </svg>
+            </div>
+            <div class="anchor-text">
+                <div class="a-label">Beat 0 &middot; Schematic Symbol</div>
+                <div class="a-desc">A diagram that captures the block's function &mdash; the piece you design with.</div>
+            </div>
+        </div>
+
+        <!-- The four beats -->
+        <div class="beats">
+            <div class="beat-row" data-beat="1">
+                <div class="beat-num">1</div>
+                <div class="beat-body">
+                    <div class="beat-title">Functionality</div>
+                    <div class="beat-desc">What it does &mdash; the input / output behavior as a black box.</div>
+                </div>
+                <div class="beat-glyph">
+                    <!-- black box: I/O both sides -->
+                    <svg viewBox="0 0 150 84" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="54" y="24" width="46" height="40" rx="4"/>
+                        <line x1="18" y1="34" x2="54" y2="34"/><line x1="18" y1="44" x2="54" y2="44"/><line x1="18" y1="54" x2="54" y2="54"/>
+                        <polygon points="54,34 46,30 46,38" fill="currentColor" stroke="none"/>
+                        <polygon points="54,44 46,40 46,48" fill="currentColor" stroke="none"/>
+                        <polygon points="54,54 46,50 46,58" fill="currentColor" stroke="none"/>
+                        <line x1="100" y1="40" x2="126" y2="40"/><line x1="100" y1="52" x2="126" y2="52"/>
+                        <polygon points="134,40 126,36 126,44" fill="currentColor" stroke="none"/>
+                        <polygon points="134,52 126,48 126,56" fill="currentColor" stroke="none"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="beat-row" data-beat="2">
+                <div class="beat-num">2</div>
+                <div class="beat-body">
+                    <div class="beat-title">Representative Hardware Realization<span class="real-note">gate-level &mdash; or transistor-level where it matters</span></div>
+                    <div class="beat-desc">One concrete build of the block from primitives.</div>
+                </div>
+                <div class="beat-glyph">
+                    <!-- AND gate -->
+                    <svg viewBox="0 0 150 84" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M56,22 L78,22 A22,22 0 0 1 78,66 L56,66 Z"/>
+                        <line x1="30" y1="34" x2="56" y2="34"/><line x1="30" y1="54" x2="56" y2="54"/>
+                        <line x1="100" y1="44" x2="124" y2="44"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="beat-row" data-beat="3">
+                <div class="beat-num">3</div>
+                <div class="beat-body">
+                    <div class="beat-title">Applications</div>
+                    <div class="beat-desc">Where the block lives inside a larger system.</div>
+                </div>
+                <div class="beat-glyph">
+                    <!-- block-in-system -->
+                    <svg viewBox="0 0 150 84" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="14" y="16" width="118" height="52" rx="10" stroke-dasharray="7 5"/>
+                        <rect x="60" y="34" width="30" height="18" rx="3"/>
+                        <line x1="30" y1="43" x2="60" y2="43"/>
+                        <line x1="90" y1="43" x2="132" y2="43"/>
+                        <line x1="132" y1="43" x2="148" y2="43"/>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="beat-row" data-beat="4">
+                <div class="beat-num">4</div>
+                <div class="beat-body">
+                    <div class="beat-title">Verilog Description</div>
+                    <div class="beat-desc">Modeling the block in HDL.</div>
+                    <div class="beat-tag">one canonical construct per block &mdash; <span class="mono">case &middot; ?: &middot; casez &middot; ^ &middot; z</span></div>
+                </div>
+                <div class="beat-glyph">
+                    <!-- code editor -->
+                    <svg viewBox="0 0 150 84" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="28" y="16" width="94" height="52" rx="6"/>
+                        <line x1="28" y1="30" x2="122" y2="30"/>
+                        <circle cx="37" cy="23" r="1.6" fill="currentColor" stroke="none"/>
+                        <circle cx="44" cy="23" r="1.6" fill="currentColor" stroke="none"/>
+                        <circle cx="51" cy="23" r="1.6" fill="currentColor" stroke="none"/>
+                        <polyline points="48,44 42,52 48,60"/>
+                        <polyline points="60,44 66,52 60,60"/>
+                        <line x1="76" y1="46" x2="110" y2="46"/>
+                        <line x1="76" y1="54" x2="100" y2="54"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== FOOTER ===================== -->
+    <div class="footer">
+        <div class="progress" id="progress">
+            <div class="dot" data-dot="1"></div>
+            <div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div>
+            <div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> reveal beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> advance
+            &middot; <span class="k">Backspace</span> back
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const container = document.getElementById('viewportContainer');
+        const surface = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * (16 / 9); }
+        else { cw = vw; ch = cw * (9 / 16); }
+        container.style.width = cw + 'px';
+        container.style.height = ch + 'px';
+        surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt;
+    window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize, 100));
+
+    // ============ REVEAL STATE MACHINE ============
+    const MAX = 4;
+    let stage = 0;                       // 0..4 : cumulative reveal frontier
+    const rows = Array.from(document.querySelectorAll('.beat-row'));
+    const dots = Array.from(document.querySelectorAll('.dot'));
+
+    function render() {
+        rows.forEach(row => {
+            const b = +row.dataset.beat;
+            row.classList.toggle('revealed', b <= stage);
+            row.classList.toggle('active',   b === stage);
+        });
+        dots.forEach(dot => {
+            dot.classList.toggle('on', +dot.dataset.dot <= stage);
+        });
+    }
+
+    function setStage(n) { stage = Math.max(0, Math.min(MAX, n)); render(); }
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '4') { setStage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown':
+                setStage(stage + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace':
+                setStage(stage - 1); e.preventDefault(); break;
+            case 'r': case 'R':
+                setStage(0); e.preventDefault(); break;
+        }
+    });
+
+    // div-based click-to-jump on beat rows (classroom convenience; no hover states)
+    rows.forEach(row => row.addEventListener('click', () => setStage(+row.dataset.beat)));
+
+    render();
+</script>
+</body>
+</html>
