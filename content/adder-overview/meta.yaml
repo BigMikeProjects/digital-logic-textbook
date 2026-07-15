@@ -2,7 +2,7 @@ title: "Adder Circuits: A Hierarchical Approach"
 description: ""
 chapter: combinational-logic
 section: adders
-order: 30500
+order: 30600
 
 graphics:
   01-video.youtube:

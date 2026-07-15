@@ -2,7 +2,7 @@ title: "Full and Half Adders"
 description: "Half and full adder circuits — single-bit binary addition with and without a carry input"
 chapter: combinational-logic
 section: adders
-order: 30501
+order: 30601
 
 graphics:
   01-video.youtube:
