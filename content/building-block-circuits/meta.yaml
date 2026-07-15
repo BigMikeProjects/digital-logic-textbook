@@ -1,0 +1,9 @@
+title: "Building Block Circuits"
+description: ""
+chapter: combinational-logic
+section: building-block-circuits
+order: 30600
+
+graphics:
+  01-video.youtube:
+    caption: "Video: an overview of the building block circuits covered in this section — mux, demux, decoder, encoder, comparator, parity, BCD-to-seven-segment, and tri-state — and the four-part cadence (functionality, gate/transistor build, applications, Verilog) used for each"
