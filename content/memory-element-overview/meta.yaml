@@ -1,0 +1,9 @@
+title: "Memory Element Overview"
+description: ""
+chapter: sequential-logic
+section: memory-elements
+order: 40100
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the memory-elements roadmap — SR latch (bistable) → S'-R' latch (cross-coupled NAND) → D latch (data + enable) → flip-flop (edge-triggered), and why each step refines the last"
