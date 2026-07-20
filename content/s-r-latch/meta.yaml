@@ -1,8 +1,8 @@
-title: "S-R Latch"
+title: "S-R Latch and S'-R' Latch"
 description: ""
 chapter: sequential-logic
-section: latches
-order: 40001
+section: memory-elements
+order: 40102
 
 graphics:
   01-video.youtube:

@@ -1,5 +1,5 @@
-title: "Multiplexers: Data Selection Circuits"
-description: Using multiplexers to select between multiple data inputs
+title: "Multiplexers"
+description: "Using multiplexers to select between multiple data inputs"
 chapter: combinational-logic
 section: building-block-circuits
 order: 30501
