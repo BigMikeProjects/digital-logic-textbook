@@ -2,7 +2,7 @@ The previous section showed that a single inverter with feedback oscillates beca
 
 ## Circuit Structure
 
-An S-R latch consists of two NOR gates whose outputs feed back into each other's inputs. The top gate takes the Reset input $R$ and produces the output $Q$. The bottom gate takes the Set input $S$ and produces $\overline{Q}$ (labeled QN in many references, since the complementary relationship only holds under proper operation). Each gate's output connects back to one input of the other gate, forming a cross-coupled feedback loop.
+An S-R latch consists of two NOR gates whose outputs feed back into each other's inputs. The top gate takes the Reset input $R$ and produces the output $Q$. The bottom gate takes the Set input $S$ and produces $\overline{Q}$ (labeled QN in many references, since the complementary relationship only holds under proper operation). Each gate's output connects back to one input of the other gate, forming a cross-coupled feedback loop. A simple way to remember the wiring: **$Q$ pairs with $R$, and $S$ pairs with $\overline{Q}$** — each output shares its gate with the *opposite* control.
 
 Recall the NOR gate truth table:
 
