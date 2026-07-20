@@ -6,6 +6,6 @@ order: 40102
 
 graphics:
   01-video.youtube:
-    caption: "Video: S-R Latch"
+    caption: "Video: the S-R latch — cross-coupled NOR gates, the set / reset / hold behavior, and the forbidden state"
   02-interactive.html:
     caption: "Interactive: the S-R (NOR) and S'-R' (NAND) latches — toggle the inputs and watch the cross-coupled feedback loop hold the stored bit"
