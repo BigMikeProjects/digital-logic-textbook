@@ -1,5 +1,11 @@
 title: "Multiplexers"
-description: "Using multiplexers to select between multiple data inputs"
+description: "Routing one of several data inputs to a single output with a select line — functionality, the AND-OR gate build, applications, and Verilog"
 chapter: combinational-logic
 section: building-block-circuits
 order: 30501
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the multiplexer through the four-beat cadence — routing D0 or D1 to Y with the select line, the AND-OR gate build stamped per bit, applications from bus steering to time-division multiplexing, and the Verilog ?: and case idioms"
+  02-interactive.html:
+    caption: "Interactive: the 2:1 multiplexer walked through its four beats — click the select line to route D0 or D1 to Y, see the AND-OR hardware stamped across a 2-bit data line, the applications, and the 2:1 and 4:1 Verilog descriptions"

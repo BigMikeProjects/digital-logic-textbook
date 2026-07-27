@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multiplexer — The Four-Beat Cadence</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 active/data · amber #ffb74d select/anchor · violet #b388ff idiom */
+
+    /* signal-flow animation (instructor-triggered by toggling select) */
+    @keyframes dash { to { stroke-dashoffset: -48; } }
+    .flow { stroke-dasharray: 14 10; animation: dash 1s linear infinite; }
+
+    /* ---------- persistent header ---------- */
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 156px; height: 78px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    /* ---------- tab strip ---------- */
+    .tabstrip { display: flex; gap: 14px; margin: 16px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 12px 20px;
+        color: #6a8398; transition: all .12s ease; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    /* ---------- stage / pages ---------- */
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 14px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- select control widget ---------- */
+    .selctl { display: inline-flex; align-items: center; gap: 14px; cursor: pointer;
+        border: 2px solid #ffb74d; border-radius: 999px; padding: 10px 24px;
+        background: rgba(255,183,77,0.08); user-select: none; }
+    .selctl .sc-label { color: #ffb74d; font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+    .selctl .sc-val { color: #e0e0e0; font-size: 24px; font-family: 'Consolas','Courier New',monospace; }
+    .selctl .sc-val b { color: #ffb74d; font-size: 28px; }
+    .selctl .sc-hint { color: #8a7a52; font-size: 15px; }
+
+    /* PAGE 1 — functionality */
+    #p1 { gap: 40px; align-items: center; }
+    .fn-left { flex: 0 0 44%; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .fn-left svg { width: 440px; height: 320px; }
+    .yout { font-size: 30px; font-family: 'Consolas','Courier New',monospace; color: #cfd8dc; }
+    .yout b { color: #4fc3f7; }
+    .fn-right { flex: 1; display: flex; flex-direction: column; gap: 26px; }
+    .fn-statement { font-size: 31px; color: #cfd8dc; line-height: 1.5; }
+    .fn-statement .dat { color: #4fc3f7; font-weight: 600; }
+    .fn-statement .sel { color: #ffb74d; font-weight: 600; }
+    .btable { border-collapse: collapse; font-size: 29px; align-self: flex-start; }
+    .btable th, .btable td { border: 2px solid #37506a; padding: 11px 52px; text-align: center;
+        font-family: 'Consolas','Courier New',monospace; color: #e0e0e0; transition: background .2s; }
+    .btable th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; }
+    .btable tr.horow td { background: rgba(79,195,247,0.20); color: #fff; }
+    .fn-gen { font-size: 21px; color: #90a4ae; }
+    .ladder { display: flex; gap: 14px; margin-top: 8px; }
+    .rung { border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px;
+        font-family: 'Consolas','Courier New',monospace; font-size: 19px; color: #cfd8dc; }
+    .rung b { color: #ffb74d; }
+
+    /* mux-symbol highlight (page 1) */
+    .muxsym .w, .muxsym .i, .muxsym .wy { transition: opacity .25s, stroke .25s; }
+    .muxsym.sel0 .d1 { opacity: .24; } .muxsym.sel1 .d0 { opacity: .24; }
+    .muxsym.sel0 .d0, .muxsym.sel1 .d1 { stroke: #4fc3f7; }
+
+    /* PAGE 2 — hardware */
+    #p2 { flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+    .p2-top { display: flex; align-items: center; gap: 40px; }
+    .sch-wrap { width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+    .sch-wrap svg { width: 100%; max-width: 1240px; height: 100%; max-height: 700px; }
+    .hw-expr .idx { font-size: 24px; color: #607d8b; margin-left: 18px; }
+    .hw-note { font-size: 20px; color: #90a4ae; text-align: center; margin-top: 4px; }
+    .hw-expr { font-size: 38px; font-family: 'Consolas','Courier New',monospace; color: #4fc3f7; }
+    .hw-expr .op { color: #ffb74d; }
+
+    /* schematic highlight (page 2, 2-bit) */
+    .schem .w, .schem .sw, .schem .g { transition: opacity .25s, stroke .25s; }
+    .schem .wy { stroke: #4fc3f7; }
+    .schem.sel0 .wd0, .schem.sel0 .waa, .schem.sel0 .ga { stroke: #4fc3f7; }
+    .schem.sel0 .wsp { stroke: #ffd08a; }
+    .schem.sel0 .wd1, .schem.sel0 .wab, .schem.sel0 .gb, .schem.sel0 .ws { opacity: .24; }
+    .schem.sel1 .wd1, .schem.sel1 .wab, .schem.sel1 .gb { stroke: #4fc3f7; }
+    .schem.sel1 .ws { stroke: #ffd08a; }
+    .schem.sel1 .wd0, .schem.sel1 .waa, .schem.sel1 .ga, .schem.sel1 .wsp { opacity: .24; }
+
+    /* PAGE 3 — applications */
+    #p3 { align-items: center; }
+    .apps { display: flex; gap: 26px; width: 100%; }
+    .app-card { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 30px 26px; display: flex; flex-direction: column; gap: 18px; min-height: 520px; }
+    .app-card svg { width: 96px; height: 96px; color: #4fc3f7; }
+    .app-title { font-size: 26px; font-weight: 700; color: #e0e0e0; }
+    .app-desc { font-size: 21px; color: #90a4ae; line-height: 1.5; }
+
+    /* PAGE 4 — verilog (vertical) */
+    #p4 { flex-direction: column; align-items: center; justify-content: center; gap: 30px; }
+    .code-card { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+    .code-label { font-size: 24px; color: #90a4ae; font-weight: 600; }
+    .code-label b { color: #4fc3f7; } .code-label .v { color: #b388ff; }
+    .code { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        padding: 20px 32px; font-family: 'Consolas','Courier New',monospace;
+        font-size: 26px; line-height: 1.5; color: #cfd8dc; min-width: 1200px; white-space: pre; }
+    .code .kw { color: #4fc3f7; } .code .op { color: #ffb74d; }
+    .code .cm { color: #607d8b; } .code .lit { color: #b388ff; }
+    .idiom-tag { color: #b388ff; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 8px 26px; font-size: 24px; font-weight: 600; background: rgba(179,136,255,0.08); }
+    .idiom-tag .mono { font-family: 'Consolas','Courier New',monospace; color: #cbb4ff; }
+
+    /* ---------- footer ---------- */
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 12px; height: 36px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== persistent header (beat-0 anchor) ===== -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="-18 -4 244 108" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="66,14 66,86 142,68 142,32"/>
+                <line x1="30" y1="32" x2="66" y2="32"/><line x1="30" y1="68" x2="66" y2="68"/>
+                <line x1="142" y1="50" x2="184" y2="50"/>
+                <line x1="104" y1="76" x2="104" y2="94"/>
+                <text x="24" y="37" font-size="15" fill="currentColor" stroke="none" text-anchor="end" font-family="'Consolas',monospace">D0</text>
+                <text x="24" y="73" font-size="15" fill="currentColor" stroke="none" text-anchor="end" font-family="'Consolas',monospace">D1</text>
+                <text x="190" y="55" font-size="15" fill="currentColor" stroke="none" font-family="'Consolas',monospace">Y</text>
+                <text x="104" y="108" font-size="14" fill="#ffb74d" stroke="none" text-anchor="middle" font-family="'Consolas',monospace">S</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Multiplexer <span class="sub">(Mux) — the data selector</span></h1>
+            <div class="subtitle">The four-beat cadence &middot; 2:1 mux as our running example</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <!-- ===== tab strip ===== -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Functionality</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Hardware</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Applications</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Verilog</div></div>
+    </div>
+
+    <!-- ===== pages ===== -->
+    <div class="stage">
+
+        <!-- PAGE 1 -->
+        <div class="page" id="p1">
+            <div class="fn-left">
+                <svg class="muxsym" id="muxsym1" viewBox="-24 -6 324 262" fill="none" stroke="#8fa8bd" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- internal routes (drawn first, under outline) -->
+                    <line class="i d0" x1="100" y1="72"  x2="180" y2="120"/>
+                    <line class="i d1" x1="100" y1="168" x2="180" y2="120"/>
+                    <!-- trapezoid body -->
+                    <polygon points="100,34 100,206 180,166 180,74" stroke="#cfd8dc"/>
+                    <!-- input wires -->
+                    <line class="w d0" x1="30" y1="72"  x2="100" y2="72"/>
+                    <line class="w d1" x1="30" y1="168" x2="100" y2="168"/>
+                    <!-- output wire -->
+                    <line class="wy w-y" x1="180" y1="120" x2="262" y2="120" stroke="#4fc3f7"/>
+                    <!-- select -->
+                    <line x1="140" y1="186" x2="140" y2="224" stroke="#ffb74d"/>
+                    <!-- labels -->
+                    <text x="22" y="78"  font-size="22" fill="#4fc3f7" stroke="none" text-anchor="end" font-family="'Consolas',monospace">D0</text>
+                    <text x="22" y="174" font-size="22" fill="#4fc3f7" stroke="none" text-anchor="end" font-family="'Consolas',monospace">D1</text>
+                    <text x="272" y="126" font-size="22" fill="#4fc3f7" stroke="none" font-family="'Consolas',monospace">Y</text>
+                    <text x="140" y="248" font-size="20" fill="#ffb74d" stroke="none" text-anchor="middle" font-family="'Consolas',monospace">S</text>
+                </svg>
+                <div class="selctl" data-selctl>
+                    <span class="sc-label">SELECT</span>
+                    <span class="sc-val">S = <b class="sc-num">0</b></span>
+                    <span class="sc-hint">click / press S</span>
+                </div>
+                <div class="yout">Y = <b class="yval">D0</b></div>
+            </div>
+            <div class="fn-right">
+                <div class="fn-statement">A multiplexer routes <span class="dat">one of several data inputs</span> to a single output. The <span class="sel">select</span> line chooses which one.</div>
+                <table class="btable">
+                    <tr><th>S</th><th>Y</th></tr>
+                    <tr class="brow" data-s="0"><td>0</td><td>D0</td></tr>
+                    <tr class="brow" data-s="1"><td>1</td><td>D1</td></tr>
+                </table>
+                <div class="fn-gen">2:1 shown &mdash; in general an <b style="color:#4fc3f7">N:1</b> mux selects 1 of N inputs with <b style="color:#ffb74d">log&#8322;N</b> select lines:</div>
+                <div class="ladder">
+                    <div class="rung">2:1 &rarr; <b>1</b> sel</div>
+                    <div class="rung">4:1 &rarr; <b>2</b> sel</div>
+                    <div class="rung">8:1 &rarr; <b>3</b> sel</div>
+                    <div class="rung" style="border-style:dashed;">N:1 &rarr; <b>log&#8322;N</b></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 2 -->
+        <div class="page" id="p2">
+            <div class="p2-top">
+                <div class="hw-expr">Y[i] = S&#8242;<span class="op">&middot;</span>D0[i] <span class="op">+</span> S<span class="op">&middot;</span>D1[i] <span class="idx">i = 0, 1</span></div>
+                <div class="selctl" data-selctl>
+                    <span class="sc-label">SELECT</span>
+                    <span class="sc-val">S = <b class="sc-num">0</b></span>
+                    <span class="sc-hint">click / press S</span>
+                </div>
+            </div>
+            <div class="sch-wrap">
+                <svg class="schem" id="schem2" viewBox="0 -6 1160 872" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <!-- slice grouping boxes -->
+                    <g fill="none" stroke="#33465e" stroke-width="2" stroke-dasharray="7 6">
+                        <rect x="435" y="55" width="395" height="235" rx="10"/>
+                        <rect x="435" y="415" width="395" height="235" rx="10"/>
+                    </g>
+                    <!-- data wires -->
+                    <polyline class="w wd0" points="115,95 450,95"   stroke="#8fa8bd"/>
+                    <polyline class="w wd1" points="115,205 450,205" stroke="#8fa8bd"/>
+                    <polyline class="w wd0" points="115,455 450,455" stroke="#8fa8bd"/>
+                    <polyline class="w wd1" points="115,565 450,565" stroke="#8fa8bd"/>
+                    <!-- select -->
+                    <polyline class="sw" points="115,730 255,730" stroke="#ffb74d"/>
+                    <polyline class="sw ws" points="185,730 185,670 410,670" stroke="#ffb74d"/>
+                    <circle cx="185" cy="730" r="6" fill="#ffb74d" stroke="none"/>
+                    <polyline class="sw wsp" points="326,730 370,730 370,135" stroke="#ffb74d"/>
+                    <polyline class="sw wsp" points="370,135 450,135" stroke="#ffb74d"/>
+                    <polyline class="sw wsp" points="370,495 450,495" stroke="#ffb74d"/>
+                    <polyline class="sw ws" points="410,670 410,245" stroke="#ffb74d"/>
+                    <polyline class="sw ws" points="410,245 450,245" stroke="#ffb74d"/>
+                    <polyline class="sw ws" points="410,605 450,605" stroke="#ffb74d"/>
+                    <!-- AND outputs -> OR inputs -->
+                    <polyline class="w waa" points="542,115 620,115 620,140 683,140" stroke="#8fa8bd"/>
+                    <polyline class="w wab" points="542,225 620,225 620,200 683,200" stroke="#8fa8bd"/>
+                    <polyline class="w waa" points="542,475 620,475 620,500 683,500" stroke="#8fa8bd"/>
+                    <polyline class="w wab" points="542,585 620,585 620,560 683,560" stroke="#8fa8bd"/>
+                    <!-- OR outputs -> Y -->
+                    <polyline class="w wy" points="800,170 880,170" stroke="#4fc3f7"/>
+                    <polyline class="w wy" points="800,530 880,530" stroke="#4fc3f7"/>
+                    <!-- inverter -->
+                    <polygon points="255,702 255,758 311,730" stroke="#ffb74d"/>
+                    <circle cx="319" cy="730" r="7" stroke="#ffb74d"/>
+                    <!-- AND gates -->
+                    <path class="g ga" d="M450,71  L498,71  A44,44 0 0 1 498,159 L450,159 Z" stroke="#cfd8dc"/>
+                    <path class="g gb" d="M450,181 L498,181 A44,44 0 0 1 498,269 L450,269 Z" stroke="#cfd8dc"/>
+                    <path class="g ga" d="M450,431 L498,431 A44,44 0 0 1 498,519 L450,519 Z" stroke="#cfd8dc"/>
+                    <path class="g gb" d="M450,541 L498,541 A44,44 0 0 1 498,629 L450,629 Z" stroke="#cfd8dc"/>
+                    <!-- OR gates -->
+                    <path class="g gor" d="M670,105 C725,105 770,130 800,170 C770,210 725,235 670,235 Q702,170 670,105 Z" stroke="#cfd8dc"/>
+                    <path class="g gor" d="M670,465 C725,465 770,490 800,530 C770,570 725,595 670,595 Q702,530 670,465 Z" stroke="#cfd8dc"/>
+                    <!-- labels -->
+                    <g font-family="Consolas, monospace" font-size="26" stroke="none">
+                        <text x="105" y="103" fill="#4fc3f7" text-anchor="end">D0[0]</text>
+                        <text x="105" y="213" fill="#4fc3f7" text-anchor="end">D1[0]</text>
+                        <text x="105" y="463" fill="#4fc3f7" text-anchor="end">D0[1]</text>
+                        <text x="105" y="573" fill="#4fc3f7" text-anchor="end">D1[1]</text>
+                        <text x="105" y="738" fill="#ffb74d" text-anchor="end">S</text>
+                        <text x="336" y="712" fill="#ffb74d">S&#8242;</text>
+                        <text x="892" y="179" fill="#4fc3f7">Y[0]</text>
+                        <text x="892" y="539" fill="#4fc3f7">Y[1]</text>
+                    </g>
+                    <g font-family="Consolas, monospace" font-size="20" fill="#5c7189" stroke="none">
+                        <text x="445" y="80">bit 0</text>
+                        <text x="445" y="440">bit 1</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="hw-note">Two 1-bit muxes in parallel &mdash; one select S (and S&#8242;) shared across every bit.</div>
+        </div>
+
+        <!-- PAGE 3 -->
+        <div class="page" id="p3">
+            <div class="apps">
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="22" x2="58" y2="22"/><line x1="12" y1="40" x2="58" y2="40"/><line x1="12" y1="58" x2="58" y2="58"/>
+                        <polygon points="58,16 58,64 78,40"/>
+                        <line x1="78" y1="40" x2="78" y2="82"/><line x1="20" y1="82" x2="88" y2="82" stroke-width="4"/>
+                    </svg>
+                    <div class="app-title">Bus source select</div>
+                    <div class="app-desc">Route one of several drivers onto a single shared bus line.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="18,14 18,82 42,66 42,30"/>
+                        <line x1="42" y1="36" x2="42" y2="60"/>
+                        <path d="M54,24 L70,24 L84,48 L70,72 L54,72 L68,48 Z"/>
+                    </svg>
+                    <div class="app-title">ALU operand steering</div>
+                    <div class="app-desc">Pick which register or immediate value feeds the datapath.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="14" y="14" width="68" height="68" rx="6"/>
+                        <line x1="14" y1="36" x2="82" y2="36"/><line x1="14" y1="58" x2="82" y2="58"/>
+                        <line x1="48" y1="14" x2="48" y2="82"/>
+                    </svg>
+                    <div class="app-title">Function generator</div>
+                    <div class="app-desc">A 2&#8319;:1 mux implements any n-input function &mdash; wire the data pins to the truth-table column.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="14" y1="26" x2="40" y2="26"/><line x1="14" y1="48" x2="40" y2="48"/><line x1="14" y1="70" x2="40" y2="70"/>
+                        <polygon points="40,18 40,78 58,48"/>
+                        <line x1="58" y1="48" x2="84" y2="48"/>
+                        <polyline points="70,38 82,48 70,58"/>
+                    </svg>
+                    <div class="app-title">Time-division mux</div>
+                    <div class="app-desc">Cycle the select to share one line among many signals over time.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 4 (vertical) -->
+        <div class="page" id="p4">
+            <div class="code-card">
+                <div class="code-label"><b>2:1</b> &mdash; ternary</div>
+                <div class="code"><span class="kw">module</span> mux2 (<span class="kw">input</span> s, d0, d1, <span class="kw">output</span> y);
+  <span class="kw">assign</span> y = s <span class="op">?</span> d1 <span class="op">:</span> d0;
+<span class="kw">endmodule</span></div>
+            </div>
+            <div class="code-card">
+                <div class="code-label"><b>4:1</b> &mdash; case</div>
+                <div class="code"><span class="kw">module</span> mux4 (<span class="kw">input</span> [<span class="lit">1:0</span>] sel, <span class="kw">input</span> [<span class="lit">7:0</span>] d0, d1, d2, d3, <span class="kw">output reg</span> [<span class="lit">7:0</span>] y);
+  <span class="kw">always</span> @*
+    <span class="kw">case</span> (sel)
+      <span class="lit">2'b00</span>: y = d0;
+      <span class="lit">2'b01</span>: y = d1;
+      <span class="lit">2'b10</span>: y = d2;
+      <span class="lit">2'b11</span>: y = d3;
+    <span class="kw">endcase</span>
+<span class="kw">endmodule</span></div>
+            </div>
+            <div class="idiom-tag">mux &rarr; <span class="mono">?:</span> &nbsp;/&nbsp; <span class="mono">case</span></div>
+        </div>
+
+    </div>
+
+    <!-- ===== footer ===== -->
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k">Backspace</span> prev
+            &middot; <span class="k amber">S</span> select
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+
+    const FIRST = 1, LAST = 4;
+    let page = 1;
+    let sel = 0;   // select value for the animated mux (pages 1-2)
+
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    const muxsym = document.getElementById('muxsym1');
+    const schem  = document.getElementById('schem2');
+
+    // apply the signal-flow animation class to whichever wires are active
+    function applyFlow() {
+        document.querySelectorAll('.flow').forEach(el => el.classList.remove('flow'));
+        // page 1 symbol
+        const symActive = sel === 0
+            ? ['.d0', '.wy'] : ['.d1', '.wy'];
+        symActive.forEach(s => muxsym.querySelectorAll(s).forEach(el => el.classList.add('flow')));
+        // page 2 schematic
+        const schActive = sel === 0
+            ? ['.wd0', '.waa', '.wy', '.wsp']
+            : ['.wd1', '.wab', '.wy', '.ws'];
+        schActive.forEach(s => schem.querySelectorAll(s).forEach(el => el.classList.add('flow')));
+    }
+
+    function renderSel() {
+        muxsym.classList.toggle('sel0', sel === 0);
+        muxsym.classList.toggle('sel1', sel === 1);
+        schem.classList.toggle('sel0', sel === 0);
+        schem.classList.toggle('sel1', sel === 1);
+        document.querySelectorAll('.sc-num').forEach(n => n.textContent = sel);
+        document.querySelectorAll('.yval').forEach(n => n.textContent = 'D' + sel);
+        document.querySelectorAll('.brow').forEach(r =>
+            r.classList.toggle('horow', +r.dataset.s === sel));
+        applyFlow();
+    }
+
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    function toggleSel() { sel = sel ? 0 : 1; renderSel(); }
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '4') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 's': case 'S': toggleSel(); e.preventDefault(); break;
+            case 'r': case 'R': setPage(1); e.preventDefault(); break;
+        }
+    });
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-selctl]').forEach(el => el.addEventListener('click', toggleSel));
+
+    render();
+    renderSel();
+</script>
+</body>
+</html>
