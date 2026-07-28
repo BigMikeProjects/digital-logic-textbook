@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magnitude Comparator — The Four-Beat Cadence</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 A/active · amber #ffb74d B/anchor · violet #b388ff idiom */
+
+    @keyframes dash { to { stroke-dashoffset: -48; } }
+    .flow { stroke-dasharray: 14 10; animation: dash 1s linear infinite; }
+
+    /* ---------- persistent header ---------- */
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 182px; height: 80px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    /* ---------- tab strip ---------- */
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    /* ---------- stage / pages ---------- */
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- CASE control widget ---------- */
+    .casectl { display: inline-flex; align-items: center; gap: 18px; cursor: pointer;
+        border: 2px solid #ffb74d; border-radius: 999px; padding: 9px 26px;
+        background: rgba(255,183,77,0.08); user-select: none; }
+    .casectl .cc-label { color: #ffb74d; font-size: 19px; font-weight: 700; letter-spacing: 1px; }
+    .casectl .cc-val { color: #cfd8dc; font-size: 22px; font-family: 'Consolas','Courier New',monospace; }
+    .casectl .cc-val b.ca { color: #4fc3f7; }
+    .casectl .cc-val b.cb { color: #ffb74d; }
+    .casectl .cc-hint { color: #8a7a52; font-size: 15px; }
+
+    /* ---------- PAGE 1 — functionality ---------- */
+    #p1 { gap: 44px; align-items: center; }
+    .fn-left { flex: 0 0 47%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .fn-right { flex: 1; display: flex; flex-direction: column; gap: 22px; }
+
+    .lanes { display: flex; flex-direction: column; gap: 10px; }
+    .lrow { display: grid; grid-template-columns: 86px repeat(4, 104px); gap: 14px; align-items: center; }
+    .lname { font-size: 27px; font-weight: 700; text-align: right;
+        font-family: 'Consolas','Courier New',monospace; }
+    .lname.a { color: #4fc3f7; } .lname.b { color: #ffb74d; }
+    .cell { height: 82px; border: 2px solid #37506a; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Consolas','Courier New',monospace; font-size: 38px; color: #cfd8dc;
+        background: #0d1b2a; transition: all .22s ease; }
+    .cell.a { color: #4fc3f7; } .cell.b { color: #ffb74d; }
+    .idx { height: 30px; border: none; background: none; font-size: 17px; color: #5c7189;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Consolas','Courier New',monospace; }
+    .mk { height: 40px; display: flex; align-items: center; justify-content: center;
+        font-size: 26px; color: #5c7189; font-family: 'Consolas','Courier New',monospace;
+        transition: all .22s ease; }
+
+    /* deciding column + irrelevant columns */
+    .cell.decide { border-color: #4fc3f7; background: rgba(79,195,247,0.16);
+        box-shadow: 0 0 0 3px rgba(79,195,247,0.25); }
+    .mk.decide { color: #4fc3f7; font-weight: 700; }
+    .cell.moot { opacity: .30; }
+    .mk.moot { opacity: .30; }
+    .cell.allmatch { border-color: #66bb6a; background: rgba(102,187,106,0.12); }
+
+    .decide-tag { height: 26px; display: flex; align-items: center; justify-content: center;
+        font-size: 14px; letter-spacing: 1.5px; font-weight: 700; color: #4fc3f7;
+        text-transform: uppercase; opacity: 0; transition: opacity .22s; }
+    .decide-tag.on { opacity: 1; }
+
+    .lamps { display: flex; gap: 18px; }
+    .lamp { border: 2px solid #37506a; border-radius: 12px; padding: 12px 30px;
+        background: #0d1b2a; color: #55697c; font-size: 27px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; transition: all .22s ease; }
+    .lamp.on { color: #0d1b2a; background: #4fc3f7; border-color: #4fc3f7; }
+
+    .fn-statement { font-size: 29px; color: #cfd8dc; line-height: 1.45; }
+    .fn-statement .ia { color: #4fc3f7; font-weight: 600; }
+    .fn-statement .ib { color: #ffb74d; font-weight: 600; }
+    .btable { border-collapse: collapse; font-size: 25px; align-self: flex-start; }
+    .btable th, .btable td { border: 2px solid #37506a; padding: 9px 30px; text-align: center;
+        font-family: 'Consolas','Courier New',monospace; color: #e0e0e0; transition: background .2s; }
+    .btable th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; }
+    .btable caption { caption-side: top; text-align: left; color: #90a4ae;
+        font-size: 19px; padding-bottom: 8px; font-family: 'Segoe UI', sans-serif; }
+    .btable tr.horow td { background: rgba(79,195,247,0.22); color: #fff; }
+    .keyidea { border-left: 4px solid #4fc3f7; padding: 4px 0 4px 20px;
+        font-size: 24px; color: #90a4ae; line-height: 1.45; }
+    .keyidea b { color: #4fc3f7; }
+
+    /* ---------- PAGE 2 — hardware ---------- */
+    #p2 { flex-direction: column; align-items: center; gap: 10px; }
+    .p2-top { display: flex; align-items: center; gap: 46px; }
+    .hw-expr { font-size: 25px; font-family: 'Consolas','Courier New',monospace; color: #cfd8dc; }
+    .hw-expr .op { color: #ffb74d; }
+    .hw-expr .hd { color: #4fc3f7; }
+    .sch-wrap { width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+    .sch-wrap svg { width: 100%; max-width: 1300px; height: 100%; max-height: 610px; }
+    .hw-note { font-size: 19px; color: #90a4ae; text-align: center; }
+    .hw-note b { color: #4fc3f7; }
+
+    .schem .term { opacity: .22; transition: opacity .25s; }
+    .schem.d3 .term-3, .schem.d2 .term-2, .schem.d1 .term-1, .schem.d0 .term-0 { opacity: 1; }
+    .schem .eqbox { transition: stroke .25s; }
+    .schem.deq .eqbox { stroke: #4fc3f7; }
+    .schem.deq .eqout { stroke: #4fc3f7; }
+
+    /* live x&#7522; status pills — house rule: 0 is dim, 1 is bright */
+    .schem .xpill rect { fill: #0d1b2a; stroke: #37506a; stroke-width: 2;
+        transition: stroke .25s, fill .25s; }
+    .schem .xpill text { fill: #55697c; transition: fill .25s; }
+    .schem .xpill.on rect { stroke: #4fc3f7; fill: rgba(79,195,247,0.16); }
+    .schem .xpill.on text { fill: #4fc3f7; }
+    .schem .xout { transition: stroke .25s; }
+    .schem .xout.on  { stroke: #4fc3f7; }
+    .schem .xout.off { stroke: #3d5266; }
+
+    /* ---------- PAGE 3 — applications ---------- */
+    #p3 { align-items: center; }
+    .apps { display: flex; gap: 24px; width: 100%; }
+    .app-card { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 28px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 500px; }
+    .app-card svg { width: 92px; height: 92px; color: #4fc3f7; }
+    .app-title { font-size: 25px; font-weight: 700; color: #e0e0e0; }
+    .app-desc { font-size: 20px; color: #90a4ae; line-height: 1.5; }
+
+    /* ---------- PAGE 4 — verilog ---------- */
+    #p4 { flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
+    .code-card { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+    .code-label { font-size: 22px; color: #90a4ae; font-weight: 600; }
+    .code-label b { color: #4fc3f7; } .code-label .v { color: #b388ff; }
+    .code { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        padding: 18px 30px; font-family: 'Consolas','Courier New',monospace;
+        font-size: 24px; line-height: 1.45; color: #cfd8dc; min-width: 1180px; white-space: pre; }
+    .code .kw { color: #4fc3f7; } .code .op { color: #ffb74d; }
+    .code .cm { color: #607d8b; } .code .lit { color: #b388ff; }
+    .gotcha { display: flex; align-items: center; gap: 20px; min-width: 1180px;
+        border: 2px solid #6a5324; border-radius: 14px; background: rgba(255,183,77,0.07);
+        padding: 14px 26px; }
+    .gotcha .g-bang { color: #ffb74d; font-size: 32px; font-weight: 700; flex-shrink: 0; }
+    .gotcha .g-txt { font-size: 20px; color: #cfd8dc; line-height: 1.45; }
+    .gotcha .g-txt code { font-family: 'Consolas','Courier New',monospace; color: #ffb74d; }
+    .idiom-tag { color: #b388ff; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 8px 26px; font-size: 23px; font-weight: 600; background: rgba(179,136,255,0.08); }
+    .idiom-tag .mono { font-family: 'Consolas','Courier New',monospace; color: #cbb4ff; }
+
+    /* ---------- footer ---------- */
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 10px; height: 34px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== persistent header (beat-0 anchor) ===== -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 264 104" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="104" y="14" width="72" height="76" rx="6"/>
+                <line x1="58" y1="38" x2="104" y2="38"/>
+                <line x1="58" y1="66" x2="104" y2="66"/>
+                <!-- bus slashes -->
+                <line x1="76" y1="44" x2="88" y2="32" stroke="#90a4ae"/>
+                <line x1="76" y1="72" x2="88" y2="60" stroke="#90a4ae"/>
+                <text x="90" y="32" font-size="12" fill="#90a4ae" stroke="none" font-family="'Consolas',monospace">4</text>
+                <text x="90" y="60" font-size="12" fill="#90a4ae" stroke="none" font-family="'Consolas',monospace">4</text>
+                <line x1="176" y1="30" x2="214" y2="30"/>
+                <line x1="176" y1="52" x2="214" y2="52"/>
+                <line x1="176" y1="74" x2="214" y2="74"/>
+                <text x="54" y="44" font-size="17" fill="#4fc3f7" stroke="none" text-anchor="end" font-family="'Consolas',monospace">A</text>
+                <text x="54" y="72" font-size="17" fill="#ffb74d" stroke="none" text-anchor="end" font-family="'Consolas',monospace">B</text>
+                <text x="140" y="58" font-size="15" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif" letter-spacing="1">COMP</text>
+                <g font-size="19" fill="#4fc3f7" stroke="none" font-family="'Consolas',monospace">
+                    <text x="220" y="36">&gt;</text>
+                    <text x="220" y="58">=</text>
+                    <text x="220" y="80">&lt;</text>
+                </g>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Magnitude Comparator <span class="sub">&mdash; the decision block</span></h1>
+            <div class="subtitle">The four-beat cadence &middot; 4-bit unsigned comparator as our running example</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <!-- ===== tab strip ===== -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Functionality</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Hardware</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Applications</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Verilog</div></div>
+    </div>
+
+    <!-- ===== pages ===== -->
+    <div class="stage">
+
+        <!-- ============ PAGE 1 — FUNCTIONALITY ============ -->
+        <div class="page" id="p1">
+            <div class="fn-left">
+                <div class="lanes">
+                    <div class="lrow">
+                        <div class="lname"></div>
+                        <div class="idx">bit 3</div><div class="idx">bit 2</div>
+                        <div class="idx">bit 1</div><div class="idx">bit 0</div>
+                    </div>
+                    <div class="lrow">
+                        <div class="lname a">A</div>
+                        <div class="cell a" data-col="0">1</div><div class="cell a" data-col="1">0</div>
+                        <div class="cell a" data-col="2">1</div><div class="cell a" data-col="3">1</div>
+                    </div>
+                    <div class="lrow">
+                        <div class="lname b">B</div>
+                        <div class="cell b" data-col="0">0</div><div class="cell b" data-col="1">1</div>
+                        <div class="cell b" data-col="2">1</div><div class="cell b" data-col="3">0</div>
+                    </div>
+                    <div class="lrow">
+                        <div class="lname"></div>
+                        <div class="mk" data-col="0"></div><div class="mk" data-col="1"></div>
+                        <div class="mk" data-col="2"></div><div class="mk" data-col="3"></div>
+                    </div>
+                    <div class="lrow">
+                        <div class="lname"></div>
+                        <div class="decide-tag" data-col="0">decides</div>
+                        <div class="decide-tag" data-col="1">decides</div>
+                        <div class="decide-tag" data-col="2">decides</div>
+                        <div class="decide-tag" data-col="3">decides</div>
+                    </div>
+                </div>
+
+                <div class="casectl" data-casectl>
+                    <span class="cc-label">CASE</span>
+                    <span class="cc-val">A=<b class="ca cc-a">1011</b> &nbsp; B=<b class="cb cc-b">0110</b></span>
+                    <span class="cc-hint">click / press C</span>
+                </div>
+
+                <div class="lamps">
+                    <div class="lamp" data-lamp="gt">A &gt; B</div>
+                    <div class="lamp" data-lamp="eq">A = B</div>
+                    <div class="lamp" data-lamp="lt">A &lt; B</div>
+                </div>
+            </div>
+
+            <div class="fn-right">
+                <div class="fn-statement">A comparator takes two numbers <span class="ia">A</span> and
+                    <span class="ib">B</span> and reports their <em>relationship</em> &mdash; not a routed
+                    value, but a <strong>decision</strong>. Three one-hot outputs: exactly one is high.</div>
+
+                <table class="btable">
+                    <caption>The 1-bit comparator &mdash; the primitive</caption>
+                    <tr><th>A</th><th>B</th><th>A&gt;B</th><th>A=B</th><th>A&lt;B</th></tr>
+                    <tr class="brow" data-ab="00"><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+                    <tr class="brow" data-ab="01"><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td></tr>
+                    <tr class="brow" data-ab="10"><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+                    <tr class="brow" data-ab="11"><td>1</td><td>1</td><td>0</td><td>1</td><td>0</td></tr>
+                </table>
+
+                <div class="keyidea">Scan from the <b>most significant bit down</b>. The first position
+                    where A and B differ <b>decides the whole comparison</b> &mdash; every lower bit is
+                    irrelevant. If no position differs, A = B.</div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 2 — HARDWARE ============ -->
+        <div class="page" id="p2">
+            <div class="p2-top">
+                <div class="hw-expr">
+                    <span class="hd">x&#7522;</span> = A&#7522; &#8857; B&#7522; &nbsp;&middot;&nbsp;
+                    <span class="hd">EQ</span> = x&#8323;<span class="op">&middot;</span>x&#8322;<span class="op">&middot;</span>x&#8321;<span class="op">&middot;</span>x&#8320;
+                    &nbsp;&middot;&nbsp; <span class="hd">LT</span> = (GT <span class="op">+</span> EQ)&#8242;
+                </div>
+                <div class="casectl" data-casectl>
+                    <span class="cc-label">CASE</span>
+                    <span class="cc-val">A=<b class="ca cc-a">1011</b> &nbsp; B=<b class="cb cc-b">0110</b></span>
+                    <span class="cc-hint">click / press C</span>
+                </div>
+            </div>
+
+            <div class="sch-wrap">
+                <svg class="schem" id="schem2" viewBox="0 0 1310 870" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+
+                    <!-- grouping boxes -->
+                    <rect class="eqbox" x="55" y="22" width="680" height="418" rx="12"
+                          fill="none" stroke="#33465e" stroke-width="2" stroke-dasharray="7 6"/>
+                    <rect x="55" y="488" width="810" height="344" rx="12"
+                          fill="none" stroke="#33465e" stroke-width="2" stroke-dasharray="7 6"/>
+                    <g font-family="'Segoe UI',sans-serif" font-size="20" fill="#5c7189" stroke="none">
+                        <text x="70" y="16">equality layer &mdash; one XNOR per bit &middot; x&#7522; = 1 when the bits match</text>
+                        <text x="70" y="482">greater-than cascade &mdash; MSB first</text>
+                    </g>
+
+                    <!-- ===== XNOR layer: bit 3,2,1,0 at Cy 70,175,280,385 ===== -->
+                    <g stroke="#cfd8dc">
+                        <!-- bit 3 -->
+                        <path d="M150,37 C195,37 222,49 240,70 C222,91 195,103 150,103 Q176,70 150,37 Z"/>
+                        <path d="M138,37 Q164,70 138,103"/>
+                        <circle cx="249" cy="70" r="9"/>
+                        <!-- bit 2 -->
+                        <path d="M150,142 C195,142 222,154 240,175 C222,196 195,208 150,208 Q176,175 150,142 Z"/>
+                        <path d="M138,142 Q164,175 138,208"/>
+                        <circle cx="249" cy="175" r="9"/>
+                        <!-- bit 1 -->
+                        <path d="M150,247 C195,247 222,259 240,280 C222,301 195,313 150,313 Q176,280 150,247 Z"/>
+                        <path d="M138,247 Q164,280 138,313"/>
+                        <circle cx="249" cy="280" r="9"/>
+                        <!-- bit 0 -->
+                        <path d="M150,352 C195,352 222,364 240,385 C222,406 195,418 150,418 Q176,385 150,352 Z"/>
+                        <path d="M138,352 Q164,385 138,418"/>
+                        <circle cx="249" cy="385" r="9"/>
+                    </g>
+
+                    <!-- XNOR input wires — terminate on the outer XOR arc (x=148), not past it -->
+                    <g stroke="#4fc3f7">
+                        <line class="xin" x1="74" y1="54"  x2="148" y2="54"/>
+                        <line class="xin" x1="74" y1="159" x2="148" y2="159"/>
+                        <line class="xin" x1="74" y1="264" x2="148" y2="264"/>
+                        <line class="xin" x1="74" y1="369" x2="148" y2="369"/>
+                    </g>
+                    <g stroke="#ffb74d">
+                        <line class="xin" x1="74" y1="86"  x2="148" y2="86"/>
+                        <line class="xin" x1="74" y1="191" x2="148" y2="191"/>
+                        <line class="xin" x1="74" y1="296" x2="148" y2="296"/>
+                        <line class="xin" x1="74" y1="401" x2="148" y2="401"/>
+                    </g>
+                    <g font-family="Consolas, monospace" font-size="21" stroke="none" text-anchor="end">
+                        <text x="68" y="61"  fill="#4fc3f7">A3</text>
+                        <text x="68" y="93"  fill="#ffb74d">B3</text>
+                        <text x="68" y="166" fill="#4fc3f7">A2</text>
+                        <text x="68" y="198" fill="#ffb74d">B2</text>
+                        <text x="68" y="271" fill="#4fc3f7">A1</text>
+                        <text x="68" y="303" fill="#ffb74d">B1</text>
+                        <text x="68" y="376" fill="#4fc3f7">A0</text>
+                        <text x="68" y="408" fill="#ffb74d">B0</text>
+                    </g>
+
+                    <!-- XNOR outputs + x-net labels -->
+                    <g stroke="#8fa8bd">
+                        <line class="xout xw-0" x1="258" y1="70"  x2="360" y2="70"/>
+                        <line class="xout xw-1" x1="258" y1="175" x2="360" y2="175"/>
+                        <line class="xout xw-2" x1="258" y1="280" x2="360" y2="280"/>
+                        <line class="xout xw-3" x1="258" y1="385" x2="360" y2="385"/>
+                    </g>
+                    <!-- live xi status: value pill on the net, house rule 0 = dim / 1 = bright -->
+                    <g class="xpills">
+                        <g class="xpill xp-0"><rect x="286" y="30" width="74" height="34" rx="9"/>
+                            <text x="323" y="54" font-family="Consolas, monospace" font-size="22" text-anchor="middle" stroke="none">x3=1</text></g>
+                        <g class="xpill xp-1"><rect x="286" y="135" width="74" height="34" rx="9"/>
+                            <text x="323" y="159" font-family="Consolas, monospace" font-size="22" text-anchor="middle" stroke="none">x2=1</text></g>
+                        <g class="xpill xp-2"><rect x="286" y="240" width="74" height="34" rx="9"/>
+                            <text x="323" y="264" font-family="Consolas, monospace" font-size="22" text-anchor="middle" stroke="none">x1=1</text></g>
+                        <g class="xpill xp-3"><rect x="286" y="345" width="74" height="34" rx="9"/>
+                            <text x="323" y="369" font-family="Consolas, monospace" font-size="22" text-anchor="middle" stroke="none">x0=1</text></g>
+                    </g>
+
+                    <!-- routing into EQ AND -->
+                    <g stroke="#8fa8bd">
+                        <polyline class="eqin" points="360,70 395,70 395,150 430,150"/>
+                        <polyline class="eqin" points="360,175 400,175 400,205 430,205"/>
+                        <polyline class="eqin" points="360,280 405,280 405,260 430,260"/>
+                        <polyline class="eqin" points="360,385 410,385 410,315 430,315"/>
+                    </g>
+
+                    <!-- EQ AND gate -->
+                    <path d="M430,120 L470,120 A105,105 0 0 1 470,330 L430,330 Z" stroke="#cfd8dc"/>
+                    <line class="eqout" x1="575" y1="225" x2="1140" y2="225" stroke="#8fa8bd"/>
+                    <circle cx="900" cy="225" r="6" fill="#8fa8bd" stroke="none"/>
+                    <polyline points="900,225 900,435 940,435" stroke="#8fa8bd"/>
+
+                    <!-- ===== GT cascade ===== -->
+                    <!-- Cascade term wires stop exactly on the OR gate's back curve
+                         (x = 570.3 / 581.2 / 581.1 / 570.2 at these input heights). -->
+                    <g class="term term-3">
+                        <text x="415" y="554" font-family="Consolas, monospace" font-size="24" fill="#4fc3f7" stroke="none" text-anchor="end">A3&#183;B3&#8242;</text>
+                        <line x1="400" y1="545" x2="430" y2="545" stroke="#8fa8bd"/>
+                        <path d="M430,519 L460,519 A26,26 0 0 1 460,571 L430,571 Z" stroke="#cfd8dc"/>
+                        <line class="twire" x1="486" y1="545" x2="570" y2="545" stroke="#8fa8bd"/>
+                        <text class="tval" x="502" y="534" font-family="Consolas, monospace" font-size="21" stroke="none"></text>
+                    </g>
+                    <g class="term term-2">
+                        <text x="415" y="629" font-family="Consolas, monospace" font-size="24" fill="#4fc3f7" stroke="none" text-anchor="end">x3&#183;A2&#183;B2&#8242;</text>
+                        <line x1="400" y1="620" x2="430" y2="620" stroke="#8fa8bd"/>
+                        <path d="M430,594 L460,594 A26,26 0 0 1 460,646 L430,646 Z" stroke="#cfd8dc"/>
+                        <line class="twire" x1="486" y1="620" x2="581" y2="620" stroke="#8fa8bd"/>
+                        <text class="tval" x="502" y="609" font-family="Consolas, monospace" font-size="21" stroke="none"></text>
+                    </g>
+                    <g class="term term-1">
+                        <text x="415" y="704" font-family="Consolas, monospace" font-size="24" fill="#4fc3f7" stroke="none" text-anchor="end">x3&#183;x2&#183;A1&#183;B1&#8242;</text>
+                        <line x1="400" y1="695" x2="430" y2="695" stroke="#8fa8bd"/>
+                        <path d="M430,669 L460,669 A26,26 0 0 1 460,721 L430,721 Z" stroke="#cfd8dc"/>
+                        <line class="twire" x1="486" y1="695" x2="581" y2="695" stroke="#8fa8bd"/>
+                        <text class="tval" x="502" y="684" font-family="Consolas, monospace" font-size="21" stroke="none"></text>
+                    </g>
+                    <g class="term term-0">
+                        <text x="415" y="779" font-family="Consolas, monospace" font-size="24" fill="#4fc3f7" stroke="none" text-anchor="end">x3&#183;x2&#183;x1&#183;A0&#183;B0&#8242;</text>
+                        <line x1="400" y1="770" x2="430" y2="770" stroke="#8fa8bd"/>
+                        <path d="M430,744 L460,744 A26,26 0 0 1 460,796 L430,796 Z" stroke="#cfd8dc"/>
+                        <line class="twire" x1="486" y1="770" x2="570" y2="770" stroke="#8fa8bd"/>
+                        <text class="tval" x="502" y="759" font-family="Consolas, monospace" font-size="21" stroke="none"></text>
+                    </g>
+
+                    <!-- OR gate -->
+                    <path d="M560,505 C640,505 700,540 740,657 C700,774 640,810 560,810 Q605,657 560,505 Z" stroke="#cfd8dc"/>
+                    <line class="gtout" x1="740" y1="657" x2="1140" y2="657" stroke="#8fa8bd"/>
+                    <circle cx="880" cy="657" r="6" fill="#8fa8bd" stroke="none"/>
+                    <polyline class="gtout" points="880,657 880,505 940,505" stroke="#8fa8bd"/>
+
+                    <!-- NOR gate -> LT -->
+                    <path d="M930,400 C990,400 1035,425 1060,470 C1035,515 990,540 930,540 Q955,470 930,400 Z" stroke="#cfd8dc"/>
+                    <circle cx="1070" cy="470" r="10" stroke="#cfd8dc"/>
+                    <line class="ltout" x1="1080" y1="470" x2="1140" y2="470" stroke="#8fa8bd"/>
+
+                    <!-- output labels — value set by JS, asserted output lights cyan -->
+                    <g font-family="Consolas, monospace" font-size="25" stroke="none">
+                        <text id="oEQ" x="1150" y="233" fill="#55697c">A=B = 0</text>
+                        <text id="oLT" x="1150" y="478" fill="#55697c">A&lt;B = 0</text>
+                        <text id="oGT" x="1150" y="665" fill="#55697c">A&gt;B = 0</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="hw-note" id="hwNote">Four XNORs decide <b>which bits match</b>; the AND-OR cascade
+                finds the <b>highest bit where they don't</b>. The third output is free &mdash; one NOR
+                recovers it.</div>
+        </div>
+
+        <!-- ============ PAGE 3 — APPLICATIONS ============ -->
+        <div class="page" id="p3">
+            <div class="apps">
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="12" y="18" width="46" height="60" rx="4"/>
+                        <line x1="12" y1="34" x2="58" y2="34"/><line x1="12" y1="50" x2="58" y2="50"/>
+                        <line x1="12" y1="66" x2="58" y2="66"/>
+                        <line x1="58" y1="42" x2="76" y2="42"/>
+                        <circle cx="84" cy="42" r="7"/>
+                    </svg>
+                    <div class="app-title">Address decoding</div>
+                    <div class="app-desc">Assert a chip-select when the address bus matches a device's
+                        base address &mdash; or falls inside its range.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="10,72 26,50 42,60 60,26 84,16"/>
+                        <line x1="10" y1="40" x2="88" y2="40" stroke-dasharray="6 5"/>
+                        <line x1="10" y1="84" x2="88" y2="84"/>
+                        <line x1="10" y1="84" x2="10" y2="12"/>
+                    </svg>
+                    <div class="app-title">Threshold detection</div>
+                    <div class="app-desc">Trip an alarm or controller when a sensor or ADC reading crosses
+                        a setpoint &mdash; thermostats, over-current cut-offs, limit switches.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="14" y="14" width="68" height="68" rx="8"/>
+                        <polyline points="28,48 42,62 68,32"/>
+                        <line x1="14" y1="34" x2="82" y2="34"/>
+                    </svg>
+                    <div class="app-title">CPU branch conditions</div>
+                    <div class="app-desc">The compare behind <em>beq</em>, <em>blt</em>, <em>bge</em> &mdash;
+                        the flags that decide whether the program counter jumps.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="26" x2="40" y2="26"/><line x1="12" y1="70" x2="40" y2="70"/>
+                        <path d="M40,26 L58,26 L58,70 L84,70"/>
+                        <path d="M40,70 L58,70 L58,26 L84,26"/>
+                        <circle cx="58" cy="48" r="5" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <div class="app-title">Sort &amp; min/max networks</div>
+                    <div class="app-desc">A compare-and-swap element is just a comparator driving a pair of
+                        muxes. Stack them and you have a sorting network.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 4 — VERILOG ============ -->
+        <div class="page" id="p4">
+            <div class="code-card">
+                <div class="code-label"><b>4-bit comparator</b> &mdash; relational operators in a combinational <span class="v">always</span> block</div>
+                <div class="code"><span class="kw">module</span> comp4 (<span class="kw">input</span> [<span class="lit">3:0</span>] a, b, <span class="kw">output</span> <span class="kw">reg</span> gt, eq, lt);
+  <span class="kw">always</span> <span class="op">@(*)</span> <span class="kw">begin</span>
+    gt = <span class="lit">1'b0</span>;  eq = <span class="lit">1'b0</span>;  lt = <span class="lit">1'b0</span>;   <span class="cm">// defaults first &mdash; nothing can be left un-assigned</span>
+    <span class="kw">if</span>      (a <span class="op">&gt;</span>  b) gt = <span class="lit">1'b1</span>;
+    <span class="kw">else</span> <span class="kw">if</span> (a <span class="op">&lt;</span>  b) lt = <span class="lit">1'b1</span>;
+    <span class="kw">else</span>            eq = <span class="lit">1'b1</span>;         <span class="cm">// the three outputs stay one-hot by construction</span>
+  <span class="kw">end</span>
+<span class="kw">endmodule</span></div>
+            </div>
+
+            <div class="code-card">
+                <div class="code-label">equality the structural way &mdash; <span class="v">XNOR reduction</span></div>
+                <div class="code"><span class="kw">always</span> <span class="op">@(*)</span> eq = <span class="op">&amp;</span>(a <span class="op">~^</span> b);   <span class="cm">// bitwise XNOR, then AND-reduce &mdash; the gate diagram, in one line</span></div>
+            </div>
+
+            <div class="gotcha">
+                <div class="g-bang">&#9888;</div>
+                <div class="g-txt">Plain vectors compare as <b>unsigned</b>. <code>4'b1000 &gt; 4'b0111</code>
+                    is <em>true</em> (8 &gt; 7) &mdash; but read as two's complement those same bits mean
+                    &minus;8 &gt; 7, which is <em>false</em>. For signed comparison declare
+                    <code>input signed [3:0] a, b</code> or cast with <code>$signed()</code>.</div>
+            </div>
+
+            <div class="idiom-tag">comparator &rarr; <span class="mono">&gt;</span> &nbsp;<span class="mono">==</span> &nbsp;<span class="mono">&lt;</span> &nbsp;inside&nbsp; <span class="mono">always @(*)</span></div>
+        </div>
+
+    </div>
+
+    <!-- ===== footer ===== -->
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k">Backspace</span> prev
+            &middot; <span class="k amber">C</span> case
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+
+    // ============ PAGE STATE ============
+    const FIRST = 1, LAST = 4;
+    let page = 1;
+
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    const schem = document.getElementById('schem2');
+
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+
+    // ============ CASE STATE ============
+    // Strings are MSB-first: index 0 = bit 3.
+    const CASES = [
+        { a: '1011', b: '0110' },   // A > B, decided at bit 3
+        { a: '0101', b: '0101' },   // A = B, no deciding bit
+        { a: '0011', b: '1001' },   // A < B, decided at bit 3
+        { a: '1010', b: '1001' },   // A > B, decided at bit 1 (walks past two matches)
+        { a: '0110', b: '0111' }    // A < B, decided at bit 0 (walks past three matches)
+    ];
+    let ci = 0;
+
+    // returns the left-to-right column index (0..3) of the first differing bit, or -1 if equal
+    function decidingCol(a, b) {
+        for (let c = 0; c < 4; c++) { if (a[c] !== b[c]) return c; }
+        return -1;
+    }
+
+    const cellsA = Array.from(document.querySelectorAll('#p1 .cell.a'));
+    const cellsB = Array.from(document.querySelectorAll('#p1 .cell.b'));
+    const marks  = Array.from(document.querySelectorAll('#p1 .mk'));
+    const dtags  = Array.from(document.querySelectorAll('#p1 .decide-tag'));
+    const lamps  = Array.from(document.querySelectorAll('#p1 .lamp'));
+    const brows  = Array.from(document.querySelectorAll('#p1 .brow'));
+
+    const oGT = document.getElementById('oGT');
+    const oEQ = document.getElementById('oEQ');
+    const oLT = document.getElementById('oLT');
+    const hwNote = document.getElementById('hwNote');
+    const ON = '#4fc3f7', OFF = '#55697c';
+
+    // Drive the signal-flow animation along the path actually carrying a 1, all the way
+    // through to the asserted output. One branch per verdict so gt / eq / lt are covered.
+    function applyFlow(verdict, d) {
+        schem.querySelectorAll('.flow').forEach(el => el.classList.remove('flow'));
+        const add = sel => schem.querySelectorAll(sel).forEach(el => el.classList.add('flow'));
+        if (verdict === 'gt') {
+            // the one cascade term that fires -> OR gate -> A>B
+            add('.term-' + (3 - d) + ' .twire');
+            add('.gtout');
+        } else if (verdict === 'eq') {
+            // every bit matched: all four XNORs -> 4-input AND -> A=B
+            add('.xin'); add('.xout'); add('.eqin'); add('.eqout');
+        } else {
+            // A<B asserts because GT and EQ are both 0 — the NOR output is the live wire
+            add('.ltout');
+        }
+    }
+
+    function renderCase() {
+        const { a, b } = CASES[ci];
+        const d = decidingCol(a, b);
+
+        // readouts in both CASE widgets
+        document.querySelectorAll('.cc-a').forEach(n => n.textContent = a);
+        document.querySelectorAll('.cc-b').forEach(n => n.textContent = b);
+
+        // bit lanes
+        for (let c = 0; c < 4; c++) {
+            const match = a[c] === b[c];
+            cellsA[c].textContent = a[c];
+            cellsB[c].textContent = b[c];
+
+            const isDecide = (c === d);
+            const isMoot   = (d !== -1 && c > d);
+            const allMatch = (d === -1);
+
+            [cellsA[c], cellsB[c]].forEach(el => {
+                el.classList.toggle('decide', isDecide);
+                el.classList.toggle('moot', isMoot);
+                el.classList.toggle('allmatch', allMatch);
+            });
+            marks[c].textContent = match ? '=' : '≠';
+            marks[c].classList.toggle('decide', isDecide);
+            marks[c].classList.toggle('moot', isMoot);
+            dtags[c].classList.toggle('on', isDecide);
+        }
+
+        // verdict lamps
+        let verdict;
+        if (d === -1) verdict = 'eq';
+        else verdict = (a[d] === '1') ? 'gt' : 'lt';
+        lamps.forEach(l => l.classList.toggle('on', l.dataset.lamp === verdict));
+
+        // 1-bit truth-table row highlight: the deciding bit's (A,B) pair.
+        // When A = B there is no single deciding pair, so highlight both matching rows.
+        brows.forEach(r => {
+            const on = (d === -1)
+                ? (r.dataset.ab === '00' || r.dataset.ab === '11')
+                : (r.dataset.ab === a[d] + b[d]);
+            r.classList.toggle('horow', on);
+        });
+
+        // ---- schematic ----
+        // light the active cascade term (or the equality layer)
+        schem.classList.remove('d3','d2','d1','d0','deq');
+        schem.classList.add(d === -1 ? 'deq' : 'd' + (3 - d));
+
+        // Live status of the four xi nets leaving the XNORs. Column c holds bit 3-c.
+        for (let c = 0; c < 4; c++) {
+            const match = (a[c] === b[c]);
+            const pill = schem.querySelector('.xp-' + c);
+            const wire = schem.querySelector('.xw-' + c);
+            pill.classList.toggle('on', match);
+            pill.querySelector('text').textContent = 'x' + (3 - c) + '=' + (match ? 1 : 0);
+            wire.classList.toggle('on', match);
+            wire.classList.toggle('off', !match);
+        }
+
+        // Per-term value readout. The deciding bit picks the term, but that term only
+        // *fires* in a GT case — in an LT case the same term evaluates to 0, and saying
+        // so out loud is the point.
+        schem.querySelectorAll('.tval').forEach(t => { t.textContent = ''; });
+        if (d !== -1) {
+            const tv = schem.querySelector('.term-' + (3 - d) + ' .tval');
+            const fires = (verdict === 'gt');
+            tv.textContent = fires ? '1' : '0';
+            tv.setAttribute('fill', fires ? ON : '#7a8fa3');
+        }
+
+        // output readouts
+        oGT.textContent = 'A>B = ' + (verdict === 'gt' ? 1 : 0);
+        oEQ.textContent = 'A=B = ' + (verdict === 'eq' ? 1 : 0);
+        oLT.textContent = 'A<B = ' + (verdict === 'lt' ? 1 : 0);
+        oGT.setAttribute('fill', verdict === 'gt' ? ON : OFF);
+        oEQ.setAttribute('fill', verdict === 'eq' ? ON : OFF);
+        oLT.setAttribute('fill', verdict === 'lt' ? ON : OFF);
+
+        // caption narrating this specific case
+        const bit = (d === -1) ? null : (3 - d);
+        if (verdict === 'eq') {
+            hwNote.innerHTML = 'All four bits match &mdash; every <b>x&#7522; = 1</b>, so the AND asserts '
+                + '<b>A = B</b>. No cascade term can fire.';
+        } else if (verdict === 'gt') {
+            hwNote.innerHTML = 'Bit <b>' + bit + '</b> decides: A' + bit + ' = 1, B' + bit + ' = 0 '
+                + '&mdash; that cascade term fires and the OR passes it straight through to <b>A &gt; B</b>.';
+        } else {
+            hwNote.innerHTML = 'Bit <b>' + bit + '</b> decides: A' + bit + ' = 0, B' + bit + ' = 1 '
+                + '&mdash; so no cascade term fires (GT = 0) and the bits differ (EQ = 0). '
+                + 'The NOR is what asserts <b>A &lt; B</b>.';
+        }
+
+        applyFlow(verdict, d);
+    }
+
+    function nextCase() { ci = (ci + 1) % CASES.length; renderCase(); }
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '4') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 'c': case 'C': nextCase(); e.preventDefault(); break;
+            case 'r': case 'R': setPage(1); ci = 0; renderCase(); e.preventDefault(); break;
+        }
+    });
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-casectl]').forEach(el => el.addEventListener('click', nextCase));
+
+    render();
+    renderCase();
+</script>
+</body>
+</html>

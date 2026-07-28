@@ -1,0 +1,11 @@
+title: "Comparators"
+description: "Comparing two unsigned numbers to report greater-than, equal, or less-than — the MSB-first decision, the XNOR + AND-OR gate build, applications, and Verilog"
+chapter: combinational-logic
+section: building-block-circuits
+order: 30505
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the magnitude comparator through the four-beat cadence — the MSB-first scan that decides a comparison, the staged XNOR + AND-OR gate build, deriving A<B from the other two outputs, applications, and the Verilog always block"
+  02-interactive.html:
+    caption: "Interactive: a 4-bit unsigned magnitude comparator walked through its four beats — press C to step through cases and watch the deciding bit, the XNOR match terms, and the AND-OR cascade light up the winning output"
