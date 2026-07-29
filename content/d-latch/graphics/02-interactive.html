@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The D Latch — One Data Input, and a Window When It Listens</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 = 1/active/Q · amber #ffb74d = D & EN controls · violet #b388ff = retired forbidden state · navy #0d1b2a panel */
+    @keyframes dash { to { stroke-dashoffset: -48; } }
+    .flow { stroke-dasharray: 13 9; animation: dash 1s linear infinite; }
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 168px; height: 84px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 16px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px; border: 2px solid #24384c;
+        border-radius: 12px; padding: 12px 22px; color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 21px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 14px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- pages 1 & 2 : schematic + panel ---------- */
+    .latch { display: flex; gap: 32px; width: 100%; align-items: stretch; }
+    .schwrap { flex: 0 0 56%; display: flex; align-items: center; justify-content: center;
+        background: #0d1b2a; border: 2px solid #24384c; border-radius: 18px; padding: 12px; }
+    .schwrap svg { width: 100%; height: 100%; max-height: 640px; }
+    .panel { flex: 1; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+    .ctls { display: flex; gap: 18px; }
+    .selctl { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer;
+        border: 2px solid #ffb74d; border-radius: 999px; padding: 13px 20px;
+        background: rgba(255,183,77,0.08); user-select: none; }
+    .selctl .sc-label { color: #ffb74d; font-size: 25px; font-weight: 700; font-family: 'Consolas','Courier New',monospace; }
+    .selctl .sc-val { color: #e0e0e0; font-size: 23px; font-family: 'Consolas','Courier New',monospace; }
+    .selctl .sc-val b { font-size: 29px; }
+    .selctl .sc-val b.one { color: #4fc3f7; } .selctl .sc-val b.zero { color: #5c7189; }
+    .selctl .sc-hint { color: #8a7a52; font-size: 14px; }
+
+    .pillrow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .pillrow .lead { color: #90a4ae; font-size: 18px; }
+    .pill { font-family: 'Consolas','Courier New',monospace; font-size: 23px; font-weight: 700;
+        border: 2px solid #37506a; border-radius: 10px; padding: 5px 16px; background: #0d1b2a; color: #5c7189; }
+    .pill.one { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.10); }
+
+    .statebadge { align-self: flex-start; font-size: 27px; font-weight: 700; letter-spacing: 1px;
+        border-radius: 12px; padding: 10px 26px; border: 2px solid; }
+    .statebadge.transparent { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.10); }
+    .statebadge.latched { color: #cfd8dc; border-color: #37506a; background: #0d1b2a; }
+    .statebadge.hold { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.10); }
+    .statebadge.set, .statebadge.reset { color: #cfd8dc; border-color: #37506a; background: #0d1b2a; }
+
+    .qout { font-size: 32px; font-family: 'Consolas','Courier New',monospace; color: #90a4ae; }
+    .qout b { font-size: 38px; } .qout b.one { color: #4fc3f7; } .qout b.zero { color: #5c7189; }
+
+    .tt { border-collapse: collapse; font-size: 21px; font-family: 'Consolas','Courier New',monospace; align-self: flex-start; }
+    .tt th, .tt td { border: 2px solid #37506a; padding: 6px 18px; text-align: center; color: #e0e0e0; }
+    .tt th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; font-size: 18px; }
+    .tt td.one { color: #4fc3f7; } .tt td.zero { color: #5c7189; }
+    .tt td.mode { color: #90a4ae; font-family: 'Segoe UI',sans-serif; font-size: 18px; }
+    .tt tr.rowon td { background: rgba(79,195,247,0.20); color: #fff; }
+    .tt tr.rowon td.mode { color: #cfe6f5; }
+    .tt tr.dead td { color: #6a5a86; text-decoration: line-through; opacity: 0.6; border-color: #4a3a68; }
+    .tt tr.dead td.mode { color: #b388ff; text-decoration: none; opacity: 0.85; font-size: 16px; }
+
+    .eqbox { align-self: flex-start; border: 2px solid #37506a; border-radius: 12px; background: #0b1622;
+        padding: 12px 24px; font-family: 'Consolas','Courier New',monospace; font-size: 26px; color: #cfd8dc; }
+    .eqbox .cy { color: #4fc3f7; } .eqbox .am { color: #ffb74d; }
+
+    .caption { font-size: 21px; color: #cfd8dc; line-height: 1.5; border-left: 3px solid #4fc3f7;
+        padding-left: 18px; margin-top: auto; }
+    .caption .cy { color: #4fc3f7; font-weight: 600; } .caption .am { color: #ffb74d; font-weight: 600; }
+    .caption .vl { color: #b388ff; font-weight: 600; }
+    .hint { font-size: 17px; color: #8a7a52; border-left: 3px solid #6a5324; padding-left: 18px; }
+    .hint.proved { color: #4fc3f7; border-color: #4fc3f7; }
+
+    /* ---------- page 3 : timing ---------- */
+    #p3 { flex-direction: column; gap: 14px; }
+    .tstrip { display: flex; align-items: center; gap: 26px; flex-shrink: 0; }
+    .tstrip .statebadge { align-self: auto; font-size: 23px; padding: 8px 22px; }
+    .tstrip .qout { font-size: 27px; } .tstrip .qout b { font-size: 32px; }
+    .tstrip .tcap { color: #90a4ae; font-size: 18px; flex: 1; line-height: 1.4; }
+    .tstrip .tcap b.cy { color: #4fc3f7; } .tstrip .tcap b.am { color: #ffb74d; }
+    .playbtn { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 999px; padding: 9px 22px;
+        color: #ffb74d; font-size: 19px; font-weight: 700; background: rgba(255,183,77,0.08);
+        cursor: pointer; user-select: none; }
+    .twrap { flex: 1; min-height: 0; background: #0d1b2a; border: 2px solid #24384c;
+        border-radius: 18px; padding: 10px 16px; display: flex; }
+    .twrap svg { width: 100%; height: 100%; cursor: ew-resize; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 12px; height: 34px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a; border-radius: 6px;
+        padding: 1px 8px; margin: 0 2px; font-size: 14px; font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 168 84" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="54" y="14" width="60" height="56" rx="6"/>
+                <line x1="28" y1="28" x2="54" y2="28"/><line x1="28" y1="56" x2="54" y2="56"/>
+                <line x1="114" y1="28" x2="142" y2="28"/><line x1="114" y1="56" x2="142" y2="56"/>
+                <text x="24" y="33" font-size="13" fill="#ffb74d" stroke="none" text-anchor="end" font-family="Consolas,monospace">D</text>
+                <text x="24" y="61" font-size="12" fill="#ffb74d" stroke="none" text-anchor="end" font-family="Consolas,monospace">EN</text>
+                <text x="148" y="33" font-size="13" fill="#4fc3f7" stroke="none" font-family="Consolas,monospace">Q</text>
+                <text x="148" y="61" font-size="12" fill="#607d8b" stroke="none" font-family="Consolas,monospace">Q&#8242;</text>
+                <text x="84" y="47" font-size="15" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="Consolas,monospace">D</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>The D Latch <span class="sub">&mdash; one data input, and a window when it listens</span></h1>
+            <div class="subtitle">Gate the S&#8242;-R&#8242; latch with D and EN &middot; the forbidden state disappears, and Q follows D only while EN is high</div>
+        </div>
+        <div class="page-count">Page <b id="pcNum">1</b> / 3</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Build It</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Transparent vs. Latched</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Timing</div></div>
+    </div>
+
+    <div class="stage">
+        <div class="page" id="p1">
+            <div class="latch">
+                <div class="schwrap"><svg id="sch1" viewBox="12 62 816 392"></svg></div>
+                <div class="panel" id="panel1"></div>
+            </div>
+        </div>
+        <div class="page" id="p2">
+            <div class="latch">
+                <div class="schwrap"><svg id="sch2" viewBox="12 62 816 392"></svg></div>
+                <div class="panel" id="panel2"></div>
+            </div>
+        </div>
+        <div class="page" id="p3">
+            <div class="tstrip">
+                <div class="statebadge latched" id="tBadge">LATCHED</div>
+                <div class="qout" id="tQout">D = <b class="zero">0</b> &nbsp;EN = <b class="zero">0</b> &nbsp;&middot;&nbsp; Q = <b class="zero">0</b></div>
+                <div class="tcap" id="tCap"></div>
+                <div class="playbtn" id="playBtn">&#9654; Play</div>
+            </div>
+            <div class="twrap"><svg id="tsvg" viewBox="0 0 1240 520"></svg></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div><div class="dot" data-dot="3"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">3</span> page
+            &middot; <span class="k amber">D</span> data / <span class="k amber">E</span> enable (or click)
+            &middot; <span class="k">Space</span> play timing
+            &middot; try: EN=1, D=1 &rarr; drop EN &rarr; now toggle D
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const DIM = '#7d9bb5', BRIGHT = '#4fc3f7', AMBER = '#ffb74d', GREY = '#8ba4ba';
+
+    /* ================= logic =================
+       Front gating:  S' = (D · EN)'      R' = (D' · EN)'
+       Latch core:    Q  = (S' · Q')'     Q' = (R' · Q)'
+       Because R' is driven by D', S'=R'=0 is unreachable: the forbidden state is gone.  */
+    const nand = (a,b) => (a && b) ? 0 : 1;
+
+    function dLatch(D, EN, q) {
+        const Sb = nand(D, EN), Rb = nand(1-D, EN);
+        let Q;
+        if (Sb === 0 && Rb === 0) Q = 1;          // unreachable — kept only so the core is total
+        else if (Sb === 0)        Q = 1;          // set
+        else if (Rb === 0)        Q = 0;          // reset
+        else                      Q = q;          // both inputs idle -> hold
+        return { Sb, Rb, Q, Qb: 1-Q, mode: EN ? 'TRANSPARENT' : 'LATCHED',
+                 core: EN ? (D ? 'SET' : 'RESET') : 'HOLD' };
+    }
+
+    // self-check: the gate-level core must equal the characteristic equation, and never hit S'=R'=0
+    (function selfTest(){
+        let bad = 0;
+        for (const EN of [0,1]) for (const D of [0,1]) for (const q of [0,1]) {
+            const o = dLatch(D,EN,q);
+            if (o.Q !== ((D&&EN) || (q&&!EN) ? 1 : 0)) bad++;
+            if (o.Sb === 0 && o.Rb === 0) bad++;
+        }
+        if (bad) console.error('D-latch logic self-test FAILED:', bad);
+        else console.log('D-latch logic self-test passed (8/8 cases, forbidden state unreachable)');
+    })();
+
+    /* ---------- svg helpers ---------- */
+    function el(par,tag,a){ const e=document.createElementNS(SVGNS,tag); for(const k in a) e.setAttribute(k,a[k]); par.appendChild(e); return e; }
+    function wire(par,pts){ return el(par,'polyline',{points:pts,fill:'none',stroke:DIM,'stroke-width':3,'stroke-linecap':'round','stroke-linejoin':'round'}); }
+    function txt(par,x,y,s,fill,size,anchor){ const t=el(par,'text',{x,y,fill,'font-size':size||20,'font-family':'Consolas,monospace','text-anchor':anchor||'start'}); t.textContent=s; return t; }
+    function dot(par,x,y,fill){ return el(par,'circle',{cx:x,cy:y,r:5,fill:fill||DIM,stroke:'none'}); }
+
+    // NAND body: flat back at bx, D-shape front, inversion bubble. Returns output pin x.
+    function nandBody(par,bx,cy,w,h){
+        const t=cy-h/2, b=cy+h/2;
+        el(par,'path',{d:`M${bx},${t} L${bx+w-h/2},${t} A${h/2},${h/2} 0 0 1 ${bx+w-h/2},${b} L${bx},${b} Z`,
+            fill:'none',stroke:'#cfd8dc','stroke-width':2.8});
+        el(par,'circle',{cx:bx+w+7,cy:cy,r:7,fill:'none',stroke:'#cfd8dc','stroke-width':2.8});
+        return bx+w+14;
+    }
+    // inverter: triangle + bubble. Returns output pin x.
+    function invBody(par,bx,cy,w,h){
+        el(par,'path',{d:`M${bx},${cy-h/2} L${bx+w},${cy} L${bx},${cy+h/2} Z`,
+            fill:'none',stroke:'#cfd8dc','stroke-width':2.8});
+        el(par,'circle',{cx:bx+w+7,cy:cy,r:7,fill:'none',stroke:'#cfd8dc','stroke-width':2.8});
+        return bx+w+14;
+    }
+
+    /* ---------- the D-latch schematic ----------
+       Geometry (all coordinates fixed so nothing lands inside a gate body):
+         front NAND (S') : back x=270, cy=128, 105x74  -> body y 91..165, inputs y=109 (D), y=147 (EN)
+         front NAND (R') : back x=270, cy=352, 105x74  -> body y 315..389, inputs y=333 (D'), y=371 (EN)
+         inverter        : back x=100, cy=200, 76x52   -> output pin x=176
+         core NAND (Q)   : back x=500, cy=150, 110x80  -> body y 110..190, inputs y=128 (S'), y=172 (Q' fb)
+         core NAND (Q')  : back x=500, cy=330, 110x80  -> body y 290..370, inputs y=308 (Q fb), y=352 (R')
+       Feedback runs in the clear band between the core gates (y 190..290).                        */
+    function buildSchematic(svg){
+        svg.innerHTML = '';
+        const gFront = el(svg,'g',{});      // everything on the D / EN side (dimmed when latched)
+        const gCore  = el(svg,'g',{});
+
+        // --- dashed box around the reused S'-R' latch core ---
+        el(gCore,'rect',{x:448,y:95,width:282,height:300,rx:14,fill:'none',stroke:'#37506a',
+            'stroke-width':2,'stroke-dasharray':'7 7'});
+        txt(gCore,589,88,"S'-R' latch core — from the previous topic",'#5c7189',16,'middle');
+
+        // --- gate bodies ---
+        nandBody(gFront,270,128,105,74);
+        nandBody(gFront,270,352,105,74);
+        const invOut = invBody(gFront,100,200,76,52);   // = 190: right of the inversion bubble
+        nandBody(gCore,500,150,110,80);
+        nandBody(gCore,500,330,110,80);
+        txt(gFront,322,134,'NAND','#5c7189',15,'middle');
+        txt(gFront,322,358,'NAND','#5c7189',15,'middle');
+        txt(gCore,555,156,'NAND','#5c7189',15,'middle');
+        txt(gCore,555,336,'NAND','#5c7189',15,'middle');
+
+        // --- front wires ---
+        const wD    = wire(gFront,'52,109 270,109');                    // D -> S' gate top input
+        const wDbr  = wire(gFront,'70,109 70,200 100,200');             // D -> inverter
+        const wDbar = wire(gFront,`${invOut},200 245,200 245,333 270,333`);   // D' -> R' gate top input
+        const wEN   = wire(gFront,'52,430 90,430 90,147 270,147');      // EN -> S' gate bottom input
+        const wENb  = wire(gFront,'90,371 270,371');                    // EN -> R' gate bottom input
+        const dD  = dot(gFront,70,109);
+        const dEN = dot(gFront,90,371);
+        txt(gFront,46,116,'D',AMBER,24,'end');
+        txt(gFront,46,437,'EN',AMBER,24,'end');
+        const tDbar = txt(gFront,202,190,"D' = 1",'#90a4ae',17,'middle');
+
+        // --- S' / R' nets into the core ---
+        const wSb = wire(gFront,'389,128 500,128');
+        const wRb = wire(gFront,'389,352 500,352');
+        const tSb = txt(gFront,394,118,"S'=1",'#90a4ae',18,'start');   // ends x≈434, clear of the core box edge at 448
+        const tRb = txt(gFront,394,375,"R'=1",'#90a4ae',18,'start');
+
+        // --- core outputs + cross-coupled feedback ---
+        const wQ    = wire(gCore,'624,150 735,150');
+        const wQbar = wire(gCore,'624,330 735,330');
+        const wFbQ    = wire(gCore,'665,150 665,235 470,235 470,308 500,308');   // Q  -> Q' gate
+        const wFbQbar = wire(gCore,'700,330 700,265 455,265 455,172 500,172');   // Q' -> Q gate
+        const tapQ  = dot(gCore,665,150,BRIGHT);
+        const tapQb = dot(gCore,700,330,DIM);
+        const tQ  = txt(gCore,745,158,'Q = 0',BRIGHT,24,'start');
+        const tQb = txt(gCore,745,338,"Q' = 1",'#90a4ae',22,'start');
+
+        return {gFront,gCore,wD,wDbr,wDbar,wEN,wENb,dD,dEN,tDbar,wSb,wRb,tSb,tRb,
+                wQ,wQbar,wFbQ,wFbQbar,tapQ,tapQb,tQ,tQb};
+    }
+
+    function setWire(w,v,animate){ w.setAttribute('stroke', v ? BRIGHT : DIM); w.classList.toggle('flow', !!animate); }
+    function setTxt(t,s,v){ t.textContent = s; t.setAttribute('fill', v ? BRIGHT : GREY); }
+
+    /* ---------- shared circuit state (pages 1 and 2 are the same circuit) ---------- */
+    const st = { D: 0, EN: 0, q: 0 };
+    const H = { 1: null, 2: null };   // schematic handles per page
+
+    // `fade` is page 2 only: there the greyed-out D side IS the point (the latch is closed, so
+    // nothing on that side can reach Q). On page 1 the schematic must stay fully legible whatever
+    // EN is doing — a faded half is unreadable when you are trying to follow how it is built.
+    function paintSchematic(h, o, fade) {
+        const latched = !st.EN;
+        setWire(h.wD,   st.D, false);
+        setWire(h.wDbr, st.D, false);
+        setWire(h.wDbar, 1-st.D, false);
+        setWire(h.wEN,  st.EN, false);
+        setWire(h.wENb, st.EN, false);
+        h.dD.setAttribute('fill',  st.D ? BRIGHT : DIM);
+        h.dEN.setAttribute('fill', st.EN ? BRIGHT : DIM);
+        setTxt(h.tDbar, "D' = "+(1-st.D), 1-st.D);
+        setWire(h.wSb, o.Sb, false);
+        setWire(h.wRb, o.Rb, false);
+        setTxt(h.tSb, "S'="+o.Sb, o.Sb);
+        setTxt(h.tRb, "R'="+o.Rb, o.Rb);
+        // the whole D/EN side fades when the latch is closed — nothing on it can reach Q
+        h.gFront.setAttribute('opacity', (fade && latched) ? 0.55 : 1);
+        // core: feedback loop animates while the bit is being held
+        setWire(h.wQ,    o.Q,  latched);
+        setWire(h.wQbar, o.Qb, latched);
+        setWire(h.wFbQ,    o.Q,  latched);
+        setWire(h.wFbQbar, o.Qb, latched);
+        h.tapQ.setAttribute('fill',  o.Q  ? BRIGHT : DIM);
+        h.tapQb.setAttribute('fill', o.Qb ? BRIGHT : DIM);
+        setTxt(h.tQ,  'Q = '+o.Q,   o.Q);
+        setTxt(h.tQb, "Q' = "+o.Qb, o.Qb);
+    }
+
+    /* ---------- panels ---------- */
+    const P1_ROWS = [   // S'  R'  what the core sees
+        ['1','1','hold — latch closed'],
+        ['0','1','set → Q=1'],
+        ['1','0','reset → Q=0'],
+        ['0','0','forbidden — unreachable now'],
+    ];
+    const P2_ROWS = [   // EN  D  Q+
+        ['0','X','Q','latched — D ignored'],
+        ['1','0','0','transparent — Q follows D'],
+        ['1','1','1','transparent — Q follows D'],
+    ];
+
+    function ctlHtml(){
+        return `<div class="selctl" data-ctl="D"><span class="sc-label">D</span><span class="sc-val">= <b class="zero">0</b></span><span class="sc-hint">click / key D</span></div>`+
+               `<div class="selctl" data-ctl="EN"><span class="sc-label">EN</span><span class="sc-val">= <b class="zero">0</b></span><span class="sc-hint">click / key E</span></div>`;
+    }
+
+    const panel1 = document.getElementById('panel1');
+    panel1.innerHTML =
+        `<div class="ctls">${ctlHtml()}</div>`+
+        `<div class="pillrow"><span class="lead">the front gates hand the core:</span>`+
+            `<span class="pill" id="p1sb">S' = 1</span><span class="pill" id="p1rb">R' = 1</span></div>`+
+        `<table class="tt"><tr><th>S&#8242;</th><th>R&#8242;</th><th>what the core does</th></tr>`+
+        P1_ROWS.map((r,i)=>`<tr class="ttrow ${i===3?'dead':''}" data-a="${r[0]}" data-b="${r[1]}"><td>${r[0]}</td><td>${r[1]}</td><td class="mode">${r[2]}</td></tr>`).join('')+
+        `</table>`+
+        `<div class="eqbox">S&#8242; = <span class="am">(D&middot;EN)&#8242;</span> &nbsp; R&#8242; = <span class="am">(D&#8242;&middot;EN)&#8242;</span></div>`+
+        `<div class="caption" id="cap1"></div>`;
+
+    const panel2 = document.getElementById('panel2');
+    panel2.innerHTML =
+        `<div class="ctls">${ctlHtml()}</div>`+
+        `<div class="statebadge latched" id="p2badge">LATCHED</div>`+
+        `<div class="qout" id="p2q">Q = <b class="zero">0</b> &nbsp;&middot;&nbsp; Q&#8242; = <b class="one">1</b></div>`+
+        `<table class="tt"><tr><th>EN</th><th>D</th><th>Q&#8314;</th><th>mode</th></tr>`+
+        P2_ROWS.map(r=>`<tr class="ttrow" data-a="${r[0]}" data-b="${r[1]}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="mode">${r[3]}</td></tr>`).join('')+
+        `</table>`+
+        `<div class="eqbox">Q&#8314; = <span class="cy">D</span>&middot;<span class="am">EN</span> + <span class="cy">Q</span>&middot;<span class="am">EN&#8242;</span></div>`+
+        `<div class="caption" id="cap2"></div>`+
+        `<div class="hint" id="hint2"></div>`;
+
+    document.querySelectorAll('[data-ctl]').forEach(e =>
+        e.addEventListener('click', () => toggle(e.dataset.ctl)));
+
+    /* ---------- render ---------- */
+    function render(){
+        const o = dLatch(st.D, st.EN, st.q);
+        st.q = o.Q;
+        if (H[1]) paintSchematic(H[1], o, false);   // page 1 never fades — it must stay readable
+        if (H[2]) paintSchematic(H[2], o, true);    // page 2 fades the D side when latched
+
+        // control readouts (both panels)
+        document.querySelectorAll('.selctl').forEach(c => {
+            const v = st[c.dataset.ctl];
+            const b = c.querySelector('.sc-val b');
+            b.textContent = v; b.className = v ? 'one' : 'zero';
+        });
+
+        // --- page 1 ---
+        const sbPill = document.getElementById('p1sb'), rbPill = document.getElementById('p1rb');
+        sbPill.textContent = "S' = "+o.Sb; sbPill.className = 'pill'+(o.Sb?' one':'');
+        rbPill.textContent = "R' = "+o.Rb; rbPill.className = 'pill'+(o.Rb?' one':'');
+        panel1.querySelectorAll('.ttrow').forEach(r => {
+            r.classList.toggle('rowon', r.dataset.a == String(o.Sb) && r.dataset.b == String(o.Rb));
+        });
+        document.getElementById('cap1').innerHTML = st.EN
+            ? `<span class="am">EN = 1.</span> D reaches the core: S&#8242; and R&#8242; are <span class="cy">complementary</span>, so it is driven straight to Q = D = ${st.D}. Because R&#8242; comes from <span class="am">D&#8242;</span>, the two can never be 0 together &mdash; the <span class="vl">forbidden row is unreachable</span>, and that is exactly what the gating bought us.`
+            : `<span class="am">EN = 0.</span> Both front NANDs output 1 no matter what D does, so the core sees S&#8242;=R&#8242;=1 &mdash; its <span class="cy">hold</span> case. The D side is disconnected; the bit is kept by the feedback loop alone.`;
+
+        // --- page 2 ---
+        const badge = document.getElementById('p2badge');
+        badge.textContent = o.mode; badge.className = 'statebadge '+o.mode.toLowerCase();
+        const qb = panel2.querySelectorAll('#p2q b');
+        qb[0].textContent = o.Q;  qb[0].className = o.Q  ? 'one' : 'zero';
+        qb[1].textContent = o.Qb; qb[1].className = o.Qb ? 'one' : 'zero';
+        panel2.querySelectorAll('.ttrow').forEach(r => {
+            const on = st.EN ? (r.dataset.a === '1' && r.dataset.b === String(st.D))
+                             : (r.dataset.a === '0');
+            r.classList.toggle('rowon', on);
+        });
+        const proved = !st.EN && st.D !== o.Q;
+        document.getElementById('cap2').innerHTML = st.EN
+            ? `<span class="cy">Transparent.</span> While EN is high the latch is a piece of wire from D to Q &mdash; every change on D passes straight through, as many times as D changes. Q = D = ${st.D}.`
+            : (proved
+                ? `<span class="cy">Latched &mdash; and there is the proof.</span> D = ${st.D} but <span class="cy">Q = ${o.Q}</span>. The latch is ignoring its data input and holding the value D had when EN fell. <em>That is memory.</em>`
+                : `<span class="cy">Latched.</span> Q is frozen at ${o.Q} &mdash; the value D had at the instant EN went low. D can wiggle all it likes; nothing gets through.`);
+        document.getElementById('hint2').className = 'hint'+(proved ? ' proved' : '');
+        document.getElementById('hint2').innerHTML = proved
+            ? `Now raise EN again and Q snaps to D. The latch listens for the <b>whole time</b> EN is high &mdash; that is what "level-sensitive" means.`
+            : `Try it: set EN = 1 and D = 1, drop EN to 0, then toggle D. Q should refuse to move.`;
+
+        if (page === 3) paintCursor();
+    }
+
+    function toggle(which){ st[which] = st[which] ? 0 : 1; render(); }
+
+    /* ================= page 3 — timing ================= */
+    const T_END = 24, X0 = 115, XS = 45;              // t=0 at x=115, 45px per time unit
+    const ROW = { EN:{hi:70, lo:125}, D:{hi:205, lo:260}, Q:{hi:340, lo:395} };
+    const EN_EDGES = [[0,0],[3,1],[11,0],[17,1],[21,0]];
+    const D_EDGES  = [[0,0],[4,1],[6,0],[8,1],[12.5,0],[14,1],[15.5,0],[19,1],[20.5,0],[22.5,1]];
+    const tx = t => X0 + t*XS;
+    const valAt = (edges,t) => { let v = edges[0][1]; for (const [et,ev] of edges) { if (t + 1e-9 >= et) v = ev; } return v; };
+
+    // Q is *derived*, never hand-drawn: walk every edge in order and apply the latch rule.
+    function buildQ(){
+        const times = [...new Set([...EN_EDGES, ...D_EDGES].map(e => e[0]))].sort((a,b) => a-b);
+        const out = []; let q = 0;
+        for (const t of times) {
+            const EN = valAt(EN_EDGES,t), D = valAt(D_EDGES,t);
+            q = EN ? D : q;
+            if (!out.length || out[out.length-1][1] !== q) out.push([t,q]);
+        }
+        return out;
+    }
+    const Q_EDGES = buildQ();
+    const windows = (() => {           // [start,end] spans where EN is high
+        const w = []; let s = null;
+        for (const [t,v] of EN_EDGES) { if (v && s === null) s = t; else if (!v && s !== null) { w.push([s,t]); s = null; } }
+        if (s !== null) w.push([s,T_END]);
+        return w;
+    })();
+
+    function tracePoints(edges,row){
+        const pts = []; let prev = null;
+        for (const [t,v] of edges) {
+            const y = v ? row.hi : row.lo;
+            if (prev !== null) { pts.push(`${tx(t)},${prev}`); }
+            pts.push(`${tx(t)},${y}`);
+            prev = y;
+        }
+        pts.push(`${tx(T_END)},${prev}`);
+        return pts.join(' ');
+    }
+
+    const tsvg = document.getElementById('tsvg');
+    let cursor = null, cDots = {}, cursorT = 0, playing = false, rafId = null, lastTs = 0;
+
+    function buildTiming(){
+        tsvg.innerHTML = '';
+        // enable windows
+        windows.forEach(([a,b]) => {
+            el(tsvg,'rect',{x:tx(a),y:45,width:(b-a)*XS,height:370,fill:'rgba(79,195,247,0.09)',
+                stroke:'rgba(79,195,247,0.35)','stroke-width':1.5,rx:4});
+            txt(tsvg,(tx(a)+tx(b))/2,38,'EN high — transparent','#4fc3f7',16,'middle');
+        });
+        // row baselines + labels
+        [['EN',ROW.EN,AMBER],['D',ROW.D,AMBER],['Q',ROW.Q,BRIGHT]].forEach(([lab,row,col]) => {
+            el(tsvg,'line',{x1:X0,y1:row.lo,x2:tx(T_END),y2:row.lo,stroke:'#24384c','stroke-width':1.5});
+            txt(tsvg,95,(row.hi+row.lo)/2+9,lab,col,24,'end');
+        });
+        // traces
+        el(tsvg,'polyline',{points:tracePoints(EN_EDGES,ROW.EN),fill:'none',stroke:AMBER,'stroke-width':3.4,'stroke-linejoin':'round'});
+        el(tsvg,'polyline',{points:tracePoints(D_EDGES,ROW.D), fill:'none',stroke:AMBER,'stroke-width':3.4,'stroke-linejoin':'round'});
+        el(tsvg,'polyline',{points:tracePoints(Q_EDGES,ROW.Q), fill:'none',stroke:BRIGHT,'stroke-width':4,'stroke-linejoin':'round'});
+        // capture markers on every falling edge of EN — flagged beside the Q trace, in the
+        // clear band between the D and Q rows, so they never collide with the window labels
+        EN_EDGES.filter(e => e[1] === 0 && e[0] > 0).forEach(([t]) => {
+            el(tsvg,'line',{x1:tx(t),y1:45,x2:tx(t),y2:415,stroke:'#ffb74d','stroke-width':2,'stroke-dasharray':'6 6'});
+            txt(tsvg,tx(t)+9,322,'captures '+valAt(Q_EDGES,t),AMBER,16,'start');
+        });
+        // annotations under the trace — kept short so the three never overlap
+        txt(tsvg,(tx(3)+tx(11))/2,448,'Q copies every change on D','#90a4ae',17,'middle');
+        txt(tsvg,(tx(11)+tx(17))/2,448,'D moves twice — Q does not','#4fc3f7',17,'middle');
+        txt(tsvg,(tx(17)+tx(21))/2,474,'transparent again','#90a4ae',17,'middle');   // staggered a row down —
+        txt(tsvg,tx(24),474,'held','#4fc3f7',17,'end');                              // the hold caption runs right up to x≈tx(17)
+        txt(tsvg,X0,492,'Captured = whatever D did last in the window — so the next step sharpens EN into a clock edge.','#607d8b',17,'start');
+        txt(tsvg,X0,514,'D also has to be stable right around the closing edge — that is the setup/hold window.','#607d8b',17,'start');
+        // cursor
+        cursor = el(tsvg,'line',{x1:X0,y1:45,x2:X0,y2:415,stroke:'#e0e0e0','stroke-width':2,opacity:0.75});
+        cDots.EN = el(tsvg,'circle',{cx:X0,cy:ROW.EN.lo,r:6,fill:AMBER});
+        cDots.D  = el(tsvg,'circle',{cx:X0,cy:ROW.D.lo, r:6,fill:AMBER});
+        cDots.Q  = el(tsvg,'circle',{cx:X0,cy:ROW.Q.lo, r:6,fill:BRIGHT});
+    }
+
+    function paintCursor(){
+        const x = tx(cursorT);
+        cursor.setAttribute('x1',x); cursor.setAttribute('x2',x);
+        const EN = valAt(EN_EDGES,cursorT), D = valAt(D_EDGES,cursorT), Q = valAt(Q_EDGES,cursorT);
+        cDots.EN.setAttribute('cx',x); cDots.EN.setAttribute('cy', EN?ROW.EN.hi:ROW.EN.lo);
+        cDots.D.setAttribute('cx',x);  cDots.D.setAttribute('cy',  D ?ROW.D.hi :ROW.D.lo);
+        cDots.Q.setAttribute('cx',x);  cDots.Q.setAttribute('cy',  Q ?ROW.Q.hi :ROW.Q.lo);
+        const b = document.getElementById('tBadge');
+        b.textContent = EN ? 'TRANSPARENT' : 'LATCHED';
+        b.className = 'statebadge '+(EN ? 'transparent' : 'latched');
+        document.getElementById('tQout').innerHTML =
+            `D = <b class="${D?'one':'zero'}">${D}</b> &nbsp;EN = <b class="${EN?'one':'zero'}">${EN}</b> &nbsp;&middot;&nbsp; Q = <b class="${Q?'one':'zero'}">${Q}</b>`;
+        document.getElementById('tCap').innerHTML = EN
+            ? `Window open &mdash; <b class="cy">Q is tracking D</b>. Anything D does right now lands on Q immediately.`
+            : (D !== Q
+                ? `Window shut &mdash; D = ${D} but <b class="cy">Q is still ${Q}</b>, the value D held when EN fell.`
+                : `Window shut &mdash; <b class="cy">Q = ${Q}</b> is being held by the feedback loop, not by D.`);
+    }
+
+    function setCursorFromEvent(e){
+        const r = tsvg.getBoundingClientRect();
+        const vb = 1240, sx = (e.clientX - r.left) / r.width * vb;
+        cursorT = Math.max(0, Math.min(T_END, (sx - X0) / XS));
+        paintCursor();
+    }
+    tsvg.addEventListener('pointerdown', e => { playing = false; updatePlayBtn(); setCursorFromEvent(e); tsvg.setPointerCapture(e.pointerId); });
+    tsvg.addEventListener('pointermove', e => { if (e.buttons) setCursorFromEvent(e); });
+
+    function updatePlayBtn(){ document.getElementById('playBtn').innerHTML = playing ? '&#10073;&#10073; Pause' : '&#9654; Play'; }
+    function tick(ts){
+        if (!playing) return;
+        const dt = lastTs ? (ts - lastTs)/1000 : 0; lastTs = ts;
+        cursorT += dt * 3.2;                       // ~7.5 s for the whole 24-unit story
+        if (cursorT >= T_END) { cursorT = T_END; playing = false; updatePlayBtn(); }
+        paintCursor();
+        if (playing) rafId = requestAnimationFrame(tick);
+    }
+    function togglePlay(){
+        playing = !playing; lastTs = 0; updatePlayBtn();
+        if (playing) { if (cursorT >= T_END) cursorT = 0; rafId = requestAnimationFrame(tick); }
+        else if (rafId) cancelAnimationFrame(rafId);
+    }
+    document.getElementById('playBtn').addEventListener('click', togglePlay);
+
+    /* ---------- paging + keys ---------- */
+    let page = 1;
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const dots = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+
+    function showPage(n){
+        page = Math.max(1, Math.min(3, n));
+        if (page !== 3 && playing) togglePlay();
+        document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+        render();
+    }
+    tabs.forEach(t => t.addEventListener('click', () => showPage(+t.dataset.page)));
+
+    document.addEventListener('keydown', e => {
+        const k = e.key;
+        if (k === '1' || k === '2' || k === '3') { showPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggle('D'); e.preventDefault(); }
+        else if (k === 'e' || k === 'E') { toggle('EN'); e.preventDefault(); }
+        else if (k === ' ') { if (page === 3) togglePlay(); e.preventDefault(); }
+    });
+
+    /* ---------- init ---------- */
+    H[1] = buildSchematic(document.getElementById('sch1'));
+    H[2] = buildSchematic(document.getElementById('sch2'));
+    buildTiming();
+    paintCursor();
+    showPage(1);
+</script>
+</body>
+</html>

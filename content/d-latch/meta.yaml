@@ -1,0 +1,11 @@
+title: "D Latch"
+description: "An S'-R' latch with both inputs generated from one data line and an enable — the gating that removes the forbidden state, transparent vs. latched behavior, the characteristic equation, and reading the timing diagram"
+chapter: sequential-logic
+section: memory-elements
+order: 40103
+
+graphics:
+  01-video.youtube:
+    caption: "Video: building the D latch — two front NAND gates and an inverter turn an S'-R' latch into a one-data-input memory element, then transparent vs. latched behavior and how to read Q off a timing diagram"
+  02-interactive.html:
+    caption: "Interactive D latch — toggle D and EN to watch S' and R' drive the cross-coupled core, prove the bit holds with the enable off, and scrub a timing diagram whose Q trace is derived from the enable windows"
