@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The D Flip-Flop — Edge, Not Level</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 = 1/active/Q · amber #ffb74d = D & CLK controls · violet #b388ff = the edge/sample · navy #0d1b2a panel */
+    @keyframes dash { to { stroke-dashoffset: -48; } }
+    .flow { stroke-dasharray: 13 9; animation: dash 1s linear infinite; }
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 168px; height: 84px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 16px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px; border: 2px solid #24384c;
+        border-radius: 12px; padding: 12px 22px; color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 21px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 14px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- page 1 : schematic + panel ---------- */
+    .latch { display: flex; gap: 32px; width: 100%; align-items: stretch; }
+    .schwrap { flex: 0 0 58%; display: flex; align-items: center; justify-content: center;
+        background: #0d1b2a; border: 2px solid #24384c; border-radius: 18px; padding: 12px; }
+    .schwrap svg { width: 100%; height: 100%; max-height: 620px; }
+    .panel { flex: 1; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+    .ctls { display: flex; gap: 16px; }
+    .selctl { flex: 1; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer;
+        border: 2px solid #ffb74d; border-radius: 999px; padding: 13px 18px;
+        background: rgba(255,183,77,0.08); user-select: none; }
+    .selctl .sc-label { color: #ffb74d; font-size: 25px; font-weight: 700; font-family: 'Consolas','Courier New',monospace; }
+    .selctl .sc-val { color: #e0e0e0; font-size: 23px; font-family: 'Consolas','Courier New',monospace; }
+    .selctl .sc-val b { font-size: 29px; }
+    .selctl .sc-val b.one { color: #4fc3f7; } .selctl .sc-val b.zero { color: #5c7189; }
+    .selctl .sc-hint { color: #8a7a52; font-size: 14px; }
+    .pulsebtn { border: 2px solid #b388ff; border-radius: 999px; padding: 13px 22px; cursor: pointer;
+        color: #b388ff; font-size: 20px; font-weight: 700; background: rgba(179,136,255,0.10);
+        user-select: none; text-align: center; }
+    .pulsebtn.busy { opacity: .5; }
+
+    .statebadge { align-self: flex-start; font-size: 24px; font-weight: 700; letter-spacing: 1px;
+        border-radius: 12px; padding: 10px 24px; border: 2px solid; }
+    .statebadge.tracking { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.10); }
+    .statebadge.repeating { color: #cfd8dc; border-color: #37506a; background: #0d1b2a; }
+    .statebadge.captured { color: #b388ff; border-color: #6a4fa0; background: rgba(179,136,255,0.14); }
+
+    .qout { font-size: 30px; font-family: 'Consolas','Courier New',monospace; color: #90a4ae; }
+    .qout b { font-size: 36px; } .qout b.one { color: #4fc3f7; } .qout b.zero { color: #5c7189; }
+
+    .tt { border-collapse: collapse; font-size: 19px; font-family: 'Consolas','Courier New',monospace; align-self: flex-start; }
+    .tt th, .tt td { border: 2px solid #37506a; padding: 6px 14px; text-align: center; color: #e0e0e0; }
+    .tt th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; font-size: 17px; }
+    .tt td.mode { color: #90a4ae; font-family: 'Segoe UI',sans-serif; font-size: 17px; text-align: left; }
+    .tt tr.rowon td { background: rgba(79,195,247,0.20); color: #fff; }
+    .tt tr.rowon td.mode { color: #cfe6f5; }
+
+    .caption { font-size: 20px; color: #cfd8dc; line-height: 1.5; border-left: 3px solid #4fc3f7;
+        padding-left: 18px; margin-top: auto; }
+    .caption .cy { color: #4fc3f7; font-weight: 600; } .caption .am { color: #ffb74d; font-weight: 600; }
+    .caption .vl { color: #b388ff; font-weight: 600; }
+
+    /* ---------- pages 2 & 3 : timing ---------- */
+    .tpage { flex-direction: column; gap: 12px; }
+    .tstrip { display: flex; align-items: center; gap: 18px; flex-shrink: 0; flex-wrap: wrap; }
+    .tstrip .tcap { color: #90a4ae; font-size: 18px; flex: 1; line-height: 1.4; min-width: 300px; }
+    .tstrip .tcap b.cy { color: #4fc3f7; } .tstrip .tcap b.am { color: #ffb74d; }
+    .tstrip .tcap b.vl { color: #b388ff; }
+    .presets { display: flex; gap: 10px; flex-wrap: wrap; }
+    .pbtn { border: 2px solid #37506a; border-radius: 999px; padding: 8px 16px; cursor: pointer;
+        color: #90a4ae; font-size: 16px; font-weight: 600; background: #0d1b2a; user-select: none; }
+    .pbtn:hover { border-color: #4fc3f7; color: #4fc3f7; }
+    .pbtn.on { border-color: #4fc3f7; color: #4fc3f7; background: rgba(79,195,247,0.12); }
+    .pbtn.violet { border-color: #6a4fa0; color: #b388ff; background: rgba(179,136,255,0.10); }
+    .pbtn.violet.on { border-color: #b388ff; background: rgba(179,136,255,0.22); }
+    .twrap { flex: 1; min-height: 0; background: #0d1b2a; border: 2px solid #24384c;
+        border-radius: 18px; padding: 8px 16px; display: flex; }
+    .twrap svg { width: 100%; height: 100%; }
+    .twrap.editable svg { cursor: pointer; }
+    .instr { color: #ffb74d; font-size: 17px; font-weight: 600; }
+    .instr .k { display: inline-block; color: #ffb74d; border: 1px solid #6a5324; border-radius: 6px;
+        padding: 1px 7px; font-size: 14px; font-family: 'Consolas','Courier New',monospace; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 10px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a; border-radius: 6px;
+        padding: 1px 8px; margin: 0 2px; font-size: 14px; font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 168 84" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="54" y="12" width="60" height="60" rx="6"/>
+                <line x1="28" y1="26" x2="54" y2="26"/><line x1="28" y1="58" x2="54" y2="58"/>
+                <line x1="114" y1="26" x2="142" y2="26"/><line x1="114" y1="58" x2="142" y2="58"/>
+                <path d="M54,52 l10,6 l-10,6" stroke="#4fc3f7"/>
+                <text x="24" y="31" font-size="13" fill="#ffb74d" stroke="none" text-anchor="end" font-family="Consolas,monospace">D</text>
+                <text x="146" y="31" font-size="13" fill="#4fc3f7" stroke="none" font-family="Consolas,monospace">Q</text>
+                <text x="146" y="63" font-size="12" fill="#607d8b" stroke="none" font-family="Consolas,monospace">Q&#8242;</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>The D Flip-Flop <span class="sub">&mdash; edge, not level</span></h1>
+            <div class="subtitle">Two D latches on opposite clock levels &middot; a latch listens for a whole interval, a flip-flop samples one instant</div>
+        </div>
+        <div class="page-count">Page <b id="pcNum">1</b> / 3</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Build It</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Latch vs. Flip-Flop</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Try It</div></div>
+    </div>
+
+    <div class="stage">
+        <div class="page" id="p1">
+            <div class="latch">
+                <div class="schwrap"><svg id="sch1" viewBox="5 55 875 470"></svg></div>
+                <div class="panel" id="panel1"></div>
+            </div>
+        </div>
+
+        <div class="page tpage" id="p2">
+            <div class="tstrip">
+                <div class="tcap">One <b class="am">D</b> and one <b class="am">CLK</b> driving both.
+                    The <b class="cy">latch</b> copies every change on D while the clock is high; the
+                    <b class="cy">flip-flop</b> only moves at a <b class="vl">rising edge</b>, taking the value D held just before it.</div>
+            </div>
+            <div class="twrap"><svg id="tsvg2" viewBox="0 0 1240 560"></svg></div>
+        </div>
+
+        <div class="page tpage" id="p3">
+            <div class="tstrip">
+                <div class="instr">Click any slot on the <span class="k">D</span> row to toggle it &mdash; both outputs redraw instantly.</div>
+                <div class="presets" id="presets"></div>
+                <div class="pbtn violet" id="predictFF">&#128065; Hide flip-flop</div>
+                <div class="pbtn violet" id="predictLatch">&#128065; Hide latch</div>
+            </div>
+            <div class="tstrip"><div class="tcap" id="tcap3"></div></div>
+            <div class="twrap editable"><svg id="tsvg3" viewBox="0 0 1240 560"></svg></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div><div class="dot" data-dot="3"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">3</span> page
+            &middot; p1: <span class="k amber">D</span> data / <span class="k amber">C</span> clock / <span class="k">Space</span> pulse the clock
+            &middot; p3: click D to edit &middot; <span class="k">P</span> hide FF &middot; <span class="k">L</span> hide latch &middot; <span class="k">R</span> reset
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer'), s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const DIM='#7d9bb5', BRIGHT='#4fc3f7', AMBER='#ffb74d', VIOLET='#b388ff', GREY='#8ba4ba';
+
+    /* ================= the models =================
+       D latch  : level-sensitive.  Q = D while EN is high, holds while EN is low.
+       D flip-flop (two-latch, positive edge):
+           capture latch = D latch with EN = CLK'   (transparent while CLK is LOW)
+           output  latch = D latch with EN = CLK    (transparent while CLK is HIGH)
+       The two are never transparent together, so no path ever runs straight from D to Q. */
+    const dLatch = (D, EN, q) => EN ? D : q;
+
+    function el(par,tag,a){ const e=document.createElementNS(SVGNS,tag); for(const k in a) e.setAttribute(k,a[k]); par.appendChild(e); return e; }
+    function wire(par,pts){ return el(par,'polyline',{points:pts,fill:'none',stroke:DIM,'stroke-width':3,'stroke-linecap':'round','stroke-linejoin':'round'}); }
+    function txt(par,x,y,s,fill,size,anchor,weight){ const t=el(par,'text',{x,y,fill,'font-size':size||20,'font-family':'Consolas,monospace','text-anchor':anchor||'start'}); if(weight) t.setAttribute('font-weight',weight); t.textContent=s; return t; }
+    function setWire(w,v,anim){ w.setAttribute('stroke', v?BRIGHT:DIM); w.classList.toggle('flow', !!anim); }
+
+    /* ================= page 1 — the two-latch schematic ================= */
+    /* geometry: capture block x 210..390, output block x 520..700, both 150 tall centred at y=170.
+       inverter on the capture latch's enable at x 195..259, y=330. Clock spine runs along y=330. */
+    const S1 = { D:0, CLK:0, qm:0, q:0, phase:0 };
+    let H1 = null;
+
+    function latchBlock(par, x, y, w, h, label){
+        const g = el(par,'g',{});
+        el(g,'rect',{x,y,width:w,height:h,rx:10,fill:'#12263a',stroke:'#cfd8dc','stroke-width':2.8});
+        txt(g, x+w/2, y+28, label, '#cfd8dc', 19, 'middle', 700);
+        txt(g, x+w/2, y+h-16, 'D latch', '#5c7189', 15, 'middle');
+        txt(g, x+12, y+62, 'D', '#90a4ae', 17, 'start');
+        txt(g, x+12, y+112, 'EN', '#90a4ae', 17, 'start');
+        txt(g, x+w-12, y+62, 'Q', '#90a4ae', 17, 'end');
+        return g;
+    }
+
+    function buildSch(){
+        const svg = document.getElementById('sch1'); svg.innerHTML='';
+        const MX=210, SX=520, BY=95, BW=180, BH=150;
+        const gCap = el(svg,'g',{}), gOut = el(svg,'g',{}), gW = el(svg,'g',{});
+        // blocks (drawn first so wires land on their edges)
+        latchBlock(gCap, MX, BY, BW, BH, 'CAPTURE');
+        latchBlock(gOut, SX, BY, BW, BH, 'OUTPUT');
+        // data path: D -> capture.D -> Qc -> output.D -> Q
+        const wD  = wire(gW, `60,157 ${MX},157`);
+        const wQm = wire(gW, `${MX+BW},157 ${SX},157`);
+        const wQ  = wire(gW, `${SX+BW},157 790,157`);
+        txt(gW, 54, 164, 'D', AMBER, 24, 'end');
+        const tQm = txt(gW, (MX+BW+SX)/2, 143, 'Qc=0', '#90a4ae', 18, 'middle');
+        const tQ  = txt(gW, 800, 164, 'Q = 0', BRIGHT, 24, 'start');
+        // clock spine along y=330, up into each latch's EN (capture latch via inverter)
+        const wCLK = wire(gW, `60,330 150,330`);
+        txt(gW, 54, 337, 'CLK', AMBER, 24, 'end');
+        // inverter for the capture latch's enable
+        el(gW,'path',{d:'M195,306 L245,330 L195,354 Z',fill:'none',stroke:'#cfd8dc','stroke-width':2.8});
+        el(gW,'circle',{cx:252,cy:330,r:7,fill:'none',stroke:'#cfd8dc','stroke-width':2.8});
+        const wCin  = wire(gW, `150,330 195,330`);
+        const wCbar = wire(gW, `259,330 ${MX+50},330 ${MX+50},${BY+BH}`);   // CLK' up into capture EN
+        const wCs   = wire(gW, `150,362 ${SX+50},362 ${SX+50},${BY+BH}`);   // CLK up into output EN,
+        const wCdrop= wire(gW, `150,330 150,362`);                          //   dropped below the inverter
+        el(gW,'circle',{cx:150,cy:330,r:5,fill:DIM,stroke:'none'});
+        const tCbar = txt(gW, MX+58, 316, "CLK' ", '#90a4ae', 16, 'start');
+        const tCs   = txt(gW, SX+58, 316, 'CLK', '#90a4ae', 16, 'start');
+        // transparency badges under each block
+        const bCap = txt(gCap, MX+BW/2, BY+BH+34, 'OPEN', BRIGHT, 17, 'middle', 700);
+        const bOut = txt(gOut, SX+BW/2, BY+BH+34, 'CLOSED', GREY, 17, 'middle', 700);
+        // ---- one clock pulse, drawn as a waveform beneath the circuit ----
+        // "Pulse the clock" is a shape, not just a state change: show the shape, and mark which
+        // latch is open over each part of it so the waveform ties back to the blocks above.
+        const WX0=140, WX1=820, WR=300, WF=560, WHI=425, WLO=478;
+        txt(gW, WX0, 400, 'one clock pulse', '#5c7189', 15, 'start');
+        el(gW,'line',{x1:WX0,y1:WLO,x2:WX1,y2:WLO,stroke:'#24384c','stroke-width':1.4});
+        el(gW,'polyline',{points:`${WX0},${WLO} ${WR},${WLO} ${WR},${WHI} ${WF},${WHI} ${WF},${WLO} ${WX1},${WLO}`,
+            fill:'none',stroke:AMBER,'stroke-width':3.2,'stroke-linejoin':'round'});
+        txt(gW, WX0-12, WLO-22, 'CLK', AMBER, 20, 'end', 700);
+        // the rising edge is the whole point of the device
+        el(gW,'line',{x1:WR,y1:WHI-22,x2:WR,y2:WLO+16,stroke:VIOLET,'stroke-width':2,'stroke-dasharray':'6 6'});
+        el(gW,'path',{d:`M${WR},${WHI-28} l-7,-11 l14,0 Z`,fill:VIOLET});
+        txt(gW, WR+11, WHI-30, 'flip-flop samples here', VIOLET, 15, 'start');
+        // the falling edge matters too — it is when the capture latch reopens
+        el(gW,'line',{x1:WF,y1:WHI-6,x2:WF,y2:WLO+16,stroke:'#4fc3f7','stroke-width':1.6,'stroke-dasharray':'3 7',opacity:0.75});
+        // which latch is open over each stretch
+        const wlab = (x,t) => txt(gW, x, WLO+34, t, '#7cc9ec', 14, 'middle');
+        const wl1 = wlab((WX0+WR)/2, 'capture latch open'),
+              wl2 = wlab((WR+WF)/2,  'output latch open'),
+              wl3 = wlab((WF+WX1)/2, 'capture latch open');
+        // live cursor
+        const curLine = el(gW,'line',{x1:WX0,y1:WHI-16,x2:WX0,y2:WLO+10,stroke:'#e0e0e0','stroke-width':2,opacity:0.8});
+        const curDot  = el(gW,'circle',{cx:WX0,cy:WLO,r:7,fill:'#e0e0e0',stroke:'#0d1b2a','stroke-width':2});
+        const CURX = [ (WX0+WR)/2, WR, (WR+WF)/2, (WF+WX1)/2 ];
+        const CURY = [ WLO, WHI, WHI, WLO ];
+
+        // the "never both open" note
+        txt(gW, 425, 78, 'never open at the same time', '#5c7189', 16, 'middle');
+        el(gW,'path',{d:`M${MX+BW},84 L${SX},84`,stroke:'#37506a','stroke-width':1.5,'stroke-dasharray':'5 5'});
+        return {gCap,gOut,wD,wQm,wQ,wCLK,wCin,wCbar,wCs,wCdrop,tQm,tQ,bCap,bOut,tCbar,tCs,
+                curLine,curDot,CURX,CURY,wl1,wl2,wl3};
+    }
+
+    const P1_ROWS = [
+        ['low',  'transparent', 'closed',      'capture tracks D — Q cannot change'],
+        ['rise', 'closes',      'opens',       'the value at the edge is handed across'],
+        ['high', 'closed',      'transparent', 'output repeats it — D is locked out'],
+        ['fall', 'opens',       'closed',      'capture tracks D again; Q holds'],
+    ];
+
+    document.getElementById('panel1').innerHTML =
+        `<div class="ctls">`+
+          `<div class="selctl" data-ctl="D"><span class="sc-label">D</span><span class="sc-val">= <b class="zero">0</b></span><span class="sc-hint">key D</span></div>`+
+          `<div class="selctl" data-ctl="CLK"><span class="sc-label">CLK</span><span class="sc-val">= <b class="zero">0</b></span><span class="sc-hint">key C</span></div>`+
+        `</div>`+
+        `<div class="pulsebtn" id="pulseBtn">&#9201; Pulse the clock &nbsp;(watch the handoff)</div>`+
+        `<div class="statebadge tracking" id="p1badge">CAPTURE LATCH TRACKING</div>`+
+        `<div class="qout" id="p1q">Qc = <b class="zero">0</b> &nbsp;&rarr;&nbsp; Q = <b class="zero">0</b></div>`+
+        `<table class="tt"><tr><th>CLK</th><th>capture</th><th>output</th><th>what happens</th></tr>`+
+        P1_ROWS.map(r=>`<tr class="ttrow" data-k="${r[0]}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="mode">${r[3]}</td></tr>`).join('')+
+        `</table>`+
+        `<div class="caption" id="p1cap"></div>`;
+
+    let lastCLK = 0, capturedFlash = false;
+
+    function render1(){
+        const h = H1;
+        // capture latch transparent on CLK low, output latch on CLK high
+        const capOpen = !S1.CLK, outOpen = !!S1.CLK;
+        S1.qm = dLatch(S1.D, capOpen ? 1 : 0, S1.qm);
+        S1.q  = dLatch(S1.qm, outOpen ? 1 : 0, S1.q);
+
+        setWire(h.wD,   S1.D,   false);
+        setWire(h.wQm,  S1.qm,  false);
+        setWire(h.wQ,   S1.q,   !outOpen);            // output latch holding -> animate its output
+        setWire(h.wCLK, S1.CLK, false);
+        setWire(h.wCin, S1.CLK, false);
+        setWire(h.wCbar, capOpen?1:0, false);
+        setWire(h.wCs,  outOpen?1:0, false);
+        setWire(h.wCdrop, S1.CLK, false);
+        h.tCbar.setAttribute('fill', capOpen?BRIGHT:GREY);
+        h.tCs.setAttribute('fill', outOpen?BRIGHT:GREY);
+        h.gCap.setAttribute('opacity', capOpen ? 1 : 0.58);
+        h.gOut.setAttribute('opacity', outOpen ? 1 : 0.58);
+        h.bCap.textContent = capOpen?'OPEN':'CLOSED'; h.bCap.setAttribute('fill', capOpen?BRIGHT:GREY);
+        h.bOut.textContent = outOpen?'OPEN':'CLOSED'; h.bOut.setAttribute('fill', outOpen?BRIGHT:GREY);
+        h.tQm.textContent = 'Qc='+S1.qm; h.tQm.setAttribute('fill', S1.qm?BRIGHT:GREY);
+        h.tQ.textContent  = 'Q = '+S1.q; h.tQ.setAttribute('fill', S1.q?BRIGHT:GREY);
+
+        // clock-waveform cursor follows the live phase
+        const ph = S1.phase;
+        h.curLine.setAttribute('x1', h.CURX[ph]); h.curLine.setAttribute('x2', h.CURX[ph]);
+        h.curDot.setAttribute('cx', h.CURX[ph]);  h.curDot.setAttribute('cy', h.CURY[ph]);
+        h.curDot.setAttribute('fill', ph===1 ? VIOLET : '#e0e0e0');
+        [h.wl1,h.wl2,h.wl3].forEach((t,i)=>{
+            const live = (i===0 && ph===0) || (i===1 && (ph===1||ph===2)) || (i===2 && ph===3);
+            t.setAttribute('fill', live ? '#4fc3f7' : '#4a6274');
+            t.setAttribute('font-weight', live ? 700 : 400);
+        });
+
+        document.querySelectorAll('#panel1 .selctl').forEach(c=>{
+            const v = S1[c.dataset.ctl], b = c.querySelector('.sc-val b');
+            b.textContent = v; b.className = v?'one':'zero';
+        });
+        const badge = document.getElementById('p1badge');
+        const key = capturedFlash ? 'rise' : (S1.CLK ? 'high' : 'low');
+        if (capturedFlash) { badge.textContent='CAPTURED ON THE EDGE'; badge.className='statebadge captured'; }
+        else if (S1.CLK)   { badge.textContent='OUTPUT LATCH REPEATING';      badge.className='statebadge repeating'; }
+        else               { badge.textContent='CAPTURE LATCH TRACKING';      badge.className='statebadge tracking'; }
+        const qb = document.querySelectorAll('#p1q b');
+        qb[0].textContent=S1.qm; qb[0].className=S1.qm?'one':'zero';
+        qb[1].textContent=S1.q;  qb[1].className=S1.q ?'one':'zero';
+        document.querySelectorAll('#panel1 .ttrow').forEach(r=>r.classList.toggle('rowon', r.dataset.k===key));
+
+        document.getElementById('p1cap').innerHTML = capturedFlash
+            ? `<span class="vl">Rising edge.</span> The <span class="cy">capture latch</span> shut at exactly this instant, freezing D=${S1.qm}, and the <span class="cy">output latch</span> opened and passed it to <span class="cy">Q=${S1.q}</span>. That hand-off is the whole flip-flop.`
+            : (S1.CLK
+                ? `<span class="cy">CLK high &mdash; output latch open, capture latch shut.</span> Q just repeats the value that was captured. Toggle <span class="am">D</span> now and watch <span class="cy">nothing happen</span>: D is locked out at the shut capture latch.`
+                : `<span class="cy">CLK low &mdash; capture latch open, output latch shut.</span> The capture latch is tracking D, but the shut output latch keeps <span class="cy">Q</span> frozen. Whatever D holds at the next rising edge is what gets captured.`);
+    }
+
+    document.querySelectorAll('#panel1 [data-ctl]').forEach(e =>
+        e.addEventListener('click', ()=>{ S1[e.dataset.ctl] = S1[e.dataset.ctl]?0:1;
+            capturedFlash = (e.dataset.ctl==='CLK' && S1.CLK===1);
+            if (e.dataset.ctl==='CLK') S1.phase = S1.CLK ? 1 : 3;
+            render1(); }));
+
+    let pulsing = false;
+    function pulseClock(){
+        if (pulsing) return; pulsing = true;
+        const btn = document.getElementById('pulseBtn'); btn.classList.add('busy');
+        S1.CLK = 0; S1.phase = 0; capturedFlash = false; render1();
+        setTimeout(()=>{ S1.CLK = 1; S1.phase = 1; capturedFlash = true;  render1();        // rising edge
+        setTimeout(()=>{ S1.phase = 2; capturedFlash = false; render1();                    // settle into high
+        setTimeout(()=>{ S1.CLK = 0; S1.phase = 3; render1();
+                         pulsing=false; btn.classList.remove('busy'); }, 900); }, 900); }, 700);
+    }
+    document.getElementById('pulseBtn').addEventListener('click', pulseClock);
+
+    /* ================= pages 2 & 3 — timing ================= */
+    /* A 32-slot grid with an 8-slot clock (4 low + 4 high) — deliberately finer than the clock, so
+       every D transition can sit a clear 2 slots away from BOTH the rising edge (setup: the value
+       is obviously settled well in advance) and the falling edge (so what the latch holds when it
+       closes is never ambiguous). Rising edges land on 4/12/20/28, falling on 8/16/24.            */
+    const SLOTS = 32, PERIOD = 8;
+    const clkAt = s => (s % PERIOD) >= PERIOD/2 ? 1 : 0;
+    const RISING = [], FALLING = [];
+    for (let s=1;s<SLOTS;s++) {
+        if (clkAt(s)===1 && clkAt(s-1)===0) RISING.push(s);
+        if (clkAt(s)===0 && clkAt(s-1)===1) FALLING.push(s);
+    }
+
+    // Unnamed on purpose — the student works out what each one shows. Every transition sits mid-phase.
+    const CASES = [
+        [0,0,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1],  // mixed
+        [0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0],  // changes only while CLK is low
+        [0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0],  // changes only mid-high-phase
+    ];
+    const DEFAULT_D = CASES[0].slice();
+
+    // Q(latch): follows D whenever CLK is high.  Q(ff): steps at each rising edge to D of the slot before it.
+    function latchTrace(d){ const out=[]; let q=0;
+        for (let s=0;s<SLOTS;s++){ q = clkAt(s) ? d[s] : q; out.push(q); } return out; }
+    function ffTrace(d){ const out=[]; let q=0;
+        for (let s=0;s<SLOTS;s++){ if (RISING.includes(s)) q = d[s-1]; out.push(q); } return out; }
+    const sampledAt = d => RISING.map(s => ({ slot:s, val:d[s-1] }));
+
+    const X0=120, XW=1070, SW=XW/SLOTS;               // slot width (32 slots)
+    const ROWS = { CLK:{hi:70,lo:120}, D:{hi:190,lo:240}, QL:{hi:310,lo:360}, QF:{hi:430,lo:480} };
+    const sx = s => X0 + s*SW;
+
+    function traceFor(vals,row){
+        const pts=[]; let prev=null;
+        for (let s=0;s<SLOTS;s++){
+            const y = vals[s]?row.hi:row.lo;
+            if (prev!==null && prev!==y) pts.push(`${sx(s)},${prev}`);
+            pts.push(`${sx(s)},${y}`);
+            prev=y;
+        }
+        pts.push(`${sx(SLOTS)},${prev}`);
+        return pts.join(' ');
+    }
+
+    function drawTiming(svg, d, opts){
+        opts = opts || {};
+        svg.innerHTML='';
+        const clk = [], lat = latchTrace(d), ff = ffTrace(d);
+        for (let s=0;s<SLOTS;s++) clk.push(clkAt(s));
+
+        // clock-high shading behind the latch row only
+        for (let s=0;s<SLOTS;s++){
+            if (!clkAt(s)) continue;
+            const start = (s===0 || !clkAt(s-1));
+            if (!start) continue;
+            let e=s; while (e+1<SLOTS && clkAt(e+1)) e++;
+            el(svg,'rect',{x:sx(s),y:ROWS.QL.hi-24,width:(e-s+1)*SW,height:(ROWS.QL.lo-ROWS.QL.hi)+48,
+                fill:'rgba(79,195,247,0.10)',stroke:'rgba(79,195,247,0.30)','stroke-width':1.2,rx:4});
+        }
+        // slot grid
+        for (let s=0;s<=SLOTS;s++)
+            el(svg,'line',{x1:sx(s),y1:50,x2:sx(s),y2:500,stroke:'#26405a','stroke-width':1});
+        // falling-edge rules — the latch closes here, so they matter as much as the rising ones.
+        // Drawn cyan (the latch's colour) and stopped at the latch row so they stay subordinate
+        // to the violet rising edges.
+        FALLING.forEach(s=>{
+            el(svg,'line',{x1:sx(s),y1:50,x2:sx(s),y2:ROWS.QL.lo+16,stroke:'#4fc3f7','stroke-width':1.6,
+                'stroke-dasharray':'3 7',opacity:0.7});
+            // the value in this label IS the answer, so it goes away while the latch is hidden
+            txt(svg,sx(s)+8,ROWS.QL.lo+14,
+                opts.hideLatch ? 'latch closes' : 'latch closes on '+lat[s-1],'#7cc9ec',13,'start');
+        });
+        // rising-edge rules through every row
+        RISING.forEach(s=>{
+            el(svg,'line',{x1:sx(s),y1:50,x2:sx(s),y2:500,stroke:VIOLET,'stroke-width':2,'stroke-dasharray':'6 6'});
+            el(svg,'path',{d:`M${sx(s)},44 l-7,-11 l14,0 Z`,fill:VIOLET});
+        });
+        // row baselines + labels
+        [['CLK',ROWS.CLK,AMBER],['D',ROWS.D,AMBER],['Q  latch',ROWS.QL,BRIGHT],['Q  flip-flop',ROWS.QF,BRIGHT]].forEach(([lab,row,col])=>{
+            el(svg,'line',{x1:X0,y1:row.lo,x2:sx(SLOTS),y2:row.lo,stroke:'#24384c','stroke-width':1.4});
+            txt(svg,X0-14,(row.hi+row.lo)/2+7,lab,col,lab.length>6?15:22,'end',700);
+        });
+        // traces
+        el(svg,'polyline',{points:traceFor(clk,ROWS.CLK),fill:'none',stroke:AMBER,'stroke-width':3,'stroke-linejoin':'round'});
+        el(svg,'polyline',{points:traceFor(d,ROWS.D),fill:'none',stroke:AMBER,'stroke-width':3.4,'stroke-linejoin':'round'});
+        if (!opts.hideLatch)
+            el(svg,'polyline',{points:traceFor(lat,ROWS.QL),fill:'none',stroke:'#8fd8f5','stroke-width':3.4,
+                'stroke-linejoin':'round'});
+        else
+            txt(svg,(X0+sx(SLOTS))/2,(ROWS.QL.hi+ROWS.QL.lo)/2+8,'hidden — work it out, then reveal',VIOLET,20,'middle',700);
+        if (!opts.hideFF)
+            el(svg,'polyline',{points:traceFor(ff,ROWS.QF),fill:'none',stroke:BRIGHT,'stroke-width':4.4,'stroke-linejoin':'round'});
+        else {
+            txt(svg,(X0+sx(SLOTS))/2,(ROWS.QF.hi+ROWS.QF.lo)/2+8,'hidden — work it out, then reveal',VIOLET,20,'middle',700);
+        }
+        // setup brackets: from D's last change up to the rising edge, so "settled well in advance"
+        // is visible rather than asserted. Recomputed from the live data, so it stays honest when
+        // the student edits D.
+        RISING.forEach((s,i)=>{
+            let t = s-1; while (t > 0 && d[t-1] === d[t]) t--;      // walk back to the last change
+            if (t >= s) return;
+            const y = ROWS.D.lo + 22;
+            el(svg,'line',{x1:sx(t),y1:y,x2:sx(s),y2:y,stroke:VIOLET,'stroke-width':1.6,opacity:0.75});
+            el(svg,'line',{x1:sx(t),y1:y-5,x2:sx(t),y2:y+5,stroke:VIOLET,'stroke-width':1.6,opacity:0.75});
+            el(svg,'line',{x1:sx(s),y1:y-5,x2:sx(s),y2:y+5,stroke:VIOLET,'stroke-width':1.6,opacity:0.75});
+            if (i===0) txt(svg,(sx(t)+sx(s))/2,y+20,'D settled this far ahead of the edge','#b388ff',14,'middle');
+        });
+        // sample markers: the value D held just before each edge
+        if (!opts.hideFF) sampledAt(d).forEach(({slot,val})=>{
+            el(svg,'circle',{cx:sx(slot),cy:val?ROWS.D.hi:ROWS.D.lo,r:7,fill:VIOLET,stroke:'#0d1b2a','stroke-width':2});
+            txt(svg,sx(slot)+11,ROWS.D.hi-16,'captured '+val,VIOLET,15,'start');
+        });
+        // slot numbers
+        for (let s=0;s<SLOTS;s+=4) txt(svg,sx(s),522,String(s),'#6d8aa5',14,'middle');
+        txt(svg,X0,545,'time — clock is 4 slots low, 4 slots high. Violet = rising edge (flip-flop samples). Cyan = falling edge (latch closes).','#8098ac',15,'start');
+        return {lat, ff};
+    }
+
+    /* --- page 2: fixed story --- */
+    drawTiming(document.getElementById('tsvg2'), DEFAULT_D);
+
+    /* --- page 3: editable --- */
+    let D3 = DEFAULT_D.slice(), hideFF = false, hideLatch = false, activePreset = 0;
+    const svg3 = document.getElementById('tsvg3');
+
+    // Cases are numbered, not described — naming them ("steady data", "glitch") hands over the
+    // answer the student is supposed to arrive at by reading the traces.
+    document.getElementById('presets').innerHTML =
+        CASES.map((_,i)=>`<div class="pbtn" data-preset="${i}">Case ${i+1}</div>`).join('');
+
+    function render3(){
+        drawTiming(svg3, D3, {hideFF, hideLatch});
+        document.querySelectorAll('[data-preset]').forEach(b=>b.classList.toggle('on', +b.dataset.preset===activePreset));
+        const pf = document.getElementById('predictFF'), pl = document.getElementById('predictLatch');
+        pf.classList.toggle('on', hideFF);
+        pf.innerHTML = hideFF ? '&#128065; Reveal flip-flop' : '&#128065; Hide flip-flop';
+        pl.classList.toggle('on', hideLatch);
+        pl.innerHTML = hideLatch ? '&#128065; Reveal latch' : '&#128065; Hide latch';
+        const caps = sampledAt(D3);
+        const lat = latchTrace(D3), ff = ffTrace(D3);
+        let differ = 0; for (let s=0;s<SLOTS;s++) if (lat[s]!==ff[s]) differ++;
+        // whatever is hidden must stay hidden in the prose too
+        let cap;
+        if (hideFF && hideLatch)
+            cap = `Both outputs hidden. For the <b class="cy">latch</b>: while the clock is high it just copies D, and at the <b class="cy">falling edge</b> it freezes whatever D was. For the <b class="vl">flip-flop</b>: only the <b class="vl">rising edges</b> matter, and each one takes the D from the slot just before it.`;
+        else if (hideFF)
+            cap = `<b class="vl">${RISING.length} rising edges.</b> For each one, ask: <b class="vl">what was D in the slot just before it?</b> That is what the flip-flop captures. The latch trace is a hint, not the answer — it moves at times the flip-flop ignores.`;
+        else if (hideLatch)
+            cap = `The latch is hidden. It has no edges to wait for: while the clock is <b class="cy">high</b> it copies D continuously, and it freezes at each <b class="cy">falling edge</b>. Where does it end up differing from the flip-flop below?`;
+        else
+            cap = `<b class="vl">${caps.length} rising edges</b> captured ${caps.map(c=>c.val).join(', ')} — the value D held in the slot before each edge. `+
+              (differ ? `The two outputs disagree in <b class="cy">${differ} of ${SLOTS} slots</b> — every one of them a change the latch followed and the flip-flop was not looking at.`
+                      : `The two outputs <b class="cy">agree everywhere</b> here. Worth asking yourself what it is about this D that makes a latch and a flip-flop indistinguishable.`);
+        document.getElementById('tcap3').innerHTML = cap;
+    }
+
+    function slotFromEvent(e){
+        const r = svg3.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width * 1240;
+        const y = (e.clientY - r.top) / r.height * 560;
+        if (y < ROWS.D.hi-34 || y > ROWS.D.lo+34) return -1;      // only the D row is editable
+        const s = Math.floor((x - X0)/SW);
+        return (s>=0 && s<SLOTS) ? s : -1;
+    }
+    svg3.addEventListener('click', e=>{
+        const s = slotFromEvent(e);
+        if (s<0) return;
+        D3[s] = D3[s]?0:1; activePreset = -1; render3();
+    });
+    document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
+        D3 = CASES[+b.dataset.preset].slice(); activePreset = +b.dataset.preset; render3();
+    }));
+    document.getElementById('predictFF').addEventListener('click',()=>{ hideFF=!hideFF; render3(); });
+    document.getElementById('predictLatch').addEventListener('click',()=>{ hideLatch=!hideLatch; render3(); });
+
+    /* ================= paging + keys ================= */
+    let page = 1;
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const dots = Array.from(document.querySelectorAll('.dot'));
+    function showPage(n){
+        page = Math.max(1, Math.min(3, n));
+        document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id==='p'+page));
+        tabs.forEach(t=>t.classList.toggle('on', +t.dataset.page===page));
+        dots.forEach(d=>d.classList.toggle('on', +d.dataset.dot===page));
+        document.getElementById('pcNum').textContent = page;
+    }
+    tabs.forEach(t=>t.addEventListener('click',()=>showPage(+t.dataset.page)));
+    document.addEventListener('keydown', e=>{
+        const k=e.key;
+        if (k==='1'||k==='2'||k==='3'){ showPage(+k); e.preventDefault(); return; }
+        if (page===1){
+            if (k==='d'||k==='D'){ S1.D=S1.D?0:1; capturedFlash=false; render1(); e.preventDefault(); }
+            else if (k==='c'||k==='C'){ S1.CLK=S1.CLK?0:1; capturedFlash=(S1.CLK===1); S1.phase=S1.CLK?1:3; render1(); e.preventDefault(); }
+            else if (k===' '){ pulseClock(); e.preventDefault(); }
+        } else if (page===3){
+            if (k==='p'||k==='P'){ hideFF=!hideFF; render3(); e.preventDefault(); }
+            else if (k==='l'||k==='L'){ hideLatch=!hideLatch; render3(); e.preventDefault(); }
+            else if (k==='r'||k==='R'){ D3=DEFAULT_D.slice(); activePreset=0; render3(); e.preventDefault(); }
+        }
+    });
+
+    /* ================= init ================= */
+    H1 = buildSch();
+    render1();
+    render3();
+    showPage(1);
+
+    /* self-check: the two-latch composition must equal "sample D at the rising edge" */
+    (function selfTest(){
+        let bad = 0;
+        for (const pattern of CASES) {
+            let qm=0, q=0; const walked=[];
+            for (let s=0;s<SLOTS;s++){                      // walk the two latches slot by slot
+                const c = clkAt(s);
+                if (c===1 && clkAt(s-1)===0 && s>0) { q = qm; }   // rising edge: output latch takes the frozen value
+                qm = c ? qm : pattern[s];                          // capture latch transparent only while CLK is low
+                walked.push(q);
+            }
+            const model = ffTrace(pattern);
+            for (let s=0;s<SLOTS;s++) if (walked[s]!==model[s]) bad++;
+        }
+        console.log(bad ? `D-FF self-test FAILED (${bad} slot mismatches)`
+                        : 'D-FF self-test passed — two-latch walk == edge-sample model on 4 patterns');
+    })();
+</script>
+</body>
+</html>

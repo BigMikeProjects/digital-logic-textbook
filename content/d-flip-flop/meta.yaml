@@ -1,0 +1,11 @@
+title: "D Flip-Flop"
+description: "Edge-triggered storage built from two D latches on opposite clock polarity — the capture and output latches, why they are never transparent together, and reading a timing diagram to tell a flip-flop from a latch"
+chapter: sequential-logic
+section: memory-elements
+order: 40104
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the D flip-flop — why synchronous design triggers on a clock edge instead of a level, how two D latches on opposite clock polarity hand the value across at the edge, and the timing-diagram analysis that separates a flip-flop from a latch"
+  02-interactive.html:
+    caption: "Interactive D flip-flop — pulse the clock and watch the capture latch hand the value to the output latch, compare latch and flip-flop traces on one clock, then edit the D waveform yourself and hide either output to predict it"
