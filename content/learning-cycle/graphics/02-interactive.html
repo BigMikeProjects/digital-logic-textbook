@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Infobook Learning Cycle</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: #eef2f6; }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; background: #f7f9fb;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+    /* engineering palette — deep blue #0f3057 structure · teal #2a9d8f the three modes
+       · orange #e76f51 the internalize cycle · ink #1d2b36 body · hairline #dfe6ec        */
+    svg { width: 100%; height: 100%; display: block; }
+    .mode { transition: opacity .18s ease; cursor: default; }
+    .dimmed { opacity: 0.28; }
+    @keyframes spin { to { stroke-dashoffset: -64; } }
+    .cycleflow { stroke-dasharray: 2 14; stroke-linecap: round; animation: spin 2.4s linear infinite; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+    <svg id="art" viewBox="0 0 1920 1080"></svg>
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer'), s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', ()=>{ clearTimeout(rt); rt=setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', ()=>setTimeout(autoResize,100));
+
+    const NS='http://www.w3.org/2000/svg';
+    const BLUE='#0f3057', TEAL='#2a9d8f', ORANGE='#e76f51', ORANGE_TX='#c9552f',
+          INK='#1d2b36', MUTED='#5b6b78', HAIR='#dfe6ec', PAPER='#ffffff';
+    const svg = document.getElementById('art');
+
+    const el=(p,t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e;};
+    const g =(p,a)=>el(p,'g',a||{});
+    function txt(p,x,y,s,{fill=INK,size=16,anchor='middle',weight=400,ls=0,style=''}={}){
+        const t=el(p,'text',{x,y,fill,'font-size':size,'text-anchor':anchor,'font-weight':weight,
+            'letter-spacing':ls,'font-family':"'Segoe UI',Tahoma,sans-serif"});
+        if(style) t.setAttribute('font-style',style);
+        t.textContent=s; return t;
+    }
+    // arrowhead pointing along `deg` (0 = right, clockwise positive)
+    function head(p,x,y,deg,fill,size=11){
+        const r=deg*Math.PI/180, c=Math.cos(r), s=Math.sin(r);
+        const pt=(dx,dy)=>`${x+dx*c-dy*s},${y+dx*s+dy*c}`;
+        el(p,'path',{d:`M${pt(0,0)} L${pt(-size,size*0.58)} L${pt(-size*0.72,0)} L${pt(-size,-size*0.58)} Z`,fill});
+    }
+
+    /* ===================== icons — minimalist line art, no emoji ===================== */
+    function icon(p,name,x,y,col,sc=1){
+        const G=g(p,{transform:`translate(${x},${y}) scale(${sc})`,fill:'none',stroke:col,
+            'stroke-width':2.1,'stroke-linecap':'round','stroke-linejoin':'round'});
+        const P=d=>el(G,'path',{d});
+        switch(name){
+            case 'watch':      // play button in a frame
+                el(G,'rect',{x:-15,y:-11,width:30,height:22,rx:3.5});
+                el(G,'path',{d:'M-4,-5 L6,0 L-4,5 Z',fill:col,stroke:'none'}); break;
+            case 'read':       // open book
+                P('M0,-9 C-4,-12 -10,-12 -14,-10 L-14,9 C-10,7 -4,7 0,10');
+                P('M0,-9 C4,-12 10,-12 14,-10 L14,9 C10,7 4,7 0,10'); P('M0,-9 L0,10'); break;
+            case 'interact':   // pointer with a tap ripple
+                P('M-5,-12 L8,2 L0,3 L4,11 L0,12.5 L-4,4.5 L-9,9 Z');
+                P('M-12,-6 C-12,-10 -10,-12 -7,-13.5'); break;
+            case 'sketch':     // pencil
+                P('M-11,11 L-8,3 L4,-9 L9,-4 L-3,8 Z'); P('M3,-8 L8,-3'); P('M-11,11 L-6,9'); break;
+            case 'whiteboard': // board on a stand
+                el(G,'rect',{x:-13,y:-11,width:26,height:17,rx:2});
+                P('M-9,-5 L-1,-5'); P('M-9,0 L5,0'); P('M0,6 L0,10'); P('M-6,12 L0,10 L6,12'); break;
+            case 'teach':      // two figures
+                el(G,'circle',{cx:-6,cy:-6,r:4}); P('M-13,10 A7,7 0 0 1 1,10');
+                el(G,'circle',{cx:8,cy:-4,r:3.2}); P('M2.5,10 A5.5,5.5 0 0 1 13.5,10'); break;
+            case 'solve':      // puzzle piece — curves, not arc sweep flags
+                P('M-11,-10 L-4,-10 C-4,-15 4,-15 4,-10 L11,-10 L11,-3 C16,-3 16,5 11,5 L11,11 L-11,11 Z'); break;
+            case 'design':     // lightbulb
+                P('M-6,4 A7.5,7.5 0 1 1 6,4 C4,6 4,7 4,9 L-4,9 C-4,7 -4,6 -6,4 Z');
+                P('M-3,12 L3,12'); break;
+            case 'recall':     // head with brain folds
+                el(G,'circle',{cx:0,cy:0,r:11.5});
+                P('M-6,-4.5 C-3,-7.5 3,-7.5 6,-4.5');
+                P('M-6,0.5 C-3,-2.5 3,-2.5 6,0.5');
+                P('M-6,5.5 C-3,2.5 3,2.5 6,5.5'); break;
+        }
+        return G;
+    }
+
+    /* ===================== title + entry ===================== */
+    txt(svg,960,74,'The Infobook Learning Cycle',{fill:BLUE,size:44,weight:700,ls:-0.3});
+
+    function pill(x,y,label,{fill=PAPER,stroke=BLUE,tc=BLUE,w=196,h=46,size=20,weight=700}={}){
+        const G=g(svg);
+        el(G,'rect',{x:x-w/2,y:y-h/2,width:w,height:h,rx:h/2,fill,stroke,'stroke-width':2});
+        txt(G,x,y+7,label,{fill:tc,size,weight,ls:0.4});
+        return G;
+    }
+
+    /* ===================== geometry =====================
+       Sized so the three mode cards sit wholly inside the ring, and the six practice icons
+       on the ring clear the cards. Card corners reach ~286 from centre; ring is at 330.     */
+    const CX=960, CY=560, RR=330, RLAB=392, TR=165, CW=210, CH=120;
+    const pol=(r,deg)=>[CX+r*Math.sin(deg*Math.PI/180), CY-r*Math.cos(deg*Math.PI/180)];
+
+    /* ===================== the ring ===================== */
+    el(svg,'circle',{cx:CX,cy:CY,r:RR,fill:'none',stroke:'#f7e6df','stroke-width':34});
+    el(svg,'circle',{cx:CX,cy:CY,r:RR,fill:'none',stroke:ORANGE,'stroke-width':2,opacity:0.45});
+    el(svg,'circle',{cx:CX,cy:CY,r:RR,fill:'none',stroke:ORANGE,'stroke-width':4,opacity:0.9,class:'cycleflow'});
+    // iteration arrowheads riding the ring clockwise; tangent direction at angle a is exactly a
+    [55,125,235,305].forEach(a=>{ const [x,y]=pol(RR,a); head(svg,x,y,a,ORANGE,12); });
+
+    const PRACTICES=[
+        [ 30,'sketch',    'Sketch circuits'],
+        [ 90,'whiteboard','Explain on a whiteboard'],
+        [150,'teach',     'Teach a classmate'],
+        [210,'solve',     'Solve problems'],
+        [270,'design',    'Design new circuits'],
+        [330,'recall',    'Recall from memory'],
+    ];
+    PRACTICES.forEach(([a,ic,label])=>{
+        const [ix,iy]=pol(RR,a);
+        // at 3 and 9 o'clock a centred label would sit on top of its own icon — push it outward
+        // and anchor it away from the ring instead
+        let lx,ly,anchor;
+        if (a===90)       { lx=ix+38; ly=iy+6; anchor='start'; }
+        else if (a===270) { lx=ix-38; ly=iy+6; anchor='end';   }
+        else              { [lx,ly]=pol(RLAB,a); ly+=6; anchor='middle'; }
+        el(svg,'circle',{cx:ix,cy:iy,r:24,fill:PAPER,stroke:ORANGE,'stroke-width':2});
+        icon(svg,ic,ix,iy,ORANGE,0.8);
+        txt(svg,lx,ly,label,{fill:BLUE,size:17,weight:600,anchor});
+    });
+
+    // the ring's name, in the clear band between the card row and the bottom of the ring
+    txt(svg,CX,772,'INTERNALIZE',{fill:ORANGE_TX,size:29,weight:700,ls:3.4});
+    txt(svg,CX,802,'Think Without the Technology',{fill:MUTED,size:17});
+
+    /* ===================== the triangle of modes ===================== */
+    const V={watch:pol(TR,0), read:pol(TR,240), interact:pol(TR,120)};
+    el(svg,'path',{d:`M ${V.watch[0]} ${V.watch[1]} L ${V.interact[0]} ${V.interact[1]} `+
+        `L ${V.read[0]} ${V.read[1]} Z`, fill:'none', stroke:TEAL,'stroke-width':2, opacity:0.45});
+    // a facing pair of arrowheads mid-edge: movement runs both ways, with no fixed sequence
+    function biArrow(A,B){
+        const dx=B[0]-A[0], dy=B[1]-A[1], deg=Math.atan2(dy,dx)*180/Math.PI;
+        const at=t=>[A[0]+dx*t, A[1]+dy*t];
+        let p=at(0.42); head(svg,p[0],p[1],deg+180,TEAL,12);
+        p=at(0.58);     head(svg,p[0],p[1],deg,TEAL,12);
+    }
+    biArrow(V.watch,V.read); biArrow(V.watch,V.interact); biArrow(V.read,V.interact);
+
+    txt(svg,CX,538,'Conceptual',{fill:BLUE,size:21,weight:700});
+    txt(svg,CX,563,'Understanding',{fill:BLUE,size:21,weight:700});
+
+    const MODES=[
+        {key:'watch',   ic:'watch',   name:'WATCH',    at:V.watch,
+         lines:['Build intuition','See concepts in motion','Learn from demonstrations']},
+        {key:'read',    ic:'read',    name:'READ',     at:V.read,
+         lines:['Build understanding','Develop mental models','Learn precise terminology']},
+        {key:'interact',ic:'interact',name:'INTERACT', at:V.interact,
+         lines:['Experiment','Explore "what if" scenarios','Receive immediate feedback']},
+    ];
+    const cards=[];
+    MODES.forEach(m=>{
+        const [x,y]=m.at, G=g(svg,{class:'mode'});
+        el(G,'rect',{x:x-CW/2,y:y-CH/2,width:CW,height:CH,rx:12,fill:PAPER,stroke:HAIR,'stroke-width':1.5});
+        el(G,'rect',{x:x-CW/2,y:y-CH/2,width:CW,height:4,rx:2,fill:TEAL});
+        // icon + heading as one centred row
+        const hw = m.name.length*11.6, ix = x - (hw+30)/2 + 11;
+        icon(G,m.ic,ix,y-CH/2+32,TEAL,0.78);
+        txt(G,ix+18,y-CH/2+39,m.name,{fill:TEAL,size:20,weight:700,anchor:'start',ls:1.1});
+        m.lines.forEach((s,i)=>txt(G,x,y-CH/2+62+i*19,s,{fill:INK,size:14}));
+        cards.push({G,key:m.key});
+        G.addEventListener('mouseenter',()=>cards.forEach(c=>c.G.classList.toggle('dimmed',c.key!==m.key)));
+        G.addEventListener('mouseleave',()=>cards.forEach(c=>c.G.classList.remove('dimmed')));
+    });
+
+    /* ===================== entry ==============================
+       Drawn after the ring so nothing can paint over it, and stopped 6px short of the ring
+       band's outer edge (y=213) so the arrowhead reads cleanly against the page.        */
+    pill(960,140,'NEW CONCEPT');
+    el(svg,'line',{x1:960,y1:165,x2:960,y2:197,stroke:BLUE,'stroke-width':2.4});
+    head(svg,960,207,90,BLUE,12);
+
+    /* ===================== exit + loop back ===================== */
+    el(svg,'line',{x1:960,y1:890,x2:960,y2:922,stroke:ORANGE,'stroke-width':2.4});
+    head(svg,960,930,90,ORANGE,11);
+    pill(960,962,'MASTERY',{fill:ORANGE,stroke:ORANGE,tc:PAPER,w:186,h:46});
+
+    // subtle return: every new topic runs the same loop
+    el(svg,'path',{d:'M867,962 L150,962 Q104,962 104,916 L104,186 Q104,140 150,140 L862,140',
+        fill:'none',stroke:'#a9b7c6','stroke-width':2,'stroke-dasharray':'7 7'});
+    head(svg,862,140,0,'#a9b7c6',10);
+    txt(svg,86,551,'every new topic runs the same loop',
+        {fill:MUTED,size:15}).setAttribute('transform','rotate(-90 86 551)');
+
+    /* ===================== key message ===================== */
+    el(svg,'line',{x1:496,y1:1000,x2:1424,y2:1000,stroke:HAIR,'stroke-width':1.5});
+    txt(svg,960,1030,'Technology helps you explore and understand. Internalization happens when you can',
+        {fill:INK,size:18});
+    txt(svg,960,1054,'think, sketch, explain, and solve without the technology.',{fill:INK,size:18});
+</script>
+</body>
+</html>

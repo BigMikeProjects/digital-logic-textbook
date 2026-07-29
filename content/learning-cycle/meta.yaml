@@ -1,5 +1,11 @@
 title: "The Infobook Learning Cycle"
-description: ""
+description: "How this book expects you to learn: watch, read, and interact — then put the technology down and sketch, explain, solve, and recall until it is yours"
 chapter: front-matter
 section: learning-strategies
 order: 101
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the philosophy behind the Infobook — why disconnected videos leave you without a path, the watch/read/interact triangle, and the outer loop where you put the technology down and internalize the material"
+  02-interactive.html:
+    caption: "Interactive: the learning cycle in one diagram — the Watch / Read / Interact triangle converging on conceptual understanding, wrapped in the Internalize ring of sketching, explaining, teaching, solving, designing, and recalling"
