@@ -1,5 +1,9 @@
 title: "Use of AI in this Infobook"
-description: ""
+description: "How AI is used to build this Infobook - the graphics, videos, and text - and where human judgment stays in charge."
 chapter: front-matter
 section: ai
 order: 1
+
+graphics:
+  01-how-this-infobook-is-made.jpg:
+    caption: "How this Infobook is made: AI-assisted at every stage, human judgment at every step."
