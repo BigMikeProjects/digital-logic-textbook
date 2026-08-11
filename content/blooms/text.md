@@ -2,7 +2,7 @@
 
 Digital logic is not a course about memorizing gate symbols. It is a course about learning to think across levels: from bits and Boolean expressions, to circuits, to hardware descriptions, to design tradeoffs. Bloom's taxonomy is a useful way to understand that progression.
 
-Bloom's taxonomy organizes learning into levels. At the bottom, students remember facts and recognize basic ideas. As they move upward, they explain relationships, use techniques, analyze unfamiliar systems, evaluate competing solutions, and eventually create new designs. That last step matters in engineering. The goal is not just to know what a circuit is. The goal is to design a circuit that solves a problem.
+Bloom's taxonomy organizes learning into levels. At the bottom, students remember facts and recognize basic ideas. As they move upward, they explain relationships, use techniques, analyze unfamiliar systems, evaluate competing solutions, and eventually create new designs. That last step matters in engineering. The goal is not just to know what a circuit is. The goal is to design a circuit that solves a problem and ultimately learn how to think systematically about design.  
 
 In this course, the pyramid is not an abstract education diagram. It describes the way your skill should develop.
 
