@@ -123,10 +123,6 @@ B. Videos arrive as disconnected topics with no coherent path through a course
 C. Videos cannot show a concept in motion  
 D. Videos take longer than reading
 
-**Answer: B.** Individual videos may be excellent, but nothing organizes them into a coherent set,
-so you get a pile of explanations without the shape of the subject. Supplying that path is the
-reason this book exists.
-
 ### Question 2
 
 Two reasons are given for reading about a topic you have already watched. Which pair is correct?
@@ -135,10 +131,6 @@ A. Reading is faster, and reading is more enjoyable
 B. Reading is more accurate, and reading is required for the exam  
 C. Reading presents the idea in a different format, and it lets you jump to a specific point without re-watching  
 D. Reading replaces the need to interact with the graphics
-
-**Answer: C.** The same idea in a different format gives you a second way to access it, and written
-material is random access — when you are fuzzy on one detail, you go straight to it instead of
-sitting through the whole video again.
 
 ### Question 3
 
@@ -149,10 +141,6 @@ B. It happens only after the final exam
 C. It uses none of the technology — sketching, explaining, solving, and recalling without the tools  
 D. It covers harder topics than the triangle does
 
-**Answer: C.** The triangle is the technology half. The outer loop is deliberately unplugged: you
-sketch, explain on a whiteboard or paper, teach a classmate, solve, design, and recall from memory —
-and the standard is that you can do it with nothing but paper in front of you.
-
 ### Question 4
 
 Why is cramming described as an especially tempting trap in this particular course?
@@ -162,6 +150,20 @@ B. The material is not hard enough to stop you getting away with it, so the cost
 C. There is no written material to review  
 D. The topics are unrelated, so order does not matter
 
-**Answer: B.** You can compress this material and still pass the exam, which is exactly what makes
+## Answer Explanations
+
+**1. B.** Individual videos may be excellent, but nothing organizes them into a coherent set,
+so you get a pile of explanations without the shape of the subject. Supplying that path is the
+reason this book exists.
+
+**2. C.** The same idea in a different format gives you a second way to access it, and written
+material is random access — when you are fuzzy on one detail, you go straight to it instead of
+sitting through the whole video again.
+
+**3. C.** The triangle is the technology half. The outer loop is deliberately unplugged: you
+sketch, explain on a whiteboard or paper, teach a classmate, solve, design, and recall from memory —
+and the standard is that you can do it with nothing but paper in front of you.
+
+**4. B.** You can compress this material and still pass the exam, which is exactly what makes
 it dangerous — the failure is deferred. Digital logic sits underneath much of what you build later,
 so not remembering it is a problem long after the grade is recorded.

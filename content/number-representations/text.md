@@ -177,8 +177,6 @@ B. Always -1
 C. It depends on the representation rule  
 D. It cannot represent a valid value
 
-**Answer: C.** The same four bits can mean 15 as an unsigned number, -1 as a two's-complement number, or something else under another encoding.
-
 ### Question 2
 
 Why is hexadecimal commonly used in digital logic documentation?
@@ -187,8 +185,6 @@ A. Hexadecimal is what the hardware stores internally
 B. One hexadecimal digit corresponds exactly to four binary bits  
 C. Hexadecimal eliminates overflow  
 D. Hexadecimal can represent only signed values
-
-**Answer: B.** Hexadecimal is a compact human-readable shorthand for binary because each hex digit maps directly to one nibble.
 
 ### Question 3
 
@@ -199,8 +195,6 @@ B. 16
 C. 128  
 D. 256
 
-**Answer: D.** Eight bits provide $2^8 = 256$ distinct bit patterns.
-
 ### Question 4
 
 In four-bit two's complement, what does `1000` represent?
@@ -210,4 +204,12 @@ B. -8
 C. -1  
 D. 0
 
-**Answer: B.** In four-bit two's complement, the most significant bit has weight -8, so `1000` represents -8.
+## Answer Explanations
+
+**1. C.** The same four bits can mean 15 as an unsigned number, -1 as a two's-complement number, or something else under another encoding.
+
+**2. B.** Hexadecimal is a compact human-readable shorthand for binary because each hex digit maps directly to one nibble.
+
+**3. D.** Eight bits provide $2^8 = 256$ distinct bit patterns.
+
+**4. B.** In four-bit two's complement, the most significant bit has weight -8, so `1000` represents -8.

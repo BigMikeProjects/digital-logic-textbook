@@ -173,8 +173,6 @@ B. Determining the function of an unfamiliar gate-level circuit
 C. Naming the symbol for an XOR gate  
 D. Copying a Verilog statement from an example
 
-**Answer: B.** Analysis means breaking a system into parts and determining how those parts work together.
-
 ### Question 2
 
 Why is "create" an important level in a digital logic course?
@@ -183,8 +181,6 @@ A. It means students no longer need basic facts
 B. It means students can synthesize circuits that solve new problems  
 C. It means every design has only one correct implementation  
 D. It means transistor-level details can be ignored
-
-**Answer: B.** Creation means combining lower-level knowledge, methods, analysis, and judgment to produce a working design.
 
 ### Question 3
 
@@ -195,8 +191,6 @@ B. Decimal notation
 C. Fanout  
 D. Propagation delay
 
-**Answer: A.** These are different representations or abstraction levels for describing the same behavior.
-
 ### Question 4
 
 Two circuits produce the same output for every input combination. Why might an engineer still prefer one over the other?
@@ -206,4 +200,12 @@ B. Only the circuit with more gates can be correct
 C. They may differ in cost, delay, power, readability, or scalability  
 D. Digital circuits cannot be compared once they work
 
-**Answer: C.** Evaluation considers tradeoffs beyond functional correctness.
+## Answer Explanations
+
+**1. B.** Analysis means breaking a system into parts and determining how those parts work together.
+
+**2. B.** Creation means combining lower-level knowledge, methods, analysis, and judgment to produce a working design.
+
+**3. A.** These are different representations or abstraction levels for describing the same behavior.
+
+**4. C.** Evaluation considers tradeoffs beyond functional correctness.
