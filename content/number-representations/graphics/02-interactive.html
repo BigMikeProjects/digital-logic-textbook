@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Number Representations — Representation Is a Contract</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 · amber #ffb74d derived values · violet #b388ff emphasis ·
+       navy #0d1b2a panels — single standalone page, no beats */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 38px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 23px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 18px; margin-top: 3px; }
+    .mono { font-family: 'Consolas','Courier New',monospace; }
+
+    .stage { flex: 1; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 30px; min-height: 0; }
+
+    .thesis { border: 2px solid #6a5324; border-radius: 14px; background: rgba(255,183,77,0.07);
+        padding: 14px 40px; font-size: 27px; color: #cfd8dc; text-align: center; line-height: 1.4; }
+    .thesis b { color: #ffb74d; }
+
+    .widths { display: flex; align-items: center; gap: 20px; }
+    .widths .wlab { font-size: 25px; color: #90a4ae; font-weight: 600; }
+    .wcard { border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a;
+        padding: 12px 28px; text-align: center; }
+    .wcard .wb { font-size: 26px; font-weight: 700; color: #4fc3f7;
+        font-family: 'Consolas','Courier New',monospace; }
+    .wcard .wr { font-size: 18px; color: #ffb74d; font-family: 'Consolas','Courier New',monospace;
+        margin-top: 3px; }
+    .widths .wcost { font-size: 19px; color: #90a4ae; max-width: 440px; line-height: 1.4; }
+    .widths .wcost b { color: #ffb74d; }
+
+    .questions { display: flex; gap: 18px; width: 100%; max-width: 1780px; }
+    .qcard { flex: 1; border: 2px solid #24384c; border-radius: 16px; background: #0d1b2a;
+        padding: 20px 22px; display: flex; flex-direction: column; gap: 9px; }
+    .qcard .qq { font-size: 22px; font-weight: 700; color: #e0e0e0; line-height: 1.3; }
+    .qcard .qa { font-size: 17px; color: #90a4ae; line-height: 1.4; }
+
+    .bugbar { border: 2px solid #6a4fa0; border-radius: 14px; background: rgba(179,136,255,0.08);
+        padding: 13px 40px; font-size: 25px; color: #cfd8dc; text-align: center; }
+    .bugbar b { color: #b388ff; }
+
+    .roadwrap { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+    .roadlab { font-size: 17px; color: #b388ff; letter-spacing: 2px; font-weight: 700; }
+    .road { display: flex; align-items: center; gap: 12px; }
+    .rcard { border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a;
+        padding: 14px 22px; text-align: center; }
+    .rcard .rt { font-size: 21px; font-weight: 700; color: #e0e0e0; }
+    .rcard .rs { font-size: 15px; color: #90a4ae; margin-top: 3px; }
+    .rarrow { color: #4fc3f7; font-size: 30px; }
+    .rcard.you { border-color: #ffb74d; background: rgba(255,183,77,0.08); }
+    .rcard.you .rt { color: #ffb74d; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== header ===== -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none">
+                <text x="129" y="42" font-size="30" fill="#4fc3f7" text-anchor="middle"
+                    font-family="'Consolas',monospace" letter-spacing="2">0100 0001</text>
+                <g font-family="'Consolas',monospace" font-size="15" text-anchor="middle">
+                    <text x="45"  y="90" fill="#ffb74d">65</text>
+                    <text x="129" y="90" fill="#ffb74d">'A'</text>
+                    <text x="213" y="90" fill="#ffb74d">0x41</text>
+                </g>
+                <g stroke="#607d8b" stroke-width="1.6">
+                    <line x1="88"  y1="52" x2="47"  y2="74"/>
+                    <line x1="129" y1="52" x2="129" y2="74"/>
+                    <line x1="170" y1="52" x2="211" y2="74"/>
+                </g>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Number Representations <span class="sub">&mdash; representation is a contract</span></h1>
+            <div class="subtitle">The same bits &mdash; <span class="mono">0100 0001</span> &mdash; can be the number 65, the character 'A', or the hex byte 0x41. The hardware doesn&rsquo;t know which; <b>the design contract does.</b></div>
+        </div>
+    </div>
+
+    <!-- ===== the one page: choosing a contract ===== -->
+    <div class="stage">
+
+        <div class="thesis">
+            Bits carry no meaning by themselves. Engineers assign meaning by
+            <b>choosing a representation</b> &mdash; and this section of the Infobook is about
+            learning the contracts you&rsquo;ll choose between.
+        </div>
+
+        <div class="widths">
+            <div class="wlab">Width is a purchase:</div>
+            <div class="wcard"><div class="wb">4 bits</div><div class="wr">16 patterns &middot; 0&ndash;15</div></div>
+            <div class="wcard"><div class="wb">8 bits</div><div class="wr">256 &middot; 0&ndash;255</div></div>
+            <div class="wcard"><div class="wb">16 bits</div><div class="wr">65,536 &middot; 0&ndash;65,535</div></div>
+            <div class="wcost">every extra bit buys <b>range</b> and costs storage, wires,
+                circuit area, and power</div>
+        </div>
+
+        <div class="questions">
+            <div class="qcard"><div class="qq">What range is required?</div>
+                <div class="qa">sets the minimum width</div></div>
+            <div class="qcard"><div class="qq">Can values be negative?</div>
+                <div class="qa">decides signed vs unsigned</div></div>
+            <div class="qcard"><div class="qq">What happens on overflow?</div>
+                <div class="qa">wrap, saturate, or flag an error</div></div>
+            <div class="qcard"><div class="qq">Who reads the value?</div>
+                <div class="qa">binary, decimal, hex, or symbols on the display</div></div>
+            <div class="qcard"><div class="qq">What does the other side assume?</div>
+                <div class="qa">interfaces must agree on width, signedness, encoding</div></div>
+        </div>
+
+        <div class="bugbar">Many real digital-logic bugs are <b>representation bugs</b> &mdash;
+            the value was stored perfectly and read wrongly.</div>
+
+        <div class="roadwrap">
+            <div class="roadlab">THE SECTION AHEAD &mdash; EACH TOPIC IS ONE CLAUSE OF THE CONTRACT</div>
+            <div class="road">
+                <div class="rcard you"><div class="rt">You are here</div><div class="rs">why contracts exist</div></div>
+                <div class="rarrow">&rarr;</div>
+                <div class="rcard"><div class="rt">Binary &#8646; Decimal</div><div class="rs">conversion fluency</div></div>
+                <div class="rarrow">&rarr;</div>
+                <div class="rcard"><div class="rt">Binary &#8646; Hex</div><div class="rs">the shorthand</div></div>
+                <div class="rarrow">&rarr;</div>
+                <div class="rcard"><div class="rt">Hex &#8646; Decimal</div><div class="rs">closing the triangle</div></div>
+                <div class="rarrow">&rarr;</div>
+                <div class="rcard"><div class="rt">Signed Numbers</div><div class="rs">negatives join</div></div>
+                <div class="rarrow">&rarr;</div>
+                <div class="rcard"><div class="rt">Two&rsquo;s Complement</div><div class="rs">two ways &middot; the number wheel</div></div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+</script>
+</body>
+</html>
