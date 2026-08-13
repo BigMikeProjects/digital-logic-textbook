@@ -1,4 +1,4 @@
-# Truth Tables: Mapping Inputs to Outputs
+## Truth Tables: Mapping Inputs to Outputs
 
 A **truth table** is a complete description of a digital logic function. It lists every possible input combination and shows what the output should be for each one. If a circuit has inputs named $A$, $B$, and $C$, a truth table answers the question, "What should the circuit do for $000$? What about $001$? What about $010$?" and so on until every combination has been covered.
 
@@ -8,7 +8,9 @@ This matters because digital design is built around precise behavior. A sentence
 
 For a circuit with $n$ Boolean inputs, there are $2^n$ possible input combinations. Each input can be either 0 or 1, so every new input doubles the number of rows in the table. One input gives 2 rows, two inputs give 4 rows, three inputs give 8 rows, and four inputs give 16 rows.
 
-The rows should be written in **binary counting order**. For three inputs, the usual convention is to put the variables in alphabetical order from left to right, with the leftmost variable as the most-significant bit and the rightmost variable as the least-significant bit. That gives the row order $000, 001, 010, 011, 100, 101, 110, 111$.
+The rows should be written in **binary counting order**. For three inputs, the usual convention is to put the variables in alphabetical order from left to right, with the leftmost variable as the most-significant bit and the rightmost variable as the least-significant bit. That gives the row order $000, 001, 010, 011, 100, 101, 110, 111$ — which is one of the reasons *Binary Number Basics* asked you to get fast at counting in binary: reading row 5 of a table and knowing instantly that it means $A=1, B=0, C=1$ is a skill you will use daily in this course.
+
+The doubling also explains why truth tables have limits: eight inputs would already need $2^8 = 256$ rows. Truth tables are the *definition* of correctness for small functions; later tools — Boolean algebra, Karnaugh maps — exist precisely because the table stops being a practical working surface as inputs grow.
 
 ![Truth table row ordering for three inputs A, B, and C, showing 2^3 equals 8 rows and binary counting order from 000 through 111.](./images/truth-table-binary-order.svg)
 
@@ -43,6 +45,23 @@ The expression $A + B$ means "$A$ OR $B$." In Boolean algebra, addition-like not
 Complements may be written with an overbar or with a prime. For example, $\bar{A}$ and $A'$ both mean NOT $A$. If $A=0$, then $\bar{A}=1$. If $A=1$, then $\bar{A}=0$.
 
 > **Notation:** In this course, $\bar{A}$ and $A'$ both mean the complement of $A$.
+
+## From Words to a Table
+
+Return to the sentence from the introduction: "turn the alarm on when the sensor is active and the override is not active." Build its table and watch what the table does that the sentence did not. Two inputs — sensor $S$ and override $O$ — give $2^2 = 4$ rows:
+
+| S | O | Alarm $= S \cdot \bar{O}$ |
+|---|---|---------------------------|
+| 0 | 0 | 0 |
+| 0 | 1 | 0 |
+| 1 | 0 | 1 |
+| 1 | 1 | 0 |
+
+"Sensor active and override not active" is $S \cdot \bar{O}$, and the table shows it firing on exactly one row: $S=1, O=0$.
+
+Here is the part worth noticing. The sentence described only *one* situation — when the alarm turns on. It said nothing about the row $S=0, O=1$: override pressed, sensor quiet. Should the alarm sound? Obviously not — but the sentence never said so. Filling in the table **forces every unstated case to get an explicit answer**. That is what "complete specification" means in practice: not that the table is long, but that it leaves no case for two engineers to imagine differently.
+
+> **Key idea:** Prose describes the interesting cases; a truth table forces a decision on all of them.
 
 ## Building a Table from an Expression
 
@@ -99,7 +118,24 @@ $$F = \bar{A}B\bar{C} + A\bar{B}\bar{C}.$$
 
 That expression is not necessarily the simplest possible expression, but it is a correct expression for the table. Simplification is a later step. The first job is to capture the behavior accurately.
 
+A product term that mentions *every* input — like $\bar{A}B\bar{C}$ — selects exactly one row, and such a term has a name you will meet again soon: a **minterm**. The recipe above ("one product term per 1-row") is therefore called the sum-of-minterms form, and it works for *any* truth table whatsoever. That is a quietly remarkable fact: it guarantees that every function you can write down as a table can be built from ANDs, ORs, and NOTs.
+
 > **Design habit:** Capture the behavior first. Simplify only after the truth table or expression is correct.
+
+## One Table, Many Expressions
+
+The same function can be written many ways, and the truth table is the referee that decides whether two expressions are really the same. Compare $F_1 = AB + A\bar{B}$ with the bare variable $F_2 = A$, building helper columns as usual:
+
+| A | B | $AB$ | $A\bar{B}$ | $F_1 = AB + A\bar{B}$ | $F_2 = A$ |
+|---|---|------|------------|------------------------|-----------|
+| 0 | 0 | 0 | 0 | 0 | 0 |
+| 0 | 1 | 0 | 0 | 0 | 0 |
+| 1 | 0 | 0 | 1 | 1 | 1 |
+| 1 | 1 | 1 | 0 | 1 | 1 |
+
+The two output columns match on every row — so $AB + A\bar{B}$ and $A$ are the *same function*. One version costs two AND gates, an inverter, and an OR gate; the other costs a piece of wire. This is why simplification matters, and how any claimed simplification is checked: if the columns match on all $2^n$ rows, the designs are interchangeable. No argument about *why* they should be equal is needed — the table settles it by exhaustion.
+
+> **Key idea:** Two expressions describe the same circuit exactly when their truth-table columns match on every row.
 
 ## A Reliable Workflow
 
@@ -115,7 +151,7 @@ There is also an important design habit here: do not simplify before you know th
 
 ## Key Takeaways
 
-A truth table lists every possible input combination and the output for each one. With $n$ inputs, there are $2^n$ rows, usually written in binary counting order. In Boolean algebra, a product means AND and a sum means OR. A sum-of-products expression is often read by finding the rows where the output is 1, while a product-of-sums expression is often read by finding the rows where the output is 0. For larger expressions, build helper columns first and then combine them to get the final output.
+A truth table lists every possible input combination and the output for each one. With $n$ inputs, there are $2^n$ rows, usually written in binary counting order. Building the table from a verbal specification forces every unstated case to receive an explicit answer — that completeness is the table's whole job. In Boolean algebra, a product means AND and a sum means OR. A sum-of-products expression is often read by finding the rows where the output is 1, while a product-of-sums expression is often read by finding the rows where the output is 0. Two expressions describe the same function exactly when their output columns match on every row, which makes the table the final referee for any claimed simplification. For larger expressions, build helper columns first and then combine them to get the final output.
 
 ## Review Questions
 
@@ -155,6 +191,12 @@ A truth table lists every possible input combination and the output for each one
    C. They break a larger expression into smaller pieces that are easier to evaluate
    D. They replace the need for Boolean expressions
 
+7. A specification says: "unlock the door when the badge is valid and the lockdown switch is not on." With badge $B$ and lockdown $L$, which expression matches, and on which single row is it 1?
+   A. $B + \bar{L}$, true on three rows
+   B. $B \cdot \bar{L}$, true on row $B=1, L=0$
+   C. $\bar{B} \cdot L$, true on row $B=0, L=1$
+   D. $B \cdot L$, true on row $B=1, L=1$
+
 ## Answer Explanations
 
 1. **C.** Four inputs give $2^4 = 16$ possible input combinations, so the table needs 16 input rows.
@@ -168,3 +210,5 @@ A truth table lists every possible input combination and the output for each one
 5. **A.** POS is usually easiest to read by finding where each OR term becomes 0, then ANDing the columns together.
 
 6. **C.** Helper columns let you evaluate one term or subcircuit at a time, then combine those intermediate results for the final output.
+
+7. **B.** "Badge valid AND lockdown not on" is $B \cdot \bar{L}$, a product term mentioning both variables, so it selects exactly one row: $B=1, L=0$. Choice A uses OR, which would unlock the door in three situations, including lockdown-off with no badge at all. Choice C unlocks for an invalid badge during lockdown, and choice D unlocks *only* during lockdown — both reversals of a complement, which is precisely the kind of ambiguity building the table catches.

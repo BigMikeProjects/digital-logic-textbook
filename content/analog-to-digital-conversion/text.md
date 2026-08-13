@@ -6,8 +6,9 @@ By the end of this section, you should be able to:
 
 - Explain why digital systems require analog-to-digital conversion to interact with the physical world.
 - Describe the two fundamental steps of A/D conversion: sampling and quantization.
-- Calculate the number of quantization levels from a given bit depth.
+- Calculate the number of quantization levels and the step size from a given bit depth and range.
 - Explain how quantization introduces noise and why more bits reduce this noise.
+- Explain why the sampling rate must be matched to how fast the signal changes.
 - Trace the complete pipeline from continuous waveform to binary digit stream.
 
 These objectives address one of the most fundamental questions in digital systems: **how does a computer—which only understands 1s and 0s—capture and process signals from the real world?**
@@ -25,6 +26,8 @@ This creates a fundamental engineering problem:
 > Anytime we want a computer to measure, analyze, store, or communicate something from the physical world, we must convert that analog signal into digital information.
 
 This conversion is not a minor technical detail. It is the bridge between the continuous physical world and the discrete computational world. Every digital audio recording, every digital photograph, every sensor reading in a modern car or medical device depends on this conversion working correctly.
+
+Notice that the problem has two separate faces. A continuous signal is continuous in *two* ways at once: it exists at every instant of time, and at each instant it can take any value whatsoever. Digitizing it therefore requires taming both kinds of continuity, and that is exactly why the conversion has two steps.
 
 ---
 
@@ -45,7 +48,9 @@ This process is called **sampling**. A sample-and-hold circuit measures the sign
 
 Consider a sinusoidal waveform representing sound from a microphone. The continuous wave rises and falls smoothly. When we sample it, we capture only the amplitude at specific sample times—represented visually as vertical lines through the waveform. The blue dots at the intersections show the actual measured values.
 
-The rate at which we sample—the **sampling rate** or **sampling frequency**—determines how well we capture rapid changes in the signal. Audio CDs use 44,100 samples per second. Professional audio might use 96,000 or 192,000. The principle is the same: we trade continuous time for discrete measurements at regular intervals.
+How often must we sample? Intuitively, fast enough that the signal cannot do anything interesting *between* the samples. This intuition has a precise form: to faithfully capture a signal, you must sample at **more than twice the highest frequency present in it**—a threshold known as the Nyquist rate. Human hearing tops out near 20,000 cycles per second, which is exactly why audio CDs sample at 44,100 samples per second: comfortably more than twice 20,000. Professional audio might use 96,000 or 192,000. The principle is the same: we trade continuous time for discrete measurements, taken often enough that nothing audible slips between them.
+
+Sampling *too slowly* does something worse than merely blurring the signal—it fabricates. When a signal changes faster than the sampler can follow, the samples still form a smooth pattern, but the pattern belongs to a *different, slower* signal that happens to pass through the same points. This effect is called **aliasing**, and you have seen it: a wheel in a video that appears to spin slowly backward is a fast rotation being sampled too slowly by the camera's frame rate. The samples are all genuine measurements; the story they tell is false. Real converters guard against this by filtering out frequencies too fast to capture before sampling ever happens.
 
 ### Quantization: Mapping to Discrete Levels
 
@@ -74,7 +79,13 @@ The relationship is exponential:
 
 With 3 bits, we have only 8 possible output values. Each purple horizontal line in the visualization represents one of these levels. The analog signal, which can take any value, must be forced into one of these 8 discrete states.
 
-With 16 bits—standard for audio CDs—we have over 65,000 levels. The spacing between adjacent levels becomes so fine that the difference between the original analog value and its quantized representation is nearly imperceptible.
+The levels divide the converter's input range into equal steps, and the **step size** follows directly:
+
+$$\text{step size} = \frac{\text{input range}}{2^{\text{bits}}}$$
+
+Work one conversion completely. Suppose a 3-bit converter accepts voltages from 0 to 8 V. Its 8 levels are spaced $8 \div 2^3 = 1$ V apart, so level 0 covers voltages near 0 V, level 1 near 1 V, and so on up to level 7 near 7 V. Now a sample arrives at **5.7 V**. The nearest level is 6, so the converter outputs level 6—which, as a 3-bit binary code, is `110`. That three-bit pattern is all that survives; the ".7" is gone permanently. Every later stage of the system will believe the sample was 6 V.
+
+With 16 bits over the same 0–8 V range, the story changes dramatically: $8 \div 65{,}536 \approx 0.00012$ V per step. The same 5.7 V sample lands on a level within a ten-thousandth of a volt of the truth. The spacing between adjacent levels becomes so fine that the difference between the original analog value and its quantized representation is nearly imperceptible.
 
 ---
 
@@ -82,21 +93,16 @@ With 16 bits—standard for audio CDs—we have over 65,000 levels. The spacing 
 
 Whenever we quantize a signal, we introduce a discrepancy between the original analog value and the stored digital value. This difference is called **quantization error** or **quantization noise**.
 
-Consider what happens with coarse quantization (few bits):
+The worked example above shows the pattern:
 
-- The original signal might have a value of 5.7
-- With only 8 levels (0-7), we round to 6
-- The error is 0.3
+- Coarse quantization (3 bits, 1 V steps): 5.7 V stored as 6 V — an error of 0.3 V
+- Fine quantization (16 bits, 0.12 mV steps): 5.7 V stored within 0.00006 V — an error ten thousand times smaller
 
-With fine quantization (many bits):
-
-- The original signal might have a value of 5.7
-- With 65,536 levels, we might quantize to 37,356 (representing approximately 5.7001)
-- The error is tiny—less than 0.001
+Notice that the error can never exceed half a step: the converter always picks the *nearest* level, so the worst case is landing exactly between two of them. That gives quantization noise a hard ceiling—and shrinking the step is the only way to lower it.
 
 This leads to an important principle:
 
-> More bits means more levels, which means smaller quantization errors, which means better fidelity to the original signal.
+> More bits means more levels, which means smaller steps, which means smaller quantization errors, which means better fidelity to the original signal.
 
 In audio applications, quantization noise is literally audible as a form of distortion or hiss. A 3-bit audio signal would sound harsh and distorted. A 16-bit signal is clean enough for commercial music distribution. A 24-bit signal is used for professional recording and mastering where maximum fidelity is required.
 
@@ -116,7 +122,11 @@ Putting it all together, analog-to-digital conversion follows a clear pipeline:
 
 5. **Output a stream of binary digits** — The result is a sequence of bits that can be stored, processed, transmitted, and manipulated by digital systems.
 
-This pipeline is fundamental to modern technology. Every time you record a voice memo, take a digital photograph, or use a fitness tracker that monitors your heart rate, this conversion is happening—often millions of times per second.
+It is worth pausing to appreciate the volume of data this pipeline produces. A stereo audio CD samples two channels at 44,100 samples per second, 16 bits each:
+
+$$44{,}100 \times 16 \times 2 \approx 1.4 \text{ million bits per second}$$
+
+—about 10 megabytes for a single minute of music. Every one of those bits started life as a voltage in a microphone. This pipeline is fundamental to modern technology: every time you record a voice memo, take a digital photograph, or use a fitness tracker that monitors your heart rate, this conversion is happening—often millions of times per second.
 
 ---
 
@@ -132,9 +142,7 @@ Like all engineering systems, A/D conversion involves tradeoffs:
 
 The art of A/D converter design is choosing parameters that provide adequate fidelity for the application while respecting constraints on storage, bandwidth, power, and cost.
 
-A telephone call uses 8-bit samples at 8,000 samples per second—adequate for intelligible speech. A studio recording might use 24-bit samples at 192,000 samples per second—far more data, but capturing every nuance of a musical performance.
-
-Neither is "wrong." Each represents an appropriate engineering choice for its context.
+A telephone call uses 8-bit samples at 8,000 samples per second—adequate for intelligible speech, because speech remains understandable even with everything above 4,000 cycles per second discarded. A studio recording might use 24-bit samples at 192,000 samples per second—far more data, but capturing every nuance of a musical performance. The two systems differ in data rate by a factor of more than a hundred, yet neither is "wrong." Each represents an appropriate engineering choice for its context, made by asking the questions in the table above.
 
 ---
 
@@ -144,7 +152,7 @@ This section has focused on how continuous signals become sequences of binary nu
 
 That is where digital logic comes in. The circuits we will study throughout this course—gates, adders, multiplexers, flip-flops, state machines—are the building blocks that process, store, and transform digital information.
 
-Every digital system that interacts with the physical world contains analog-to-digital converters at its inputs and often digital-to-analog converters at its outputs. Understanding the conversion process helps explain why digital systems work with bits in the first place, and why the particular characteristics of binary representation matter.
+Every digital system that interacts with the physical world contains analog-to-digital converters at its inputs and often digital-to-analog converters at its outputs, running the same two ideas in reverse. Understanding the conversion process helps explain why digital systems work with bits in the first place, and why the particular characteristics of binary representation matter.
 
 ---
 
@@ -185,6 +193,13 @@ Every digital system that interacts with the physical world contains analog-to-d
 - C) To convert continuous time into discrete measurement points
 - D) To compress the signal for efficient storage
 
+**6. A 3-bit converter spans an input range of 0 to 8 V. A sample arrives at 3.4 V. What level does the converter store, and what binary code represents it?**
+
+- A) Level 3, code `011`
+- B) Level 4, code `100`
+- C) Level 3, code `110`
+- D) Level 34, code `100010`
+
 ---
 
 ## Answer Explanations
@@ -207,7 +222,7 @@ The number of quantization levels equals 2 raised to the power of the bit depth.
 
 **3. Answer: B) The difference between the actual analog value and the nearest discrete level**
 
-Quantization noise arises because continuous values must be rounded to discrete levels. The error between the original value and the quantized value is inherent to the discretization process.
+Quantization noise arises because continuous values must be rounded to discrete levels. The error between the original value and the quantized value is inherent to the discretization process—and it can never exceed half a step, since the converter always picks the nearest level.
 
 - *Electrical interference* (A) is a separate issue from quantization—it affects the analog signal before or during sampling.
 - *Errors in binary encoding* (C) would be a digital error, not quantization noise.
@@ -226,5 +241,13 @@ More bits means more quantization levels, which means each level represents a sm
 An analog signal exists at every instant in time, but digital systems can only store a finite number of values. Sampling captures the signal at specific moments, creating the discrete time series that digital systems require.
 
 - *Amplifying weak signals* (A) is done by analog amplifiers, not the sampling process.
-- *Filtering noise* (B) may be part of the analog front-end but is not the purpose of sampling itself.
+- *Filtering noise* (B) may be part of the analog front-end but is not the purpose of sampling itself—though a filter *is* used before sampling to prevent aliasing.
 - *Compression* (D) happens after digitization and is not related to sampling.
+
+**6. Answer: A) Level 3, code `011`**
+
+With 3 bits over 0–8 V, the step size is 8 ÷ 2³ = 1 V, so levels sit at 0, 1, 2, ... 7 V. The nearest level to 3.4 V is level 3, and 3 in three-bit binary is `011`.
+
+- *Level 4* (B) rounds the wrong way—4 V is 0.6 V away, while 3 V is only 0.4 V away.
+- *Code `110`* (C) is binary 6, not 3—the level was right but the encoding wrong.
+- *Level 34* (D) treats the voltage's digits as the level; levels are indexes into the step grid, not the voltage with the decimal point dropped.

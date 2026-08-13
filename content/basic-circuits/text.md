@@ -41,7 +41,11 @@ Two relationships govern this loop. The first is **Ohm's law**, which ties toget
 
 $$V = I \cdot R$$
 
-Here $V$ is the voltage across a resistor, $I$ is the current through it, and $R$ is its resistance. The second relationship is **Kirchhoff's voltage law (KVL)**, which says that if you travel all the way around a closed loop, the voltage *rises* and *drops* must cancel out — you end up back where you started, at the same potential.
+Here $V$ is the voltage across a resistor, $I$ is the current through it, and $R$ is its resistance. Each quantity has its own unit: voltage is measured in **volts** (V), current in **amperes** or "amps" (A), and resistance in **ohms** ($\Omega$). In the small circuits of digital electronics, a full ampere is actually a lot of current — the currents we will meet are usually **milliamps** (mA, thousandths of an ampere), and resistances typically run from tens to thousands of ohms.
+
+If the equation feels abstract, water gives a serviceable picture: voltage is the *pressure* pushing flow around the loop, current is the *amount of flow*, and resistance is the *narrowness of the pipe*. More pressure pushes more flow; a narrower pipe passes less of it. Ohm's law is that picture made exact.
+
+The second relationship is **Kirchhoff's voltage law (KVL)**, which says that if you travel all the way around a closed loop, the voltage *rises* and *drops* must cancel out — you end up back where you started, at the same potential.
 
 ![Ohm's law relationship graphic showing V = I * R, I = V/R, and R = V/I.](./images/ohms-law-relationships.svg)
 
@@ -58,6 +62,18 @@ The crucial move is to **solve for the current**, because in this circuit the vo
 $$I = \frac{V}{R}$$
 
 With $V$ held constant by the source, the current is determined entirely by $R$.
+
+Put numbers in to see the sizes involved. With the $5$ V source and a common $330\ \Omega$ resistor:
+
+$$I = \frac{5\text{ V}}{330\ \Omega} \approx 0.015\text{ A} = 15\text{ mA}$$
+
+Fifteen milliamps happens to sit right in the range where a typical indicator LED glows nicely — roughly $5$–$20$ mA — which is exactly why $330\ \Omega$ shows up so often in beginner electronics kits.
+
+We can even undo our earlier simplification. A real red LED holds back about $2$ V of the loop's budget, leaving only $5 - 2 = 3$ V across the resistor, so the honest current is $3/330 \approx 9$ mA — dimmer than the idealized answer, but still comfortably lit. And this calculation runs just as well in reverse, which is how it is used in practice: *choose* a target current, then solve for the resistor. Want $10$ mA through that LED? Then
+
+$$R = \frac{5\text{ V} - 2\text{ V}}{0.010\text{ A}} = 300\ \Omega$$
+
+Pick the nearest standard resistor value and the design is done. This little computation — budget the voltage, choose the current, solve for $R$ — is the single most common calculation in practical electronics.
 
 ---
 
@@ -96,6 +112,8 @@ $$V_1 = I \cdot R_1 \qquad V_2 = I \cdot R_2$$
 
 If $R_1 \neq R_2$, then $V_1 \neq V_2$. In series, the current is common and the voltage divides up among the components.
 
+Series resistances also *add*. From the current's point of view, two resistors in a row are simply two obstacles crossed one after the other, so the loop behaves as if it contained a single resistor of $R_1 + R_2$. Put a $330\ \Omega$ and a $470\ \Omega$ resistor in series and the source sees $800\ \Omega$ — the current drops accordingly.
+
 ### Parallel: shared voltage
 
 Now connect the same two resistors side by side, both spanning the same two points $A$ and $B$:
@@ -103,6 +121,8 @@ Now connect the same two resistors side by side, both spanning the same two poin
 ![Parallel resistor schematic showing two branches between A and B with split currents I1 and I2 and a shared voltage.](./images/parallel-resistors.svg)
 
 Here the situation is mirrored. Both resistors are connected to the identical pair of nodes, so the **same voltage** appears across each — that is the defining property of a parallel connection. The *currents* now generally differ, since each branch carries $I = V/R$ for its own resistance. In parallel, the voltage is common and the current divides up among the branches.
+
+And where series connections *add* resistance, parallel connections *reduce* it: each added branch opens another lane for current, so the combination passes more total current than either branch alone — meaning the pair behaves like a resistor *smaller* than either one. (The exact formula can wait; the direction of the effect is what matters here.) Adding lanes to a highway never slows the traffic.
 
 A compact way to remember the contrast:
 
@@ -163,7 +183,9 @@ That is the truth table of the logical **OR** operation. **Parallel means OR.**
 
 We started with three resistors and a battery, and we have arrived at AND and OR. That is not a coincidence — it is the central reason a digital-logic course bothers with circuit theory at all.
 
-A **transistor** can act as a voltage-controlled switch: a signal on its control terminal closes or opens the path between its other two terminals. Once you can build a switch out of a transistor, the series-means-AND and parallel-means-OR rules tell you how to wire transistors together to compute any logic function. Stringing transistors in series gives you an AND-like condition; placing them in parallel gives you an OR-like condition. Combining these patterns is exactly how the logic gates at the heart of every digital chip — and, eventually, every computer — are built. The humble single-loop LED circuit and the two ways of connecting components turn out to be the foundation of the whole subject.
+A **transistor** can act as a voltage-controlled switch: a signal on its control terminal closes or opens the path between its other two terminals. Once you can build a switch out of a transistor, the series-means-AND and parallel-means-OR rules tell you how to wire transistors together to compute any logic function. Stringing transistors in series gives you an AND-like condition; placing them in parallel gives you an OR-like condition. Combining these patterns is exactly how the logic gates at the heart of every digital chip — and, eventually, every computer — are built.
+
+One ingredient is still missing from the story: nothing in series-AND or parallel-OR ever *inverts* — turns a 1 into a 0. Inversion takes one more trick, using a transistor switch to pull an output's voltage down, and it is the first thing the next topic adds. With that third piece, the set is complete: AND, OR, and NOT are enough to build everything else. The humble single-loop LED circuit and the two ways of connecting components turn out to be the foundation of the whole subject.
 
 ![Concept map showing the progression from circuit theory to series and parallel circuits, switches, AND/OR logic, transistors as switches, logic gates, and computers.](./images/circuits-to-logic-concept-map.svg)
 
@@ -173,7 +195,7 @@ A **transistor** can act as a voltage-controlled switch: a signal on its control
 
 ## Key Takeaways
 
-A single-loop circuit consists of a voltage source, a current-limiting resistor, and a load, with the **same current flowing through every element**. Ohm's law ($V = I \cdot R$) together with Kirchhoff's voltage law lets us solve for that current as $I = V/R$. Because the source holds the voltage constant, the resistance is the controlling variable: increasing $R$ decreases the current (a dimmer LED), and decreasing $R$ increases it (a brighter LED). The resistor is essential because $R = 0$ would imply runaway current that destroys the load. Connecting components in **series** forces a shared current while the voltage divides; connecting them in **parallel** forces a shared voltage while the current divides. Reinterpreted with switches, a series path has continuity only when *both* switches are closed — the logical **AND** — while a parallel path has continuity when *either* switch is closed — the logical **OR**. Because a transistor is a controllable switch, these two topologies are exactly how transistors are arranged to build logic gates, making basic circuit theory the bridge to all of digital logic.
+A single-loop circuit consists of a voltage source, a current-limiting resistor, and a load, with the **same current flowing through every element**. Ohm's law ($V = I \cdot R$) together with Kirchhoff's voltage law lets us solve for that current as $I = V/R$. Because the source holds the voltage constant, the resistance is the controlling variable: increasing $R$ decreases the current (a dimmer LED), and decreasing $R$ increases it (a brighter LED). The resistor is essential because $R = 0$ would imply runaway current that destroys the load, and choosing it is a three-step habit: budget the voltage, pick the target current, solve for $R$ — with $5$ V, a $2$ V LED drop, and $330\ \Omega$ giving a comfortable $9$ mA. Connecting components in **series** forces a shared current while the voltage divides; connecting them in **parallel** forces a shared voltage while the current divides. Reinterpreted with switches, a series path has continuity only when *both* switches are closed — the logical **AND** — while a parallel path has continuity when *either* switch is closed — the logical **OR**. Because a transistor is a controllable switch, these two topologies are exactly how transistors are arranged to build logic gates, making basic circuit theory the bridge to all of digital logic.
 
 ---
 
@@ -214,6 +236,13 @@ A single-loop circuit consists of a voltage source, a current-limiting resistor,
 - C. NOT, because the second switch inverts the first
 - D. OR, because the current divides between the two switches
 
+**6.** An LED that drops $2$ V should carry about $15$ mA from a $5$ V source. Which resistor value is closest to the right choice?
+
+- A. $100\ \Omega$
+- B. $200\ \Omega$
+- C. $330\ \Omega$
+- D. $470\ \Omega$
+
 ---
 
 ## Answer Explanations
@@ -227,3 +256,5 @@ A single-loop circuit consists of a voltage source, a current-limiting resistor,
 **4. C.** Parallel switches each provide an independent path from $A$ to $B$, so the path is complete whenever *at least one* switch is closed — the logical OR. Requiring both (A) describes the series/AND case; "exactly one" (D) is the exclusive-or, not plain OR.
 
 **5. B.** Series switches share a single path, so current reaches the far node only if *both* are closed — the defining behavior of AND. OR corresponds to the parallel arrangement (A, D), and a single switch in series does not invert anything (C).
+
+**6. B.** Budget the voltage first: the LED takes $2$ V, leaving $5 - 2 = 3$ V for the resistor. Then $R = 3\text{ V} / 0.015\text{ A} = 200\ \Omega$. Choosing $100\ \Omega$ (A) would push $30$ mA — likely too much; $330\ \Omega$ (C) and $470\ \Omega$ (D) give roughly $9$ mA and $6$ mA — safe but noticeably dimmer than the $15$ mA target. (Forgetting the LED's $2$ V drop and computing $5/0.015 \approx 330\ \Omega$ is exactly the error choice C is waiting for.)
