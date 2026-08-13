@@ -16,13 +16,13 @@ The same idea appears throughout computing:
 
 | Bit Pattern | Possible Interpretation | Meaning |
 | --- | --- | --- |
-| `0101` | Unsigned binary | 5 |
-| `0101` | 4-bit two's complement | 5 |
-| `0101` | Binary-coded decimal | Decimal digit 5 |
-| `0101` | Control flags | Four independent true/false signals |
-| `0101` | State encoding | State selected by the designer |
+| `1001` | Unsigned binary | 9 |
+| `1001` | 4-bit two's complement | -7 |
+| `1001` | Binary-coded decimal | Decimal digit 9 |
+| `1001` | Control flags | Four independent true/false signals |
+| `1001` | State encoding | State selected by the designer |
 
-The important lesson is not that one interpretation is "correct" in isolation. The correct interpretation is the one specified by the circuit, interface, instruction set, file format, or design document.
+Notice that the first two rows do not even agree numerically — the same pattern is 9 under one rule and $-7$ under another. The important lesson is not that one interpretation is "correct" in isolation. The correct interpretation is the one specified by the circuit, interface, instruction set, file format, or design document.
 
 ## Positional Notation
 
