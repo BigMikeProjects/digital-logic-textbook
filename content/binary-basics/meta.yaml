@@ -1,11 +1,11 @@
 title: "Binary Number Basics"
-description: "Introduction to the binary number system and conversions"
+description: "The jump-start on binary numbers: bits, place values, counting, and the names for groups of bits"
 chapter: combinational-logic
 section: number-systems
 order: 30000
 
 graphics:
-  01-intro.youtube:
-    caption: "Video: Binary Number System Explained"
-  02-analog-digital.png:
-    caption: "Analog vs Digital signal representation"
+  01-video.youtube:
+    caption: "Video: Binary Number Basics"
+  02-interactive.html:
+    caption: "Interactive: two symbols, counting with place values and hex readout, and bits in groups"

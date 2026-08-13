@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary Number Basics — Two Symbols Are Enough</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 asserted/1 · amber #ffb74d derived values · navy #0d1b2a panels */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- page 1 : two symbols ---------- */
+    #p1 { gap: 56px; align-items: center; }
+    .sw-left { flex: 0 0 44%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .sw-left svg { width: 560px; height: 430px; cursor: pointer; }
+    .sw-hint { color: #607d8b; font-size: 17px; }
+    .sw-right { flex: 1; display: flex; flex-direction: column; gap: 26px; }
+    .fn-statement { font-size: 30px; color: #cfd8dc; line-height: 1.45; }
+    .fn-statement .c { color: #4fc3f7; font-weight: 600; }
+    .fn-statement .a { color: #ffb74d; font-weight: 600; }
+    .alphabet { display: flex; align-items: center; gap: 20px; }
+    .alphabet .lab { font-size: 21px; color: #90a4ae; }
+    .glyph { width: 86px; height: 96px; border: 2px solid #37506a; border-radius: 14px;
+        background: #0d1b2a; display: flex; align-items: center; justify-content: center;
+        font-family: 'Consolas','Courier New',monospace; font-size: 56px; color: #4fc3f7; }
+    .alphabet .fin { font-size: 21px; color: #607d8b; }
+    .madeof { border-left: 4px solid #ffb74d; padding: 4px 0 4px 20px;
+        font-size: 22px; color: #90a4ae; line-height: 1.5; }
+    .madeof b { color: #ffb74d; }
+
+    /* ---------- shared register ---------- */
+    .regwrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .pvrow, .bitrow, .ixrow { display: flex; gap: 14px; }
+    .pv { text-align: center; font-family: 'Consolas','Courier New',monospace;
+        font-size: 24px; color: #55697c; transition: color .18s; }
+    .pv.lit { color: #4fc3f7; }
+    .bit { border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a;
+        display: flex; align-items: center; justify-content: center; cursor: pointer;
+        user-select: none; font-family: 'Consolas','Courier New',monospace;
+        color: #55697c; transition: all .15s ease; }
+    .bit.on { color: #0d1b2a; background: #4fc3f7; border-color: #4fc3f7; }
+    .bit.chg { box-shadow: 0 0 0 5px rgba(255,183,77,0.55); }
+    .ix { text-align: center; font-family: 'Consolas','Courier New',monospace;
+        font-size: 16px; color: #4a6274; }
+    .ix .mk { color: #b388ff; font-weight: 700; letter-spacing: 1px; margin-top: 2px; }
+    .sumline { font-family: 'Consolas','Courier New',monospace; font-size: 34px;
+        color: #ffb74d; min-height: 46px; }
+    .sumline .dim { color: #607d8b; }
+    .hexline { font-family: 'Consolas','Courier New',monospace; font-size: 24px;
+        color: #b388ff; }
+    .hexline .dim { color: #607d8b; font-size: 18px; }
+
+    .ctl { display: flex; gap: 14px; align-items: center; }
+    .cbtn { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px;
+        padding: 9px 24px; color: #90a4ae; font-size: 19px; font-weight: 600; background: #0d1b2a;
+        transition: all .15s ease; }
+    .cbtn:hover { border-color: #4fc3f7; color: #cfd8dc; }
+    .cbtn.live { border-color: #ffb74d; color: #ffb74d; background: rgba(255,183,77,0.08); }
+    .cbtn .k { font-family: 'Consolas','Courier New',monospace; color: #607d8b;
+        font-size: 15px; margin-left: 8px; }
+
+    /* ---------- page 2 : counting ---------- */
+    #p2 { gap: 48px; align-items: center; }
+    .cnt-left { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .cnt-left .bit { width: 118px; height: 128px; font-size: 64px; }
+    .cnt-left .pv, .cnt-left .ix { width: 118px; }
+    .odometer { border-left: 4px solid #4fc3f7; padding: 4px 0 4px 20px; max-width: 700px;
+        font-size: 21px; color: #90a4ae; line-height: 1.5; }
+    .odometer b { color: #4fc3f7; }
+    .handoff { border: 2px solid #6a5324; border-radius: 12px; background: rgba(255,183,77,0.07);
+        padding: 10px 22px; font-size: 18px; color: #cfd8dc; max-width: 700px; line-height: 1.45; }
+    .handoff b { color: #ffb74d; }
+    .cnt-right { flex: 0 0 560px; display: flex; flex-direction: column; gap: 12px; }
+    .cnt-right .cap { font-size: 19px; color: #90a4ae; text-align: center; }
+    .cgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 14px; }
+    .centry { border: 2px solid #24384c; border-radius: 10px; padding: 6px 16px;
+        font-family: 'Consolas','Courier New',monospace; font-size: 21px; color: #7d9bb5;
+        display: flex; justify-content: space-between; gap: 10px; transition: all .15s ease; }
+    .centry .d { color: #55697c; }
+    .centry .h { color: #7a6a99; }
+    .centry.now { border-color: #ffb74d; background: rgba(255,183,77,0.12); color: #fff; }
+    .centry.now .d { color: #ffb74d; }
+    .centry.now .h { color: #b388ff; }
+
+    /* ---------- page 3 : bunches ---------- */
+    #p3 { flex-direction: column; align-items: center; gap: 22px; }
+    .p3-reg .bit { width: 96px; height: 104px; font-size: 52px; }
+    .p3-reg .pv, .p3-reg .ix { width: 96px; }
+    .brackets { position: relative; width: 866px; height: 54px; }
+    .brk { position: absolute; top: 0; height: 26px; border: 2px solid #b388ff; border-top: none;
+        border-radius: 0 0 10px 10px; }
+    .brk-lab { position: absolute; top: 28px; width: 100%; text-align: center;
+        font-size: 17px; color: #b388ff; font-weight: 700; letter-spacing: 1px; }
+    .terms { display: flex; gap: 18px; }
+    .term { border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a;
+        padding: 16px 24px; width: 280px; display: flex; flex-direction: column; gap: 6px; }
+    .term .tname { font-size: 23px; font-weight: 700; color: #4fc3f7; }
+    .term .tsize { font-family: 'Consolas','Courier New',monospace; font-size: 18px; color: #ffb74d; }
+    .term .tdesc { font-size: 16px; color: #90a4ae; line-height: 1.4; }
+    .rtable { border-collapse: collapse; font-size: 22px; }
+    .rtable th, .rtable td { border: 2px solid #37506a; padding: 8px 26px; text-align: center;
+        font-family: 'Consolas','Courier New',monospace; color: #e0e0e0; }
+    .rtable th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700;
+        font-family: 'Segoe UI', sans-serif; }
+    .rtable td.rng { color: #ffb74d; }
+    .next-banner { border: 2px solid #6a4fa0; border-radius: 12px; background: rgba(179,136,255,0.07);
+        padding: 10px 26px; font-size: 19px; color: #cfd8dc; }
+    .next-banner b { color: #b388ff; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 8px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== persistent header ===== -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="22" y="22" width="52" height="60" rx="10" stroke="#7d9bb5" stroke-width="2.6"/>
+                <text x="48" y="66" font-size="40" fill="#7d9bb5" text-anchor="middle"
+                    font-family="'Consolas',monospace">0</text>
+                <rect x="90" y="22" width="52" height="60" rx="10" stroke="#4fc3f7" stroke-width="2.6"
+                    fill="rgba(79,195,247,0.12)"/>
+                <text x="116" y="66" font-size="40" fill="#4fc3f7" text-anchor="middle"
+                    font-family="'Consolas',monospace">1</text>
+                <g stroke="#90a4ae" stroke-width="2.6">
+                    <line x1="168" y1="70" x2="238" y2="70"/>
+                    <circle cx="176" cy="70" r="6" fill="#0d1b2a"/>
+                    <line x1="176" y1="70" x2="214" y2="40"/>
+                    <circle cx="230" cy="70" r="6" fill="#0d1b2a"/>
+                </g>
+                <text x="203" y="94" font-size="12" fill="#90a4ae" stroke="none" text-anchor="middle"
+                    font-family="'Segoe UI',sans-serif">a switch</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Binary Number Basics <span class="sub">&mdash; two symbols are enough</span></h1>
+            <div class="subtitle">The jump-start &middot; just enough about binary to start working problems &middot; depth comes in later topics</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 3</div>
+    </div>
+
+    <!-- ===== tab strip ===== -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Two Symbols</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Counting</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Bits Come in Bunches</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- ============ PAGE 1 ============ -->
+        <div class="page" id="p1">
+            <div class="sw-left">
+                <svg id="swSvg" viewBox="0 0 560 430">
+                    <!-- lamp -->
+                    <circle id="swLamp" cx="280" cy="96" r="58" fill="#0d1b2a" stroke="#37506a" stroke-width="3"/>
+                    <g id="swRays" stroke="#4fc3f7" stroke-width="3" stroke-linecap="round" opacity="0">
+                        <line x1="280" y1="10"  x2="280" y2="26"/>
+                        <line x1="280" y1="166" x2="280" y2="182"/>
+                        <line x1="194" y1="96"  x2="210" y2="96"/>
+                        <line x1="350" y1="96"  x2="366" y2="96"/>
+                        <line x1="219" y1="35"  x2="230" y2="46"/>
+                        <line x1="330" y1="146" x2="341" y2="157"/>
+                        <line x1="341" y1="35"  x2="330" y2="46"/>
+                        <line x1="230" y1="146" x2="219" y2="157"/>
+                    </g>
+                    <!-- wire loop lamp -> switch -->
+                    <path d="M 222 96 L 96 96 L 96 300 L 176 300" fill="none" stroke="#7d9bb5" stroke-width="3.2" id="swWireL"/>
+                    <path d="M 338 96 L 464 96 L 464 300 L 384 300" fill="none" stroke="#7d9bb5" stroke-width="3.2" id="swWireR"/>
+                    <!-- switch -->
+                    <circle cx="184" cy="300" r="9" fill="#0d1b2a" stroke="#cfd8dc" stroke-width="3"/>
+                    <circle cx="376" cy="300" r="9" fill="#0d1b2a" stroke="#cfd8dc" stroke-width="3"/>
+                    <line id="swArm" x1="192" y1="298" x2="352" y2="230" stroke="#cfd8dc" stroke-width="5" stroke-linecap="round"/>
+                    <!-- big digit -->
+                    <text id="swDigit" x="280" y="415" font-size="96" fill="#7d9bb5" text-anchor="middle"
+                        font-family="'Consolas',monospace">0</text>
+                    <text id="swWord" x="280" y="252" font-size="22" fill="#607d8b" text-anchor="middle"
+                        font-family="'Segoe UI',sans-serif">OFF</text>
+                </svg>
+                <div class="sw-hint">click the switch &middot; that is the entire vocabulary of digital electronics</div>
+            </div>
+            <div class="sw-right">
+                <div class="fn-statement">
+                    A <span class="c">bit</span> is a single binary digit &mdash;
+                    a <span class="c">0</span> or a <span class="c">1</span>. Nothing else exists.
+                </div>
+                <div class="alphabet">
+                    <div class="lab">The whole alphabet:</div>
+                    <div class="glyph">0</div>
+                    <div class="glyph">1</div>
+                    <div class="fin">&mdash; that&rsquo;s it.</div>
+                </div>
+                <div class="fn-statement">
+                    Why two? Hardware is built from <span class="a">switches</span>.
+                    A switch is <span class="a">OFF (0)</span> or <span class="a">ON (1)</span> &mdash;
+                    two states that are cheap to build and easy to tell apart, even in a noisy circuit.
+                </div>
+                <div class="madeof">
+                    Everything digital &mdash; numbers, text, pictures, this page &mdash; is
+                    <b>bits in patterns</b>. The rest of this course is about giving those
+                    patterns meaning.
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 2 ============ -->
+        <div class="page" id="p2">
+            <div class="cnt-left">
+                <div class="regwrap" id="reg4"></div>
+                <div class="sumline" id="sum4"></div>
+                <div class="hexline" id="hex4"></div>
+                <div class="ctl">
+                    <div class="cbtn" id="btnCount">&#9654; Count up<span class="k">C</span></div>
+                    <div class="cbtn" id="btnStop">&#9632; Stop<span class="k">X</span></div>
+                </div>
+                <div class="odometer">
+                    Counting is the <b>odometer</b> idea: when a column runs out of symbols it rolls
+                    back to 0 and <b>carries</b>. Decimal runs out at 9 &mdash; binary runs out at
+                    <b>1</b>, so it carries constantly. Watch <b>0111 &rarr; 1000</b> ripple.
+                </div>
+                <div class="handoff">
+                    To <i>read</i> a binary number, add the place values under the 1s and skip the 0s
+                    &mdash; that&rsquo;s all the sum line is doing. You&rsquo;ll get <b>fluent</b> at
+                    converting (both directions, two methods) in <b>Binary To/From Decimal</b>.
+                </div>
+            </div>
+            <div class="cnt-right">
+                <div class="cap">counting 0 &rarr; 15 with four bits &middot; binary = decimal &middot; hex</div>
+                <div class="cgrid" id="cgrid"></div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 3 ============ -->
+        <div class="page" id="p3">
+            <div class="regwrap p3-reg" id="reg8"></div>
+            <div class="brackets">
+                <div class="brk" style="left: 0px; width: 426px;"></div>
+                <div class="brk-lab" style="left: 0px; width: 426px;">nibble &middot; 4 bits</div>
+                <div class="brk" style="left: 440px; width: 426px;"></div>
+                <div class="brk-lab" style="left: 440px; width: 426px;">nibble &middot; 4 bits</div>
+            </div>
+            <div class="sumline" id="sum8"></div>
+            <div class="terms">
+                <div class="term"><div class="tname">Bit</div><div class="tsize">1 digit</div>
+                    <div class="tdesc">One 0-or-1. The atom.</div></div>
+                <div class="term"><div class="tname">Nibble</div><div class="tsize">4 bits</div>
+                    <div class="tdesc">Half a byte; 16 patterns.</div></div>
+                <div class="term"><div class="tname">Byte</div><div class="tsize">8 bits</div>
+                    <div class="tdesc">The everyday unit; 256 patterns.</div></div>
+                <div class="term"><div class="tname">Word</div><div class="tsize">16 / 32 / 64 bits</div>
+                    <div class="tdesc">Machine-dependent &mdash; whatever the hardware moves at once.</div></div>
+            </div>
+            <table class="rtable">
+                <tr><th>Bits</th><th>Patterns (2&#8319;)</th><th>Unsigned range</th></tr>
+                <tr><td>4</td><td>16</td><td class="rng">0 &ndash; 15</td></tr>
+                <tr><td>8</td><td>256</td><td class="rng">0 &ndash; 255</td></tr>
+                <tr><td>16</td><td>65,536</td><td class="rng">0 &ndash; 65,535</td></tr>
+                <tr><td>32</td><td>~4.3 billion</td><td class="rng">0 &ndash; 4,294,967,295</td></tr>
+            </table>
+            <div class="next-banner">
+                <b>Next:</b> what bit patterns <b>mean</b> (Number Representations) &mdash; and getting
+                fluent moving between binary and decimal.
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">3</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; click bits to toggle
+            &middot; <span class="k amber">C</span> count up
+            &middot; <span class="k amber">X</span> stop
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ PAGE STATE ============
+    const FIRST = 1, LAST = 3;
+    let page = 1;
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) {
+        const next = Math.max(FIRST, Math.min(LAST, n));
+        if (next !== page) stopCount();          // a count animation never outlives its page
+        page = next; render();
+    }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+
+    // ============ PAGE 1 : the switch ============
+    let sw = 0;
+    function renderSwitch() {
+        const on = sw === 1;
+        document.getElementById('swArm').setAttribute('y2', on ? 298 : 230);
+        document.getElementById('swArm').setAttribute('x2', on ? 368 : 352);
+        document.getElementById('swLamp').setAttribute('fill', on ? '#4fc3f7' : '#0d1b2a');
+        document.getElementById('swLamp').setAttribute('stroke', on ? '#4fc3f7' : '#37506a');
+        document.getElementById('swRays').setAttribute('opacity', on ? 1 : 0);
+        ['swWireL','swWireR'].forEach(id =>
+            document.getElementById(id).setAttribute('stroke', on ? '#4fc3f7' : '#7d9bb5'));
+        const d = document.getElementById('swDigit');
+        d.textContent = sw; d.setAttribute('fill', on ? '#4fc3f7' : '#7d9bb5');
+        const w = document.getElementById('swWord');
+        w.textContent = on ? 'ON' : 'OFF'; w.setAttribute('fill', on ? '#4fc3f7' : '#607d8b');
+    }
+    document.getElementById('swSvg').addEventListener('click', () => { sw ^= 1; renderSwitch(); });
+
+    // ============ THE REGISTER (shared by pages 2 & 3) ============
+    // One byte of state. Page 2 shows (and counts within) the low nibble; page 3 the full byte.
+    let val = 13;                                 // boots on the worked example: 1101 = 13
+    function bitsOf(v, n) { return Array.from({length: n}, (_, i) => (v >> (n-1-i)) & 1); }
+
+    function buildReg(rootId, nbits, markEnds) {
+        const root = document.getElementById(rootId);
+        const pv = document.createElement('div'); pv.className = 'pvrow';
+        const br = document.createElement('div'); br.className = 'bitrow';
+        const ix = document.createElement('div'); ix.className = 'ixrow';
+        for (let i = nbits-1; i >= 0; i--) {
+            const p = document.createElement('div'); p.className = 'pv';
+            p.dataset.bit = i; p.textContent = 2**i; pv.appendChild(p);
+            const b = document.createElement('div'); b.className = 'bit';
+            b.dataset.bit = i;
+            b.addEventListener('click', () => { stopCount(); val ^= (1 << i); renderRegs(); });
+            br.appendChild(b);
+            const x = document.createElement('div'); x.className = 'ix';
+            x.textContent = 'bit ' + i;
+            if (markEnds && (i === nbits-1 || i === 0)) {
+                const m = document.createElement('div'); m.className = 'mk';
+                m.textContent = i === 0 ? 'LSB' : 'MSB';
+                x.appendChild(m);
+            }
+            ix.appendChild(x);
+        }
+        root.appendChild(pv); root.appendChild(br); root.appendChild(ix);
+    }
+    buildReg('reg4', 4, true);
+    buildReg('reg8', 8);
+
+    function renderReg(rootId, sumId, nbits, changedMask) {
+        const root = document.getElementById(rootId);
+        const bits = bitsOf(val & ((1<<nbits)-1), nbits);
+        root.querySelectorAll('.bit').forEach(b => {
+            const i = +b.dataset.bit;
+            b.textContent = bits[nbits-1-i];
+            b.classList.toggle('on', bits[nbits-1-i] === 1);
+            b.classList.toggle('chg', !!(changedMask & (1<<i)));
+        });
+        root.querySelectorAll('.pv').forEach(p =>
+            p.classList.toggle('lit', bits[nbits-1-(+p.dataset.bit)] === 1));
+        const terms = [];
+        for (let i = nbits-1; i >= 0; i--) if (bits[nbits-1-i]) terms.push(2**i);
+        const v = val & ((1<<nbits)-1);
+        document.getElementById(sumId).innerHTML = terms.length
+            ? terms.join(' <span class="dim">+</span> ') + ' <span class="dim">=</span> ' + v
+            : '<span class="dim">no place values lit</span> = 0';
+    }
+    function renderRegs(changedMask) {
+        renderReg('reg4', 'sum4', 4, changedMask || 0);
+        renderReg('reg8', 'sum8', 8, changedMask || 0);
+        document.getElementById('hex4').innerHTML =
+            'hex 0x' + (val & 15).toString(16).toUpperCase()
+            + ' <span class="dim">&mdash; one hex digit per 4 bits</span>';
+        document.querySelectorAll('#cgrid .centry').forEach((e, i) =>
+            e.classList.toggle('now', i === (val & 15)));
+    }
+
+    // count grid 0..15
+    const cgrid = document.getElementById('cgrid');
+    for (let v = 0; v <= 15; v++) {
+        const e = document.createElement('div'); e.className = 'centry';
+        e.innerHTML = bitsOf(v,4).join('') + '<span class="d">= ' + v + '</span>'
+                    + '<span class="h">0x' + v.toString(16).toUpperCase() + '</span>';
+        cgrid.appendChild(e);
+    }
+
+    // ============ COUNT ANIMATION ============
+    let timer = null;
+    const btnCount = document.getElementById('btnCount');
+    function stopCount() { if (timer) { clearInterval(timer); timer = null; btnCount.classList.remove('live'); } }
+    function startCount() {
+        stopCount(); btnCount.classList.add('live');
+        timer = setInterval(() => {
+            const mod = page === 3 ? 256 : 16;
+            const before = val & (mod-1);
+            val = (before + 1) % mod;                       // page-2 counting stays inside the nibble
+            renderRegs(before ^ val);                       // flash exactly the bits that flipped
+        }, 700);
+    }
+    btnCount.addEventListener('click', () => timer ? stopCount() : startCount());
+    document.getElementById('btnStop').addEventListener('click', stopCount);
+
+    // ============ KEYS ============
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '3') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 'c': case 'C': timer ? stopCount() : startCount(); e.preventDefault(); break;
+            case 'x': case 'X': stopCount(); e.preventDefault(); break;
+            case 'r': case 'R': stopCount(); sw = 0; val = 13; setPage(1);
+                                renderSwitch(); renderRegs(); e.preventDefault(); break;
+        }
+    });
+
+    render();
+    renderSwitch();
+    renderRegs();
+</script>
+</body>
+</html>
