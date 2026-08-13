@@ -3,9 +3,11 @@ import { NavigationContext } from '@/lib/types/content';
 
 interface TopNavProps {
   navigation: NavigationContext;
+  /** When the topic is on the course schedule: "Lecture 5 · Wed Sep 2" badge → /schedule/ */
+  lectureBadge?: { lec: number; label: string } | null;
 }
 
-export default function TopNav({ navigation }: TopNavProps) {
+export default function TopNav({ navigation, lectureBadge }: TopNavProps) {
   const { current, prev, next } = navigation;
 
   return (
@@ -45,6 +47,18 @@ export default function TopNav({ navigation }: TopNavProps) {
             : current.chapter
             ? formatName(current.chapter)
             : ''}
+          {lectureBadge && (
+            <>
+              {' · '}
+              <Link
+                href="/schedule/"
+                className="inline-block align-middle rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 text-xs font-medium hover:bg-blue-100"
+                title="See the full course schedule"
+              >
+                {lectureBadge.label}
+              </Link>
+            </>
+          )}
         </p>
       </div>
 

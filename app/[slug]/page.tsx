@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import path from 'path';
 import { loadAllTopics, buildNavigation, buildChapterStructure } from '@/lib/content';
+import { loadSchedule, lectureForSlug, prettyDate } from '@/lib/content/schedule';
 import { renderMarkdown } from '@/lib/markdown';
 import TwoPanel from '@/components/Layout/TwoPanel';
 import { TopNav } from '@/components/Navigation';
@@ -60,9 +61,20 @@ export default async function TopicPage({ params }: PageProps) {
 
   const html = await renderMarkdown(topic.markdown, relativeContentPath);
 
+  // Course-schedule badge: where this topic falls in lecture order (if assigned)
+  const lecture = lectureForSlug(loadSchedule(), slug);
+  const lectureBadge = lecture
+    ? {
+        lec: lecture.lec,
+        label:
+          `Lecture ${lecture.lec}` +
+          (lecture.date ? ` · ${lecture.weekday} ${prettyDate(lecture.date)}` : ''),
+      }
+    : null;
+
   return (
     <TwoPanel
-      topNav={<TopNav navigation={navContext} />}
+      topNav={<TopNav navigation={navContext} lectureBadge={lectureBadge} />}
       graphicsPanel={<GraphicsPanel graphics={topic.graphics} />}
       textPanel={<TextPanel html={html} />}
       chapters={chapters}

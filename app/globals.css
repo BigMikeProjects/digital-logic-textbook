@@ -109,3 +109,10 @@
 .graphics-nav-button:disabled {
   @apply opacity-30 cursor-not-allowed;
 }
+
+/* Course Schedule: visited reading links change color so students can see their
+   progress through the assignments. Browsers only allow color changes on :visited
+   (anti-tracking rule) — that's exactly what we use. */
+.schedule-link:visited {
+  color: #7c3aed; /* violet-600 — clearly distinct from the unvisited blue */
+}

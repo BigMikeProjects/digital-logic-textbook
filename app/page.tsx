@@ -22,17 +22,29 @@ export default async function HomePage() {
           combinational circuits.
         </p>
 
-        {firstSlug && (
+        <div className="flex items-center justify-center gap-4 flex-wrap">
+          {firstSlug && (
+            <Link
+              href={`/${firstSlug}/`}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-lg text-lg transition-colors"
+            >
+              Start Reading
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+              </svg>
+            </Link>
+          )}
           <Link
-            href={`/${firstSlug}/`}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 rounded-lg text-lg transition-colors"
+            href="/schedule/"
+            className="inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold px-8 py-4 rounded-lg text-lg transition-colors border border-gray-600"
           >
-            Start Reading
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-            </svg>
+            Course Schedule
           </Link>
-        )}
+        </div>
+        <p className="text-gray-500 text-sm mt-4">
+          Taking the course? The chapters below are the book&rsquo;s logical order — the
+          class follows the schedule, which visits topics as we need them.
+        </p>
       </div>
 
       {/* Table of Contents */}
