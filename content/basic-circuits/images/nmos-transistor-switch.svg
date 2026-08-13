@@ -39,11 +39,14 @@
 
     <text class="title" x="54" y="58">NMOS transistor as a switch</text>
     <rect class="box" x="70" y="100" width="680" height="360"/>
-    <text class="label" x="360" y="126">Drain</text><line class="wire" x1="400" y1="148" x2="400" y2="228"/>
-    <line class="wire" x1="400" y1="312" x2="400" y2="394"/><text class="label" x="355" y="430">Source</text>
-    <line class="thin" x1="340" y1="225" x2="340" y2="315"/><line class="thin" x1="365" y1="240" x2="365" y2="300"/><line class="thin" x1="400" y1="228" x2="365" y2="250"/><line class="thin" x1="400" y1="312" x2="365" y2="290"/>
+    <text class="label" x="360" y="126">Drain</text><line class="wire" x1="400" y1="148" x2="400" y2="232"/>
+    <line class="wire" x1="400" y1="308" x2="400" y2="394"/><text class="label" x="355" y="430">Source</text>
+    <!-- MOSFET symbol: gate plate insulated (gap) from the channel bar; drain/source join the
+         channel with right-angle taps. No diagonals — those read as a BJT. -->
+    <line class="thin" x1="340" y1="240" x2="340" y2="300"/><line class="thin" x1="365" y1="225" x2="365" y2="315"/>
+    <line class="wire" x1="400" y1="232" x2="365" y2="232"/><line class="wire" x1="365" y1="308" x2="400" y2="308"/>
     <line class="wire" x1="190" y1="270" x2="340" y2="270"/><text class="label" x="128" y="278">Gate</text>
-    <path class="path" d="M 400 150 L 400 392"/><path class="current" d="M 462 170 L 462 370"/><text class="label" x="486" y="280" style="fill: #2563eb">current flows when gate is high</text>
+    <path class="path" d="M 400 150 L 400 232 L 365 232 L 365 308 L 400 308 L 400 392"/><path class="current" d="M 462 170 L 462 370"/><text class="label" x="486" y="280" style="fill: #2563eb">current flows when gate is high</text>
     <rect class="soft-green" x="110" y="350" width="174" height="54"/><text class="label" x="143" y="386">Gate = 1</text>
     
 </svg>
