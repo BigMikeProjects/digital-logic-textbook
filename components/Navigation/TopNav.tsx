@@ -5,9 +5,11 @@ interface TopNavProps {
   navigation: NavigationContext;
   /** When the topic is on the course schedule: "Lecture 5 · Wed Sep 2" badge → /schedule/ */
   lectureBadge?: { lec: number; label: string } | null;
+  /** Next topic in LECTURE order (course order) — may differ from book-order `next` */
+  lectureNext?: { slug: string; title: string; lec: number; sameLecture: boolean } | null;
 }
 
-export default function TopNav({ navigation, lectureBadge }: TopNavProps) {
+export default function TopNav({ navigation, lectureBadge, lectureNext }: TopNavProps) {
   const { current, prev, next } = navigation;
 
   return (
@@ -62,14 +64,40 @@ export default function TopNav({ navigation, lectureBadge }: TopNavProps) {
         </p>
       </div>
 
-      {/* Next button */}
-      <div className="w-32 text-right">
+      {/* Next buttons — two orders through the same book: the text's logical order,
+          and the course's lecture order (which skips around by design) */}
+      <div className="flex items-center justify-end gap-2 shrink-0">
+        {lectureNext && (
+          <Link
+            href={`/${lectureNext.slug}/`}
+            title={`${lectureNext.title} (Lecture ${lectureNext.lec})`}
+            className="nav-button inline-flex items-center gap-1 text-sm bg-violet-600 text-white hover:bg-violet-700"
+          >
+            <span>
+              Next Lecture Topic
+              {!lectureNext.sameLecture && (
+                <span className="opacity-75 font-normal"> · L{lectureNext.lec}</span>
+              )}
+            </span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-4 h-4"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </Link>
+        )}
         {next ? (
           <Link
             href={`/${next.slug}/`}
+            title={next.title}
             className="nav-button nav-button-primary inline-flex items-center gap-1 text-sm"
           >
-            <span>Next</span>
+            <span>Next Text Topic</span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"

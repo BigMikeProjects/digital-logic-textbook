@@ -52,3 +52,27 @@ export function lectureForSlug(data: ScheduleData | null, slug: string): Lecture
   }
   return null;
 }
+
+export interface LectureNeighbor {
+  slug: string;
+  title: string;
+  lec: number;          // which lecture the neighbor belongs to
+  sameLecture: boolean; // false when the step crosses into another lecture
+}
+
+/** The next topic in LECTURE order (course order), skipping unpublished topics and
+ *  no-content rows. Null when the topic isn't scheduled or is the course's last. */
+export function nextInLectureOrder(data: ScheduleData | null, slug: string): LectureNeighbor | null {
+  if (!data) return null;
+  // flatten the schedule into one course-ordered list of published, linkable topics
+  const flat: { slug: string; title: string; lec: number }[] = [];
+  for (const lecture of data.lectures) {
+    for (const item of lecture.items) {
+      if (item.slug && item.published) flat.push({ slug: item.slug, title: item.title, lec: lecture.lec });
+    }
+  }
+  const ix = flat.findIndex((f) => f.slug === slug);
+  if (ix < 0 || ix + 1 >= flat.length) return null;
+  const next = flat[ix + 1];
+  return { ...next, sameLecture: next.lec === flat[ix].lec };
+}

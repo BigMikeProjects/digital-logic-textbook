@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import path from 'path';
 import { loadAllTopics, buildNavigation, buildChapterStructure } from '@/lib/content';
-import { loadSchedule, lectureForSlug, prettyDate } from '@/lib/content/schedule';
+import { loadSchedule, lectureForSlug, nextInLectureOrder, prettyDate } from '@/lib/content/schedule';
 import { renderMarkdown } from '@/lib/markdown';
 import TwoPanel from '@/components/Layout/TwoPanel';
 import { TopNav } from '@/components/Navigation';
@@ -61,8 +61,9 @@ export default async function TopicPage({ params }: PageProps) {
 
   const html = await renderMarkdown(topic.markdown, relativeContentPath);
 
-  // Course-schedule badge: where this topic falls in lecture order (if assigned)
-  const lecture = lectureForSlug(loadSchedule(), slug);
+  // Course-schedule wiring: badge + next-in-lecture-order navigation
+  const schedule = loadSchedule();
+  const lecture = lectureForSlug(schedule, slug);
   const lectureBadge = lecture
     ? {
         lec: lecture.lec,
@@ -71,10 +72,11 @@ export default async function TopicPage({ params }: PageProps) {
           (lecture.date ? ` · ${lecture.weekday} ${prettyDate(lecture.date)}` : ''),
       }
     : null;
+  const lectureNext = nextInLectureOrder(schedule, slug);
 
   return (
     <TwoPanel
-      topNav={<TopNav navigation={navContext} lectureBadge={lectureBadge} />}
+      topNav={<TopNav navigation={navContext} lectureBadge={lectureBadge} lectureNext={lectureNext} />}
       graphicsPanel={<GraphicsPanel graphics={topic.graphics} />}
       textPanel={<TextPanel html={html} />}
       chapters={chapters}
