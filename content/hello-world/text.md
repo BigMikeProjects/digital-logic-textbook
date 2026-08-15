@@ -2,7 +2,7 @@
 
 Every programming language has its "hello world" — the smallest program that proves your tools work and shows you the shape of things to come. Verilog's version is different in a telling way: hardware has no screen to print to, so the hello world of digital design is not a message. It is a *pair* of files — a small piece of hardware, and a small program that proves the hardware works. This topic walks through both, using the simplest interesting circuit we know: an XOR gate.
 
-Keep the interactive above alongside this text. It shows the two files exactly the way you will see them in the lab tools: the design on the left, the testbench on the right.
+Keep the interactive above alongside this text. It shows the two files exactly the way you will see them in the lab tools: the testbench on the left, the design on the right.
 
 ## Two Files, Two Jobs
 
@@ -18,7 +18,7 @@ The two files meet in simulation. A simulator such as Icarus Verilog (or the one
 Here is the complete design file:
 
 ```verilog
-// design.sv — the hardware we are describing
+// design.v — the hardware we are describing
 module xor_gate (
   input  wire a,     // first input
   input  wire b,     // second input
@@ -43,7 +43,7 @@ Three ideas, and they carry the whole file.
 Now the second file:
 
 ```verilog
-// testbench.sv — the program that exercises the hardware
+// testbench.v — the program that exercises the hardware
 module xor_gate_tb;
 
   reg  a, b;         // testbench drives these

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verilog Hello World — Design Left, Testbench Right</title>
+<title>Verilog Hello World — Testbench Left, Design Right</title>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; overflow: hidden;
@@ -154,7 +154,7 @@
         </div>
         <div class="titles">
             <h1>Verilog: Hello World <span class="sub">&mdash; a design, a testbench, and proof it works</span></h1>
-            <div class="subtitle">The two-file pattern behind every lab &middot; design on the left, testbench on the right &middot; XOR as the first example</div>
+            <div class="subtitle">The two-file pattern behind every lab &middot; testbench on the left, design on the right &middot; XOR as the first example</div>
         </div>
         <div class="page-count">Beat <b id="pcNum">1</b> / 3</div>
     </div>
@@ -173,19 +173,19 @@
             <div class="split">
                 <div class="col1">
                     <div class="pane" style="flex:1">
-                        <div class="pane-head"><span class="fn">design.sv</span>
-                            <span class="role">the hardware you are describing</span></div>
-                        <div class="code" id="code-d1"></div>
-                    </div>
-                    <div class="chips" id="chips-d"></div>
-                </div>
-                <div class="col1">
-                    <div class="pane" style="flex:1">
-                        <div class="pane-head tbh"><span class="fn">testbench.sv</span>
+                        <div class="pane-head tbh"><span class="fn">testbench.v</span>
                             <span class="role">the program that exercises it</span></div>
                         <div class="code" id="code-t1"></div>
                     </div>
                     <div class="chips" id="chips-t"></div>
+                </div>
+                <div class="col1">
+                    <div class="pane" style="flex:1">
+                        <div class="pane-head"><span class="fn">design.v</span>
+                            <span class="role">the hardware you are describing</span></div>
+                        <div class="code" id="code-d1"></div>
+                    </div>
+                    <div class="chips" id="chips-d"></div>
                 </div>
             </div>
             <div class="p1note" id="p1note">click a chip to see where each idea lives — some ideas live in <b>both files at once</b></div>
@@ -195,12 +195,12 @@
         <div class="page" id="p2">
             <div class="runrow">
                 <div class="pane">
-                    <div class="pane-head"><span class="fn">design.sv</span></div>
-                    <div class="code" id="code-d2"></div>
+                    <div class="pane-head tbh"><span class="fn">testbench.v</span></div>
+                    <div class="code" id="code-t2"></div>
                 </div>
                 <div class="pane">
-                    <div class="pane-head tbh"><span class="fn">testbench.sv</span></div>
-                    <div class="code" id="code-t2"></div>
+                    <div class="pane-head"><span class="fn">design.v</span></div>
+                    <div class="code" id="code-d2"></div>
                 </div>
                 <div class="runside">
                     <div class="xorsym" id="xorsym"></div>
@@ -214,13 +214,13 @@
         <div class="page" id="p3">
             <div class="why-cards">
                 <div class="wcard dsn">
-                    <div class="wt"><span class="mono">design.sv</span> describes</div>
+                    <div class="wt"><span class="mono">design.v</span> describes</div>
                     <div class="wd">A module is hardware: a named block with a boundary of
                         <b>ports</b> and logic inside. It doesn&rsquo;t run, print, or explain
                         itself &mdash; it just <b>is</b> the circuit.</div>
                 </div>
                 <div class="wcard tb">
-                    <div class="wt"><span class="mono">testbench.sv</span> exercises</div>
+                    <div class="wt"><span class="mono">testbench.v</span> exercises</div>
                     <div class="wd">The bench is your lab station: it <b>drives the inputs</b>,
                         <b>watches the outputs</b>, and prints what it sees. Every
                         <span class="mono">$display</span> line in the console came from the
@@ -311,7 +311,7 @@
         return h;
     }
     const DESIGN = [
-'// design.sv — the hardware we are describing',
+'// design.v — the hardware we are describing',
 'module xor_gate (',
 '  input  wire a,     // first input',
 '  input  wire b,     // second input',
@@ -323,7 +323,7 @@
 'endmodule',
     ];
     const TB = [
-'// testbench.sv — the program that exercises the hardware',
+'// testbench.v — the program that exercises the hardware',
 'module xor_gate_tb;',
 '',
 '  reg  a, b;         // testbench drives these',
@@ -430,7 +430,7 @@
     }
     function renderRun() {
         document.querySelectorAll('#p2 .cl').forEach(c => c.classList.remove('run'));
-        let out = '<span class="chead">$ iverilog -o sim design.sv testbench.sv && ./sim</span>\n';
+        let out = '<span class="chead">$ iverilog -o sim design.v testbench.v && ./sim</span>\n';
         if (step >= 1) out += 'a b | y\n----+--\n';
         for (let i = 0; i < Math.min(step, 4); i++) {
             const cse = CASES[i];
