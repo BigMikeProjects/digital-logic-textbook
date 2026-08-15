@@ -1,0 +1,9 @@
+title: "Verilog - Hello World"
+description: "Verilog's hello world: a design file and a testbench, side by side — modules, ports, and why every design ships with proof"
+chapter: verilog
+section: verilog-basics
+order: 60001
+
+graphics:
+  01-interactive.html:
+    caption: "Design left, testbench right: the two-file Verilog pattern, with a steppable XOR simulation"
