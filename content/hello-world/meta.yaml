@@ -5,5 +5,7 @@ section: verilog-basics
 order: 60001
 
 graphics:
-  01-interactive.html:
-    caption: "Design left, testbench right: the two-file Verilog pattern, with a steppable XOR simulation"
+  01-video.youtube:
+    caption: "Video: Verilog Hello World — the design side, the testbench side, and running the XOR example"
+  02-interactive.html:
+    caption: "Testbench left, design right: the two-file Verilog pattern, with a steppable XOR simulation"

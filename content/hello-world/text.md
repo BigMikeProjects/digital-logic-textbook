@@ -32,7 +32,7 @@ endmodule
 
 Three ideas, and they carry the whole file.
 
-**A module is a named block of hardware.** Everything between `module` and `endmodule` is one component, and the name — `xor_gate` — is how other files refer to it. Think of it as the outline of a chip drawn around some circuitry.
+**A module is a named block of hardware.** Everything between `module` and `endmodule` is one component, and the name — `xor_gate` — is how other files refer to it. Think of it as the outline of a chip drawn around some circuitry. In Verilog, *every* circuit element becomes a module — and later in the course, sophisticated designs are built exactly this way: by connecting modules to modules, the same move the testbench below makes once.
 
 **Ports are the boundary.** The parenthesized list declares the module's only connections to the outside world: two inputs, `a` and `b`, and one output, `y`, each a `wire` carrying a single bit. Nothing outside the module can see anything *except* these ports — exactly like the pins on a physical chip.
 
@@ -96,7 +96,7 @@ And that is the standard you should hold every run to: you knew before simulatin
 
 It is tempting, early on, to treat the testbench as ceremony — the design is three lines, so why write twenty more to check it? Three reasons, and they only grow stronger as designs grow:
 
-First, **hardware cannot be asked directly.** A module has no print statement and no way to volunteer its own correctness. The only way to know what a design does is to drive its inputs and watch its outputs — and that is precisely what a testbench automates. No bench, no evidence.
+First, **hardware cannot be asked directly.** In Python you would print a value or step through the code in a debugger, watching variables change. A Verilog design has neither — you are not watching variables, you are watching *circuits*, and a module has no print statement and no way to volunteer its own correctness. The only way to know what a design does is to drive its inputs and watch its outputs — and that is precisely what a testbench automates. No bench, no evidence.
 
 Second, **the bench encodes your expectations.** Writing the stimulus forces you to decide what the design *should* do for each case before you see what it *does*. For the XOR gate that expectation is a four-row truth table; for later designs it will be longer tables, timing behavior, and sequences of states. The habit starts here.
 
