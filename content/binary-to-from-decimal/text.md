@@ -55,6 +55,27 @@ Alternatively, work from the largest power of two downward. Find the biggest pow
 
 Reading top to bottom gives $1101_2$, the same result. Notice that this method is just **binary → decimal run in reverse**: instead of adding up place values, it fills them in directly, MSB first (left to right). The division method builds the bits LSB first; the powers method builds them MSB first; both land on the same binary string.
 
+### A Second Example, Both Methods, With a Check
+
+Let's convert $52_{10}$ from scratch. By the division method:
+
+| Step | Quotient | Remainder |
+|------|----------|-----------|
+| $52 \div 2$ | $26$ | $\mathbf{0}$ ← LSB (first) |
+| $26 \div 2$ | $13$ | $0$ |
+| $13 \div 2$ | $6$ | $1$ |
+| $6 \div 2$ | $3$ | $0$ |
+| $3 \div 2$ | $1$ | $1$ |
+| $1 \div 2$ | $0$ | $\mathbf{1}$ ← MSB (last) |
+
+Reading bottom-up: $110100_2$. By the powers method: $32$ fits ($52 - 32 = 20$) → 1; $16$ fits ($20 - 16 = 4$) → 1; $8$ doesn't fit → 0; $4$ fits ($4 - 4 = 0$) → 1; $2$ and $1$ don't fit → 0, 0. Reading left to right: $110100_2$ — the same answer by both routes.
+
+Now the habit worth keeping: **check by converting back**. The two directions are exact inverses, so expand your answer's place values — $110100_2 = 32 + 16 + 4 = 52$ — and landing on the number you started with confirms the conversion. On an exam this round trip costs seconds and catches almost every slip.
+
+### Powers-of-Two Fluency
+
+Both decimal→binary methods lean on knowing the powers of two on sight, so commit the ladder to memory: $1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024$. Two anchors from it recur constantly in digital work. First, $2^{10} = 1024$ is "about a thousand" — the origin of the K in kilobyte. Second, the largest value $n$ bits can hold is $2^n - 1$, because counting starts at 0: four bits top out at $1111_2 = 15$, and eight bits at $255$. With the ladder memorized, the powers method becomes nearly instant — you can often see the decomposition ($52 = 32 + 16 + 4$) before writing anything down.
+
 ## A Note on Width and Leading Zeros
 
 The number of bits you write is a separate choice from the value. $13_{10} = 1101_2$ in four bits, but the same value is $00001101_2$ in an eight-bit register — the leading zeros change nothing about the quantity. Hardware works with fixed-width values (8, 16, 32 bits), so it is common to pad a converted number with leading zeros to the register width.
@@ -101,6 +122,12 @@ B. `1101`, because the remainders are read bottom-up (first remainder is the LSB
 C. `0110`, after dropping the first remainder
 D. `1110`, because the last remainder is the LSB
 
+**7. A student converts $45_{10}$ to binary and gets $101101_2$. What is the fastest way to check the answer, and what should it produce?**
+A. Expand the place values: $32 + 8 + 4 + 1 = 45$, matching the starting number
+B. Divide $101101$ by 2 and confirm the quotient is even
+C. Count the bits and confirm there are six
+D. Re-run the same method and hope for the same answer
+
 ## Answer Explanations
 
 **1. B.** Hardware is built from transistors that act as two-state switches. Two states are inexpensive and reliable to manufacture, and the wide gap between the LOW and HIGH bands gives strong noise immunity — small disturbances never flip the bit. Binary numbers are not generally shorter than their decimal equivalents (option A), and binary still relies on voltages (option D).
@@ -114,3 +141,5 @@ D. `1110`, because the last remainder is the LSB
 **5. C.** Each bit independently takes one of two values, so $n$ bits give $2 \times 2 \times \dots = 2^n$ distinct combinations.
 
 **6. B.** The remainders are produced LSB first, so the order produced (1, 0, 1, 1) must be reversed when read as a binary number. Reading bottom-up gives $1101_2 = 13_{10}$, which checks out as $8+4+1$.
+
+**7. A.** The two conversion directions are exact inverses, so the quickest check is the round trip: expand $101101_2$ by its place values, $32 + 8 + 4 + 1 = 45$, and matching the starting number confirms the work. Re-running the same method (D) can repeat the same mistake; bit-counting (C) says nothing about the value.

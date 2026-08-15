@@ -177,6 +177,20 @@
           "published": true
         },
         {
+          "num": "3.1.8",
+          "title": "Ten's Complement",
+          "slug": "tens-complement",
+          "type": "full",
+          "published": true
+        },
+        {
+          "num": "3.3.0",
+          "title": "Boolean Basics",
+          "slug": "boolean-basics",
+          "type": "full",
+          "published": true
+        },
+        {
           "num": "6.0.0",
           "title": "HDL Hardware Description Languages",
           "slug": "history",
@@ -205,16 +219,16 @@
           "published": true
         },
         {
-          "num": "3.1.8",
-          "title": "Ten's Complement",
-          "slug": "tens-complement",
+          "num": "3.1.9",
+          "title": "Two ways to Two's Complement",
+          "slug": "two-ways",
           "type": "full",
           "published": true
         },
         {
-          "num": "3.1.9",
-          "title": "Two ways to Two's Complement",
-          "slug": "two-ways",
+          "num": "3.3.2",
+          "title": "Applying Boolean Properties and Identities",
+          "slug": "applying-boolean",
           "type": "full",
           "published": true
         }
@@ -236,13 +250,6 @@
           "num": "3.1.10",
           "title": "Two's Complement Number Wheel",
           "slug": "twos-comp-number-wheel",
-          "type": "full",
-          "published": true
-        },
-        {
-          "num": "3.3.3",
-          "title": "Minterms and Maxterms",
-          "slug": "minterms-maxterms",
           "type": "full",
           "published": true
         },
@@ -289,27 +296,6 @@
       "weekday": "Mon",
       "items": [
         {
-          "num": "3.3.0",
-          "title": "Boolean Basics",
-          "slug": "boolean-basics",
-          "type": "full",
-          "published": true
-        },
-        {
-          "num": "3.3.2",
-          "title": "Applying Boolean Properties and Identities",
-          "slug": "applying-boolean",
-          "type": "full",
-          "published": true
-        }
-      ]
-    },
-    {
-      "lec": 10,
-      "date": "2026-09-16",
-      "weekday": "Wed",
-      "items": [
-        {
           "num": "3.3.4",
           "title": "De Morgan's Theorem and Universal Gates",
           "slug": "demorgans-and-universal-gates",
@@ -327,6 +313,20 @@
           "num": "3.3.6",
           "title": "All Nand and all Nor realizations",
           "slug": "all-nand-all-nor",
+          "type": "full",
+          "published": true
+        }
+      ]
+    },
+    {
+      "lec": 10,
+      "date": "2026-09-16",
+      "weekday": "Wed",
+      "items": [
+        {
+          "num": "3.3.3",
+          "title": "Minterms and Maxterms",
+          "slug": "minterms-maxterms",
           "type": "full",
           "published": true
         },

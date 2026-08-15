@@ -6,6 +6,8 @@ So far we have studied what a logic circuit *does*: given a set of inputs, we fi
 
 A timing diagram plots each signal's logic value against a shared horizontal **time axis**. Time runs left to right; each signal is drawn as a waveform that is high when the value is `1` and low when it is `0`, with vertical edges marking transitions. Reading down a single vertical slice tells you the state of every signal at that instant; reading across a signal shows how it evolves. Where a truth table answers "what is the output for these inputs," a timing diagram answers "how do the signals move as the inputs change over time."
 
+Two pieces of vocabulary come with the picture. A transition from `0` to `1` is a **rising edge**; a transition from `1` to `0` is a **falling edge**. Much of reading a timing diagram is edge-to-edge reasoning: spotting an edge on an input, then looking right along the output rows to see whether — and when — a corresponding edge appears. Each signal gets its own row, every row shares the same time axis, and that shared axis is what makes cause and effect visible.
+
 ## An Idealized Example
 
 The cleanest way to start is with an **idealized** timing diagram — one that ignores gate delay, so every response appears to happen instantaneously. This lets us focus purely on the *sequence* of behavior. (We will add realistic delays later.)
@@ -50,6 +52,17 @@ Several lessons fall out of the walkthrough:
 - **An internal change can be invisible at the output.** At step 5, $A$ rises so $P$ becomes `1`, but $Y$ was *already* `1` (because $C = 1$), so the output does not visibly change.
 
 The exact bit sequence is not the point; the point is the **method**. You can step through the input transitions and build a diagram that captures how the circuit behaves over time for a given set of input conditions.
+
+## Drawing One Yourself
+
+The walkthrough above generalizes into a recipe you can apply to any combinational circuit:
+
+1. **List the signals as rows** — inputs first, then internal signals, then outputs — all sharing one time axis. Naming the internal signals (like the product term $P$) is what keeps a multi-gate circuit manageable.
+2. **Draw the input waveforms** for the scenario you care about, one transition at a time. Only change one input per step while you're learning; simultaneous edges are harder to reason about.
+3. **At each input edge, recompute the internals and the output** left to right, and draw any resulting edges directly below the input edge that caused them (idealized timing: cause and effect line up vertically).
+4. **Sanity-check a few vertical slices** against the truth table: at any instant, the diagram's values must agree with the static analysis for those inputs.
+
+The interactive for this topic animates the same $Y = (A \cdot B) + C$ walkthrough — step the inputs and watch the product term and output rows respond — but the skill worth having is doing it on paper, because exams and whiteboard discussions won't come with an animation.
 
 ## Idealized vs. Real Timing
 
@@ -111,6 +124,12 @@ B. It cascades with delay: $B$ → product term → OR output
 C. Only after the next clock cycle
 D. It never reaches the output
 
+**7. On a timing diagram, a signal transitions from `1` to `0`. What is this transition called?**
+A. A rising edge
+B. A falling edge
+C. A glitch
+D. A vertical slice
+
 ## Answer Explanations
 
 **1. B.** A timing diagram plots signals against a time axis to show *when* they change — the dynamic view. A truth table gives the static input-to-output mapping but says nothing about timing. The other options are unrelated to what a timing diagram depicts.
@@ -124,3 +143,5 @@ D. It never reaches the output
 **5. B.** Whether a transition reaches the output depends on the rest of the circuit's state: a change ANDed with a 0 is blocked, and a change that would set an output already holding `1` produces no visible difference. Options C and D describe different (sequential) or simply incorrect behavior.
 
 **6. B.** In a real circuit each gate adds propagation delay, so the effect of a $B$ transition appears first at the AND (product) term and then, after further delay, at the OR output — the change cascades through the gates rather than appearing instantly.
+
+**7. B.** A `1`-to-`0` transition is a falling edge; `0`-to-`1` is a rising edge. A vertical slice (D) is a way of *reading* the diagram — the state of every signal at one instant — not a transition, and a glitch (C) is an unwanted momentary pulse, a topic for later.
