@@ -30,19 +30,7 @@ Call the AND-gate output the **product term** $P = A \cdot B$; the final output 
 
 Drawn as waveforms, the same story looks like this:
 
-```
-        step:  0   1   2   3   4   5   6
-              ___     ___________     _______
-   A      ___|   |___|           |___|        
-                  _______________________________
-   B      _______|                                
-                              ___________________
-   C      ___________________|           |_______
-                  ___     ___________________
-   P      _______|   |___|                   ...   (P = A·B)
-                  _______     ___________________
-   Y      _______|       |___|                     (Y = P + C)
-```
+![Idealized timing diagram for Y = (A·B) + C: waveforms for inputs A, B, C, the product term P, and output Y across steps 0 through 6, with each output edge aligned to the input edge that caused it.](./images/and-or-timing-diagram.svg)
 
 Several lessons fall out of the walkthrough:
 

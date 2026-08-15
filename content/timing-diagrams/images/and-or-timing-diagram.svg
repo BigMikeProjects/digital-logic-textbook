@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 664" width="1340" height="664">
+
+  <style>
+    svg { background: #fff; }
+    .title { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 30px; font-weight: 700; fill: #24313f; }
+    .label { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 24px; font-weight: 600; fill: #24313f; }
+    .small { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 19px; fill: #64748b; }
+    .tiny { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 15px; fill: #64748b; }
+    .math { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 19px; fill: #64748b; }
+    .grid { fill: none; stroke: #64748b; stroke-width: 1.5; stroke-dasharray: 6 7; }
+    .wave-in { fill: none; stroke: #2563eb; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .wave-p  { fill: none; stroke: #f97316; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .wave-y  { fill: none; stroke: #16a34a; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+
+<text class="title" x="40" y="56">Idealized timing diagram — Y = (A·B) + C</text>
+<text class="small" x="78" y="106">step:</text>
+<text class="small" x="165" y="106">0</text>
+<line class="grid" x1="310" y1="112" x2="310" y2="604"/>
+<text class="small" x="305" y="106">1</text>
+<line class="grid" x1="450" y1="112" x2="450" y2="604"/>
+<text class="small" x="445" y="106">2</text>
+<line class="grid" x1="590" y1="112" x2="590" y2="604"/>
+<text class="small" x="585" y="106">3</text>
+<line class="grid" x1="730" y1="112" x2="730" y2="604"/>
+<text class="small" x="725" y="106">4</text>
+<line class="grid" x1="870" y1="112" x2="870" y2="604"/>
+<text class="small" x="865" y="106">5</text>
+<line class="grid" x1="1010" y1="112" x2="1010" y2="604"/>
+<text class="small" x="1005" y="106">6</text>
+<text class="label" x="60" y="184">A</text>
+<text class="tiny" x="128" y="156">1</text>
+<text class="tiny" x="128" y="201">0</text>
+<polyline class="wave-in" points="170,196 310,196 310,150 590,150 590,196 870,196 870,150 1150,150"/>
+<text class="label" x="60" y="282">B</text>
+<text class="tiny" x="128" y="254">1</text>
+<text class="tiny" x="128" y="299">0</text>
+<polyline class="wave-in" points="170,294 450,294 450,248 1150,248"/>
+<text class="label" x="60" y="380">C</text>
+<text class="tiny" x="128" y="352">1</text>
+<text class="tiny" x="128" y="397">0</text>
+<polyline class="wave-in" points="170,392 730,392 730,346 1010,346 1010,392 1150,392"/>
+<text class="label" x="60" y="478">P</text>
+<text class="tiny" x="128" y="450">1</text>
+<text class="tiny" x="128" y="495">0</text>
+<polyline class="wave-p" points="170,490 450,490 450,444 590,444 590,490 870,490 870,444 1150,444"/>
+<text class="math" x="1168" y="478">P = A·B</text>
+<text class="label" x="60" y="576">Y</text>
+<text class="tiny" x="128" y="548">1</text>
+<text class="tiny" x="128" y="593">0</text>
+<polyline class="wave-y" points="170,588 450,588 450,542 590,542 590,588 730,588 730,542 1150,542"/>
+<text class="math" x="1168" y="576">Y = P + C</text>
+<text class="small" x="170" y="638">time →</text>
+<text class="tiny" x="360" y="638">ideal gates: each output edge lines up exactly with the input edge that caused it</text>
+</svg>
