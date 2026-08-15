@@ -20,6 +20,16 @@ This section makes that connection. We will see how complementary metal-oxide se
 
 ---
 
+## What a Transistor Is
+
+Before arranging transistors into gates, it helps to know what one is. The transistors in digital logic are MOSFETs — metal-oxide-semiconductor field-effect transistors — and for our purposes each one is simply an electrically controlled switch. A MOSFET has three terminals: a **source** and a **drain**, the two ends of the switch, and a **gate**, the control input. The voltage on the gate terminal determines whether current can flow between source and drain. Nothing moves; the switching is purely electrical, which is why a transistor can turn on and off billions of times per second without wearing out.
+
+One unfortunate naming collision: the *gate* terminal of a transistor has nothing to do with a *logic gate* — the terminal was named for gating the flow of current, decades before anyone drew AND gates on schematics. Here, "gate voltage" always means the transistor's control terminal; "gate" by itself means a logic gate.
+
+The scale of these devices is what makes digital electronics possible: a modern transistor is measured in nanometers, and a single processor chip contains billions of them, every one acting as a switch that is either on or off.
+
+---
+
 ## The Two Transistor Types
 
 CMOS logic uses two types of transistors that work as complementary partners: **PMOS** and **NMOS**.
@@ -52,6 +62,8 @@ $$Y = \bar{A}$$
 |:---:|:---:|
 | 0   | 1   |
 | 1   | 0   |
+
+The interactives for this topic let you toggle the inputs of the inverter, NAND, and NOR circuits and watch which transistors conduct — it is worth flipping each input and tracing the conduction path yourself before reading on.
 
 ---
 
@@ -136,6 +148,24 @@ This duality is De Morgan's theorem made physical. De Morgan's tells us that $\o
 
 This also explains why NAND and NOR gates are the natural building blocks of CMOS logic. An AND gate in CMOS would actually require a NAND gate followed by an inverter — an extra pair of transistors. The inversion that the complementary pull-up/pull-down structure provides for free makes NAND and NOR the most efficient gates to build. This is why, in practice, complex logic is often implemented using NAND-only or NOR-only networks rather than mixtures of AND, OR, and NOT gates.
 
+The transistor counts make the cost difference concrete:
+
+| Gate | Transistors |
+|:---|:---:|
+| NOT (inverter) | 2 |
+| NAND | 4 |
+| NOR | 4 |
+| AND (NAND + inverter) | 6 |
+| OR (NOR + inverter) | 6 |
+
+On a chip with billions of gates, a 50% transistor overhead on every AND and OR is not a rounding error, so design tools restructure logic to favor the inverting gates wherever possible.
+
+---
+
+## Why CMOS Won
+
+The complementary structure has one more consequence, and it is the reason CMOS displaced every competing way of building logic. Because exactly one network — pull-up or pull-down — conducts for any valid input, no current flows from $V_{DD}$ to ground while a gate is simply holding its value. Energy is spent only at the moments the output changes. This is why power consumption depends on *switching activity*: a processor running hard gets hot because billions of nodes are changing state billions of times per second, while the same processor idle draws a tiny fraction of that power. It is also why a chip with billions of transistors is feasible at all — if each gate leaked even a trickle while idle, a billion gates' worth of trickle would melt the chip. Earlier logic families had exactly that problem; CMOS's near-zero standby power is what made large-scale integration, and ultimately the devices in your pocket, possible.
+
 ---
 
 ## Reading CMOS Circuits: A Practical Method
@@ -149,6 +179,16 @@ When you encounter an unfamiliar CMOS gate schematic, you can determine its func
 3. **Verify with the pull-up network** (PMOS transistors, connected to $V_{DD}$). The pull-up network should implement $F$ directly, but remember that each PMOS transistor provides a built-in inversion due to its bubble.
 
 For example, if the pull-down network has two NMOS transistors in series (implementing $A \cdot B$), then $\bar{F} = A \cdot B$, so $F = \overline{A \cdot B}$ — a NAND gate. If the pull-down has two NMOS transistors in parallel (implementing $A + B$), then $F = \overline{A + B}$ — a NOR gate.
+
+The same method handles gates you have never seen before. Suppose you encounter a schematic whose pull-down network has an NMOS transistor controlled by $A$ in series with a *pair* of parallel NMOS transistors controlled by $B$ and $C$. Work through the steps:
+
+1. **Read the pull-down network.** Current reaches ground only if the $A$ transistor is on *and* at least one of the $B$ or $C$ transistors is on. Series means AND, parallel means OR, so the pull-down function is $A \cdot (B + C)$. This is when the output is pulled low: $\bar{F} = A \cdot (B + C)$.
+
+2. **Invert to find $F$.** The gate's function is $F = \overline{A \cdot (B + C)}$. The output is high unless $A$ is high and at least one of $B$, $C$ is high.
+
+3. **Verify with the pull-up network.** The pull-up should be the dual arrangement: a PMOS transistor controlled by $A$ in *parallel* with a *series* pair controlled by $B$ and $C$. Check it with De Morgan's: $\overline{A \cdot (B + C)} = \bar{A} + \overline{(B+C)} = \bar{A} + \bar{B} \cdot \bar{C}$. The parallel $A$ transistor provides the $\bar{A}$ term (it conducts when $A$ is low), and the series $B$, $C$ pair provides $\bar{B} \cdot \bar{C}$ (both must be low). The pull-up conducts exactly when $F = 1$ — the networks are complementary, as they must be.
+
+This single circuit computes $\overline{A \cdot (B + C)}$ in one stage, using six transistors; built from separate OR, AND, and inverter gates, the same function would take fourteen. Compound gates like this are series-parallel logic all the way down — no new principles, just the same two rules applied inside a larger network.
 
 ---
 
@@ -202,6 +242,13 @@ CMOS logic builds every gate from two complementary networks of transistors. The
 - C) The pull-up implements AND logic and the pull-down implements OR logic in all gates
 - D) The pull-up is active during one clock phase and the pull-down during the other
 
+**7. A CMOS gate's pull-down network has an NMOS transistor controlled by $A$ in parallel with a series pair of NMOS transistors controlled by $B$ and $C$. What is the gate's output function?**
+
+- A) $F = \overline{A + B \cdot C}$
+- B) $F = \overline{A \cdot (B + C)}$
+- C) $F = A + B \cdot C$
+- D) $F = \overline{A \cdot B \cdot C}$
+
 ---
 
 ## Answer Explanations
@@ -252,3 +299,11 @@ This is the fundamental CMOS design principle. The pull-up network conducts when
 - *Same function for redundancy* (A) would create a short circuit whenever $F = 1$, since both networks would conduct simultaneously.
 - *AND pull-up / OR pull-down* (C) describes one specific gate (NOR) but is not true for all gates.
 - *Clock-phase alternation* (D) describes dynamic logic, not standard static CMOS.
+
+**7. Answer: A) $F = \overline{A + B \cdot C}$**
+
+Read the pull-down network first: parallel means OR and series means AND, so the path to ground conducts when $A$ is high *or* both $B$ and $C$ are high. The pull-down function is $\bar{F} = A + B \cdot C$, and the gate's output is its complement: $F = \overline{A + B \cdot C}$.
+
+- *$\overline{A \cdot (B + C)}$* (B) is the gate from the worked example in the text — its pull-down has $A$ in *series* with a parallel $B$/$C$ pair, the opposite arrangement.
+- *$A + B \cdot C$* (C) is the pull-down function itself, not the output — the pull-down network implements $\bar{F}$, so the output must be inverted.
+- *$\overline{A \cdot B \cdot C}$* (D) would require all three NMOS transistors in series (a three-input NAND); it ignores the parallel branch in the given network.

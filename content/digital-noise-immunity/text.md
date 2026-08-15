@@ -1,69 +1,56 @@
 # Digital Noise Immunity
 
-Now that we understand how analog signals can be converted to digital representation through sampling and quantization, a natural question arises: why bother? What makes digital worth the effort of conversion? The answer lies in a collection of practical advantages that have made digital technology dominant in modern electronics.
+Now that we understand how analog signals can be converted to digital representation through sampling and quantization, a natural question arises: why bother? The answer lies in a collection of practical advantages that have made digital technology dominant in modern electronics—and the biggest of them is the subject of this topic: digital systems can shrug off noise that would slowly destroy an analog signal.
 
 ## Advantages of Digital Systems
 
-Digital systems offer several compelling benefits over their analog counterparts:
+Digital systems offer several compelling benefits over their analog counterparts. The first is reliability: because a digital signal is interpreted as one of two states rather than measured as an exact value, the same data processed twice produces exactly the same result. Closely related is noise immunity—the focus of this section.
 
-- **Reliability**: Digital signals can be transmitted and processed with predictable, repeatable results
-- **Noise immunity**: The ability to distinguish valid signals from corruption (the focus of this section)
-- **Easy storage and processing**: Binary data can be stored indefinitely and manipulated with mathematical precision
-- **Programmability**: The same hardware can perform different functions through software
-- **Error correction**: Techniques exist to detect and even fix errors in digital data
-
-These advantages have driven the digital revolution—from music distribution to telecommunications to computing itself.
+Digital data is also easy to store and process: a photograph stored as bits does not fade, and each copy is identical to the last. Digital hardware is programmable—the same processor can be a calculator, a music player, or a flight controller depending on its software, whereas an analog circuit is built to do one job. Finally, digital data supports error correction: extra bits can be added that let a receiver detect, and often repair, corruption after it happens—a scratched CD that still plays perfectly is error correction at work. Together, these advantages have driven the digital revolution—from music distribution to telecommunications to computing itself.
 
 ## Trade-offs of Digital Systems
 
-Of course, digital systems aren't without costs:
-
-- **Quantization errors**: Converting continuous values to discrete levels introduces small errors
-- **Power consumption**: Digital circuits require power to constantly switch between states
-- **Sampling rate requirements**: Capturing fast-changing signals requires high-speed conversion
-- **Bandwidth expansion**: Representing analog information digitally often requires more bandwidth
+Of course, digital systems aren't without costs. Converting continuous values to discrete levels introduces small quantization errors. Digital circuits consume power constantly switching between states. Capturing fast-changing signals requires high-speed conversion hardware, and digital representation often takes more bandwidth: a single analog voltage becomes eight, sixteen, or twenty-four bits that all have to be moved and stored.
 
 ![Digital advantages include reliability, noise immunity, easy storage and processing, programmability, and error correction. Trade-offs include quantization errors, power consumption, and bandwidth requirements.](./images/digital-advantages-disadvantages.jpg)
 
-For most applications, the advantages far outweigh the trade-offs. But understanding both sides helps engineers make informed design decisions. In this section, we'll focus on one of the most important advantages: noise immunity.
+For most applications, the advantages far outweigh the trade-offs, but understanding both sides helps engineers make informed design decisions. Let's focus now on the advantage this topic is named for: noise immunity.
 
 ## Understanding Noise
 
-Real-world signals are constantly under assault from various sources of noise:
+Real-world signals are constantly under assault. Electromagnetic interference from nearby wires, motors, and radio transmitters couples into signal paths—the buzz you once heard from speakers with a phone set down next to them. Signals weaken as they travel, shrinking the gap between the information and the noise riding on top of it. And no component is perfect: every resistor, capacitor, and transistor adds its own small contribution of noise just by operating.
 
-- **Interference**: Electromagnetic signals from nearby wires, motors, radio transmitters, and other electrical equipment can couple into signal paths
-- **Attenuation**: Signals weaken as they travel through cables and components, reducing the margin between signal and noise
-- **Component imperfections**: No resistor, capacitor, or transistor behaves perfectly—each adds small amounts of noise and distortion
-
-These factors combine to corrupt signals as they move through a system. The question becomes: how much corruption can a system tolerate before information is lost?
+The question becomes: how much of this corruption can a system tolerate before information is lost?
 
 ## The Analog Problem
 
-When an analog signal passes through multiple stages of a system, the noise introduced at each stage becomes a permanent part of the waveform. Consider what happens as an analog audio signal travels through a recording and playback chain:
+When an analog signal passes through multiple stages of a system, the noise introduced at each stage becomes a permanent part of the waveform. An analog stage cannot tell signal from noise—it faithfully processes both. Consider what happens as an analog audio signal travels through a recording and playback chain:
 
 1. The original signal picks up some noise during transmission
 2. An amplifier boosts the signal—but also boosts the noise
 3. The next stage adds its own noise on top
 4. Another amplifier increases everything again
 
-Each stage compounds the problem. By the time the signal reaches its destination, it may be severely degraded. The original information becomes increasingly difficult to distinguish from the accumulated noise. This is why analog tape recordings lose quality with each copy—the noise floor rises with every generation.
+Each stage compounds the problem. This is why analog tape recordings lose quality with each copy—a copy of a copy carries the accumulated hiss of every generation—and why long-distance analog telephone calls were famously bad: a cross-country call passed through dozens of amplifiers, each boosting the accumulated noise of the whole journey along with the voice.
 
 ## How Digital Systems Achieve Noise Immunity
 
-Digital systems take a fundamentally different approach. Instead of treating the signal as a continuous value that must be preserved exactly, digital systems interpret the signal as one of two discrete states: high (1) or low (0).
+Digital systems take a fundamentally different approach. Instead of preserving an exact continuous value, they interpret the signal as one of two discrete states: high (1) or low (0).
 
 This interpretation happens through voltage thresholds. A receiving circuit asks simple questions:
 
 - Is this voltage above the "high" threshold? → Interpret as 1
 - Is this voltage below the "low" threshold? → Interpret as 0
 
-As long as noise doesn't push the voltage across these threshold boundaries, the original binary value can be recovered perfectly. A logic 1 that arrives as 4.8V instead of a clean 5V is still clearly a 1. A logic 0 that wobbles between 0.1V and 0.3V is still unmistakably a 0.
+As long as noise doesn't push the voltage across these threshold boundaries, the original binary value can be recovered perfectly.
+
+Let's make that concrete. Suppose a system uses 5 V for logic 1 and 0 V for logic 0, and the receiver treats anything above 2.5 V as a 1 and anything below as a 0. A transmitter sends the bit 1 as a clean 5.0 V. Along the wire, interference subtracts 0.4 V, so the receiver sees 4.6 V. Is 4.6 V above 2.5 V? Yes—the receiver reads a 1, exactly what was sent. Now send a 0: it leaves as 0.0 V, picks up 0.3 V of noise, and arrives as 0.3 V. Below 2.5 V? Yes—read as 0, correct again. The noise changed the voltages but not the information; a bit could only be misread if noise moved the signal more than 2.5 V—half the entire signal swing. In an analog system carrying music as a voltage, that same 0.3 V of noise isn't absorbed by any threshold; it becomes a permanent, audible addition to the waveform.
 
 ## Signal Regeneration
 
-The real power of digital systems comes from regeneration. After interpreting an incoming signal, a digital circuit can output a fresh, clean version of that signal. The noise disappears completely—it simply isn't passed along.
+Thresholds alone would only buy limited tolerance—accumulating noise would eventually cross the threshold anyway. The real power comes from regeneration: after interpreting an incoming signal, a digital circuit outputs a fresh, clean version of it. A received 4.6 V is read as a 1 and re-transmitted as a full 5.0 V; the noise simply isn't passed along, and the next stage starts clean.
 
-Consider a digital signal traveling through a long chain of circuits:
+Consider a signal traveling through a long chain of circuits:
 
 | Stage | Analog System | Digital System |
 |-------|---------------|----------------|
@@ -73,17 +60,17 @@ Consider a digital signal traveling through a long chain of circuits:
 | After Stage 3 | Signal + even more noise | Clean signal (regenerated) |
 | Output | Degraded signal | Perfect copy of input |
 
-Each digital stage acts as a noise filter. The accumulated noise never grows because it gets stripped away at every regeneration point. This is why digital audio can be copied a million times with zero quality loss—every copy is bit-for-bit identical to the original.
+Each digital stage acts as a noise filter. The accumulated noise never grows because it gets stripped away at every regeneration point—the interactive for this topic lets you watch this comparison play out stage by stage. This is why digital audio can be copied a million times with zero quality loss, and why the engineers who converted the telephone network to digital did it: regeneration meant a call across the planet could finally sound as clear as a call across the street.
 
 ## Digital Signals Are Still Analog
 
-An important subtlety: the physical signals carrying digital data are still analog voltages. A wire carrying a "digital 1" doesn't contain some magical digital substance—it carries a voltage, typically around 3.3V or 5V depending on the logic family. That voltage can still pick up noise, still experience attenuation, still be corrupted.
+An important subtlety: the physical signals carrying digital data are still analog voltages. A wire carrying a "digital 1" doesn't contain some magical digital substance—it carries a voltage, typically around 3.3 V or 5 V, and that voltage can still pick up noise and still be corrupted. The difference is in the interpretation: by treating ranges of voltages as discrete symbols and regenerating clean signals at each stage, digital systems achieve noise immunity that analog systems cannot match.
 
-The difference is in how we interpret and process these voltages. By agreeing to treat ranges of voltages as discrete symbols (0 or 1), and by regenerating clean signals at each stage, digital systems achieve noise immunity that analog systems cannot match.
+This also explains how digital systems fail. An analog system degrades gracefully—more noise, gradually worse quality. A digital system is perfect right up until noise pushes voltages across the threshold; then bits flip and the data is suddenly wrong. This all-or-nothing behavior is sometimes called the digital cliff: a weak digital TV signal doesn't get fuzzy like an old antenna broadcast—it freezes or drops out entirely.
 
 ## Key Takeaways
 
-Digital systems achieve noise immunity not by eliminating noise, but by interpreting signals through voltage thresholds and regenerating clean outputs at each stage. While the physical signals remain analog voltages susceptible to noise, the digital interpretation ensures that information can be preserved perfectly through any number of processing stages. This fundamental property—the ability to maintain data integrity despite real-world imperfections—is one of the primary reasons digital technology has become the foundation of modern electronics.
+Digital systems achieve noise immunity not by eliminating noise, but by interpreting signals through voltage thresholds and regenerating clean outputs at each stage. While the physical signals remain analog voltages susceptible to noise, the digital interpretation ensures information can be preserved perfectly through any number of stages—noise is absorbed by the threshold and discarded at every regeneration point rather than accumulating as in an analog chain. The cost is the all-or-nothing failure mode of the digital cliff. This ability to maintain data integrity despite real-world imperfections is a primary reason digital technology has become the foundation of modern electronics.
 
 ---
 
@@ -143,6 +130,15 @@ Digital systems achieve noise immunity not by eliminating noise, but by interpre
 
 ---
 
+**7. A system uses 5 V for logic 1, 0 V for logic 0, and a receiver threshold of 2.5 V. A transmitted 1 arrives at the receiver as 3.1 V. What does the receiver read?**
+
+- A) A 1, because 3.1 V is above the 2.5 V threshold
+- B) A 0, because the signal lost more than it kept
+- C) An error, because 3.1 V is not a valid logic voltage
+- D) The value 0.62, the fraction of the original voltage that survived
+
+---
+
 ## Answer Explanations
 
 **1. Answer: B) Infinite precision**
@@ -192,3 +188,11 @@ When analog signals are converted to digital, the continuous values must be roun
 - *Cannot be copied* (A) is incorrect—digital's advantage is perfect copying
 - *Noise accumulates* (C) is incorrect—this describes analog, not digital
 - *Cannot be stored* (D) is incorrect—digital storage is a key advantage
+
+**7. Answer: A) A 1, because 3.1 V is above the 2.5 V threshold**
+
+The receiver's only job is to compare the incoming voltage against the threshold. Even though the signal lost 1.9 V to noise and attenuation, 3.1 V is still above 2.5 V, so it is read—and regenerated—as a clean logic 1. The information survives intact.
+
+- *A 0* (B) is incorrect—what matters is which side of the threshold the voltage lands on, not how much was lost
+- *An error* (C) is incorrect—digital receivers accept any voltage and classify it; there is no "invalid" reading here
+- *The value 0.62* (D) is incorrect—that would be an analog interpretation; digital circuits recover discrete symbols, not ratios

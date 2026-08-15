@@ -59,6 +59,38 @@ The process runs in reverse just as mechanically. To go **binary → hex**, grou
 
 The interactive for this topic lets you feel this directly. Click any bit to flip it and watch its nibble's hex digit update; select a hex digit and nudge it and watch the four bits underneath rearrange. Reading *down* from bits to a digit is binary → hex; reading *up* from a digit to bits is hex → binary. The same value is shown simultaneously in binary, hex, and decimal so the three representations stay tied together.
 
+## A Full Worked Example, Both Directions
+
+Let's run one complete conversion each way, at 16 bits. Start with the binary value:
+
+$$1101\;0111\;0010\;1000$$
+
+**Binary → hex.** The bits are already grouped in fours, so name each nibble using the 8-4-2-1 weights:
+
+- `1101` $= 8+4+1 = 13 =$ **D**
+- `0111` $= 4+2+1 = 7$
+- `0010` $= 2$
+- `1000` $= 8$
+
+Reading the digits in order: `1101011100101000` is **D728** in hex. Four additions, no carrying, and each nibble was handled completely independently of its neighbors.
+
+**Hex → binary.** Now take the hex value `4E2C` and expand each digit back into its four-bit pattern:
+
+- `4` $\rightarrow$ `0100`
+- `E` $= 14 = 8+4+2 \rightarrow$ `1110`
+- `2` $\rightarrow$ `0010`
+- `C` $= 12 = 8+4 \rightarrow$ `1100`
+
+String the nibbles together and `4E2C` is $0100\;1110\;0010\;1100$. Keep the leading zero of the first nibble — every digit expands to exactly four bits, even when its pattern starts with zeros. Drop that zero and every bit downstream shifts position, silently changing the value.
+
+One caution while reading hex aloud: resist pronouncing hex values as if they were decimal. The hex value `10` is *sixteen*, not ten, which is why engineers habitually spell values out digit by digit ("one-zero" or "D-seven-two-eight") rather than reading them as numbers.
+
+## Bytes and the 0x Prefix
+
+There is one more reason base 16 won out over every other candidate shorthand. Computers organize storage in **bytes** of 8 bits, and 8 bits is exactly *two* nibbles — so **one byte is always exactly two hex digits**. A byte's value runs from `00` to `FF`, a 32-bit word is 4 bytes and 8 hex digits, and byte boundaries in a long hex string always fall between digit pairs. (Base 8, octal, had its era — groups of three bits — but three doesn't divide 8 evenly, so a byte straddles octal digit boundaries. Hex fits the byte perfectly, and that settled it.)
+
+Because hex is everywhere, most programming languages mark it with the prefix **`0x`**: what Verilog writes as `8'hB5`, C and Python write as `0xB5`. Once you know the notation, you will notice hex all over computing: memory addresses in error messages (`0x00007FFC`), web colors (`#B5C2A9` is three bytes — red, green, blue), network hardware MAC addresses (`A4:5E:60:C2:19:8B`, six bytes), and the file dumps produced by hex editors. In every case the underlying data is binary, and hex is the two-digits-per-byte window humans use to look at it.
+
 ## When the Width Isn't a Multiple of Four
 
 Grouping is perfectly clean whenever the number of bits is a multiple of four: 8 bits give 2 hex digits, 16 bits give 4, 32 bits give 8. Real hardware, though, often works with widths like 10 or 12 bits, and 10 is not a multiple of four. The fix is **zero-padding the most significant end**. For an unsigned value, the missing high bits are simply treated as `0`, which never changes the value, and the nibbles are then formed as usual.
@@ -89,7 +121,7 @@ Writing `8'hB5` instead of `8'b10110101` is shorter and less error-prone for exa
 
 ## Key Takeaways
 
-Hexadecimal is base 16, a compact human-readable shorthand for binary that makes long bit patterns easier to read, copy, and compare — a single mistyped bit is far more likely to be caught, and a one-bit difference between two values is far easier to spot. Its digits are `0`–`9` followed by `A`–`F` for the values ten through fifteen, and each digit is simply the decimal value of a four-bit **nibble**, with the bits carrying place values 8-4-2-1. Because $16 = 2^4$, conversion is a direct digit-for-nibble substitution that works identically in both directions: group binary into fours to get hex, expand each hex digit into four bits to get binary — no decimal detour required. When the bit width is not a multiple of four, pad the most significant end with zeros; this leaves the top hex digit with fewer real bits, capping its value (a 10-bit field's leading digit maxes out at `3`). Hardware description languages such as Verilog let you write these values directly as hex literals like `8'hB5`, which is why fluent binary↔hex conversion is an everyday skill in digital design.
+Hexadecimal is base 16, a compact human-readable shorthand for binary that makes long bit patterns easier to read, copy, and compare — a single mistyped bit is far more likely to be caught, and a one-bit difference between two values is far easier to spot. Its digits are `0`–`9` followed by `A`–`F` for the values ten through fifteen, and each digit is simply the decimal value of a four-bit **nibble**, with the bits carrying place values 8-4-2-1. Because $16 = 2^4$, conversion is a direct digit-for-nibble substitution that works identically in both directions: group binary into fours to get hex, expand each hex digit into four bits to get binary — no decimal detour required. When the bit width is not a multiple of four, pad the most significant end with zeros; this leaves the top hex digit with fewer real bits, capping its value (a 10-bit field's leading digit maxes out at `3`). Because a byte is 8 bits, one byte is always exactly two hex digits — the anchor behind hex's appearance in memory addresses, color codes, and MAC addresses, usually marked with the `0x` prefix. Hardware description languages such as Verilog let you write these values directly as hex literals like `8'hB5`, which is why fluent binary↔hex conversion is an everyday skill in digital design.
 
 ## Review Questions
 
@@ -129,6 +161,12 @@ B. The decimal number 85
 C. A hexadecimal value that is 8 hex digits wide
 D. An error, because `B` is not a valid digit
 
+**7. How many hex digits does it take to write one byte (8 bits), and why?**
+A. One, because a hex digit can hold any value up to 255
+B. Two, because a byte is two nibbles and each nibble is one hex digit
+C. Three, because 8 bits don't divide evenly into groups of four
+D. It varies with the value stored in the byte
+
 ## Answer Explanations
 
 **1. B.** Hexadecimal does not change how the hardware stores anything — the underlying bits are identical. Its value is purely for humans: four times shorter than binary, so it is quicker to read and copy, easier to transcribe without error, and it makes a one-bit difference between two values (like `9D3F` vs `9D7F`) far easier to notice.
@@ -142,3 +180,5 @@ D. An error, because `B` is not a valid digit
 **5. C.** Three nibbles cover twelve bit positions, but a 10-bit value fills only ten of them, so the top nibble is padded with two leading zeros and has just two real bits. Two bits reach at most `0011`, which is `3`; the digit cannot climb to `F` until the width grows to a full 12 bits.
 
 **6. A.** The Verilog form `<width>'h<digits>` gives a value in hex. Here `8'h` means an 8-bit value and `B5` is the hex content, so the bits are `1011 0101`. (That equals decimal 181, not 85, and `B` is a perfectly valid hex digit.)
+
+**7. B.** Eight bits split into exactly two groups of four — two nibbles — and each nibble is one hex digit, `00` through `FF`. This exact fit between the byte and the hex digit pair is why hex, not octal, became computing's standard shorthand: a formatted value like `0xB5` or a color like `#B5C2A9` is readable byte by byte.

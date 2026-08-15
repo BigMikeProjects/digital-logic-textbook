@@ -49,6 +49,31 @@ A larger number just takes one more step. Convert `456`:
 
 Reading the remainders bottom-up gives $456_{10} = \text{1C8}_{16}$. Notice this closes the loop with the earlier example: `1C8` expands to 456, and 456 divides down to `1C8`. That is not a coincidence — the two conversions are exact inverses.
 
+One pitfall deserves its own warning. When a remainder comes out between 10 and 15, write it as its letter digit *immediately* — `A` through `F` — never as a two-digit decimal number. In the `456` example above, step 2 produced remainder 12: the digit recorded is `C`. Write "12" in the digit column instead and your final answer sprouts an extra digit and is silently wrong. The remainder column and the digit column are two views of the same value; the digit column must always hold exactly one hex symbol.
+
+## A Larger Example, Both Ways
+
+The method does not change as numbers grow — there are just more places. Expand the four-digit value `2EA6`, which brings in the $16^3 = 4096$ place:
+
+$$\text{2EA6}_{16} = (2 \times 4096) + (\underbrace{14}_{\text{E}} \times 256) + (\underbrace{10}_{\text{A}} \times 16) + (6 \times 1)$$
+
+$$= 8192 + 3584 + 160 + 6 = 11942_{10}$$
+
+Now run the inverse to confirm. Convert `11942` back to hex by repeated division:
+
+| Step | Division | Quotient | Remainder | Digit |
+|------|----------|----------|-----------|-------|
+| 1 | $11942 \div 16$ | 746 | 6 | **6** |
+| 2 | $746 \div 16$ | 46 | 10 | **A** |
+| 3 | $46 \div 16$ | 2 | 14 | **E** |
+| 4 | $2 \div 16$ | 0 | 2 | **2** |
+
+Reading bottom-up: `2EA6`, exactly where we started. Note steps 2 and 3 exercising the pitfall above — remainders 10 and 14 go into the digit column as `A` and `E`.
+
+## Getting a Feel for Hex Magnitudes
+
+Fluency also means having a rough sense of *size* without computing. The trick is that hex has its own round numbers: the powers of 16. Just as 10, 100, and 1000 anchor decimal, the anchors here are $\text{10}_{16} = 16$, $\text{100}_{16} = 256$, and $\text{1000}_{16} = 4096$. A few consequences worth memorizing because they recur constantly in digital work: two hex digits span one byte, topping out at `FF` = 255; four hex digits span 16 bits, topping out at `FFFF` = 65535. So when you see a value like `1C8`, you can place it instantly — three digits means somewhere between 256 and 4095 — before doing any arithmetic at all. That habit of estimating first also catches gross conversion errors: if your expansion of a three-digit hex number comes out below 256, something slipped.
+
 ## Use Each Direction to Check the Other
 
 Because hex→decimal and decimal→hex undo one another, they give you a built-in way to **check your work**, which is especially handy on an exam. Convert a decimal number to hex by repeated division, then convert your hex answer back to decimal by positional expansion; if you land on the number you started with, both conversions were right. Working through hex rather than binary keeps the step count low, and whenever you actually need the bits, expanding each hex digit into its nibble is immediate.
@@ -109,6 +134,12 @@ B. Expand `1C8` in base 16: $256 + 192 + 8 = 456$, matching the original decimal
 C. Convert `1C8` to binary; it should have exactly 8 bits
 D. Add the digits $1 + 12 + 8 = 21$; it should equal the original
 
+**7. During repeated division by 16, a step produces quotient 46 and remainder 14. What goes in the digit column for that step?**
+A. `14`
+B. `E`
+C. `F`
+D. `46`
+
 ## Answer Explanations
 
 **1. B.** Expand `A9` in base 16: the `A` is 10 in the $16^1$ place and the `9` is in the $16^0$ place, so $(10 \times 16) + (9 \times 1) = 160 + 9 = 169$.
@@ -122,3 +153,5 @@ D. Add the digits $1 + 12 + 8 = 21$; it should equal the original
 **5. B.** Repeated division by 16 reaches the answer in far fewer steps than repeated division by 2, with fewer opportunities for error — and a hex result expands back to binary trivially whenever the bits are needed. Binary can represent any value, and the conversions all agree, so the other options are false.
 
 **6. B.** The two directions are inverses, so the quickest check is to expand the hex answer back to decimal by place value: $(1 \times 256) + (12 \times 16) + (8 \times 1) = 256 + 192 + 8 = 456$. If that matches the number you started with, the conversion is correct. Simply summing the digits (option D) is not a valid base-16 check.
+
+**7. B.** A remainder between 10 and 15 must be recorded as its single hex letter — 14 is `E`. Writing the two-character "14" (option A) corrupts the answer with an extra digit, `F` (option C) is 15 rather than 14, and the quotient (option D) is never a digit — it is the number carried into the next division step.
