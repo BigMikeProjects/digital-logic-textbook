@@ -56,6 +56,13 @@
           "slug": "binary-basics",
           "type": "full",
           "published": true
+        },
+        {
+          "num": "6.0.1",
+          "title": "Verilog - Hello World",
+          "slug": "hello-world",
+          "type": "full",
+          "published": true
         }
       ]
     },
@@ -145,13 +152,6 @@
           "num": "3.0.4",
           "title": "Hexadecimal To/From Decimal",
           "slug": "hexadecimal-to-from-decimal",
-          "type": "full",
-          "published": true
-        },
-        {
-          "num": "6.0.1",
-          "title": "Verilog - Hello World",
-          "slug": "hello-world",
           "type": "full",
           "published": true
         }
