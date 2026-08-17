@@ -12,7 +12,7 @@ Digital data is also easy to store and process: a photograph stored as bits does
 
 Of course, digital systems aren't without costs. Converting continuous values to discrete levels introduces small quantization errors. Digital circuits consume power constantly switching between states. Capturing fast-changing signals requires high-speed conversion hardware, and digital representation often takes more bandwidth: a single analog voltage becomes eight, sixteen, or twenty-four bits that all have to be moved and stored.
 
-![Digital advantages include reliability, noise immunity, easy storage and processing, programmability, and error correction. Trade-offs include quantization errors, power consumption, and bandwidth requirements.](./images/digital-advantages-disadvantages.jpg)
+![Students at a whiteboard comparing digital advantages — noise immunity, reliable repeatable operation, easy storage and processing, programmability, error detection and correction — against digital disadvantages: quantization error, sampling requirements, finite resolution, bandwidth expansion, conversion delay, and greater complexity and power at very high speeds.](./images/advantages-whiteboard.jpg)
 
 For most applications, the advantages far outweigh the trade-offs, but understanding both sides helps engineers make informed design decisions. Let's focus now on the advantage this topic is named for: noise immunity.
 
