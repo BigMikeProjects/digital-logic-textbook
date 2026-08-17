@@ -23,19 +23,25 @@ Regular software lets you `print` values or stop at a breakpoint and inspect var
 
 Debugging shifts accordingly — instead of inspecting variables, you **examine the signals over time as waveforms**. Those waveforms are exactly the timing diagrams from earlier in this lecture: the simulator plots every signal against a shared time axis, and you read the diagram to see whether the circuit did what you intended. It's a different mindset, and the hand-drawn timing-diagram skill transfers to it directly.
 
+### Where HDLs came from
+
+HDLs exist because chips outgrew pencils. Through the 1970s, digital designs were entered as **schematics** — every gate drawn, every wire routed by hand. That works at hundreds of gates and collapses at hundreds of thousands. In the 1980s two text-based languages emerged to replace drawing with describing: **Verilog** (created in 1984 as a simulation language) and **VHDL** (developed in the same era under a U.S. Department of Defense program to document chip designs). The decisive step came when **synthesis tools** learned to turn those textual descriptions into gate-level circuits automatically — from then on, engineers could describe *what* a circuit does and let software work out the gates. Both languages became IEEE standards, and designs grew from thousands of gates to the billions of transistors in a modern processor.
+
+That scaling is the real payoff of HDLs: **essentially every chip in your life — the processor in your laptop, the SoC in your phone, the controllers in your car — was designed and verified in a hardware description language.** Text descriptions can be simulated, version-controlled, reviewed, and reused in ways hand-drawn schematics never could.
+
 ### One of several HDLs
 
-Verilog is one choice among a few. We use it because it's the easiest to learn and very widely used. **SystemVerilog** is common in industry and builds on Verilog, but it hides some of the underlying mechanisms — so we learn plain Verilog first to understand the details, and you can move to SystemVerilog later with those details intact. **VHDL** is another long-standing HDL (it originated in the U.S. Department of Defense) and is still used in parts of industry. The concepts transfer: someone who understands one HDL's mindset — concurrency, describe-then-run, waveform debugging — can pick up another's syntax.
+Verilog is one choice among a few. We use it because it's the easiest to learn and very widely used. **SystemVerilog** is common in industry and builds on Verilog, but it hides some of the underlying mechanisms — so we learn plain Verilog first to understand the details, and you can move to SystemVerilog later with those details intact. **VHDL** is the other long-standing HDL and is still used in parts of industry. The concepts transfer: someone who understands one HDL's mindset — concurrency, describe-then-run, waveform debugging — can pick up another's syntax.
 
-### The payoff: FPGAs
+### The payoff we use in lab: FPGAs
 
-In the past, learning logic meant hand-wiring simple circuits in a lab — tedious, error-prone, and limited to very basic designs. Because designs are now **software descriptions**, we can implement sophisticated circuits on **FPGA boards** — programmable hardware that can become whatever circuit you describe. A design with thousands of gates is no harder to *build* than one with ten; you describe it, simulate it, and load it.
+For this course, the payoff you'll touch directly is the **FPGA**. In the past, learning logic meant hand-wiring simple circuits in a lab — tedious, error-prone, and limited to very basic designs. Because designs are now **software descriptions**, we can implement sophisticated circuits on **FPGA boards** — programmable hardware that can become whatever circuit you describe. A design with thousands of gates is no harder to *build* than one with ten; you describe it, simulate it, and load it. FPGAs are one destination for an HDL design, not the only one — the same description that configures your lab board is the kind of description that, in industry, becomes a custom chip.
 
 The trade-off is a **longer workflow**: you simulate and synthesize a design, across several levels of abstraction, before it becomes real hardware. Where a software change is edit-run, a hardware change is edit, simulate, check the waveforms, synthesize, and program the board. We'll build up those skills through the course, starting from small simulations and working toward complete designs on the FPGA.
 
 ### Key Takeaways
 
-Verilog is this course's hardware description language, and the essential adjustment is mindset, not syntax. Circuits are physical and concurrent — everything operates at once, which is why concurrent assignments genuinely swap two values where sequential code would not. There is no print-statement debugging: a source file splits into a design that describes hardware and a testbench that runs it, and you debug by reading the resulting waveforms — the same timing diagrams drawn by hand earlier in this lecture. Verilog sits alongside SystemVerilog and VHDL; we learn plain Verilog first because it exposes the mechanisms the others build on. The payoff for the longer describe-simulate-synthesize workflow is FPGAs: programmable hardware that can become any circuit you can describe.
+Verilog is this course's hardware description language, and the essential adjustment is mindset, not syntax. Circuits are physical and concurrent — everything operates at once, which is why concurrent assignments genuinely swap two values where sequential code would not. There is no print-statement debugging: a source file splits into a design that describes hardware and a testbench that runs it, and you debug by reading the resulting waveforms — the same timing diagrams drawn by hand earlier in this lecture. HDLs arose in the 1980s (Verilog and VHDL) because schematics couldn't scale, and paired with synthesis they became the way essentially every modern chip is designed — that scaling is their real payoff. Verilog sits alongside SystemVerilog and VHDL; we learn plain Verilog first because it exposes the mechanisms the others build on. The payoff we use directly in lab is the FPGA: programmable hardware that can become any circuit you can describe, one destination among several for an HDL design.
 
 ## Review Questions
 
@@ -69,6 +75,12 @@ B. VHDL requires Verilog as a prerequisite
 C. SystemVerilog hides some underlying mechanisms; learning Verilog first exposes the details
 D. Plain Verilog is the only HDL used in industry
 
+**6. Why did hardware description languages replace hand-drawn schematics as the way chips are designed?**
+A. Schematics could not legally be patented
+B. Text descriptions scale: they can be simulated, synthesized to gates automatically, and managed at millions-of-gates size where drawing collapses
+C. HDLs run faster than the circuits they describe
+D. Schematic symbols were never standardized
+
 ## Answer Explanations
 
 **1. B.** The core difference is concurrency: software runs sequentially down the page, while a circuit's parts all exist and operate simultaneously. Getting this wrong leads to confident, wrong predictions about what Verilog code does — it is the mindset shift everything else in the course builds on.
@@ -80,3 +92,5 @@ D. Plain Verilog is the only HDL used in industry
 **4. A.** Simulation produces waveforms — every signal plotted against a shared time axis, exactly the timing diagrams drawn by hand earlier in this lecture. Debugging means reading those waveforms to see where the circuit's behavior diverges from your intent.
 
 **5. C.** SystemVerilog builds on Verilog but abstracts away some of the mechanisms underneath. Learning plain Verilog first means you understand those details, and moving to SystemVerilog later is straightforward. (VHDL is an independent HDL, not a sequel — and industry uses all three.)
+
+**6. B.** Hand-drawn schematics work at hundreds of gates and collapse at hundreds of thousands. Describing behavior in text — and letting synthesis tools derive the gates — is what allowed designs to grow to the billions of transistors in modern chips. That scaling, not any single board or device, is the fundamental payoff of HDLs; the FPGA is the version of it we use in lab.
