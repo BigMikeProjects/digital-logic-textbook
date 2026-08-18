@@ -1,0 +1,11 @@
+title: "Instantiating Modules"
+description: "Placing copies of a finished module inside a bigger design: instance names, named port mapping (.pin(wire)), internal wires, and glue logic — a full adder built from two half adders."
+chapter: verilog
+section: verilog-basics
+order: 60402
+
+graphics:
+  01-video.youtube:
+    caption: "Video: instantiating modules — a full adder from two half adders with named port mapping"
+  02-interactive.html:
+    caption: "Interactive: the part, place & wire (click any .pin(wire) hookup to light its connection), and copies-not-calls with a steppable simulation"

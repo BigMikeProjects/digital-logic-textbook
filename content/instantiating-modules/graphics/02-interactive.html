@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verilog Instantiation — Blocks Made of Blocks</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 module types/keywords · amber #ffb74d instance names/console ·
+       violet #b388ff highlights · navy #0d1b2a panels */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Consolas','Courier New',monospace; }
+
+    /* ---------- code panes ---------- */
+    .pane { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; }
+    .pane-head { display: flex; align-items: baseline; gap: 12px; padding: 10px 18px;
+        background: #0d1b2a; border-bottom: 2px solid #24384c; }
+    .pane-head .fn { font-family: 'Consolas','Courier New',monospace; font-size: 19px;
+        color: #4fc3f7; font-weight: 700; }
+    .pane-head .role { font-size: 15px; color: #607d8b; }
+    .code { padding: 12px 0; font-family: 'Consolas','Courier New',monospace;
+        font-size: 19px; line-height: 1.62; }
+    .cl { display: flex; padding: 0 16px; white-space: pre; transition: background .15s; }
+    .cl .ln { width: 40px; flex-shrink: 0; text-align: right; margin-right: 18px;
+        color: #34495c; user-select: none; }
+    .cl.hl { background: rgba(179,136,255,0.16); box-shadow: inset 3px 0 0 #b388ff; }
+    .cl.run { background: rgba(255,183,77,0.14); box-shadow: inset 3px 0 0 #ffb74d; }
+    .kw { color: #4fc3f7; } .cm { color: #56708a; } .st { color: #ffb74d; }
+    .op { color: #b388ff; }
+
+    /* ---------- pages 1 & 2 shared ---------- */
+    .split { display: flex; gap: 20px; flex: 1; min-height: 0; }
+    .col1 { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px;
+        padding: 6px 16px; font-size: 16px; color: #90a4ae; background: #0d1b2a;
+        transition: all .15s ease; }
+    .chip:hover { border-color: #b388ff; color: #cfd8dc; }
+    .chip.on { border-color: #b388ff; background: rgba(179,136,255,0.14); color: #cbb4ff; }
+    .pmap { cursor: pointer; border-bottom: 2px dotted #6a4fa0; border-radius: 4px;
+        transition: all .12s ease; }
+    .pmap:hover { background: rgba(179,136,255,0.16); }
+    .pmap.on { background: rgba(179,136,255,0.30); border-bottom: 2px solid #b388ff;
+        color: #e6dcff; }
+    .pnote { font-size: 18px; color: #90a4ae; text-align: center; min-height: 28px; }
+    .pnote b { color: #b388ff; }
+    .pnote .tname { color: #4fc3f7; font-family: 'Consolas','Courier New',monospace; }
+    .pnote .iname { color: #ffb74d; font-family: 'Consolas','Courier New',monospace; }
+    #p1, #p2 { flex-direction: column; gap: 12px; }
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; }
+    .panel-head { padding: 10px 18px; background: #0b1622; border-bottom: 2px solid #24384c;
+        font-size: 16px; color: #607d8b; }
+    .panel-head b { color: #90a4ae; }
+    .panel-body { flex: 1; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 10px; padding: 10px; min-height: 0; }
+    .panel-cap { font-size: 17px; color: #90a4ae; text-align: center; padding: 0 30px 16px; }
+    .panel-cap b { color: #ffb74d; }
+    #hasym svg { width: 640px; height: 380px; }
+    #fasym svg { width: 780px; height: 433px; }
+
+    /* ---------- page 3 ---------- */
+    #p3 { flex-direction: column; gap: 12px; }
+    .runrow { display: flex; gap: 20px; flex: 1; min-height: 0; }
+    .runrow .pane { flex: 1; }
+    .runrow .code { font-size: 16px; line-height: 1.5; }
+    .midcol { flex: 0 0 600px; display: flex; flex-direction: column; gap: 12px;
+        align-items: center; justify-content: center; }
+    #fasym3 svg { width: 600px; height: 333px; }
+    .stepbtn { cursor: pointer; user-select: none; border: 2px solid #ffb74d;
+        border-radius: 999px; padding: 10px 28px; color: #ffb74d; font-size: 19px;
+        background: rgba(255,183,77,0.08); font-weight: 700; letter-spacing: 1px; }
+    .stepbtn .k { font-family: 'Consolas','Courier New',monospace; color: #8a6a3a;
+        font-size: 15px; margin-left: 8px; }
+    .console { flex: 0 0 380px; background: #06111c; border: 2px solid #24384c;
+        border-radius: 12px; padding: 14px 20px; font-family: 'Consolas','Courier New',monospace;
+        font-size: 16px; line-height: 1.55; overflow: hidden; color: #ffb74d; white-space: pre-wrap; }
+    .console .chead { color: #607d8b; }
+    .console .fin { color: #66bb6a; }
+    .console .cursor { color: #4fc3f7; animation: blink 1.1s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .whyline { align-self: center; border: 2px solid #6a5324; border-radius: 14px;
+        background: rgba(255,183,77,0.07); padding: 12px 34px; font-size: 21px; color: #cfd8dc;
+        text-align: center; line-height: 1.45; max-width: 1600px; }
+    .whyline b { color: #ffb74d; }
+    .whyline .tname { color: #4fc3f7; font-family: 'Consolas','Courier New',monospace; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 8px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.violet { color: #b388ff; border-color: #6a4fa0; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== persistent header ===== -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none">
+                <rect x="12" y="16" width="60" height="30" rx="6" fill="#0d1b2a" stroke="#cfd8dc" stroke-width="2.2"/>
+                <rect x="12" y="58" width="60" height="30" rx="6" fill="#0d1b2a" stroke="#cfd8dc" stroke-width="2.2"/>
+                <g font-family="'Consolas',monospace" font-size="17" font-weight="700">
+                    <text x="42" y="37" text-anchor="middle" fill="#ffb74d">ha0</text>
+                    <text x="42" y="79" text-anchor="middle" fill="#ffb74d">ha1</text>
+                </g>
+                <g font-family="'Consolas',monospace" font-size="15">
+                    <text x="84" y="37"><tspan fill="#4fc3f7">half_adder</tspan> <tspan fill="#ffb74d">ha0</tspan><tspan fill="#cfd8dc">(&#8230;);</tspan></text>
+                    <text x="84" y="79"><tspan fill="#4fc3f7">half_adder</tspan> <tspan fill="#ffb74d">ha1</tspan><tspan fill="#cfd8dc">(&#8230;);</tspan></text>
+                </g>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Verilog: Instantiation <span class="sub">&mdash; blocks made of blocks</span></h1>
+            <div class="subtitle">place copies of a finished module inside a bigger one &middot; a full adder from two half adders &middot; the pattern behind all hierarchy</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 3</div>
+    </div>
+
+    <!-- ===== tab strip ===== -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">The Part</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Place &amp; Wire</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Copies, Not Calls</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- ============ PAGE 1 ============ -->
+        <div class="page" id="p1">
+            <div class="split">
+                <div class="col1">
+                    <div class="pane" style="flex:1">
+                        <div class="pane-head"><span class="fn">half_adder.v</span>
+                            <span class="role">a module you already know how to write</span></div>
+                        <div class="code" id="code-h1"></div>
+                    </div>
+                    <div class="chips" id="chips-h"></div>
+                </div>
+                <div class="col1">
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head">what this file creates: <b>a new part for your parts bin</b></div>
+                        <div class="panel-body"><div id="hasym"></div></div>
+                        <div class="panel-cap">define it <b>once</b> &mdash; then place as many copies as you
+                            like. Each placement is its <b>own separate hardware</b>.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="pnote" id="p1note">click a chip &mdash; this file doesn&rsquo;t <b>run</b> anything; it defines a <b>part</b></div>
+        </div>
+
+        <!-- ============ PAGE 2 ============ -->
+        <div class="page" id="p2">
+            <div class="split">
+                <div class="col1">
+                    <div class="pane" style="flex:1">
+                        <div class="pane-head"><span class="fn">full_adder.v</span>
+                            <span class="role">a bigger module built out of the part</span></div>
+                        <div class="code" id="code-f1"></div>
+                    </div>
+                    <div class="chips" id="chips-f"></div>
+                </div>
+                <div class="col1">
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head">the circuit those two lines place: <b>full_adder</b>, seen from inside</div>
+                        <div class="panel-body"><div id="fasym"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="pnote" id="p2note">click a chip &mdash; or click any <b>.pin(wire)</b> hookup in the code to light up that exact connection</div>
+        </div>
+
+        <!-- ============ PAGE 3 ============ -->
+        <div class="page" id="p3">
+            <div class="runrow">
+                <div class="pane">
+                    <div class="pane-head"><span class="fn">full_adder.v</span></div>
+                    <div class="code" id="code-f2"></div>
+                </div>
+                <div class="midcol">
+                    <div id="fasym3"></div>
+                    <div class="stepbtn" id="stepBtn">&#9654; RUN<span class="k">S</span></div>
+                </div>
+                <div class="console" id="console"></div>
+            </div>
+            <div class="whyline" id="whyline">
+                Watch the highlights: on <b>every</b> step, <span class="tname">ha0</span>,
+                <span class="tname">ha1</span> and the OR all compute <b>at the same instant</b>.
+                Instantiation is <b>placement, not a function call</b> &mdash; nothing is
+                &ldquo;invoked&rdquo;; the copies simply exist. Blocks made of blocks is how every
+                chip is built.
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">3</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k violet">click chips</span> to annotate
+            &middot; <span class="k amber">S</span> step the simulation
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ PAGE STATE ============
+    const FIRST = 1, LAST = 3;
+    let page = 1;
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+
+    // ============ THE CODE (iverilog-verified — keep in lockstep with the topic prose) ====
+    const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    function hi(line) {
+        const ix = line.indexOf('//');
+        const code = ix >= 0 ? line.slice(0, ix) : line;
+        const com  = ix >= 0 ? line.slice(ix) : '';
+        let h = esc(code)
+            .replace(/(\s)(\^|&amp;|\|)(\s)/g, '$1<span class="op">$2</span>$3')
+            .replace(/\b(module|endmodule|input|output|wire|assign)\b/g, '<span class="kw">$1</span>')
+            .replace(/\b(half_adder|full_adder)\b(?!_)/g, '<span class="kw">$1</span>')
+            .replace(/\b(ha0|ha1)\b/g, '<span class="st">$1</span>');
+        if (com) h += '<span class="cm">' + esc(com) + '</span>';
+        return h;
+    }
+    const HALF = [
+'// half_adder.v — the building block',
+'module half_adder (',
+'  input  wire a,',
+'  input  wire b,',
+'  output wire sum,    // a XOR b',
+'  output wire carry   // a AND b',
+');',
+'',
+'  assign sum   = a ^ b;',
+'  assign carry = a & b;',
+'',
+'endmodule',
+    ];
+    const FULL = [
+'// full_adder.v — built from two half adders',
+'module full_adder (',
+'  input  wire a,',
+'  input  wire b,',
+'  input  wire cin,',
+'  output wire sum,',
+'  output wire cout',
+');',
+'',
+'  wire s1, c1, c2;   // internal wiring between the parts',
+'',
+'  half_adder ha0 (.a(a),  .b(b),   .sum(s1),  .carry(c1));',
+'  half_adder ha1 (.a(s1), .b(cin), .sum(sum), .carry(c2));',
+'',
+'  assign cout = c1 | c2;',
+'',
+'endmodule',
+    ];
+    function paint(elId, lines, prefix) {
+        document.getElementById(elId).innerHTML = lines.map((l, i) =>
+            `<div class="cl" data-l="${prefix}${i+1}"><span class="ln">${i+1}</span><span>${hi(l)}</span></div>`
+        ).join('');
+    }
+    paint('code-h1', HALF, 'h');
+    paint('code-f1', FULL, 'f');
+    paint('code-f2', FULL, 'F');
+
+    // ============ SCHEMATIC DRAWING ============
+    const VIO = '#b388ff', CYAN = '#4fc3f7', AMBER = '#ffb74d',
+          ON = '#4fc3f7', OFF = '#7d9bb5', IDLE = '#5a7691', DEAD = '#34495c';
+
+    // --- beat 1: the half_adder "part" symbol (with ghost copies stacked behind) ---
+    function drawHA(hl) {
+        const h = (k) => hl === k;
+        const box = h('outline') ? VIO : '#cfd8dc';
+        const pin = h('pins') ? VIO : IDLE;
+        const pinT = h('pins') ? VIO : '#90a4ae';
+        const gate = h('gates') ? VIO : '#7d9bb5';
+        const gateT = h('gates') ? VIO : '#cfd8dc';
+        document.getElementById('hasym').innerHTML = `
+        <svg viewBox="0 0 590 350" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="184" y="79" width="280" height="210" rx="10" stroke="#37506a" stroke-width="2" stroke-dasharray="7 7"/>
+            <rect x="162" y="57" width="280" height="210" rx="10" fill="#101d2c" stroke="#4a6274" stroke-width="2" stroke-dasharray="7 7"/>
+            <rect x="140" y="35" width="280" height="210" rx="10" fill="#0d1b2a" stroke="${box}" stroke-width="3"/>
+            <line x1="60" y1="90" x2="140" y2="90" stroke="${pin}" stroke-width="3.2"/>
+            <line x1="60" y1="190" x2="140" y2="190" stroke="${pin}" stroke-width="3.2"/>
+            <line x1="420" y1="90" x2="500" y2="90" stroke="${pin}" stroke-width="3.2"/>
+            <line x1="420" y1="190" x2="500" y2="190" stroke="${pin}" stroke-width="3.2"/>
+            <g font-family="'Consolas',monospace" font-size="19" fill="${pinT}">
+                <text x="52" y="96" text-anchor="end">a</text>
+                <text x="52" y="196" text-anchor="end">b</text>
+                <text x="508" y="96">sum</text>
+                <text x="508" y="196">carry</text>
+            </g>
+            <text x="280" y="68" text-anchor="middle" font-family="'Consolas',monospace"
+                font-size="20" font-weight="700" fill="${h('outline') ? VIO : CYAN}">half_adder</text>
+            <!-- internal wiring: a and b each fan out to BOTH gates (dots = connections;
+                 the one dot-free crossing at 182,165 is topologically unavoidable),
+                 and each gate output runs to its pin. Drawn under the gate bodies. -->
+            <g stroke="${gate}" stroke-width="2.2">
+                <polyline points="140,90 200,90"/>
+                <polyline points="168,90 168,165 199,165"/>
+                <polyline points="140,190 199,190"/>
+                <polyline points="182,190 182,115 200,115"/>
+                <polyline points="242,102 268,102 268,90 420,90"/>
+                <polyline points="242,178 268,178 268,190 420,190"/>
+            </g>
+            <circle cx="168" cy="90" r="3.6" fill="${gate}"/>
+            <circle cx="182" cy="190" r="3.6" fill="${gate}"/>
+            <g stroke="${gate}" stroke-width="2.4">
+                <path d="M 196 78 Q 208 102 196 126"/>
+                <path d="M 203 78 Q 215 102 203 126 Q 228 126 242 102 Q 228 78 203 78 Z" fill="#0d1b2a"/>
+                <path d="M 199 153 L 218 153 Q 242 153 242 178 Q 242 203 218 203 L 199 203 Z" fill="#0d1b2a"/>
+            </g>
+            <g font-family="'Consolas',monospace" font-size="19" fill="${gateT}">
+                <text x="260" y="135">sum&#160;&#160; = a <tspan fill="${h('gates') ? VIO : '#b388ff'}">^</tspan> b</text>
+                <text x="260" y="212">carry = a <tspan fill="${h('gates') ? VIO : '#b388ff'}">&amp;</tspan> b</text>
+            </g>
+            <text x="280" y="325" text-anchor="middle" font-family="'Segoe UI',sans-serif"
+                font-size="17" fill="#607d8b">one part type &middot; endless copies</text>
+        </svg>`;
+    }
+
+    // --- beats 2 & 3: the full_adder schematic ---
+    // live = null (static, beat 2) or {a,b,cin,s1,c1,c2,sum,cout} (beat 3)
+    // conn = one of the eight .pin(wire) hookups (beat 2 cross-highlight), or null.
+    // Geometry note: the OR sits at x 610–690 so c2 can descend at x=585 — BETWEEN ha1
+    // and the gate — and enter the lower input from the LEFT (never through the body).
+    const CONN_WIRES = {
+        ha0a:     { w: ['ra'],   p: ['ha0.a'] },
+        ha0b:     { w: ['rb'],   p: ['ha0.b'] },
+        ha0sum:   { w: ['ns1'],  p: ['ha0.sum'] },
+        ha0carry: { w: ['nc1'],  p: ['ha0.carry'] },
+        ha1a:     { w: ['ns1'],  p: ['ha1.a'] },
+        ha1b:     { w: ['rcin'], p: ['ha1.b'] },
+        ha1sum:   { w: ['rsum'], p: ['ha1.sum'] },
+        ha1carry: { w: ['nc2'],  p: ['ha1.carry'] },
+    };
+    function faSvg(live, hl, conn) {
+        hl = hl || new Set();
+        const cw = conn && CONN_WIRES[conn] ? CONN_WIRES[conn].w : [];
+        const cp = conn && CONN_WIRES[conn] ? CONN_WIRES[conn].p : [];
+        const wc = (v) => live ? (v ? ON : OFF) : IDLE;                 // base wire color
+        const rail = (k, v) => cw.includes(k) ? VIO : wc(v);           // input/output rail
+        const railW = (k) => cw.includes(k) ? 4.6 : 3.2;
+        const net = (k, v) => cw.includes(k) ? VIO : (hl.has('nets') ? VIO : wc(v));
+        const netW = (k) => (cw.includes(k) || hl.has('nets')) ? 4.4 : 3.2;
+        const blk = (k) => hl.has(k) ? VIO : '#cfd8dc';
+        const blkFill = (k) => hl.has(k) ? 'rgba(179,136,255,0.14)' : '#0d1b2a';
+        const orS = hl.has('or') ? VIO : '#cfd8dc';
+        const pinT = hl.has('pins') ? VIO : '#7d92a8';
+        const pf = (k) => cp.includes(k) ? VIO : pinT;
+        const pwt = (k) => cp.includes(k) ? '700' : '400';
+        const typT = hl.has('labels') ? VIO : CYAN;
+        const insT = hl.has('labels') ? VIO : AMBER;
+        const vlab = (name, v, x, y, anchor, k) => live
+            ? `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="17" fill="${v ? ON : OFF}">${name}=<tspan font-weight="700" fill="${v ? ON : '#90a4ae'}">${v}</tspan></text>`
+            : `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="17" fill="${k && cw.includes(k) ? VIO : '#8a9db5'}" font-weight="${k && cw.includes(k) ? '700' : '400'}">${name}</text>`;
+        const nlab = (name, v, x, y, k) => live
+            ? `<text x="${x}" y="${y}" font-size="16" fill="${v ? ON : OFF}">${name}=<tspan font-weight="700">${v}</tspan></text>`
+            : `<text x="${x}" y="${y}" font-size="16" fill="${(cw.includes(k) || hl.has('nets')) ? VIO : '#8a9db5'}" font-weight="${cw.includes(k) ? '700' : '400'}">${name}</text>`;
+        const L = live || { a:0,b:0,cin:0,s1:0,c1:0,c2:0,sum:0,cout:0 };
+        const block = (k, x, y, name) => `
+            <rect x="${x}" y="${y}" width="165" height="90" rx="9" fill="${blkFill(k)}" stroke="${blk(k)}" stroke-width="2.8"/>
+            <text x="${x+82}" y="${y+24}" text-anchor="middle" font-size="15" fill="${typT}">half_adder</text>
+            <text x="${x+82}" y="${y+56}" text-anchor="middle" font-size="23" font-weight="700" fill="${insT}">${name}</text>`;
+        return `
+        <svg viewBox="0 0 720 400" fill="none" stroke-linecap="round" stroke-linejoin="round"
+            font-family="'Consolas',monospace">
+            <!-- input rails -->
+            <line x1="16" y1="60" x2="130" y2="60" stroke="${rail('ra', L.a)}" stroke-width="${railW('ra')}"/>
+            <line x1="16" y1="95" x2="130" y2="95" stroke="${rail('rb', L.b)}" stroke-width="${railW('rb')}"/>
+            <line x1="16" y1="148" x2="400" y2="148" stroke="${rail('rcin', L.cin)}" stroke-width="${railW('rcin')}"/>
+            <!-- internal nets (carry pins exit at their label rows: ha0 y=105, ha1 y=158) -->
+            <polyline points="295,60 350,60 350,115 400,115" stroke="${net('ns1', L.s1)}" stroke-width="${netW('ns1')}"/>
+            <polyline points="295,105 330,105 330,300 616,300" stroke="${net('nc1', L.c1)}" stroke-width="${netW('nc1')}"/>
+            <polyline points="565,158 585,158 585,325 615,325" stroke="${net('nc2', L.c2)}" stroke-width="${netW('nc2')}"/>
+            <!-- output rails -->
+            <line x1="565" y1="115" x2="712" y2="115" stroke="${rail('rsum', L.sum)}" stroke-width="${railW('rsum')}"/>
+            <line x1="690" y1="312" x2="712" y2="312" stroke="${rail('rcout', L.cout)}" stroke-width="${railW('rcout')}"/>
+            <!-- the two placed copies -->
+            ${block('ha0', 130, 35, 'ha0')}
+            ${block('ha1', 400, 80, 'ha1')}
+            <!-- pin names -->
+            <g font-size="14">
+                <text x="138" y="65" fill="${pf('ha0.a')}" font-weight="${pwt('ha0.a')}">a</text>
+                <text x="138" y="100" fill="${pf('ha0.b')}" font-weight="${pwt('ha0.b')}">b</text>
+                <text x="287" y="55" text-anchor="end" fill="${pf('ha0.sum')}" font-weight="${pwt('ha0.sum')}">sum</text>
+                <text x="287" y="110" text-anchor="end" fill="${pf('ha0.carry')}" font-weight="${pwt('ha0.carry')}">carry</text>
+                <text x="408" y="120" fill="${pf('ha1.a')}" font-weight="${pwt('ha1.a')}">a</text>
+                <text x="408" y="153" fill="${pf('ha1.b')}" font-weight="${pwt('ha1.b')}">b</text>
+                <text x="557" y="110" text-anchor="end" fill="${pf('ha1.sum')}" font-weight="${pwt('ha1.sum')}">sum</text>
+                <text x="557" y="163" text-anchor="end" fill="${pf('ha1.carry')}" font-weight="${pwt('ha1.carry')}">carry</text>
+            </g>
+            <!-- OR glue (inputs enter the concave LEFT face at y=300 and y=325) -->
+            <path d="M 610 288 Q 626 312 610 336 Q 652 336 690 312 Q 652 288 610 288 Z"
+                fill="${hl.has('or') ? 'rgba(179,136,255,0.14)' : '#0d1b2a'}" stroke="${orS}" stroke-width="2.8"/>
+            <!-- signal labels -->
+            ${vlab('a',   L.a,   16, 50,  'start', 'ra')}
+            ${vlab('b',   L.b,   16, 118, 'start', 'rb')}
+            ${vlab('cin', L.cin, 16, 171, 'start', 'rcin')}
+            ${vlab('sum', L.sum, 712, 105, 'end', 'rsum')}
+            ${vlab('cout',L.cout,712, 356, 'end', 'rcout')}
+            ${nlab('s1', L.s1, 358, 100, 'ns1')}
+            ${nlab('c1', L.c1, 340, 220, 'nc1')}
+            ${nlab('c2', L.c2, 595, 230, 'nc2')}
+        </svg>`;
+    }
+    function drawFA2(hl, conn) { document.getElementById('fasym').innerHTML = faSvg(null, hl, conn); }
+    function drawFA3(live) { document.getElementById('fasym3').innerHTML = faSvg(live, null); }
+    drawHA(null);
+    drawFA2(null);
+
+    // ============ PAGES 1 & 2: annotation chips ============
+    const CHIPS_H = [
+        { label: 'module = a new part type', lines: ['h2','h12'], sc: 'outline',
+          note: '<b>module &hellip; endmodule</b> doesn&rsquo;t run anything &mdash; it <b>defines a new part type</b>, the way a datasheet defines a chip. Nothing exists until somebody places one.' },
+        { label: 'ports = the pins', lines: ['h3','h4','h5','h6'], sc: 'pins',
+          note: 'The port list is the <b>pinout</b>: a and b in, sum and carry out. Those four pins are all an outer module will ever see or touch.' },
+        { label: 'the logic inside', lines: ['h9','h10'], sc: 'gates',
+          note: 'Inside the boundary, two <b>assign</b>s do a 1-bit add: sum is XOR, carry is AND. Verified last time &mdash; from here on we trust the part and stop looking inside.' },
+    ];
+    const CHIPS_F = [
+        { label: 'one part, two placements', lines: ['f12','f13'], sc: ['ha0','ha1'],
+          note: 'Each line <b>places a complete, independent copy</b> of half_adder. Same blueprint, two real circuits &mdash; twice the gates, twice the hardware.' },
+        { label: 'part name vs instance name', lines: ['f12','f13'], sc: ['labels'],
+          note: '<span class="tname">half_adder</span> says <b>which part</b> to place; <span class="iname">ha0</span> / <span class="iname">ha1</span> name <b>this particular copy</b> &mdash; like &ldquo;resistor&rdquo; vs &ldquo;R1, R2&rdquo; on a schematic.' },
+        { label: 'the hookup — .pin(wire)', lines: ['f12','f13'], sc: ['pins'],
+          note: '<b>.a(s1)</b> reads &ldquo;this copy&rsquo;s pin <b>a</b> connects to my wire <b>s1</b>&rdquo;. Hookups are <b>by name</b>, so their order never matters &mdash; <b>click any .pin(wire) in the code</b> to light up that one connection.' },
+        { label: 'internal wires', lines: ['f10'], sc: ['nets'],
+          note: '<b>s1, c1, c2</b> are the solder between the parts. They exist only inside full_adder &mdash; from outside, the ports are all anyone can see.' },
+        { label: 'your own glue logic', lines: ['f15'], sc: ['or'],
+          note: 'Instances and plain logic <b>mix freely</b>: one assign ORs the two carries. A module can be all instances, all logic, or any blend.' },
+    ];
+    const NOTE_DEFAULTS = {
+        p1note: 'click a chip &mdash; this file doesn&rsquo;t <b>run</b> anything; it defines a <b>part</b>',
+        p2note: 'click a chip &mdash; or click any <b>.pin(wire)</b> hookup in the code to light up that exact connection',
+    };
+    let activeChip = null, activeConn = null;
+    function clearChips() {
+        activeChip = null; activeConn = null;
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+        document.querySelectorAll('#p1 .cl, #p2 .cl').forEach(c => c.classList.remove('hl'));
+        document.querySelectorAll('#code-f1 .pmap').forEach(p => p.classList.remove('on'));
+        document.getElementById('p1note').innerHTML = NOTE_DEFAULTS.p1note;
+        document.getElementById('p2note').innerHTML = NOTE_DEFAULTS.p2note;
+        drawHA(null); drawFA2(null);
+    }
+    function selectChip(chip, el, noteId, redraw) {
+        const wasActive = activeChip === chip;
+        clearChips();
+        if (wasActive) return;
+        activeChip = chip;
+        el.classList.add('on');
+        chip.lines.forEach(l => {
+            const row = document.querySelector(`.cl[data-l="${l}"]`);
+            if (row) row.classList.add('hl');
+        });
+        document.getElementById(noteId).innerHTML = chip.note;
+        redraw(chip.sc);
+    }
+    function buildChips(elId, chips, noteId, redraw) {
+        const root = document.getElementById(elId);
+        chips.forEach((c) => {
+            const el = document.createElement('div');
+            el.className = 'chip'; el.textContent = c.label;
+            el.addEventListener('click', () => selectChip(c, el, noteId, redraw));
+            root.appendChild(el);
+        });
+    }
+    buildChips('chips-h', CHIPS_H, 'p1note', (sc) => drawHA(sc));
+    buildChips('chips-f', CHIPS_F, 'p2note', (sc) => drawFA2(new Set(sc)));
+
+    // ============ PAGE 2: per-hookup cross-highlight (.pin(wire) tokens) ============
+    // Click any .pin(wire) token on the instance lines: the token, the pin it names on
+    // that copy, and the wire in the parentheses all light together.
+    const CONN_NOTES = {
+        ha0a:     '<b>.a(a)</b> &mdash; copy <span class="iname">ha0</span>&rsquo;s pin <b>a</b> connects to full_adder&rsquo;s own input <b>a</b>.',
+        ha0b:     '<b>.b(b)</b> &mdash; copy <span class="iname">ha0</span>&rsquo;s pin <b>b</b> connects to full_adder&rsquo;s own input <b>b</b>.',
+        ha0sum:   '<b>.sum(s1)</b> &mdash; <span class="iname">ha0</span>&rsquo;s <b>sum</b> output drives internal wire <b>s1</b>.',
+        ha0carry: '<b>.carry(c1)</b> &mdash; <span class="iname">ha0</span>&rsquo;s <b>carry</b> output drives internal wire <b>c1</b>, headed for the OR.',
+        ha1a:     '<b>.a(s1)</b> &mdash; <span class="iname">ha1</span>&rsquo;s pin <b>a</b> is fed by wire <b>s1</b>: ha0&rsquo;s sum becomes ha1&rsquo;s input.',
+        ha1b:     '<b>.b(cin)</b> &mdash; <span class="iname">ha1</span>&rsquo;s pin <b>b</b> connects to full_adder&rsquo;s own input <b>cin</b>.',
+        ha1sum:   '<b>.sum(sum)</b> &mdash; <span class="iname">ha1</span>&rsquo;s <b>sum</b> drives full_adder&rsquo;s own output port <b>sum</b>.',
+        ha1carry: '<b>.carry(c2)</b> &mdash; <span class="iname">ha1</span>&rsquo;s <b>carry</b> output drives internal wire <b>c2</b>, the OR&rsquo;s other input.',
+    };
+    function selectConn(conn, el) {
+        const was = activeConn === conn;
+        clearChips();
+        if (was) return;
+        activeConn = conn;
+        el.classList.add('on');
+        document.getElementById('p2note').innerHTML = CONN_NOTES[conn];
+        drawFA2(null, conn);
+    }
+    function wireConnTokens() {
+        [['f12','ha0'], ['f13','ha1']].forEach(([lid, inst]) => {
+            const row = document.querySelector(`#code-f1 .cl[data-l="${lid}"] span:last-child`);
+            if (!row) return;
+            row.innerHTML = row.innerHTML.replace(/\.(a|b|sum|carry)\(([A-Za-z0-9_]+)\)/g,
+                (m, pin) => `<span class="pmap" data-conn="${inst}${pin}">${m}</span>`);
+        });
+        document.querySelectorAll('#code-f1 .pmap').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectConn(el.dataset.conn, el);
+            });
+        });
+    }
+    wireConnTokens();
+
+    // ============ PAGE 3: the simulation stepper ============
+    // Real iverilog output — do not invent lines. Internals recomputed through the same
+    // gate model the schematic draws (s1=a^b, c1=a&b, sum=s1^cin, c2=s1&cin, cout=c1|c2).
+    const RECORDED = [   // [a, b, cin, sum, cout] — verbatim from iverilog 12.0
+        [0,0,0, 0,0], [0,0,1, 1,0], [0,1,0, 1,0], [0,1,1, 0,1],
+        [1,0,0, 1,0], [1,0,1, 0,1], [1,1,0, 0,1], [1,1,1, 1,1],
+    ];
+    const CASES = RECORDED.map(([a,b,cin,sum,cout]) => {
+        const s1 = a^b, c1 = a&b, c2 = s1&cin;
+        return { a, b, cin, s1, c1, c2, sum, cout };
+    });
+    let step = 0;   // 0 = not started, 1..8 = rows shown, 9 = finished
+    function renderRun() {
+        document.querySelectorAll('#p3 .cl').forEach(c => c.classList.remove('run'));
+        let out = '<span class="chead">$ iverilog -o sim half_adder.v \\\n    full_adder.v testbench.v\n$ ./sim</span>\n';
+        if (step >= 1) out += 'a b cin | sum cout\n--------+---------\n';
+        for (let i = 0; i < Math.min(step, 8); i++) {
+            const c = CASES[i];
+            out += `${c.a} ${c.b}  ${c.cin}  |  ${c.sum}   ${c.cout}\n`;
+        }
+        if (step >= 1 && step <= 8) {
+            // the point of the beat: ALL the placed hardware lights on every step
+            ['F12','F13','F15'].forEach(l => {
+                const row = document.querySelector(`#p3 .cl[data-l="${l}"]`);
+                if (row) row.classList.add('run');
+            });
+            drawFA3(CASES[step-1]);
+        } else {
+            document.getElementById('fasym3').innerHTML = faSvg(null, null);
+        }
+        if (step >= 9) {
+            out += '<span class="fin">$finish — all 8 rows match the\nfull-adder truth table.</span>';
+        } else {
+            out += '<span class="cursor">▋</span>';
+        }
+        document.getElementById('console').innerHTML = out;
+        document.getElementById('stepBtn').innerHTML = step >= 9
+            ? '&#8634; RESET<span class="k">S</span>'
+            : (step === 0 ? '&#9654; RUN' : '&#9654; STEP') + '<span class="k">S</span>';
+    }
+    function doStep() { step = step >= 9 ? 0 : step + 1; renderRun(); }
+    document.getElementById('stepBtn').addEventListener('click', doStep);
+
+    // ============ KEYS ============
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '3') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 's': case 'S': doStep(); e.preventDefault(); break;
+            case 'r': case 'R': step = 0; clearChips(); setPage(1); renderRun(); e.preventDefault(); break;
+        }
+    });
+
+    render();
+    renderRun();
+
+    // ?beat=N&step=M&conn=ha0sum — deep-link a state (also used for headless render checks)
+    {
+        const q = new URLSearchParams(location.search);
+        if (q.get('beat')) setPage(+q.get('beat'));
+        if (q.get('step')) { step = Math.max(0, Math.min(9, +q.get('step'))); renderRun(); }
+        if (q.get('conn') && CONN_NOTES[q.get('conn')]) {
+            const el = document.querySelector(`#code-f1 .pmap[data-conn="${q.get('conn')}"]`);
+            if (el) selectConn(q.get('conn'), el);
+        }
+    }
+
+    // ============ IN-PAGE ASSERTIONS (house rule) ============
+    // 1) Every stepped console row must equal the gate model AND the recorded iverilog run.
+    // 2) Bounds sweep: no element may escape the 1920×1080 surface on any beat/step/chip state.
+    function runAssertions() {
+        const fails = [];
+        CASES.forEach((c, i) => {
+            if ((c.s1 ^ c.cin) !== c.sum || (c.c1 | c.c2) !== c.cout)
+                fails.push(`model row ${i}`);
+            const r = RECORDED[i];
+            if (r[3] !== c.sum || r[4] !== c.cout) fails.push(`recorded row ${i}`);
+        });
+        const surf = document.getElementById('designSurface');
+        function sweep(tag) {
+            const s = surf.getBoundingClientRect();
+            surf.querySelectorAll('*').forEach(el => {
+                const pg = el.closest('.page');
+                if (pg && !pg.classList.contains('active')) return;
+                const r = el.getBoundingClientRect();
+                if (r.width === 0 && r.height === 0) return;
+                if (r.right > s.right+2 || r.bottom > s.bottom+2 || r.left < s.left-2 || r.top < s.top-2)
+                    fails.push(`${tag}:${el.id || el.tagName}`);
+            });
+        }
+        const savedPage = page, savedStep = step;
+        [1,2,3].forEach(p => {
+            setPage(p);
+            if (p === 3) for (let st = 0; st <= 9; st++) { step = st; renderRun(); sweep(`p3s${st}`); }
+            else sweep(`p${p}`);
+        });
+        // chip states
+        setPage(1); CHIPS_H.forEach((c,i) => { drawHA(c.sc); c.lines.forEach(()=>{}); sweep(`p1c${i}`); });
+        drawHA(null);
+        setPage(2); CHIPS_F.forEach((c,i) => { drawFA2(new Set(c.sc)); sweep(`p2c${i}`); });
+        // per-hookup cross-highlight states: every conn must render in-bounds, and the
+        // token count must be exactly 8 (4 hookups × 2 instance lines)
+        Object.keys(CONN_NOTES).forEach((cn,i) => { drawFA2(null, cn); sweep(`p2conn${i}`); });
+        if (document.querySelectorAll('#code-f1 .pmap').length !== 8) fails.push('pmap count != 8');
+        Object.keys(CONN_NOTES).forEach(cn => {
+            if (!CONN_WIRES[cn]) fails.push(`conn ${cn} has notes but no wires`);
+        });
+        drawFA2(null);
+        page = savedPage; step = savedStep; render(); renderRun();
+        if (activeConn) drawFA2(null, activeConn);   // restore a deep-linked hookup state
+        if (fails.length) {
+            document.title += ' — ASSERT FAIL: ' + [...new Set(fails)].slice(0,12).join(', ');
+        } else if (location.search.indexOf('verify') >= 0) {
+            document.title += ' — ASSERT PASS';
+        }
+    }
+    runAssertions();
+</script>
+</body>
+</html>
