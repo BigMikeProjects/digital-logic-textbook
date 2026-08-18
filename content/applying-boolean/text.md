@@ -62,6 +62,34 @@ $$\overline{A + \bar{B}} \;\overset{\text{De Morgan}}{=}\; \bar{A} \cdot \overli
 
 This is exactly the same simplification you would reach geometrically by **pushing bubbles** through gates in a schematic, as introduced in the previous section. Bubble pushing and algebraic manipulation are two views of one idea: the algebra here is the underlying mathematics that justifies the schematic shortcut. Whenever you see a bubble glide from the output of a gate to its inputs (or vice versa) and the gate's shape flip between AND and OR, a De Morgan step plus involution is what makes it legal.
 
+## Example 3: The Same Moves, Mirrored by Duality
+
+Every move in Example 1 has a dual — swap OR with AND, 1 with 0 — and the dual moves are just as legal. Consider
+
+$$Y = (A + B) \cdot (A + \bar{B}).$$
+
+Example 1 factored a shared variable out of a sum of products; here we factor one out of a *product of sums*. The dual distributive law says $A + X \cdot Y = (A + X)(A + Y)$ — read right to left, our two sum terms with a shared $A$ collapse:
+
+$$Y = A + B \cdot \bar{B}.$$
+
+Now the parenthesized piece is the **complement property in its AND form**: a variable ANDed with its own complement is always 0.
+
+$$B \cdot \bar{B} = 0 \quad\Longrightarrow\quad Y = A + 0.$$
+
+And $A + 0$ is the **identity law in its OR form**:
+
+$$Y = A.$$
+
+The full chain, side by side with Example 1's:
+
+$$(A + B)(A + \bar{B}) \;\overset{\text{dual distributive}}{=}\; A + B\bar{B} \;\overset{\text{complement}}{=}\; A + 0 \;\overset{\text{identity}}{=}\; A$$
+
+Same answer as Example 1, reached through the mirror-image identities. Learn one chain and duality hands you the other.
+
+## Check the Result Before You Trust It
+
+An algebraic chain is only as good as its weakest step, and a thirty-second check catches most slips: **spot-check a truth-table row or two**. For Example 1, try $A = 0, B = 1$: the original gives $0 \cdot 1 + 0 \cdot 0 = 0$; the simplified form gives $A = 0$. Agreement. A full truth-table comparison is the definitive test, but a couple of well-chosen rows — especially ones involving the variable you eliminated — give quick, cheap confidence. If any row disagrees, some step wasn't the identity you thought it was.
+
 ## A Strategy for Working Through Reductions
 
 The two examples suggest a repeatable approach:
@@ -70,13 +98,14 @@ The two examples suggest a repeatable approach:
 2. **Look for complement pairs.** A subexpression of the form $X + \bar{X}$ collapses to 1; $X \cdot \bar{X}$ collapses to 0.
 3. **Simplify constants immediately.** Once a 0 or 1 appears, the identity and null laws ($A \cdot 1 = A$, $A + 0 = A$, $A + 1 = 1$, $A \cdot 0 = 0$) usually finish the job.
 4. **Break overbars with De Morgan.** When a bar spans a sum or product, "break the line, change the sign," then clean up any resulting double bars with involution.
-5. **Name every step.** If you cannot point to the property that justifies a move, double-check it—Boolean algebra has just enough differences from ordinary algebra to punish guessing.
+5. **Remember the duals.** Every move has a mirror: a product-of-sums factors through the dual distributive law just as a sum-of-products factors through the ordinary one, and $X \cdot \bar{X} = 0$ collapses terms the way $X + \bar{X} = 1$ does. If you're stuck, ask what the dual of your expression would suggest.
+6. **Name every step, then spot-check.** If you cannot point to the property that justifies a move, double-check it—Boolean algebra has just enough differences from ordinary algebra to punish guessing. And before trusting the final form, test a truth-table row or two against the original.
 
 The best way to internalize all of this is practice. Take a handful of expressions, predict which property applies at each step before you write it down, and confirm that each move is justified. With a little repetition, recognizing "oh, that's the complement property" or "that bar needs De Morgan" becomes automatic.
 
 ## Key Takeaways
 
-Applying Boolean identities is the bridge between an abstract logic expression and an efficient physical circuit. By factoring, substituting complement and identity laws, and using De Morgan's theorem with involution, you can reduce an expression to a form that uses fewer gates—fewer transistors, less power, and faster switching. The mechanics closely parallel ordinary algebra, with the important additions of complementation and De Morgan's theorem that have no counterpart in everyday math. Most importantly, simplification is most reliable when it is deliberate: justify each step by naming the property that licenses it, and the final result is both correct and well understood.
+Applying Boolean identities is the bridge between an abstract logic expression and an efficient physical circuit. By factoring, substituting complement and identity laws, and using De Morgan's theorem with involution, you can reduce an expression to a form that uses fewer gates—fewer transistors, less power, and faster switching. The mechanics closely parallel ordinary algebra, with the important additions of complementation and De Morgan's theorem that have no counterpart in everyday math—and duality doubles your toolkit, giving every sum-of-products move a product-of-sums mirror. Most importantly, simplification is most reliable when it is deliberate: justify each step by naming the property that licenses it, spot-check the result against the original on a truth-table row or two, and the final result is both correct and well understood.
 
 ---
 
@@ -154,6 +183,15 @@ Applying Boolean identities is the bridge between an abstract logic expression a
 
 ---
 
+**9. Using the dual of Example 1's chain, what does $(X + Y) \cdot (X + \bar{Y})$ simplify to?**
+
+- A) $X$
+- B) $Y$
+- C) $X \cdot Y$
+- D) $1$
+
+---
+
 ## Answer Explanations
 
 **1. Answer: B) It produces a circuit with fewer transistors, lower power, and faster switching**
@@ -218,3 +256,11 @@ Naming each property forces you to confirm the step is legal. Because Boolean al
 - *Grader requires it* (A) may sometimes be true but isn't the underlying reason.
 - *Changes the result* (C) is false—naming a property is documentation, not transformation.
 - *Makes it longer* (D) is not a benefit and isn't the point.
+
+**9. Answer: A) $X$**
+
+Run Example 3's chain: the dual distributive law (in reverse) collapses the shared $X$—$(X+Y)(X+\bar{Y}) = X + Y\bar{Y}$—then the complement property gives $Y \cdot \bar{Y} = 0$, and the identity law finishes with $X + 0 = X$. Spot-check with $X=0, Y=1$: original $(0+1)(0+0) = 0$; simplified $X = 0$. ✓
+
+- *$Y$* (B) is the variable that gets eliminated, not the survivor—$Y$ and $\bar{Y}$ annihilate each other.
+- *$X \cdot Y$* (C) would require both factors to depend on $Y$ the same way, which they don't.
+- *$1$* (D) confuses $Y \cdot \bar{Y} = 0$ with $Y + \bar{Y} = 1$—the AND form of the complement property yields 0.
