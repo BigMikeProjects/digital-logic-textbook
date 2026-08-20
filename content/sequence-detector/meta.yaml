@@ -1,5 +1,5 @@
-title: "Sequence Detector"
+title: "Creating FSMs"
 description: ""
 chapter: sequential-logic
-section: constructing-state-diagrams
-order: 40201
+section: fsm-applications
+order: 40301
