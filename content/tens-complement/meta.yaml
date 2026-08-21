@@ -2,7 +2,7 @@ title: "Ten's Complement"
 description: "Understanding subtraction through addition using complement representation in decimal"
 chapter: combinational-logic
 section: number-systems
-order: 30108
+order: 30100
 
 graphics:
   01-intro.youtube:
