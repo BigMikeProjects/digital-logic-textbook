@@ -5,5 +5,7 @@ section: number-systems
 order: 30103
 
 graphics:
-  01-interactive.html:
+  01-video.youtube:
+    caption: "Video: signed numbers with two’s complement — the sign bit as a negative weight, encoding, the x−2ⁿ check, and subtracting by adding"
+  02-interactive.html:
     caption: "Interactive: two’s complement start to finish — toggle bits under negative-weight place values (N = 4/5/6), step the encoding of a negative with the x−2ⁿ check, then subtract by adding"
