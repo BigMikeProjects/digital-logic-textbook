@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signed Numbers — Two's Complement, Start to Finish</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 positive/structure · amber #ffb74d negative/accent ·
+       violet #b388ff highlights · navy #0d1b2a panels */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .nsel { flex-shrink: 0; display: flex; align-items: center; gap: 9px;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 14px;
+        color: #607d8b; font-size: 16px; font-weight: 600; }
+    .nbtn { cursor: pointer; user-select: none; width: 36px; height: 36px;
+        border: 2px solid #37506a; border-radius: 8px; display: flex; align-items: center;
+        justify-content: center; font-family: 'Consolas',monospace; font-size: 19px;
+        font-weight: 700; color: #90a4ae; transition: all .12s ease; }
+    .nbtn:hover { border-color: #4fc3f7; color: #cfd8dc; }
+    .nbtn.on { border-color: #4fc3f7; background: #4fc3f7; color: #0d1b2a; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; flex-direction: column; gap: 14px; }
+    .mono { font-family: 'Consolas','Courier New',monospace; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; }
+    .panel-head { display: flex; align-items: center; gap: 14px; padding: 10px 18px;
+        background: #0b1622; border-bottom: 2px solid #24384c;
+        font-size: 16px; color: #607d8b; }
+    .panel-head b { color: #90a4ae; }
+    .panel-head .ph-main { flex: 1; }
+    .sgnbtn { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 8px;
+        padding: 3px 14px; font-family: 'Consolas',monospace; font-size: 16px; font-weight: 700;
+        color: #7d92a8; transition: all .12s ease; }
+    .sgnbtn:hover { color: #cfd8dc; }
+    .sgnbtn.onneg { border-color: #ffb74d; color: #ffb74d; background: rgba(255,183,77,0.10); }
+    .sgnbtn.onpos { border-color: #4fc3f7; color: #4fc3f7; background: rgba(79,195,247,0.10); }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .chip { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px;
+        padding: 6px 16px; font-size: 16px; color: #90a4ae; background: #0d1b2a;
+        transition: all .15s ease; }
+    .chip:hover { border-color: #b388ff; color: #cfd8dc; }
+    .chip.on { border-color: #b388ff; background: rgba(179,136,255,0.14); color: #cbb4ff; }
+    .pnote { font-size: 18px; color: #90a4ae; text-align: center; min-height: 28px; }
+    .pnote b { color: #b388ff; }
+    .pnote .neg { color: #ffb74d; } .pnote .pos { color: #4fc3f7; }
+    .pnote .m { font-family: 'Consolas',monospace; }
+
+    /* ---------- beat 1: the toggleable bits ---------- */
+    .bitrow { display: flex; gap: 22px; justify-content: center;
+        padding: 18px 0 6px; flex: 1; align-items: center; }
+    .bitcell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .bitw { font-family: 'Consolas',monospace; font-size: 22px; color: #7d92a8; }
+    .bitw.neg { color: #ffb74d; font-weight: 700; }
+    .bitbtn { width: 104px; height: 104px; border-radius: 16px; border: 3px solid #37506a;
+        background: #101d2c; color: #cfd8dc; font-family: 'Consolas',monospace;
+        font-size: 52px; font-weight: 700; cursor: pointer; transition: all .12s ease; }
+    .bitbtn.one { border-color: #4fc3f7; color: #4fc3f7; background: rgba(79,195,247,0.10); }
+    .bitcell.sign .bitbtn { border-color: #6a5324; }
+    .bitcell.sign .bitbtn.one { border-color: #ffb74d; color: #ffb74d;
+        background: rgba(255,183,77,0.10); }
+    .bitcell.hlv .bitbtn { border-color: #b388ff !important; color: #cbb4ff !important;
+        background: rgba(179,136,255,0.14) !important; }
+    .bitname { font-family: 'Consolas',monospace; font-size: 15px; color: #56708a; }
+    .decode { text-align: center; font-family: 'Consolas',monospace; font-size: 24px;
+        color: #90a4ae; padding: 4px 0 8px; }
+    .decode b { font-size: 28px; }
+    .decode .neg { color: #ffb74d; } .decode .pos { color: #4fc3f7; }
+
+    /* the x − 2^N check line */
+    .chkwrap { text-align: center; padding: 0 0 12px; }
+    .chkline { display: inline-block; border: 2px solid #24384c; border-radius: 999px;
+        padding: 5px 22px; font-family: 'Consolas',monospace; font-size: 18px;
+        color: #7d92a8; transition: all .15s ease; }
+    .chkline .neg { color: #ffb74d; } .chkline .pos { color: #4fc3f7; }
+    .chkline .ok { color: #66bb6a; }
+    .chkline.hlv { border-color: #b388ff; background: rgba(179,136,255,0.12); color: #cbb4ff; }
+
+    /* the all-patterns strip (16 / 32 / 64 cells) */
+    .strip { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center;
+        padding: 10px 14px 14px; margin-top: auto; }
+    .scell { width: 96px; border: 2px solid #24384c; border-radius: 9px; padding: 7px 0;
+        text-align: center; font-family: 'Consolas',monospace; cursor: pointer; }
+    .scell .sp { font-size: 15px; color: #7d92a8; letter-spacing: 1px; }
+    .scell .sv { font-size: 19px; font-weight: 700; margin-top: 2px; }
+    .strip.n5 { gap: 5px; }
+    .strip.n5 .scell { width: 51px; border-radius: 7px; padding: 5px 0; }
+    .strip.n5 .sp { font-size: 11px; letter-spacing: 0; }
+    .strip.n5 .sv { font-size: 15px; }
+    .strip.n6 { gap: 4px; padding: 8px 10px 12px; }
+    .strip.n6 .scell { width: 51px; border-radius: 6px; padding: 4px 0; border-width: 1px; }
+    .strip.n6 .sp { font-size: 10px; letter-spacing: 0; }
+    .strip.n6 .sv { font-size: 14px; margin-top: 1px; }
+    .scell.pos .sv { color: #4fc3f7; } .scell.neg .sv { color: #ffb74d; }
+    .scell.cur { border-color: #b388ff; background: rgba(179,136,255,0.10); }
+    .scell.hlz { border-color: #66bb6a; }
+
+    /* ---------- beat 2: the encode pipeline ---------- */
+    .pipe { display: flex; gap: 16px; flex: 1; align-items: center; padding: 8px 6px; }
+    .stagecard { flex: 1; border: 2px solid #24384c; border-radius: 14px; background: #0d1b2a;
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+        padding: 26px 12px; min-height: 340px; justify-content: center;
+        opacity: .38; transition: all .2s ease; }
+    .stagecard.done { opacity: 1; }
+    .stagecard.now { opacity: 1; border-color: #b388ff; background: rgba(179,136,255,0.07); }
+    .stagecard.skipped { opacity: .8; border-style: dashed; border-color: #3e5c46; }
+    .stagecard.skipped .stitle { color: #7d92a8; text-decoration: line-through; }
+    .stagecard .snum { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #6a8398;
+        color: #90a4ae; display: flex; align-items: center; justify-content: center;
+        font-size: 17px; font-weight: 700; }
+    .stagecard.now .snum, .stagecard.done .snum { border-color: #b388ff; color: #cbb4ff; }
+    .stagecard.skipped .snum { border-color: #3e5c46; color: #66bb6a; }
+    .stagecard .stitle { font-size: 18px; font-weight: 700; color: #cfd8dc; text-align: center; }
+    .stagecard .sbits { font-family: 'Consolas',monospace; font-size: 36px; font-weight: 700;
+        letter-spacing: 6px; color: #4fc3f7; }
+    .stagecard .sbits .sb { color: #ffb74d; }
+    .stagecard .sbits .skipmark { color: #66bb6a; letter-spacing: 0; }
+    .stagecard .sdet { font-size: 15px; color: #7d92a8; text-align: center; line-height: 1.5; }
+    .stagecard .sdet .m { font-family: 'Consolas',monospace; color: #90a4ae; }
+    .stagecard .sdet .ok { color: #66bb6a; }
+    .skipbadge { font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #66bb6a;
+        border: 1px solid #3e5c46; border-radius: 999px; padding: 2px 12px; }
+    .parrow { align-self: center; color: #56708a; font-size: 30px; flex: 0 0 auto; }
+
+    .stepbtn { cursor: pointer; user-select: none; border: 2px solid #ffb74d;
+        border-radius: 999px; padding: 10px 28px; color: #ffb74d; font-size: 19px;
+        background: rgba(255,183,77,0.08); font-weight: 700; letter-spacing: 1px;
+        align-self: center; }
+    .stepbtn .k { font-family: 'Consolas',monospace; color: #8a6a3a; font-size: 15px;
+        margin-left: 8px; }
+
+    /* ---------- beat 3: column addition ---------- */
+    .addwrap { display: flex; gap: 26px; flex: 1; min-height: 0; }
+    .addpanel { flex: 1.25; }
+    .addbody { flex: 1; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 4px; }
+    .arow { display: flex; gap: 22px; font-family: 'Consolas',monospace; font-size: 44px;
+        font-weight: 700; }
+    .arow .lab { width: 230px; font-size: 17px; font-weight: 400; color: #7d92a8;
+        display: flex; align-items: center; justify-content: flex-end; padding-right: 10px; }
+    .arow .lab .m { font-size: 16px; }
+    .acell { width: 68px; text-align: center; border-radius: 10px; }
+    .arow.carr .acell { font-size: 24px; color: #b388ff; height: 34px; line-height: 34px; }
+    .arow.opA .acell { color: #4fc3f7; }
+    .arow.opB .acell { color: #ffb74d; }
+    .arow.res .acell { color: #cfd8dc; border-top: 4px solid #37506a; padding-top: 6px; }
+    .acell.hl { background: rgba(179,136,255,0.16); box-shadow: 0 0 0 2px #b388ff inset; }
+    .acell.dim { opacity: .25; }
+    .cout { font-size: 24px !important; color: #ef5350 !important; position: relative; }
+    .cout.crossed::after { content: ''; position: absolute; left: 8px; right: 8px; top: 50%;
+        border-top: 3px solid #ef5350; transform: rotate(-18deg); }
+    .sidecol { flex: 1; display: flex; flex-direction: column; gap: 18px;
+        justify-content: center; }
+    .sidenote { border: 2px solid #24384c; border-radius: 14px; background: #0d1b2a;
+        padding: 16px 20px; font-size: 17px; color: #90a4ae; line-height: 1.55; }
+    .sidenote.warn { border-color: #8a3b39; background: rgba(239,83,80,0.07); }
+    .sidenote .bad { color: #ef5350; font-weight: 700; }
+    .arow.res .acell.bad { color: #ef5350; }
+    .sidenote b { color: #cfd8dc; }
+    .sidenote .m { font-family: 'Consolas',monospace; }
+    .sidenote .pos { color: #4fc3f7; } .sidenote .neg { color: #ffb74d; }
+
+    .whyline { align-self: center; border: 2px solid #6a5324; border-radius: 14px;
+        background: rgba(255,183,77,0.07); padding: 12px 34px; font-size: 21px; color: #cfd8dc;
+        text-align: center; line-height: 1.45; max-width: 1640px; }
+    .whyline b { color: #ffb74d; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 8px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.violet { color: #b388ff; border-color: #6a4fa0; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== persistent header ===== -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" font-family="'Consolas',monospace">
+                <g font-size="30" font-weight="700">
+                    <text x="26" y="48" fill="#ffb74d">1</text>
+                    <text x="86" y="48" fill="#4fc3f7">0</text>
+                    <text x="146" y="48" fill="#4fc3f7">1</text>
+                    <text x="206" y="48" fill="#4fc3f7">1</text>
+                </g>
+                <g font-size="16">
+                    <text x="14" y="78" fill="#ffb74d">-8</text>
+                    <text x="82" y="78" fill="#56708a">4</text>
+                    <text x="142" y="78" fill="#56708a">2</text>
+                    <text x="202" y="78" fill="#56708a">1</text>
+                </g>
+                <text x="129" y="99" text-anchor="middle" font-size="15" fill="#90a4ae">= -8+2+1 = -5</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Signed Numbers <span class="sub">&mdash; two&rsquo;s complement, start to finish</span></h1>
+            <div class="subtitle">the sign bit is a digit with negative weight &middot; encode &minus;5 the whole way &middot; then subtract by adding</div>
+        </div>
+        <div class="nsel" id="nsel">width
+            <div class="nbtn" data-n="4">4</div>
+            <div class="nbtn" data-n="5">5</div>
+            <div class="nbtn" data-n="6">6</div>
+        bits</div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 3</div>
+    </div>
+
+    <!-- ===== tab strip ===== -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">A Sign Bit With Weight</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Encoding a Number</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Subtract by Adding</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- ============ PAGE 1 ============ -->
+        <div class="page" id="p1">
+            <div class="panel" style="flex:1">
+                <div class="panel-head"><div class="ph-main">click the bits &mdash; in two&rsquo;s complement the top bit&rsquo;s weight is <b>negative</b></div></div>
+                <div class="bitrow" id="bitrow"></div>
+                <div class="decode" id="decode"></div>
+                <div class="chkwrap"><span class="chkline" id="chk"></span></div>
+                <div class="strip" id="strip"></div>
+            </div>
+            <div class="chips" id="chips1"></div>
+            <div class="pnote" id="p1note">click a chip &mdash; or toggle bits until the value below matches your guess</div>
+        </div>
+
+        <!-- ============ PAGE 2 ============ -->
+        <div class="page" id="p2">
+            <div class="panel" style="flex:1">
+                <div class="panel-head">
+                    <div class="ph-main" id="p2head"></div>
+                    <span style="color:#56708a">examples:</span>
+                    <div class="sgnbtn" data-ex="-5">&minus;5</div>
+                    <div class="sgnbtn" data-ex="5">+5</div>
+                    <div class="sgnbtn" data-ex="-1">&minus;1</div>
+                    <div class="sgnbtn" data-ex="-7">&minus;7</div>
+                </div>
+                <div class="pipe" id="pipe"></div>
+            </div>
+            <div class="stepbtn" id="stepBtn2">&#9654; START<span class="k">S</span></div>
+            <div class="pnote" id="p2note"></div>
+        </div>
+
+        <!-- ============ PAGE 3 ============ -->
+        <div class="page" id="p3">
+            <div class="addwrap">
+                <div class="panel addpanel">
+                    <div class="panel-head"><div class="ph-main" id="p3head"></div></div>
+                    <div class="addbody" id="addbody"></div>
+                </div>
+                <div class="sidecol">
+                    <div class="sidenote" id="sidenote"></div>
+                    <div class="stepbtn" id="stepBtn3">&#9654; ADD<span class="k">S</span></div>
+                </div>
+            </div>
+            <div class="whyline">There is no subtractor circuit in this story &mdash; and none in your computer.
+                Encode the negative, <b>add</b>, let the carry fall off the fixed width.
+                <b>One adder does both jobs</b> &mdash; that is why two&rsquo;s complement won.
+                The one rule: <b>the true answer must fit the width</b> &mdash; out of range, and the bits stop telling the truth.</div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">3</span> beat
+            &middot; <span class="k">4</span>&ndash;<span class="k">6</span> width
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k violet">click bits &amp; chips</span>
+            &middot; <span class="k amber">S</span> step
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ PAGE STATE ============
+    const FIRST = 1, LAST = 3;
+    let page = 1;
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        document.getElementById('pcNum').textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+
+    // ============ THE MODEL (N bits, N = 4 | 5 | 6) ============
+    let N = 4;
+    const pow = (k) => 1 << k;
+    const weights = () => Array.from({length: N}, (_,i) => i===0 ? -pow(N-1) : pow(N-1-i));
+    const decodeVal = (b) => weights().reduce((a,w,i) => a + w*b[i], 0);
+    const toBits = (u) => Array.from({length: N}, (_,i) => (u >> (N-1-i)) & 1);
+    const P = (b) => b.join('');
+    const uVal = (b) => parseInt(P(b), 2);
+    const supN = () => `2<sup>${N}</sup>`;
+
+    // ============ BEAT 1: toggleable bits + all-patterns strip ============
+    let bits = toBits(pow(4) - 5);   // start on -5, the running example
+    let hl1 = null;                  // active chip key
+    function drawBits() {
+        const row = document.getElementById('bitrow');
+        const Wt = weights();
+        row.innerHTML = bits.map((b,i) => `
+            <div class="bitcell ${i===0?'sign':''} ${hl1==='sign'&&i===0?'hlv':''}">
+                <div class="bitw ${i===0?'neg':''}">${i===0?'&minus;'+pow(N-1):Wt[i]}</div>
+                <button class="bitbtn ${b?'one':''}" data-i="${i}">${b}</button>
+                <div class="bitname">b${N-1-i}</div>
+            </div>`).join('');
+        row.querySelectorAll('.bitbtn').forEach(el => el.addEventListener('click', () => {
+            bits[+el.dataset.i] ^= 1; drawBits();
+        }));
+        const v = decodeVal(bits);
+        const terms = bits.map((b,i) => b ? (i===0?'&minus;'+pow(N-1):''+Wt[i]) : null).filter(Boolean);
+        document.getElementById('decode').innerHTML =
+            'value = ' + Wt.map((w,i) =>
+                `${i===0?'&minus;'+pow(N-1):w}&middot;${bits[i]}`).join(' + ') +
+            ` = ${terms.length? terms.join(' + ') : '0'} = <b class="${v<0?'neg':'pos'}">${v}</b>`;
+        // the x − 2^N check line (Mike's "conversion check")
+        const u = uVal(bits);
+        const chk = document.getElementById('chk');
+        chk.className = 'chkline' + (hl1==='shortcut' ? ' hlv' : '');
+        chk.innerHTML = bits[0]
+            ? `check: <span class="neg">${P(bits)}</span> read unsigned = ${u} &nbsp;&rarr;&nbsp; ${u} &minus; ${supN()} = ${u} &minus; ${pow(N)} = <span class="neg">${u-pow(N)}</span> <span class="ok">&check;</span>`
+            : `check: MSB = 0 &rarr; positive &mdash; <span class="pos">${P(bits)}</span> reads as plain binary = <span class="pos">${u}</span>, no &minus;${supN()} correction <span class="ok">&check;</span>`;
+        const strip = document.getElementById('strip');
+        strip.className = 'strip' + (N>4 ? ' n'+N : '');
+        strip.innerHTML = Array.from({length: pow(N)}, (_,n) => {
+            const bb = toBits(n);
+            const vv = decodeVal(bb);
+            const cur = P(bb) === P(bits);
+            const z = hl1==='zero' && vv===0;
+            return `<div class="scell ${vv<0?'neg':'pos'} ${cur?'cur':''} ${z?'hlz':''}" data-p="${P(bb)}">
+                <div class="sp">${P(bb)}</div><div class="sv">${vv}</div></div>`;
+        }).join('');
+        strip.querySelectorAll('.scell').forEach(el => el.addEventListener('click', () => {
+            bits = el.dataset.p.split('').map(Number); drawBits();
+        }));
+    }
+    const CHIPS1 = [
+        { key: 'sign', label: 'the sign bit has a weight',
+          note: () => `The top bit isn&rsquo;t a flag &mdash; it&rsquo;s a digit whose weight is <b>&minus;${pow(N-1)}</b>. Any pattern with it set is negative, because the other bits top out at +${pow(N-1)-1} and can never climb back above zero.` },
+        { key: 'range', label: () => `the range: −${pow(N-1)} … +${pow(N-1)-1}`,
+          note: () => `${N} bits give ${pow(N)} patterns: <span class="pos">0&hellip;${pow(N-1)-1}</span> when the top bit is 0, <span class="neg">&minus;${pow(N-1)}&hellip;&minus;1</span> when it&rsquo;s 1. One extra negative &mdash; <b>+${pow(N-1)} does not exist</b>, because its pattern (${P(toBits(pow(N-1)))}) is already taken by &minus;${pow(N-1)}.` },
+        { key: 'zero', label: 'exactly one zero',
+          note: () => `Only <b>${'0'.repeat(N)}</b> decodes to 0 &mdash; no &ldquo;negative zero.&rdquo; That uniqueness is a key win of two&rsquo;s complement over sign-magnitude schemes, and it&rsquo;s why comparisons stay simple.` },
+        { key: 'shortcut', label: 'the shortcut: x − 2ᴺ',
+          note: () => `Read any pattern as <b>unsigned</b> first. MSB = 1? The value is <b>that number &minus; ${supN()}</b> (here: &minus;${pow(N)}). MSB = 0? It already <i>is</i> the value. Use it to convert &mdash; or to double-check the weights. Watch the check line follow every toggle.` },
+    ];
+    const P1DEF = 'click a chip &mdash; or toggle bits until the value below matches your guess';
+    function drawChips1() {
+        const root = document.getElementById('chips1');
+        root.innerHTML = '';
+        CHIPS1.forEach(c => {
+            const el = document.createElement('div');
+            el.className = 'chip' + (hl1===c.key ? ' on' : '');
+            el.textContent = typeof c.label === 'function' ? c.label() : c.label;
+            el.addEventListener('click', () => {
+                hl1 = (hl1===c.key) ? null : c.key;
+                document.getElementById('p1note').innerHTML = hl1 ? c.note() : P1DEF;
+                drawChips1(); drawBits();
+            });
+            root.appendChild(el);
+        });
+    }
+
+    // ============ BEAT 2: the encode pipeline, user-selectable example ============
+    const EXAMPLES = [-5, 5, -1, -7];   // −5 = the running example; +5 = the short road
+    let encVal = -5;     // currently selected example
+    let step2 = 0;       // 0 = idle; steps shown up to maxStep2()
+    const maxStep2 = () => encVal < 0 ? 4 : 3;
+    // patterns are COMPUTED per N/value and asserted: mag -> flip -> +1 == 2^N − m
+    const enc = () => {
+        const m    = Math.abs(encVal);
+        const mag  = toBits(m);
+        const flip = mag.map(b => 1 - b);
+        const plus = toBits(pow(N) - m);
+        return { m, mag, flip, plus };
+    };
+    const wTerms = (b) => weights().map((w,i) => b[i] ? (i===0?'&minus;'+pow(N-1):''+w) : null)
+        .filter(Boolean).join(' + ');
+    function drawPipe() {
+        const E = enc();
+        const vTxt = encVal < 0 ? '&minus;' + E.m : '+' + E.m;
+        document.getElementById('p2head').innerHTML = encVal < 0
+            ? `the whole process: represent <b>${vTxt}</b> in ${N} bits, then prove the answer decodes back`
+            : `the short road: represent <b>${vTxt}</b> in ${N} bits &mdash; watch which steps disappear`;
+        document.querySelectorAll('.sgnbtn').forEach(el => {
+            const v = +el.dataset.ex;
+            el.className = 'sgnbtn' + (v === encVal ? (v < 0 ? ' onneg' : ' onpos') : '');
+        });
+        let cards;
+        if (encVal < 0) {
+            const u = pow(N) - E.m;
+            cards = [
+                { t: '1 &middot; magnitude &rarr; binary', bits: E.mag, on: 1,
+                  det: `|${vTxt}| = ${E.m} = <span class="m">${P(E.mag)}</span><br>(divide-by-two, or by sight)` },
+                { t: '2 &middot; flip every bit', bits: E.flip, on: 2,
+                  det: `the one&rsquo;s complement<br><span class="m">${P(E.mag)} &rarr; ${P(E.flip)}</span>` },
+                { t: '3 &middot; add 1', bits: E.plus, on: 3,
+                  det: `<span class="m">${P(E.flip)} + 1 = ${P(E.plus)}</span><br>the two&rsquo;s complement` },
+                { t: '4 &middot; close the loop', bits: E.plus, on: 4,
+                  det: `weights: <span class="m">${wTerms(E.plus)} = ${vTxt}</span> <span class="ok">&check;</span><br>shortcut: <span class="m">${u} &minus; ${pow(N)} = ${vTxt}</span> <span class="ok">&check;</span>` },
+            ];
+        } else {
+            cards = [
+                { t: '1 &middot; magnitude &rarr; binary', bits: E.mag, on: 1,
+                  det: `${vTxt} = <span class="m">${P(E.mag)}</span><br>zero-pad to ${N} bits` },
+                { t: '2 &middot; flip every bit', skip: true, on: 2,
+                  det: `<span class="ok">nothing to undo &mdash; the sign is +</span>` },
+                { t: '3 &middot; add 1', skip: true, on: 2,
+                  det: `<span class="ok">flip &amp; +1 exist only to<br>make a pattern negative</span>` },
+                { t: '4 &middot; close the loop', bits: E.mag, on: 3,
+                  det: `reads directly: <span class="m">${wTerms(E.mag)} = ${E.m}</span> <span class="ok">&check;</span><br>MSB = 0 &rarr; positive, no &minus;${supN()} <span class="ok">&check;</span>` },
+            ];
+        }
+        document.getElementById('pipe').innerHTML = cards.map((c,i) => `
+            ${i? '<div class="parrow">&rarr;</div>' : ''}
+            <div class="stagecard ${step2>=c.on ? (c.skip ? 'skipped done' : (step2===c.on ? 'now done' : 'done')) : ''}">
+                <div class="snum">${i+1}</div>
+                <div class="stitle">${c.t}</div>
+                ${step2>=c.on && c.skip ? '<div class="skipbadge">SKIPPED</div>' : ''}
+                <div class="sbits">${step2>=c.on
+                    ? (c.skip ? '<span class="skipmark">&mdash;</span>'
+                              : c.bits.map((b,j)=>`<span class="${j===0&&b?'sb':''}">${b}</span>`).join(''))
+                    : '&middot;'.repeat(N)}</div>
+                <div class="sdet">${step2>=c.on ? c.det : '&nbsp;<br>&nbsp;'}</div>
+            </div>`).join('');
+        document.getElementById('stepBtn2').innerHTML = step2>=maxStep2()
+            ? '&#8634; RESET<span class="k">S</span>'
+            : (step2===0 ? '&#9654; START' : '&#9654; STEP') + '<span class="k">S</span>';
+        const u = pow(N) - E.m;
+        const notes = encVal < 0 ? [
+            'step through with <b>S</b> &mdash; four stages, then the loop closes. (Or pick a <b>+</b> example above and see which stages vanish.)',
+            'same first move as any conversion: get the <b>magnitude</b> into binary',
+            `the number is <b>negative</b>, so the pipeline continues: flipping computes <span class="m">(${supN()}&minus;1) &minus; ${E.m}</span> &mdash; every bit, independently, no borrowing`,
+            `the +1 finishes <span class="m">${supN()} &minus; ${E.m} = ${u} = ${P(toBits(u))}</span> &mdash; the same pattern the shortcut <b>x &minus; ${supN()}</b> predicts`,
+            `the encode is only right because it <b>decodes back</b> &mdash; and both checks agree: weights say ${vTxt}, and <span class="m">${u} &minus; ${pow(N)} = ${vTxt}</span>. Encode, then always close the loop.`,
+        ] : [
+            'step through with <b>S</b> &mdash; positives take the short road',
+            'get the magnitude into binary &mdash; for a <b>positive</b> number this is already the answer',
+            `<b>STOP.</b> The sign is + &mdash; <b>no flip, no +1</b>. Those two steps are only for negatives; running them here would encode &minus;${E.m}, not ${vTxt}.`,
+            `close the loop: <span class="m">${P(E.mag)}</span> reads back as ${vTxt} with MSB = 0 <span class="ok">&check;</span> &mdash; finished at step 1, checked at step 4.`,
+        ];
+        document.getElementById('p2note').innerHTML = notes[Math.min(step2, notes.length-1)];
+    }
+    function doStep2() { step2 = step2>=maxStep2() ? 0 : step2+1; drawPipe(); }
+    document.getElementById('stepBtn2').addEventListener('click', doStep2);
+    document.querySelectorAll('.sgnbtn').forEach(el =>
+        el.addEventListener('click', () => {
+            encVal = +el.dataset.ex; step2 = 0; step3 = 0; drawPipe(); drawAdd(); }));
+
+    // ============ BEAT 3: column addition, N columns, follows the picked example ============
+    const A3 = () => toBits(6);                                    // +6
+    const B3 = () => toBits((pow(N) + encVal) & (pow(N) - 1));     // the example, encoded
+    const trueRes = () => 6 + encVal;
+    const inRange = (v) => v >= -pow(N-1) && v <= pow(N-1) - 1;
+    // column-by-column model (computed, then asserted against expectation)
+    function addModel() {
+        const a = A3(), b = B3();
+        const cols = [];   // index 0 = rightmost column
+        let cin = 0;
+        for (let i = N-1; i >= 0; i--) {
+            const t = a[i] + b[i] + cin;
+            cols.push({ a: a[i], b: b[i], cin, s: t & 1, cout: t >> 1 });
+            cin = t >> 1;
+        }
+        return { cols, cout: cin };
+    }
+    let step3 = 0;   // 0 idle, 1..N columns done, N+1 wrap-up+result
+    function drawAdd() {
+        const AM = addModel(), a = A3(), b = B3();
+        const m = Math.abs(encVal), T = trueRes(), ovf = !inRange(T);
+        document.getElementById('p3head').innerHTML = encVal < 0
+            ? `the payoff: <b>6 &minus; ${m}</b> computed as <b>6 + (&minus;${m})</b> &mdash; step the columns`
+            : `plain addition this time: <b>6 + ${m}</b> &mdash; same adder; watch whether the answer <b>fits ${N} bits</b>`;
+        const done = (ci) => step3 >= (N - ci);          // ci = display index 0..N-1 (msb first)
+        const now  = (ci) => step3 === (N - ci) && step3 >= 1 && step3 <= N;
+        const carryFor = (ci) => {                        // carry INTO display column ci
+            const k = N - 1 - ci;                         // model index of that column
+            return k >= 1 ? AM.cols[k-1].cout : 0;
+        };
+        const cells = (vals, cls) => vals.map((v,ci) =>
+            `<div class="acell ${cls==='res' && !done(ci) ? 'dim' : ''} ${now(ci)?'hl':''} ${cls==='res' && ovf && step3>=N+1 ? 'bad' : ''}">${cls==='res' ? (done(ci) ? AM.cols[N-1-ci].s : '&middot;') : v}</div>`).join('');
+        const carr = Array.from({length:N}, (_,ci) => {
+            const c = carryFor(ci);
+            const visible = step3 >= (N - ci) && c;      // show once its source column computed
+            return `<div class="acell ${now(ci)?'hl':''}">${visible ? '1' : '&nbsp;'}</div>`;
+        }).join('');
+        document.getElementById('addbody').innerHTML = `
+            <div class="arow carr"><div class="lab">carries</div><div class="acell">&nbsp;</div>${carr}</div>
+            <div class="arow opA"><div class="lab">6 &rarr; <span class="m">${P(a)}</span></div><div class="acell">&nbsp;</div>${cells(a,'opA')}</div>
+            <div class="arow opB"><div class="lab">${encVal<0 ? `+ (&minus;${m})` : `+ ${m}`} &rarr; <span class="m">${P(b)}</span></div><div class="acell">&nbsp;</div>${cells(b,'opB')}</div>
+            <div class="arow res"><div class="lab">sum</div>
+                <div class="acell cout ${step3>=N+1 && AM.cout ? 'crossed':''}" style="border-top:4px solid #37506a; padding-top:6px;">${step3>=N && AM.cout ? '1' : '&nbsp;'}</div>${cells(a,'res')}</div>`;
+        let note;
+        const sumBits = AM.cols.map(c=>c.s).reverse();
+        const rv = decodeVal(sumBits);
+        if (step3 === 0) {
+            note = encVal < 0
+                ? `We want <b>6 &minus; ${m}</b>. Rewrite it: <span class="m"><span class="pos">${P(a)}</span> + <span class="neg">${P(b)}</span></span> &mdash; the &minus;${m} encoded in beat 2. Step the columns right to left.`
+                : `No trick needed for <b>6 + ${m}</b>: <span class="m"><span class="pos">${P(a)}</span> + <span class="pos">${P(b)}</span></span>, the same adder. But the answer must fit the ${N}-bit range <span class="m">&minus;${pow(N-1)} &hellip; +${pow(N-1)-1}</span> &mdash; step and see.`;
+        } else if (step3 <= N) {
+            const c = AM.cols[step3-1];
+            const t = c.a + c.b + c.cin;
+            const parts = [c.a, c.b].concat(c.cin ? [1] : []).join(' + ');
+            note = `Column ${step3}: <span class="m">${parts} = ${t>1 ? '1'+(t&1) : t}</span> &mdash; write ${t&1}, ${t>1 ? 'carry 1' : 'no carry'}.`
+                + (step3===1 ? ' Ordinary binary addition &mdash; the adder neither knows nor cares how the operands are signed.' : '')
+                + (step3===N && AM.cout ? ` The final carry <b>leaves the ${N}-bit word</b>.` : '');
+        } else if (ovf) {
+            note = `<span class="bad">&#9888; out of range.</span> The true answer <b>${T>0?'+':''}${T}</b> does not fit ${N} bits (range <span class="m">&minus;${pow(N-1)} &hellip; +${pow(N-1)-1}</span>). The bits wrap to <span class="m">${P(sumBits)}</span> = <b class="neg">${rv}</b> &mdash; a wrong answer, and an expected one: <b>when a value is out of range, we do not expect fixed-width arithmetic to be accurate</b>. (At ${N+1} bits ${T>0?'+':''}${T} fits &mdash; try a wider width.)`;
+        } else if (AM.cout) {
+            note = `Discard the carry-out &mdash; a ${N}-bit register has nowhere to put it (the wrap by 2<sup>${N}</sup>, the ten&rsquo;s-complement idea in base 2). Result: <span class="m">${P(sumBits)}</span> = <b class="${rv<0?'neg':'pos'}">${rv>0?'+':''}${rv}</b>. And 6 ${encVal<0?'&minus; '+m:'+ '+m} <i>is</i> ${T}. &check;`;
+        } else {
+            note = `No carry falls off this time &mdash; the sum already fits the word. Result: <span class="m">${P(sumBits)}</span> = <b class="${rv<0?'neg':'pos'}">${rv>0?'+':''}${rv}</b>. And 6 ${encVal<0?'&minus; '+m:'+ '+m} <i>is</i> ${T}. &check; In range, so the answer is trustworthy &mdash; with or without a discarded carry.`;
+        }
+        document.getElementById('sidenote').className = 'sidenote' + (ovf && step3>=N+1 ? ' warn' : '');
+        document.getElementById('sidenote').innerHTML = note;
+        document.getElementById('stepBtn3').innerHTML = step3>=N+1
+            ? '&#8634; RESET<span class="k">S</span>'
+            : (step3===0 ? '&#9654; ADD' : '&#9654; STEP') + '<span class="k">S</span>';
+    }
+    function doStep3() { step3 = step3>=N+1 ? 0 : step3+1; drawAdd(); }
+    document.getElementById('stepBtn3').addEventListener('click', doStep3);
+
+    // ============ WIDTH SELECTOR ============
+    function setN(n) {
+        N = Math.max(4, Math.min(6, n));
+        bits = toBits(pow(N) - 5);     // keep the running example: −5 at the new width
+        step2 = 0; step3 = 0;
+        document.querySelectorAll('.nbtn').forEach(el =>
+            el.classList.toggle('on', +el.dataset.n === N));
+        if (hl1) document.getElementById('p1note').innerHTML =
+            CHIPS1.find(c => c.key === hl1).note();
+        drawChips1(); drawBits(); drawPipe(); drawAdd();
+    }
+    document.querySelectorAll('.nbtn').forEach(el =>
+        el.addEventListener('click', () => setN(+el.dataset.n)));
+
+    // ============ KEYS ============
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '3') { setPage(+k); e.preventDefault(); return; }
+        if (k >= '4' && k <= '6') { setN(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 's': case 'S':
+                if (page===2) doStep2(); else if (page===3) doStep3();
+                e.preventDefault(); break;
+            case 'r': case 'R':
+                hl1 = null; encVal = -5; setPage(1);
+                document.getElementById('p1note').innerHTML = P1DEF;
+                setN(4);
+                e.preventDefault(); break;
+        }
+    });
+
+    setN(4);
+    render();
+
+    // ?beat=N&step=M&bits=BBBB(BB)&n=4..6&ex=-5|5|-1|-7 — deep-link a state (also for headless checks)
+    {
+        const q = new URLSearchParams(location.search);
+        if (q.get('n')) setN(+q.get('n'));
+        if (q.get('bits') && /^[01]{4,6}$/.test(q.get('bits'))) {
+            setN(q.get('bits').length);
+            bits = q.get('bits').split('').map(Number); drawBits();
+        }
+        if (q.get('sign') === 'pos') { encVal = 5; drawPipe(); drawAdd(); }   // back-compat
+        if (q.get('ex') && EXAMPLES.includes(+q.get('ex'))) {
+            encVal = +q.get('ex'); drawPipe(); drawAdd(); }
+        if (q.get('beat')) setPage(+q.get('beat'));
+        if (q.get('step')) {
+            const m = Math.max(0, +q.get('step'));
+            if (page===2) { step2 = Math.min(maxStep2(), m); drawPipe(); }
+            if (page===3) { step3 = Math.min(N+1, m); drawAdd(); }
+        }
+    }
+
+    // ============ IN-PAGE ASSERTIONS (house rule) ============
+    function runAssertions() {
+        const fails = [];
+        const surf = document.getElementById('designSurface');
+        function sweep(tag) {
+            const s = surf.getBoundingClientRect();
+            surf.querySelectorAll('*').forEach(el => {
+                const pg = el.closest('.page');
+                if (pg && !pg.classList.contains('active')) return;
+                const r = el.getBoundingClientRect();
+                if (r.width === 0 && r.height === 0) return;
+                if (r.right > s.right+2 || r.bottom > s.bottom+2 || r.left < s.left-2 || r.top < s.top-2)
+                    fails.push(`${tag}:${el.id || el.className || el.tagName}`);
+            });
+        }
+        const S0 = { page, N, bits: bits.slice(), hl1, encVal, step2, step3 };
+        [4,5,6].forEach(n => {
+            setN(n);
+            const T = `n${n}`;
+            // 1) every strip value against the independent formula, and the shortcut identity
+            for (let u = 0; u < pow(N); u++) {
+                const bb = toBits(u);
+                const expect = u < pow(N-1) ? u : u - pow(N);
+                if (decodeVal(bb) !== expect) fails.push(`${T} strip ${u}`);
+                if (bb[0] && (uVal(bb) - pow(N)) !== decodeVal(bb)) fails.push(`${T} shortcut ${u}`);
+                if (!bb[0] && uVal(bb) !== decodeVal(bb)) fails.push(`${T} pos-read ${u}`);
+            }
+            // 2) the encode pipeline, for EVERY selectable example: mag -> flip -> +1
+            //    must equal 2^N − m and decode back; positives: magnitude IS the answer
+            EXAMPLES.forEach(v => {
+                encVal = v;
+                const E = enc(), m = Math.abs(v);
+                if (uVal(E.mag) !== m) fails.push(`${T} enc mag ${v}`);
+                if (uVal(E.flip) !== pow(N) - 1 - m) fails.push(`${T} enc flip ${v}`);
+                if (uVal(E.plus) !== pow(N) - m) fails.push(`${T} enc plus ${v}`);
+                if (decodeVal(E.plus) !== -m) fails.push(`${T} enc decode ${v}`);
+                if (decodeVal(E.mag) !== m || E.mag[0] !== 0) fails.push(`${T} enc positive ${v}`);
+            });
+            // 3) the addition, for EVERY example: model vs direct arithmetic; the result
+            //    must decode to 6+v exactly when 6+v is in range, and MUST NOT when it
+            //    isn't (the out-of-range case is real and displayed, never silent)
+            EXAMPLES.forEach(v => {
+                encVal = v;
+                const AM = addModel();
+                const sumBits = AM.cols.map(c => c.s).reverse();
+                if (((uVal(A3()) + uVal(B3())) & (pow(N)-1)) !== uVal(sumBits)) fails.push(`${T} add model ${v}`);
+                if (decodeVal(A3()) !== 6 || decodeVal(B3()) !== v) fails.push(`${T} add operands ${v}`);
+                if (AM.cout !== ((6 + uVal(B3())) >> N)) fails.push(`${T} add cout ${v}`);
+                const tr = trueRes();
+                if (inRange(tr)) {
+                    if (decodeVal(sumBits) !== tr) fails.push(`${T} add result ${v}`);
+                } else {
+                    if (decodeVal(sumBits) === tr) fails.push(`${T} ovf shown-but-fits ${v}`);
+                    if (!(n === 4 && v === 5)) fails.push(`${T} ovf unexpected ${v}`);
+                }
+            });
+            encVal = -5;
+            // 4) bounds sweep over every beat / step / chip / sign / edge bit states
+            setPage(1);
+            [toBits(0), toBits(pow(N)-1), toBits(pow(N-1)), toBits(pow(N-1)-1)].forEach((bb,i) => {
+                bits = bb; drawBits(); sweep(`${T}p1b${i}`); });
+            CHIPS1.forEach((c,i) => { hl1 = c.key; drawChips1(); drawBits(); sweep(`${T}p1c${i}`); });
+            hl1 = null; drawChips1(); drawBits();
+            setPage(2);
+            EXAMPLES.forEach(v => { encVal = v;
+                for (let st = 0; st <= maxStep2(); st++) { step2 = st; drawPipe(); sweep(`${T}p2e${v}s${st}`); } });
+            encVal = -5;
+            setPage(3);
+            EXAMPLES.forEach(v => { encVal = v;
+                for (let st = 0; st <= N+1; st++) { step3 = st; drawAdd(); sweep(`${T}p3e${v}s${st}`); } });
+            encVal = -5;
+        });
+        // restore the exact pre-assertion state (setN would clobber deep-linked states)
+        N = S0.N; bits = S0.bits; hl1 = S0.hl1; encVal = S0.encVal;
+        step2 = S0.step2; step3 = S0.step3; page = S0.page;
+        document.querySelectorAll('.nbtn').forEach(el =>
+            el.classList.toggle('on', +el.dataset.n === N));
+        drawChips1(); drawBits(); drawPipe(); drawAdd(); render();
+        if (fails.length) {
+            document.title += ' — ASSERT FAIL: ' + [...new Set(fails)].slice(0,12).join(', ');
+        } else if (location.search.indexOf('verify') >= 0) {
+            document.title += ' — ASSERT PASS';
+        }
+    }
+    runAssertions();
+</script>
+</body>
+</html>
