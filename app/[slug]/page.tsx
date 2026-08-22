@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import path from 'path';
 import { loadAllTopics, buildNavigation, buildChapterStructure } from '@/lib/content';
-import { loadSchedule, lectureForSlug, nextInLectureOrder, prettyDate } from '@/lib/content/schedule';
+import { loadSchedule, lectureForSlug, nextInLectureOrder, prevInLectureOrder, prettyDate } from '@/lib/content/schedule';
 import { renderMarkdown } from '@/lib/markdown';
 import TwoPanel from '@/components/Layout/TwoPanel';
 import { TopNav } from '@/components/Navigation';
@@ -73,10 +73,11 @@ export default async function TopicPage({ params }: PageProps) {
       }
     : null;
   const lectureNext = nextInLectureOrder(schedule, slug);
+  const lecturePrev = prevInLectureOrder(schedule, slug);
 
   return (
     <TwoPanel
-      topNav={<TopNav navigation={navContext} lectureBadge={lectureBadge} lectureNext={lectureNext} />}
+      topNav={<TopNav navigation={navContext} lectureBadge={lectureBadge} lectureNext={lectureNext} lecturePrev={lecturePrev} />}
       graphicsPanel={<GraphicsPanel graphics={topic.graphics} />}
       textPanel={<TextPanel html={html} />}
       chapters={chapters}

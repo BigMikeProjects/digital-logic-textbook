@@ -1,40 +1,65 @@
 import Link from 'next/link';
 import { NavigationContext } from '@/lib/types/content';
 
+interface LectureNeighborLink {
+  slug: string;
+  title: string;
+  lec: number;
+  sameLecture: boolean;
+}
+
 interface TopNavProps {
   navigation: NavigationContext;
   /** When the topic is on the course schedule: "Lecture 5 · Wed Sep 2" badge → /schedule/ */
   lectureBadge?: { lec: number; label: string } | null;
   /** Next topic in LECTURE order (course order) — may differ from book-order `next` */
-  lectureNext?: { slug: string; title: string; lec: number; sameLecture: boolean } | null;
+  lectureNext?: LectureNeighborLink | null;
+  /** Previous topic in LECTURE order — the mirror of lectureNext */
+  lecturePrev?: LectureNeighborLink | null;
 }
 
-export default function TopNav({ navigation, lectureBadge, lectureNext }: TopNavProps) {
+const BackArrow = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2}
+    stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+  </svg>
+);
+
+export default function TopNav({ navigation, lectureBadge, lectureNext, lecturePrev }: TopNavProps) {
   const { current, prev, next } = navigation;
 
   return (
     <nav className="px-4 py-3 flex items-center justify-between">
-      {/* Previous button */}
-      <div className="w-32">
+      {/* Previous buttons — mirror of the Next side: same two orders through the book.
+          Violet = lecture (course) order, blue = the text's logical order; the violet
+          buttons sit innermost so the two orders flank the title symmetrically. */}
+      <div className="flex items-center justify-start gap-2 shrink-0">
         {prev ? (
           <Link
             href={`/${prev.slug}/`}
-            className="nav-button nav-button-secondary inline-flex items-center gap-1 text-sm"
+            title={prev.title}
+            className="nav-button nav-button-primary inline-flex items-center gap-1 text-sm"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-4 h-4"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-            <span>Previous</span>
+            <BackArrow />
+            <span>Previous Text Topic</span>
           </Link>
         ) : (
           <span />
+        )}
+        {lecturePrev && (
+          <Link
+            href={`/${lecturePrev.slug}/`}
+            title={`${lecturePrev.title} (Lecture ${lecturePrev.lec})`}
+            className="nav-button inline-flex items-center gap-1 text-sm bg-violet-600 text-white hover:bg-violet-700"
+          >
+            <BackArrow />
+            <span>
+              Previous Lecture Topic
+              {!lecturePrev.sameLecture && (
+                <span className="opacity-75 font-normal"> · L{lecturePrev.lec}</span>
+              )}
+            </span>
+          </Link>
         )}
       </div>
 

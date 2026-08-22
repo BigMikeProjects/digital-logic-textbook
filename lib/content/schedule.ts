@@ -60,19 +60,35 @@ export interface LectureNeighbor {
   sameLecture: boolean; // false when the step crosses into another lecture
 }
 
-/** The next topic in LECTURE order (course order), skipping unpublished topics and
- *  no-content rows. Null when the topic isn't scheduled or is the course's last. */
-export function nextInLectureOrder(data: ScheduleData | null, slug: string): LectureNeighbor | null {
-  if (!data) return null;
-  // flatten the schedule into one course-ordered list of published, linkable topics
+/** Flatten the schedule into one course-ordered list of published, linkable topics. */
+function flatLectureOrder(data: ScheduleData): { slug: string; title: string; lec: number }[] {
   const flat: { slug: string; title: string; lec: number }[] = [];
   for (const lecture of data.lectures) {
     for (const item of lecture.items) {
       if (item.slug && item.published) flat.push({ slug: item.slug, title: item.title, lec: lecture.lec });
     }
   }
+  return flat;
+}
+
+function lectureNeighbor(data: ScheduleData | null, slug: string, step: 1 | -1): LectureNeighbor | null {
+  if (!data) return null;
+  const flat = flatLectureOrder(data);
   const ix = flat.findIndex((f) => f.slug === slug);
-  if (ix < 0 || ix + 1 >= flat.length) return null;
-  const next = flat[ix + 1];
-  return { ...next, sameLecture: next.lec === flat[ix].lec };
+  if (ix < 0) return null;
+  const jx = ix + step;
+  if (jx < 0 || jx >= flat.length) return null;
+  const neighbor = flat[jx];
+  return { ...neighbor, sameLecture: neighbor.lec === flat[ix].lec };
+}
+
+/** The next topic in LECTURE order (course order), skipping unpublished topics and
+ *  no-content rows. Null when the topic isn't scheduled or is the course's last. */
+export function nextInLectureOrder(data: ScheduleData | null, slug: string): LectureNeighbor | null {
+  return lectureNeighbor(data, slug, 1);
+}
+
+/** The previous topic in LECTURE order — the mirror of nextInLectureOrder. */
+export function prevInLectureOrder(data: ScheduleData | null, slug: string): LectureNeighbor | null {
+  return lectureNeighbor(data, slug, -1);
 }
