@@ -788,6 +788,20 @@
       ]
     },
     {
+      "lec": 27,
+      "date": "2026-10-28",
+      "weekday": "Wed",
+      "items": [
+        {
+          "num": "7.4.4",
+          "title": "FSM Coding Template",
+          "slug": "fsm-coding-template",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
       "lec": 30,
       "date": "2026-11-04",
       "weekday": "Wed",
@@ -810,13 +824,6 @@
           "num": "2.2.6",
           "title": "Power, Noise Margin and Speed Trades",
           "slug": "power-noise-margin-and-speed-trades",
-          "type": "full",
-          "published": false
-        },
-        {
-          "num": "7.4.4",
-          "title": "FSM Coding Template",
-          "slug": "fsm-coding-template",
           "type": "full",
           "published": false
         }
@@ -858,6 +865,97 @@
         {
           "num": null,
           "title": "Exam 3",
+          "slug": null,
+          "type": "no-content",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 37,
+      "date": "2026-11-20",
+      "weekday": "Fri",
+      "items": [
+        {
+          "num": "6.3.0",
+          "title": "ASICs versus FPGAs",
+          "slug": "asics-versus-fpgas",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 39,
+      "date": "2026-12-02",
+      "weekday": "Wed",
+      "items": [
+        {
+          "num": "6.0.0",
+          "title": "From Design to Silicon",
+          "slug": "from-design-to-silicon",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "6.1.0",
+          "title": "Memory Technologies Overview",
+          "slug": "memory-technologies-overview",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "6.1.1",
+          "title": "SRAM and DRAM",
+          "slug": "sram-and-dram",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 40,
+      "date": "2026-12-04",
+      "weekday": "Fri",
+      "items": [
+        {
+          "num": "6.1.2",
+          "title": "ROM and Flash",
+          "slug": "rom-and-flash",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "6.1.3",
+          "title": "Memory Arrays and Addressing",
+          "slug": "memory-arrays-and-addressing",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 41,
+      "date": "2026-12-07",
+      "weekday": "Mon",
+      "items": [
+        {
+          "num": "6.2.0",
+          "title": "Inside an FPGA",
+          "slug": "inside-an-fpga",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 42,
+      "date": "2026-12-09",
+      "weekday": "Wed",
+      "items": [
+        {
+          "num": null,
+          "title": "Final Exam Review",
           "slug": null,
           "type": "no-content",
           "published": false
