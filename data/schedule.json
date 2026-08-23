@@ -637,6 +637,20 @@
           "slug": "flip-flop-circuit-analysis",
           "type": "full",
           "published": false
+        },
+        {
+          "num": "7.4.1",
+          "title": "Blocking versus NonBlocking",
+          "slug": "blocking-versus-nonblocking",
+          "type": "full",
+          "published": true
+        },
+        {
+          "num": "7.4.3",
+          "title": "Defining State Memory in Verilog",
+          "slug": "state-memory",
+          "type": "full",
+          "published": false
         }
       ]
     },
@@ -700,20 +714,6 @@
           "slug": "synchronizers",
           "type": "full",
           "published": true
-        },
-        {
-          "num": "7.4.1",
-          "title": "Blocking versus NonBlocking",
-          "slug": "blocking-versus-nonblocking",
-          "type": "full",
-          "published": true
-        },
-        {
-          "num": "7.4.3",
-          "title": "Defining State Memory in Verilog",
-          "slug": "state-memory",
-          "type": "full",
-          "published": false
         }
       ]
     },
@@ -772,18 +772,18 @@
           "published": true
         },
         {
-          "num": "5.1.2",
+          "num": "5.1.1",
           "title": "FSMD - Finite State Machines with Datapaths",
           "slug": "fsmd-with-datapaths",
           "type": "full",
           "published": false
         },
         {
-          "num": "5.2.1",
-          "title": "Timer Circuit",
-          "slug": "timer-circuit",
+          "num": "5.1.2",
+          "title": "Illustrative Example",
+          "slug": "illustrative-example",
           "type": "full",
-          "published": true
+          "published": false
         }
       ]
     },
@@ -792,6 +792,27 @@
       "date": "2026-10-28",
       "weekday": "Wed",
       "items": [
+        {
+          "num": "5.1.3",
+          "title": "Timing Diagram FSMD Analysis",
+          "slug": "timing-diagram-fsmd-analysis",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "5.2.0",
+          "title": "Timer Circuit",
+          "slug": "timer-circuit",
+          "type": "full",
+          "published": true
+        },
+        {
+          "num": "5.2.1",
+          "title": "Switch Debouncer",
+          "slug": "switch-debouncer",
+          "type": "full",
+          "published": false
+        },
         {
           "num": "7.4.4",
           "title": "FSM Coding Template",
@@ -802,9 +823,58 @@
       ]
     },
     {
+      "lec": 28,
+      "date": "2026-10-30",
+      "weekday": "Fri",
+      "items": [
+        {
+          "num": "5.2.2",
+          "title": "Traffic-Light-Controller",
+          "slug": "traffic-light-controller",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 29,
+      "date": "2026-11-02",
+      "weekday": "Mon",
+      "items": [
+        {
+          "num": "5.2.3",
+          "title": "Laser-Range-Finder",
+          "slug": "laser-range-finder",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
       "lec": 30,
       "date": "2026-11-04",
       "weekday": "Wed",
+      "items": [
+        {
+          "num": "5.2.4",
+          "title": "TBD Example A",
+          "slug": "tbd-example-a",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "5.2.5",
+          "title": "TBD Example B",
+          "slug": "tbd-example-b",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 31,
+      "date": "2026-11-06",
+      "weekday": "Fri",
       "items": [
         {
           "num": "2.2.4",
@@ -824,6 +894,34 @@
           "num": "2.2.6",
           "title": "Power, Noise Margin and Speed Trades",
           "slug": "power-noise-margin-and-speed-trades",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 32,
+      "date": "2026-11-09",
+      "weekday": "Mon",
+      "items": [
+        {
+          "num": "6.2.0",
+          "title": "Inside an FPGA Part 1",
+          "slug": "inside-an-fpga-part-1",
+          "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 33,
+      "date": "2026-11-11",
+      "weekday": "Wed",
+      "items": [
+        {
+          "num": "6.2.1",
+          "title": "Inside an FPGA Part 2",
+          "slug": "inside-an-fpga-part-2",
           "type": "full",
           "published": false
         }
@@ -886,9 +984,9 @@
       ]
     },
     {
-      "lec": 39,
-      "date": "2026-12-02",
-      "weekday": "Wed",
+      "lec": 38,
+      "date": "2026-11-30",
+      "weekday": "Mon",
       "items": [
         {
           "num": "6.0.0",
@@ -914,9 +1012,9 @@
       ]
     },
     {
-      "lec": 40,
-      "date": "2026-12-04",
-      "weekday": "Fri",
+      "lec": 39,
+      "date": "2026-12-02",
+      "weekday": "Wed",
       "items": [
         {
           "num": "6.1.2",
@@ -935,15 +1033,29 @@
       ]
     },
     {
+      "lec": 40,
+      "date": "2026-12-04",
+      "weekday": "Fri",
+      "items": [
+        {
+          "num": null,
+          "title": "Catch Up/ Final Exam Review",
+          "slug": null,
+          "type": "no-content",
+          "published": false
+        }
+      ]
+    },
+    {
       "lec": 41,
       "date": "2026-12-07",
       "weekday": "Mon",
       "items": [
         {
-          "num": "6.2.0",
-          "title": "Inside an FPGA",
-          "slug": "inside-an-fpga",
-          "type": "full",
+          "num": null,
+          "title": "Final Exam Review",
+          "slug": null,
+          "type": "no-content",
           "published": false
         }
       ]
