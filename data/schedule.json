@@ -205,7 +205,7 @@
       "weekday": "Fri",
       "items": [
         {
-          "num": "2.2.3",
+          "num": "2.2.2",
           "title": "Schematic Guidelines",
           "slug": "schematics",
           "type": "full",
@@ -240,7 +240,7 @@
       "weekday": "Wed",
       "items": [
         {
-          "num": "2.2.2",
+          "num": "2.2.3",
           "title": "Non-ideal Switching",
           "slug": "non-ideal-switching",
           "type": "full",
