@@ -58,7 +58,7 @@
           "published": true
         },
         {
-          "num": "6.0.1",
+          "num": "7.0.1",
           "title": "Verilog - Hello World",
           "slug": "hello-world",
           "type": "full",
@@ -191,7 +191,7 @@
           "published": true
         },
         {
-          "num": "6.0.0",
+          "num": "7.0.0",
           "title": "HDL Hardware Description Languages",
           "slug": "history",
           "type": "full",
@@ -226,7 +226,7 @@
           "published": true
         },
         {
-          "num": "6.4.0",
+          "num": "7.4.0",
           "title": "Instantiating Modules",
           "slug": "instantiating-modules",
           "type": "full",
@@ -261,7 +261,7 @@
           "published": true
         },
         {
-          "num": "6.2.0",
+          "num": "7.2.0",
           "title": "Number Representations in Verilog",
           "slug": "verilog-number-representations",
           "type": "full",
@@ -296,7 +296,7 @@
           "published": true
         },
         {
-          "num": "6.1.0",
+          "num": "7.1.0",
           "title": "Modules, design, testbenches",
           "slug": "modules-design-testbenches",
           "type": "full",
@@ -702,14 +702,14 @@
           "published": true
         },
         {
-          "num": "6.4.1",
+          "num": "7.4.1",
           "title": "Blocking versus NonBlocking",
           "slug": "blocking-versus-nonblocking",
           "type": "full",
           "published": true
         },
         {
-          "num": "6.4.3",
+          "num": "7.4.3",
           "title": "Defining State Memory in Verilog",
           "slug": "state-memory",
           "type": "full",
@@ -814,7 +814,7 @@
           "published": false
         },
         {
-          "num": "6.4.4",
+          "num": "7.4.4",
           "title": "FSM Coding Template",
           "slug": "fsm-coding-template",
           "type": "full",

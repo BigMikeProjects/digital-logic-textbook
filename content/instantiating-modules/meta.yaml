@@ -2,7 +2,7 @@ title: "Instantiating Modules"
 description: "Placing copies of a finished module inside a bigger design: instance names, named port mapping (.pin(wire)), internal wires, and glue logic — a full adder built from two half adders."
 chapter: verilog
 section: verilog-basics
-order: 60400
+order: 70400
 
 graphics:
   01-video.youtube:

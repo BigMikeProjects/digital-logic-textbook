@@ -2,7 +2,7 @@ title: "Verilog - Hello World"
 description: "Verilog's hello world: a design file and a testbench, side by side — modules, ports, and why every design ships with proof"
 chapter: verilog
 section: verilog-basics
-order: 60001
+order: 70001
 
 graphics:
   01-video.youtube:

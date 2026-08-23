@@ -2,7 +2,7 @@ title: "Modules, design, testbenches"
 description: ""
 chapter: verilog
 section: verilog-basics
-order: 60100
+order: 70100
 
 graphics:
   01-modules-design-testbenches.youtube:

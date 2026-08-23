@@ -2,7 +2,7 @@ title: "HDL Hardware Description Languages"
 description: ""
 chapter: verilog
 section: introduction-to-verilog
-order: 60000
+order: 70000
 
 graphics:
   01-history.youtube:
