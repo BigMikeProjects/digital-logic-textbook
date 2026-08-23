@@ -711,6 +711,34 @@
       ]
     },
     {
+      "lec": 26,
+      "date": "2026-10-26",
+      "weekday": "Mon",
+      "items": [
+        {
+          "num": "5.1.0",
+          "title": "Introduction to Register Transfer Level Design",
+          "slug": "introduction-to-rtl-design",
+          "type": "full",
+          "published": true
+        },
+        {
+          "num": "5.1.2",
+          "title": "FSMD - Finite State Machines with Datapaths",
+          "slug": "fsmd-with-datapaths",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "5.2.1",
+          "title": "Timer Circuit",
+          "slug": "timer-circuit",
+          "type": "full",
+          "published": true
+        }
+      ]
+    },
+    {
       "lec": 34,
       "date": "2026-11-13",
       "weekday": "Fri",
