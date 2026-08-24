@@ -15,29 +15,10 @@ npm run build    # Build for production (runs copy-assets first)
 git push         # Auto-deploys to GitHub Pages via GitHub Actions
 ```
 
-## Project Structure
+## Flat content model
 
-```
-├── app/                    # Next.js app router
-├── components/
-│   ├── Graphics/           # GraphicsPanel, YouTubeEmbed, ImageViewer, HtmlPreview
-│   ├── Layout/             # SplitPane, ResizableLayout
-│   ├── Navigation/         # TOC, navigation components
-│   └── Text/               # Markdown rendering
-├── lib/
-│   ├── content/            # Content processing (scanner, parser, graphics, navigation)
-│   ├── types/              # TypeScript interfaces (content.ts)
-│   └── markdown.ts         # Markdown-to-HTML pipeline
-├── content/                # ALL TEXTBOOK CONTENT LIVES HERE (FLAT — one folder per topic)
-│   └── [topic-slug]/        # slug = folder name = URL (/[topic-slug]/)
-│       ├── text.md
-│       ├── meta.yaml        # title, description, chapter, section, order, graphics
-│       ├── graphics/        # Side panel media (01-*.svg, 02-*.html, 03-*.youtube)
-│       └── images/          # Inline images referenced in text.md
-└── public/content/         # Copied from content/ at build time
-```
-
-**Flat content model:** topics are NOT nested under chapter/section folders. A topic's
+All textbook content lives in `content/` (copied to `public/content/` at build time).
+Topics are NOT nested under chapter/section folders. A topic's
 chapter/section are `meta.yaml` fields, and `lib/content/scanner.ts` reads them from there
 (falling back to the folder path only for legacy nested topics). Navigation grouping/order
 is driven entirely by the `chapter`/`section`/`order` fields — so re-chaptering, re-sectioning,
@@ -154,35 +135,6 @@ Explanation of why B is correct.
 | Change markdown processing | `lib/markdown.ts` |
 | Modify navigation | `lib/content/navigation.ts`, `components/Navigation/` |
 | Add new content type field | `lib/types/content.ts`, `lib/content/parser.ts` |
-
-## TypeScript Interfaces
-
-### GraphicItem (lib/types/content.ts)
-```typescript
-interface GraphicItem {
-  filename: string;
-  type: 'image' | 'youtube' | 'html';
-  path: string;
-  caption?: string;
-  youtubeId?: string;     // For youtube type
-  startTime?: number;     // YouTube start time in seconds
-}
-```
-
-### Topic (lib/types/content.ts)
-```typescript
-interface Topic {
-  slug: string;
-  title: string;
-  description?: string;
-  order: number;
-  contentPath: string;
-  markdown: string;
-  graphics: GraphicItem[];
-  chapter: string;
-  section: string;
-}
-```
 
 ## Testing Changes
 
