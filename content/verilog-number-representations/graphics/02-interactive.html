@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verilog Number Representations — Literals In, $display Out</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 keywords/asserted · amber #ffb74d values/console · violet #b388ff
+       highlights · navy #0d1b2a panels.  Literal parts: size = amber, base = violet, value = cyan */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 12px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 18px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 19px; font-weight: 700; white-space: nowrap; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Consolas','Menlo','Courier New',monospace; }
+
+    /* ---------- code panes ---------- */
+    .pane { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; }
+    .pane-head { display: flex; align-items: baseline; gap: 12px; padding: 10px 18px;
+        background: #0d1b2a; border-bottom: 2px solid #24384c; }
+    .pane-head .fn { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 19px;
+        color: #ffb74d; font-weight: 700; }
+    .pane-head .role { font-size: 15px; color: #607d8b; }
+    .code { padding: 10px 0; font-family: 'Consolas','Menlo','Courier New',monospace;
+        font-size: 17px; line-height: 1.6; }
+    .cl { display: flex; padding: 0 16px; white-space: pre; transition: background .15s; }
+    .cl .ln { width: 40px; flex-shrink: 0; text-align: right; margin-right: 18px;
+        color: #34495c; user-select: none; }
+    .cl.hl { background: rgba(179,136,255,0.16); box-shadow: inset 3px 0 0 #b388ff; }
+    .cl.run { background: rgba(255,183,77,0.14); box-shadow: inset 3px 0 0 #ffb74d; }
+    .cl.gap { color: #34495c; }
+    .kw { color: #4fc3f7; } .cm { color: #56708a; } .st { color: #ffb74d; }
+    .op { color: #b388ff; }
+    .lsz { color: #ffb74d; } .ltk { color: #90a4ae; } .lbs { color: #b388ff; } .lvl { color: #4fc3f7; }
+    .lng { color: #ef9a9a; }
+    .lsg { color: #b388ff; text-decoration: underline; text-decoration-color: #ffb74d; text-underline-offset: 4px; }
+    .hl-size .lsz, .hl-base .lbs, .hl-value .lvl, .hl-signed .lsg {
+        background: rgba(255,255,255,0.14); border-radius: 4px; box-shadow: 0 0 0 2px rgba(255,255,255,0.28); }
+
+    /* ---------- lamps ---------- */
+    .lamps { display: flex; gap: 6px; }
+    .lamp { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #2f4a63;
+        background: #0d1b2a; display: flex; align-items: center; justify-content: center;
+        font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 17px; color: #3d566e; flex-shrink: 0; }
+    .lamp.on { background: #4fc3f7; border-color: #4fc3f7; color: #0d1b2a; font-weight: 700;
+        box-shadow: 0 0 10px rgba(79,195,247,0.55); }
+    .lamp.new { box-shadow: 0 0 0 3px #b388ff; }
+    .lamp.new.on { box-shadow: 0 0 0 3px #b388ff, 0 0 10px rgba(79,195,247,0.55); }
+    .lamp.src { box-shadow: 0 0 0 3px #ffb74d, 0 0 10px rgba(79,195,247,0.55); }
+    .lamps.nib .lamp:nth-child(4n+4) { margin-right: 10px; }
+    .lamps.nib .lamp:last-child { margin-right: 0; }
+    .lamps.sm .lamp { width: 22px; height: 22px; font-size: 13px; }
+    .lamps.sm { gap: 4px; }
+
+    /* ---------- page 1 ---------- */
+    #p1 { gap: 22px; }
+    .p1left { flex: 0 0 800px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .p1right { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px;
+        padding: 6px 16px; font-size: 16px; color: #90a4ae; background: #0d1b2a;
+        transition: all .15s ease; }
+    .chip:hover { border-color: #b388ff; color: #cfd8dc; }
+    .chip.on { border-color: #b388ff; background: rgba(179,136,255,0.14); color: #cbb4ff; }
+    .anat { background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px; padding: 10px 22px 6px; }
+    .anat svg { width: 100%; height: 300px; display: block; }
+    .fourways { background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 14px 24px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
+    .fourways .fwt { font-size: 19px; color: #90a4ae; }
+    .fourways .fwt b { color: #4fc3f7; }
+    .fwrow { display: flex; align-items: center; gap: 22px; padding: 6px 12px; border-radius: 10px;
+        background: rgba(255,255,255,0.025); }
+    .fwrow .lit { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 30px; width: 300px; }
+    .fwrow .bn { width: 90px; font-size: 16px; color: #607d8b; }
+    .fwrow .eq { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 24px; color: #ffb74d; margin-left: 12px; }
+    .p1note { font-size: 18px; color: #90a4ae; text-align: center; min-height: 56px; line-height: 1.45;
+        padding: 0 8px; }
+    .p1note b { color: #b388ff; } .p1note .mono { color: #cfd8dc; }
+
+    /* ---------- pages 2–4 shared ---------- */
+    #p2, #p3, #p4 { gap: 22px; }
+    .benchcol { flex: 0 0 820px; display: flex; flex-direction: column; min-width: 0; }
+    .benchcol .pane { flex: 1; }
+    .benchcol .code { font-size: 16px; line-height: 1.55; }
+    .runcol { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    .stepbtn { cursor: pointer; user-select: none; border: 2px solid #ffb74d; align-self: center;
+        border-radius: 999px; padding: 9px 28px; color: #ffb74d; font-size: 19px;
+        background: rgba(255,183,77,0.08); font-weight: 700; letter-spacing: 1px; }
+    .stepbtn .k { font-family: 'Consolas','Menlo','Courier New',monospace; color: #8a6a3a;
+        font-size: 15px; margin-left: 8px; }
+    .console { background: #06111c; border: 2px solid #24384c; border-radius: 12px;
+        padding: 10px 18px; font-family: 'Consolas','Menlo','Courier New',monospace;
+        font-size: 17px; line-height: 1.5; overflow: hidden; color: #ffb74d; white-space: pre; flex: 1; min-height: 0; }
+    .console .chead { color: #607d8b; }
+    .console .warn { color: #7a6a8e; }
+    .console .fin { color: #66bb6a; }
+    .console .more { color: #4a6274; }
+    .console .cursor { color: #4fc3f7; animation: blink 1.1s step-end infinite; }
+    .console .pad { color: #3d566e; }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* page 2 specifics */
+    .specrow { display: flex; gap: 12px; align-items: stretch; }
+    .spec { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 12px;
+        padding: 8px 12px; text-align: center; transition: all .15s; }
+    .spec .sp { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 30px; color: #b388ff; }
+    .spec .sn { font-size: 15px; color: #90a4ae; }
+    .spec .sw { font-size: 14px; color: #607d8b; }
+    .spec.on { border-color: #ffb74d; background: rgba(255,183,77,0.10); }
+    .spec.on .sp { color: #ffb74d; }
+    .lamprow { display: flex; align-items: center; justify-content: center; gap: 18px;
+        background: #0d1b2a; border: 2px solid #37506a; border-radius: 12px; padding: 10px 16px; }
+    .lamprow .ll { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 22px; color: #cfd8dc; width: 190px; text-align: right; }
+    .lamprow .lr { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 22px; color: #ffb74d; width: 190px; }
+    .callout { border: 2px solid #6a4fa0; border-radius: 12px; background: rgba(179,136,255,0.08);
+        padding: 8px 16px; font-size: 17px; color: #cfd8dc; min-height: 62px; line-height: 1.4; }
+    .callout b { color: #b388ff; } .callout .mono { color: #ffb74d; }
+    .callout .pad { color: #7a8fa3; }
+
+    /* page 3 specifics */
+    #console3 { font-size: 16px; line-height: 1.5; }
+    .sgpanel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 12px 20px; display: flex; flex-direction: column; gap: 8px; }
+    .sgrow { display: flex; align-items: center; gap: 12px; padding: 5px 12px; border-radius: 12px;
+        border: 2px solid transparent; transition: all .15s; }
+    .sgrow.on { border-color: #ffb74d; background: rgba(255,183,77,0.07); }
+    .sgrow .lab { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 24px; width: 170px; flex-shrink: 0; }
+    .sgrow .lab .who { display: block; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 14px; color: #607d8b; }
+    .bitcol { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .bitcol .pv { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 13px; color: #607d8b; width: 34px; text-align: center; }
+    .bitcol .pv.neg { color: #ef9a9a; }
+    .bitcol.lit .pv { color: #ffb74d; }
+    .bitcol.lit .pv.neg { color: #ef9a9a; font-weight: 700; }
+    .bits { display: flex; gap: 5px; }
+    .bits .bitcol:nth-child(4n+4) { margin-right: 10px; }
+    .bits .bitcol:last-child { margin-right: 0; }
+    .sgrow .sum { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 16px; color: #90a4ae; width: 160px; flex-shrink: 0; line-height: 1.3; }
+    .sgrow .sum b { color: #ffb74d; font-size: 22px; }
+    .cells { display: flex; gap: 8px; margin-left: auto; }
+    .cell { background: #06111c; border: 2px solid #24384c; border-radius: 10px; padding: 4px 10px;
+        text-align: center; min-width: 78px; }
+    .cell .cs { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 14px; color: #b388ff; }
+    .cell .cv { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 22px; color: #ffb74d; white-space: pre; }
+    .cell .cv .pad { color: #3d566e; }
+    .sgnote { font-size: 17px; color: #90a4ae; line-height: 1.4; min-height: 46px; padding: 0 12px; }
+    .sgnote b { color: #ffb74d; } .sgnote .mono { color: #cfd8dc; }
+    .closing { border: 2px solid #6a5324; border-radius: 12px; background: rgba(255,183,77,0.07);
+        padding: 6px 20px; font-size: 20px; color: #cfd8dc; text-align: center; }
+    .closing b { color: #ffb74d; } .closing .mono { color: #b388ff; }
+
+    /* page 4: sign extension */
+    #console4 { font-size: 16px; line-height: 1.5; }
+    .extrow { display: flex; flex-direction: column; gap: 4px; padding: 6px 12px; border-radius: 12px;
+        border: 2px solid transparent; transition: all .15s; }
+    .extrow.on { border-color: #ffb74d; background: rgba(255,183,77,0.07); }
+    .extrow .top { display: flex; align-items: center; gap: 14px; }
+    .extrow .lab { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 21px; width: 112px; flex-shrink: 0; }
+    .extrow .lab .who { display: block; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 13px; color: #607d8b; line-height: 1.2; }
+    .extrow .lamps { gap: 5px; }
+    .extrow .lamps .lamp { width: 28px; height: 28px; font-size: 15px; }
+    .extrow .lamps .lamp:nth-child(8) { margin-right: 22px; }
+    .extrow .tag { font-size: 13px; color: #b388ff; width: 104px; flex-shrink: 0; text-align: center; line-height: 1.25; }
+    .extrow .cells .cell { min-width: 70px; padding: 3px 8px; } .extrow .cells .cell .cv { font-size: 20px; }
+    .extrow .esum { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 14px; color: #90a4ae; padding-left: 4px; white-space: normal; line-height: 1.3; }
+    .extrow .esum b { color: #ffb74d; font-size: 18px; } .extrow .esum .neg { color: #ef9a9a; } .extrow .esum .new { color: #b388ff; }
+    .extkey { display: flex; gap: 22px; font-size: 14px; color: #607d8b; padding: 0 12px; }
+    .extkey .sw { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: -2px; margin-right: 6px; border: 2px solid #2f4a63; }
+    .extkey .sw.v { box-shadow: 0 0 0 3px #b388ff; } .extkey .sw.a { box-shadow: 0 0 0 3px #ffb74d; }
+
+    /* ---------- page 5: the widget ---------- */
+    #p5 { flex-direction: column; gap: 12px; }
+    .wctl { display: flex; gap: 14px; align-items: stretch; }
+    .wgroup { background: #0d1b2a; border: 2px solid #37506a; border-radius: 12px; padding: 8px 14px;
+        display: flex; flex-direction: column; gap: 6px; }
+    .wgroup .gl { font-size: 14px; color: #607d8b; text-transform: uppercase; letter-spacing: 1px; }
+    .seg { display: flex; gap: 6px; }
+    .sbtn { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 8px;
+        padding: 6px 14px; font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 20px;
+        color: #90a4ae; background: #06111c; transition: all .12s; }
+    .sbtn:hover { border-color: #90a4ae; color: #e0e0e0; }
+    .sbtn.on { color: #0d1b2a; font-weight: 700; }
+    .seg.size .sbtn.on { background: #ffb74d; border-color: #ffb74d; }
+    .seg.base .sbtn.on { background: #b388ff; border-color: #b388ff; }
+    .wgroup.digits { flex: 1; }
+    .din { display: flex; gap: 10px; align-items: center; }
+    .din input { width: 430px; background: #06111c; border: 2px solid #4fc3f7; border-radius: 8px;
+        color: #4fc3f7; font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 26px;
+        padding: 3px 12px; outline: none; letter-spacing: 1px; }
+    .din input:focus { box-shadow: 0 0 0 3px rgba(79,195,247,0.25); }
+    .keypad { display: flex; gap: 5px; flex-wrap: wrap; }
+    .kb { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 7px;
+        width: 40px; height: 36px; display: flex; align-items: center; justify-content: center;
+        font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 18px; color: #4fc3f7; background: #06111c; }
+    .kb:hover { border-color: #4fc3f7; }
+    .kb.fn { color: #90a4ae; width: 52px; }
+    .kb.neg { color: #ef9a9a; width: 52px; }
+    .kb.neg.on { background: #ef9a9a; color: #0d1b2a; border-color: #ef9a9a; }
+    .wmain { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .wlit { flex: 0 0 520px; min-width: 0; overflow: hidden; background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 10px; }
+    .wlit .big { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 80px; line-height: 1.1; white-space: nowrap; }
+    .wlit .big.small { font-size: 48px; }
+    .wlit .big.tiny { font-size: 34px; }
+    .wlit .big.micro { font-size: 19px; }
+    .wlit .decl.long { font-size: 12px; }
+    .wlit .decl { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 15px; color: #607d8b; text-align: left; line-height: 1.5; white-space: pre; }
+    .wlit .decl .kw { color: #4fc3f7; }
+    .wlit .hint { font-size: 14px; color: #607d8b; text-align: center; line-height: 1.4; max-width: 460px; }
+    .wlit .hint b { color: #90a4ae; }
+    .wright { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+    .readrow { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; padding: 8px 16px;
+        display: flex; align-items: center; gap: 14px; min-height: 96px; }
+    .readrow.sg { border-color: #4a3b6e; }
+    .readrow .lab { width: 150px; flex-shrink: 0; }
+    .readrow .lab .t { font-size: 17px; font-weight: 700; color: #cfd8dc; }
+    .readrow.sg .lab .t { color: #b388ff; }
+    .readrow .lab .d { font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 13px; color: #607d8b; white-space: pre; line-height: 1.35; }
+    .readrow .bits .bitcol .lamp { width: 34px; height: 34px; font-size: 18px; }
+    .readrow .bits.b16 .bitcol .lamp { width: 30px; height: 30px; font-size: 16px; }
+    .readrow .bits.b16 .bitcol .pv { width: 36px; font-size: 10px; }
+    .readrow .bits.b16 { gap: 4px; }
+    .readrow .bits .bitcol .pv { width: 38px; }
+    .readrow .rsum { flex: 1; min-width: 100px; font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 15px; color: #90a4ae; line-height: 1.35; white-space: normal; }
+    .readrow .rsum b { color: #ffb74d; font-size: 20px; } .readrow .rsum .neg { color: #ef9a9a; }
+    .readrow .cell { min-width: 110px; margin-left: auto; flex-shrink: 0; }
+    .readrow .cell .cv { font-size: 26px; }
+    .readrow .lamps.b32 { gap: 3px; flex-shrink: 0; }
+    .readrow .lamps.b32 .lamp { width: 20px; height: 20px; font-size: 12px; margin: 0; }
+    .readrow .lamps.b32 .lamp:nth-child(8n+8) { margin-right: 6px; }
+    .readrow .lamps.b32 .lamp:last-child { margin-right: 0; }
+    .readrow .rsum.r32 { font-size: 13px; }
+    .widen { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; padding: 8px 16px;
+        font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 16px; line-height: 1.55; color: #90a4ae; white-space: pre; overflow: hidden; }
+    .widen .t { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 14px; color: #607d8b; }
+    .widen .bitsx { color: #4fc3f7; } .widen .new { color: #b388ff; } .widen .v { color: #ffb74d; } .widen .neg { color: #ef9a9a; }
+    .wwarn { background: #06111c; border: 2px solid #24384c; border-radius: 12px; padding: 10px 16px; flex: 1; min-height: 0;
+        font-family: 'Consolas','Menlo','Courier New',monospace; font-size: 16px; line-height: 1.5; white-space: pre; overflow: hidden; }
+    .wwarn .w { color: #ef9a9a; } .wwarn .i { color: #607d8b; } .wwarn .ok { color: #66bb6a; } .wwarn .call { color: #90a4ae; } .wwarn .out { color: #ffb74d; }
+    .wwarn .pad { color: #3d566e; }
+    .gcards { display: flex; gap: 12px; }
+    .gcard { flex: 1; background: #0d1b2a; border: 2px solid #6a5324; border-radius: 12px; padding: 10px 16px; }
+    .gcard .gt { font-size: 17px; font-weight: 700; color: #ffb74d; }
+    .gcard .gd { font-size: 15px; color: #90a4ae; line-height: 1.45; }
+    .gcard .gd .mono { color: #cfd8dc; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 8px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Menlo','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.violet { color: #b388ff; border-color: #6a4fa0; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== persistent header ===== -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none">
+                <g font-family="'Consolas','Menlo',monospace" font-size="46" font-weight="700" text-anchor="middle">
+                    <text x="28" y="52" fill="#ffb74d">8</text>
+                    <text x="54" y="52" fill="#90a4ae">'</text>
+                    <text x="82" y="52" fill="#b388ff">h</text>
+                    <text x="140" y="52" fill="#4fc3f7">A5</text>
+                </g>
+                <g>
+                    <circle cx="34" cy="82" r="9" fill="#4fc3f7"/><circle cx="58" cy="82" r="9" fill="#0d1b2a" stroke="#37506a" stroke-width="2"/>
+                    <circle cx="82" cy="82" r="9" fill="#4fc3f7"/><circle cx="106" cy="82" r="9" fill="#0d1b2a" stroke="#37506a" stroke-width="2"/>
+                    <circle cx="138" cy="82" r="9" fill="#0d1b2a" stroke="#37506a" stroke-width="2"/><circle cx="162" cy="82" r="9" fill="#4fc3f7"/>
+                    <circle cx="186" cy="82" r="9" fill="#0d1b2a" stroke="#37506a" stroke-width="2"/><circle cx="210" cy="82" r="9" fill="#4fc3f7"/>
+                </g>
+                <text x="250" y="58" text-anchor="end" font-family="'Consolas','Menlo',monospace" font-size="19" fill="#ffb74d">165</text>
+                <text x="250" y="88" text-anchor="end" font-family="'Consolas','Menlo',monospace" font-size="19" fill="#ef9a9a">-91</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Verilog: Number Representations <span class="sub">&mdash; literals in, <span class="mono">$display</span> out</span></h1>
+            <div class="subtitle">How to write a constant &middot; how to print it &middot; why the same eight bits can print as 165 or &minus;91 &middot; what happens when they get wider</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 5</div>
+    </div>
+
+    <!-- ===== tab strip ===== -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Writing a Literal</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Printing It</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Signed Literals</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Sign Extension</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">Try It</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- ============ PAGE 1 ============ -->
+        <div class="page" id="p1">
+            <div class="p1left">
+                <div class="pane" style="flex:1">
+                    <div class="pane-head"><span class="fn">testbench.v</span>
+                        <span class="role">declarations &mdash; every literal in this lesson</span></div>
+                    <div class="code" id="code-t1"></div>
+                </div>
+                <div class="chips" id="chips"></div>
+                <div class="p1note" id="p1note"></div>
+            </div>
+            <div class="p1right">
+                <div class="anat" id="anat"></div>
+                <div class="fourways">
+                    <div class="fwt"><b>Three spellings, one bit pattern.</b> The base changes how you write it &mdash; the bits stored are identical.</div>
+                    <div id="fourways"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 2 ============ -->
+        <div class="page" id="p2">
+            <div class="benchcol">
+                <div class="pane">
+                    <div class="pane-head"><span class="fn">testbench.v</span>
+                        <span class="role">the initial block &mdash; print, print, print</span></div>
+                    <div class="code" id="code-t2"></div>
+                </div>
+            </div>
+            <div class="runcol">
+                <div class="specrow" id="specrow"></div>
+                <div class="lamprow"><div class="ll" id="lamplab2">h = 8'hA5</div><div class="lamps nib" id="lamps2"></div><div class="lr" id="lampval2"></div></div>
+                <div class="callout" id="callout2"></div>
+                <div class="stepbtn" id="stepBtn2">&#9654; RUN<span class="k">S</span></div>
+                <div class="console" id="console2"></div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 3 ============ -->
+        <div class="page" id="p3">
+            <div class="benchcol">
+                <div class="pane">
+                    <div class="pane-head"><span class="fn">testbench.v</span>
+                        <span class="role">same bits into an unsigned reg and a signed reg</span></div>
+                    <div class="code" id="code-t3"></div>
+                </div>
+            </div>
+            <div class="runcol">
+                <div class="sgpanel">
+                    <div class="sgrow" id="row-u"></div>
+                    <div class="sgrow" id="row-s"></div>
+                    <div class="sgrow" id="row-n"></div>
+                    <div class="sgnote" id="sgnote"></div>
+                </div>
+                <div class="closing">Same bits. <span class="mono">s</span> is the only difference. <b>Choose your question before you print.</b></div>
+                <div class="stepbtn" id="stepBtn3">&#9654; RUN<span class="k">S</span></div>
+                <div class="console" id="console3"></div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 4 ============ -->
+        <div class="page" id="p4">
+            <div class="benchcol">
+                <div class="pane">
+                    <div class="pane-head"><span class="fn">testbench.v</span>
+                        <span class="role">8 bits into a 16-bit reg &mdash; what fills the new bits?</span></div>
+                    <div class="code" id="code-t4"></div>
+                </div>
+            </div>
+            <div class="runcol">
+                <div class="sgpanel" style="gap:6px">
+                    <div class="extrow" id="ext-u"></div>
+                    <div class="extrow" id="ext-s"></div>
+                    <div class="extrow" id="ext-x"></div>
+                    <div class="extkey"><span><span class="sw v"></span>the 8 new bits</span><span><span class="sw a"></span>the source&rsquo;s top bit (the sign)</span></div>
+                    <div class="sgnote" id="extnote"></div>
+                </div>
+                <div class="closing"><b>Extension follows the source; reading follows the destination.</b></div>
+                <div class="stepbtn" id="stepBtn4">&#9654; RUN<span class="k">S</span></div>
+                <div class="console" id="console4"></div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 5 ============ -->
+        <div class="page" id="p5">
+            <div class="wctl">
+                <div class="wgroup"><div class="gl">size (bits)</div><div class="seg size" id="segSize"></div></div>
+                <div class="wgroup"><div class="gl">base</div><div class="seg base" id="segBase"></div></div>
+                <div class="wgroup digits"><div class="gl">the number &mdash; type it, or tap the keys valid for this base (&minus; for a negative)</div>
+                    <div class="din"><input id="digits" type="text" maxlength="64" spellcheck="false" autocomplete="off"><div class="keypad" id="keypad"></div></div>
+                </div>
+            </div>
+            <div class="wmain">
+                <div class="wlit">
+                    <div class="big" id="wbig"></div>
+                    <div class="decl" id="wdecl"></div>
+                    <div class="hint">One literal, two variables: the <b>unsigned</b> reg and the <b>signed</b> reg hold the <b>same bits</b>. Only the reading differs.</div>
+                </div>
+                <div class="wright">
+                    <div class="readrow" id="read-u"></div>
+                    <div class="readrow sg" id="read-s"></div>
+                    <div class="widen" id="widen"></div>
+                    <div class="wwarn" id="wwarn"></div>
+                </div>
+            </div>
+            <div class="gcards">
+                <div class="gcard"><div class="gt">Too many digits &rarr; silently truncated</div>
+                    <div class="gd"><span class="mono">8'h1A5</span> needs 9 bits; only the low 8 are kept, so it stores <span class="mono">a5</span>. The compiler only <i>warns</i>. Try size 8, hex, <span class="mono">1A5</span>.</div></div>
+                <div class="gcard"><div class="gt">No size &rarr; 32 bits</div>
+                    <div class="gd"><span class="mono">'hA5</span> or plain <span class="mono">165</span> is a 32-bit constant. Fine in a testbench; in a design it can widen an expression when you didn&rsquo;t mean it to. Try size <span class="mono">none</span>.</div></div>
+                <div class="gcard"><div class="gt">A minus sign negates the bits</div>
+                    <div class="gd"><span class="mono">-8'd91</span> means &ldquo;negate the 8-bit pattern for 91&rdquo; &rarr; <span class="mono">10100101</span>. The unsigned reg reads that as <span class="mono">165</span>; only the signed reg says <span class="mono">-91</span>. Try size 8, decimal, <span class="mono">&minus;91</span>.</div></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div><div class="dot" data-dot="5"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">5</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k violet">click chips</span> to annotate
+            &middot; <span class="k amber">S</span> step the simulation
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ PAGE STATE ============
+    const FIRST = 1, LAST = 5;
+    let page = 1;
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+        if (page !== 5) document.getElementById('digits').blur();
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+
+    // ============ THE $display MODEL (checked against iverilog 12.0 for every sized case) ====
+    // v = the value already truncated to N bits. Fields are right-justified, space-padded to the
+    // width of the largest value the variable can hold; %0x drops the padding.
+    function fmt(N, signed, v) {
+        const pad = (s, w) => s.length >= w ? s : ' '.repeat(w - s.length) + s;
+        const b = v.toString(2).padStart(N, '0');
+        const h = v.toString(16).padStart(Math.ceil(N/4), '0');
+        const sv = (signed && v >= 2 ** (N-1)) ? v - 2 ** N : v;
+        const dw = signed ? String(-(2 ** (N-1))).length : String(2 ** N - 1).length;
+        return { b, h, d: pad(String(sv), dw), d0: String(sv), sv, b0: v.toString(2), h0: v.toString(16) };
+    }
+    const padHtml = (s) => s.replace(/^ +/, m => `<span class="pad">${'·'.repeat(m.length)}</span>`);
+
+    // ============ THE CODE (verbatim testbench.v — iverilog-verified; keep in lockstep) ====
+    const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    function litSpan(m, neg, sz, sg, bs, val) {
+        return (neg ? `<span class="lng">-</span>` : '') + (sz ? `<span class="lsz">${sz}</span>` : '') + `<span class="ltk">'</span>` +
+               (sg ? `<span class="lsg">s</span>` : '') + `<span class="lbs">${bs}</span><span class="lvl">${val}</span>`;
+    }
+    function hiCode(seg) {
+        return esc(seg)
+            .replace(/(-?)(\d*)'(s?)([bdh])([0-9a-fA-F_]+)/g, litSpan)
+            .replace(/\b(module|endmodule|input|output|wire|reg|integer|signed|assign|initial|begin|end)\b/g, '<span class="kw">$1</span>')
+            .replace(/(\$display|\$finish)/g, '<span class="op">$1</span>');
+    }
+    function hi(line) {
+        const ix = line.indexOf('//');
+        const code = ix >= 0 ? line.slice(0, ix) : line;
+        const com  = ix >= 0 ? line.slice(ix) : '';
+        let h = '';
+        code.split(/("[^"]*")/).forEach(part => {
+            if (part.startsWith('"')) h += '<span class="st">' + esc(part) + '</span>';
+            else h += hiCode(part);
+        });
+        if (com) h += '<span class="cm">' + esc(com) + '</span>';
+        return h;
+    }
+    const TB = [
+'module literals_tb;',
+'',
+'  // --- Beat 1: one value, three ways to write it',
+'  reg [7:0] b = 8\'b1010_0101;   // binary (underscore = separator)',
+'  reg [7:0] d = 8\'d165;         // decimal',
+'  reg [7:0] h = 8\'hA5;          // hex',
+'',
+'  // --- Beat 3: same bits, signed',
+'  reg        [7:0] u = 8\'hA5;   // unsigned (the default)',
+'  reg signed [7:0] s = 8\'shA5;  // signed literal, signed reg',
+'',
+'  // --- Beat 4: widening to 16 bits',
+'  reg        [15:0] uw, sx;     // unsigned 16-bit regs',
+'  reg signed [15:0] sw;         // signed 16-bit reg',
+'',
+'  // --- Gotchas',
+'  reg [7:0] t = 8\'h1A5;         // too many digits: truncated',
+'  integer   w = \'hA5;           // unsized: 32 bits',
+'  reg [7:0] n = 8\'d5;           // small value, for %d padding',
+'',
+'  initial begin',
+'    // Beat 1',
+'    $display("b=%b  d=%d  h=%h", b, d, h);',
+'    $display("all three equal? %b", (b == d) && (d == h));',
+'    // Beat 2',
+'    $display("%%b of h -> %b", h);',
+'    $display("%%d of h -> %d", h);',
+'    $display("%%h of h -> %h", h);',
+'    $display("%%d of n -> [%d]   %%0d of n -> [%0d]", n, n);',
+'    // Beat 3',
+'    $display("u=%b  %%d -> %d", u, u);',
+'    $display("s=%b  %%d -> %d", s, s);',
+'    $display("s + 1     -> %d", s + 8\'sd1);',
+'    $display("-8\'d5 unsigned -> %d  (%b)", -8\'d5, -8\'d5);',
+'    // Beat 4',
+'    uw = u;  sw = s;  sx = s;',
+'    $display("uw = u -> %b  %%d -> %d", uw, uw);',
+'    $display("sw = s -> %b  %%d -> %d", sw, sw);',
+'    $display("sx = s -> %b  %%d -> %d", sx, sx);',
+'    // Gotchas',
+'    $display("8\'h1A5 in 8 bits -> %h", t);',
+'    $display("\'hA5 unsized     -> %b", w);',
+'    $finish;',
+'  end',
+'endmodule',
+    ];
+    function paint(elId, from, to, prefix, gapAfter) {
+        const rows = [];
+        for (let i = from; i <= to; i++) {
+            rows.push(`<div class="cl" data-l="${prefix}${i}"><span class="ln">${i}</span><span>${hi(TB[i-1])}</span></div>`);
+        }
+        if (gapAfter) rows.push(`<div class="cl gap"><span class="ln">&middot;</span><span>  &hellip; ${gapAfter}</span></div>`);
+        document.getElementById(elId).innerHTML = rows.join('');
+    }
+    paint('code-t1', 1, 19, 't', 'initial block: Beats 2, 3 and 4');
+    paint('code-t2', 21, 45, 'T');
+    paint('code-t3', 21, 45, 'U');
+    paint('code-t4', 21, 45, 'V');
+
+    // ============ LAMPS ============
+    function lampsHtml(bits, extra) {
+        return bits.split('').map((b, i) => `<div class="lamp${b === '1' ? ' on' : ''}${extra ? extra(i) : ''}">${b}</div>`).join('');
+    }
+
+    // ============ PAGE 1: anatomy + three ways + chips ============
+    document.getElementById('anat').innerHTML = `
+    <svg viewBox="0 0 1000 300" fill="none">
+        <g font-family="'Consolas','Menlo','Courier New',monospace" font-size="92" font-weight="700" text-anchor="middle">
+            <text x="322" y="134" fill="#ffb74d" class="lsz">8</text>
+            <text x="380" y="134" fill="#90a4ae">'</text>
+            <text x="438" y="134" fill="#b388ff" class="lbs">h</text>
+            <text x="526" y="134" fill="#4fc3f7" class="lvl">A5</text>
+        </g>
+        <g stroke-width="2.4" stroke-linecap="round">
+            <path d="M 322 152 L 322 176 L 175 176 L 175 200" stroke="#ffb74d"/>
+            <path d="M 438 152 L 438 176 L 500 176 L 500 200" stroke="#b388ff"/>
+            <path d="M 526 152 L 526 176 L 825 176 L 825 200" stroke="#4fc3f7"/>
+        </g>
+        <g font-family="'Segoe UI', Tahoma, sans-serif" text-anchor="middle">
+            <rect x="20" y="200" width="310" height="88" rx="12" fill="rgba(255,183,77,0.08)" stroke="#ffb74d" stroke-width="2"/>
+            <text x="175" y="230" font-size="20" font-weight="700" fill="#ffb74d" class="boxtitle">SIZE — width in bits</text>
+            <text x="175" y="256" font-size="16" fill="#90a4ae">optional; leave it off and you get 32</text>
+            <text x="175" y="277" font-size="16" fill="#90a4ae">(the tick ' separates size from base)</text>
+            <rect x="345" y="200" width="310" height="88" rx="12" fill="rgba(179,136,255,0.08)" stroke="#b388ff" stroke-width="2"/>
+            <text x="500" y="230" font-size="20" font-weight="700" fill="#b388ff" class="boxtitle">BASE — b · d · h</text>
+            <text x="500" y="256" font-size="16" fill="#90a4ae">binary · decimal · hex</text>
+            <text x="500" y="277" font-size="16" fill="#90a4ae">put an s in front for signed: 8'shA5</text>
+            <rect x="670" y="200" width="310" height="88" rx="12" fill="rgba(79,195,247,0.08)" stroke="#4fc3f7" stroke-width="2"/>
+            <text x="825" y="230" font-size="20" font-weight="700" fill="#4fc3f7" class="boxtitle">VALUE — digits in that base</text>
+            <text x="825" y="256" font-size="16" fill="#90a4ae">case doesn't matter: A5 = a5</text>
+            <text x="825" y="277" font-size="16" fill="#90a4ae">underscores are ignored: 1010_0101</text>
+        </g>
+        <text x="30" y="40" font-family="'Segoe UI', Tahoma, sans-serif" font-size="19" fill="#90a4ae">A Verilog <tspan fill="#e0e0e0" font-weight="700">literal</tspan> is a constant written into the code. Three parts:</text>
+    </svg>`;
+    const FOUR = [
+        { lit: "8'b1010_0101", base: 'binary' },
+        { lit: "8'd165",       base: 'decimal' },
+        { lit: "8'hA5",        base: 'hex' },
+    ];
+    document.getElementById('fourways').innerHTML = FOUR.map(f =>
+        `<div class="fwrow"><div class="lit">${hiCode(f.lit)}</div><div class="bn">${f.base}</div>
+         <div class="lamps nib">${lampsHtml('10100101')}</div><div class="eq">= 165</div></div>`).join('');
+
+    const CHIPS = [
+        { label: 'size', cls: 'hl-size', lines: ['t4','t5','t6','t9','t10','t13','t14','t17','t19'],
+          note: 'The number before the tick is the <b>width in bits</b>. <span class="mono">8\'hA5</span> is exactly 8 flip-flops&rsquo; worth of value — no more, no less — which is why every one of these fits a <span class="mono">reg [7:0]</span>.' },
+        { label: 'base', cls: 'hl-base', lines: ['t4','t5','t6'],
+          note: 'The letter after the tick names the <b>base the digits are written in</b>: <span class="mono">b</span> binary, <span class="mono">d</span> decimal, <span class="mono">h</span> hex. It changes the spelling, not the stored bits.' },
+        { label: 'value', cls: 'hl-value', lines: ['t4','t5','t6'],
+          note: 'The <b>digits</b>, in that base. Hex digits can be upper or lower case; the simulator prints them in lower case (<span class="mono">a5</span>).' },
+        { label: 'underscore', cls: '', lines: ['t4'],
+          note: 'An <b>underscore is ignored</b> — <span class="mono">8\'b1010_0101</span> and <span class="mono">8\'b10100101</span> are the same literal. Use it to group nibbles so a long binary constant stays readable.' },
+        { label: 'unsized', cls: '', lines: ['t18'],
+          note: 'Leave the size off and the literal is <b>32 bits wide</b>: <span class="mono">\'hA5</span> and plain <span class="mono">165</span> both are. Handy in a testbench, surprising in a design (Beat 5 shows the 32-bit printout).' },
+        { label: 'signed', cls: 'hl-signed', lines: ['t10'],
+          note: 'An <b>s before the base letter</b> makes the literal signed — <span class="mono">8\'shA5</span> is the same eight bits, read as two&rsquo;s complement (&minus;91). Beat 3 is all about this one letter.' },
+    ];
+    const P1_DEFAULT = 'Click a chip to see where each part lives — in the code on the left and in the anatomy on the right.';
+    let activeChip = null;
+    const chipRoot = document.getElementById('chips');
+    CHIPS.forEach(c => {
+        const el = document.createElement('div'); el.className = 'chip'; el.textContent = c.label;
+        el.addEventListener('click', () => selectChip(c, el)); chipRoot.appendChild(el);
+    });
+    function clearChip() {
+        activeChip = null;
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+        document.querySelectorAll('#p1 .cl').forEach(c => c.classList.remove('hl'));
+        ['hl-size','hl-base','hl-value','hl-signed'].forEach(k => document.getElementById('p1').classList.remove(k));
+        document.getElementById('p1note').innerHTML = P1_DEFAULT;
+    }
+    function selectChip(chip, el) {
+        const again = activeChip === chip;
+        clearChip();
+        if (again) return;
+        activeChip = chip; el.classList.add('on');
+        if (chip.cls) document.getElementById('p1').classList.add(chip.cls);
+        chip.lines.forEach(l => { const r = document.querySelector(`#p1 .cl[data-l="${l}"]`); if (r) r.classList.add('hl'); });
+        document.getElementById('p1note').innerHTML = chip.note;
+    }
+    clearChip();
+
+    // ============ CONSOLE (real iverilog 12.0 output — do not invent lines) ============
+    const CMD = '$ iverilog -o literals testbench.v';
+    const WARN = ['testbench.v:17: warning: Extra digits given for sized hex constant.',
+                  'testbench.v:17: warning: Numeric constant truncated to 8 bits.'];
+    const RUN = '$ vvp literals';
+    const OUT = [
+        { line: 23, text: 'b=10100101  d=165  h=a5' },
+        { line: 24, text: 'all three equal? 1' },
+        { line: 26, text: '%b of h -> 10100101' },
+        { line: 27, text: '%d of h -> 165' },
+        { line: 28, text: '%h of h -> a5' },
+        { line: 29, text: '%d of n -> [  5]   %0d of n -> [5]' },
+        { line: 31, text: 'u=10100101  %d -> 165' },
+        { line: 32, text: 's=10100101  %d ->  -91' },
+        { line: 33, text: 's + 1     ->  -90' },
+        { line: 34, text: "-8'd5 unsigned -> 251  (11111011)" },
+        { line: 37, text: 'uw = u -> 0000000010100101  %d ->   165' },
+        { line: 38, text: 'sw = s -> 1111111110100101  %d ->    -91' },
+        { line: 39, text: 'sx = s -> 1111111110100101  %d -> 65445' },
+        { line: 41, text: "8'h1A5 in 8 bits -> a5" },
+        { line: 42, text: "'hA5 unsized     -> 00000000000000000000000010100101" },
+        { line: 43, text: 'testbench.v:43: $finish called at 0 (1s)', fin: true },
+    ];
+    const OUT2 = OUT.slice(0, 6), OUT3 = OUT.slice(6, 10), OUT4 = OUT.slice(10);
+    function consoleHtml(header, items, count, done, tail) {
+        let out = header;
+        for (let i = 0; i < Math.min(count, items.length); i++) {
+            const it = items[i];
+            out += (it.fin ? `<span class="fin">${esc(it.text)}</span>` : esc(it.text).replace(/\[( +)5\]/, (m, sp) => `[<span class="pad">${'·'.repeat(sp.length)}</span>5]`)) + '\n';
+        }
+        out += done ? tail : '<span class="cursor">▋</span>';
+        return out;
+    }
+    function markRun(prefix, line) {
+        document.querySelectorAll(`.cl[data-l^="${prefix}"]`).forEach(c => c.classList.remove('run'));
+        if (line) { const r = document.querySelector(`.cl[data-l="${prefix}${line}"]`); if (r) r.classList.add('run'); }
+    }
+
+    // ============ PAGE 2: printing ============
+    const SPECS = [
+        { sp: '%b', sn: 'binary', sw: 'one char per bit · width 8' },
+        { sp: '%d', sn: 'decimal', sw: 'unsigned or signed, per the variable · width 3 (4 signed)' },
+        { sp: '%h', sn: 'hex', sw: '4 bits per digit, lower case · width 2' },
+    ];
+    document.getElementById('specrow').innerHTML = SPECS.map(s =>
+        `<div class="spec" data-sp="${s.sp[1]}"><div class="sp">${s.sp}</div><div class="sn">${s.sn}</div><div class="sw">${s.sw}</div></div>`).join('');
+    const STEP2 = [
+        { specs: ['b','d','h'], v: 'h', note: 'Line 23 prints the same value three ways in one line — <b>the variable holds bits; the specifier chooses the spelling</b>.' },
+        { specs: [], v: 'h', note: '<span class="mono">==</span> compares bits. Three literals, three bases, one pattern, so the comparison is <span class="mono">1</span>.' },
+        { specs: ['b'], v: 'h', note: '<b>%b</b> — one character per bit, always the full width (8 here). Leading zeros are printed, not dropped.' },
+        { specs: ['d'], v: 'h', note: '<b>%d</b> — decimal. An 8-bit <span class="mono">reg</span> is unsigned, so <span class="mono">10100101</span> reads as <span class="mono">165</span>.' },
+        { specs: ['h'], v: 'h', note: '<b>%h</b> — groups in fours: <span class="mono">1010 0101</span> &rarr; <span class="mono">a5</span>. Lower case comes from the simulator, whatever case you typed.' },
+        { specs: ['d'], v: 'n', note: '<b>The width rule.</b> Fields are right-justified and padded to the widest value the variable can hold — 255 has three digits, so <span class="mono">%d</span> prints <span class="mono">[<span class="pad">··</span>5]</span>. <b>%0d</b> (&ldquo;zero&rdquo; = no padding) prints <span class="mono">[5]</span>.' },
+    ];
+    let step2 = 0;   // 0 = not started, 1..6 = lines shown, 7 = finished
+    function renderRun2() {
+        const cur = step2 >= 1 && step2 <= 6 ? STEP2[step2-1] : null;
+        document.querySelectorAll('.spec').forEach(s => s.classList.toggle('on', !!cur && cur.specs.includes(s.dataset.sp)));
+        const v = cur ? cur.v : 'h';
+        document.getElementById('lamplab2').innerHTML = v === 'n' ? "n = 8'd5" : "h = 8'hA5";
+        document.getElementById('lamps2').innerHTML = lampsHtml(v === 'n' ? '00000101' : '10100101');
+        document.getElementById('lampval2').textContent = v === 'n' ? '= 5' : '= 165';
+        document.getElementById('callout2').innerHTML = cur ? cur.note :
+            (step2 === 0 ? 'Compile, then step through the <span class="mono">$display</span> lines one at a time. Every console line below is the simulator&rsquo;s actual output.'
+                         : 'Six lines, one variable, three spellings — and a padding rule. The signed lines continue in <b>Beat 3</b>.');
+        markRun('T', cur ? OUT2[step2-1].line : 0);
+        const header = `<span class="chead">${CMD}</span>\n` + (step2 >= 1 ? WARN.map(w => `<span class="warn">${w}</span>\n`).join('') + `<span class="chead">${RUN}</span>\n` : '');
+        document.getElementById('console2').innerHTML = consoleHtml(header, OUT2, step2, step2 >= 7,
+            '<span class="more">… continued in Beat 3 →</span>');
+        document.getElementById('stepBtn2').innerHTML = step2 >= 7 ? '&#8634; RESET<span class="k">S</span>'
+            : (step2 === 0 ? '&#9654; RUN' : '&#9654; STEP') + '<span class="k">S</span>';
+    }
+    function doStep2() { step2 = step2 >= 7 ? 0 : step2 + 1; renderRun2(); }
+    document.getElementById('stepBtn2').addEventListener('click', doStep2);
+
+    // ============ PAGE 3: signed ============
+    function bitsWithPlaces(bits, signed) {
+        return '<div class="bits">' + bits.split('').map((b, i) => {
+            const pvn = i === 0 && signed ? -128 : 2 ** (7 - i);
+            const on = b === '1';
+            return `<div class="bitcol${on ? ' lit' : ''}"><div class="lamp${on ? ' on' : ''}">${b}</div><div class="pv${pvn < 0 ? ' neg' : ''}">${pvn}</div></div>`;
+        }).join('') + '</div>';
+    }
+    function sgRow(id, label, who, bits, signed, sumText, cells) {
+        document.getElementById(id).innerHTML =
+            `<div class="lab">${label}<span class="who">${who}</span></div>${bitsWithPlaces(bits, signed)}
+             <div class="sum">${sumText}</div><div class="cells">${cells.map(c =>
+                `<div class="cell"><div class="cs">${c[0]}</div><div class="cv">${padHtml(esc(c[1]))}</div></div>`).join('')}</div>`;
+    }
+    const F8u = fmt(8, false, 0xA5), F8s = fmt(8, true, 0xA5), F8n = fmt(8, false, 0xFB);
+    sgRow('row-u', hiCode("u = 8'hA5"),  'reg [7:0] — unsigned', '10100101', false, `128+32+4+1<br>= <b>${F8u.d0}</b>`, [['%d', F8u.d], ['%h', F8u.h]]);
+    sgRow('row-s', hiCode("s = 8'shA5"), 'reg signed [7:0]',     '10100101', true,  `&minus;128+32+4+1<br>= <b>${F8s.d0}</b>`, [['%d', F8s.d], ['%h', F8s.h]]);
+    sgRow('row-n', hiCode("-8'd5"),      'negated 8-bit literal', '11111011', false, `128+64+32+16+8+2+1<br>= <b>${F8n.d0}</b>`, [['%d', F8n.d], ['%h', F8n.h]]);
+    const STEP3 = [
+        { row: 'row-u', note: 'Unsigned <span class="mono">u</span>: every lamp is a positive place value, so <span class="mono">%d</span> reads the bits as <b>165</b>.' },
+        { row: 'row-s', note: 'Signed <span class="mono">s</span>: the <b>same eight lamps</b>, but the top place is now <b>&minus;128</b>. <span class="mono">%d</span> follows the variable&rsquo;s signedness and reads <b>&minus;91</b>. <span class="mono">%h</span> and <span class="mono">%b</span> print identical text for both rows — <b>only %d cares about the sign</b>.' },
+        { row: 'row-s', note: 'Arithmetic follows the same reading: <span class="mono">s + 8\'sd1</span> is <b>&minus;90</b>. (All operands signed &rarr; a signed result; mix in one unsigned operand and the whole expression goes unsigned.)' },
+        { row: 'row-n', note: '<span class="mono">-8\'d5</span> — the minus is an <b>operation on the bits</b>: two&rsquo;s-complement negate 00000101 &rarr; <span class="mono">11111011</span>. The expression is unsigned, so <span class="mono">%d</span> prints <b>251</b>. There is no minus sign stored anywhere.' },
+    ];
+    let step3 = 0;
+    function renderRun3() {
+        const cur = step3 >= 1 && step3 <= 4 ? STEP3[step3-1] : null;
+        ['row-u','row-s','row-n'].forEach(id => document.getElementById(id).classList.toggle('on', !!cur && cur.row === id));
+        document.getElementById('sgnote').innerHTML = cur ? cur.note :
+            (step3 === 0 ? 'The bench continues. <span class="mono">u</span> and <span class="mono">s</span> hold the same bits; one is declared <span class="mono">signed</span>. Step to see what each <span class="mono">$display</span> prints.'
+                         : 'Same bits, two answers — only the <span class="mono">signed</span> declaration decides which one <span class="mono">%d</span> gives you. Next: what happens when those bits move into a <b>wider</b> variable (<b>Beat 4</b>).');
+        markRun('U', cur ? OUT3[step3-1].line : 0);
+        const header = `<span class="chead">${RUN}</span>\n<span class="more">… (Beat 2 lines above) …</span>\n`;
+        document.getElementById('console3').innerHTML = consoleHtml(header, OUT3, step3, step3 >= 5, '<span class="more">… continued in Beat 4 →</span>');
+        document.getElementById('stepBtn3').innerHTML = step3 >= 5 ? '&#8634; RESET<span class="k">S</span>'
+            : (step3 === 0 ? '&#9654; RUN' : '&#9654; STEP') + '<span class="k">S</span>';
+    }
+    function doStep3() { step3 = step3 >= 5 ? 0 : step3 + 1; renderRun3(); }
+    document.getElementById('stepBtn3').addEventListener('click', doStep3);
+
+    // ============ PAGE 4: sign extension ============
+    // 16-bit results are iverilog's (see OUT lines 37–39). new = the 8 added bits; src = the source's sign bit.
+    function extRow(id, label, who, bits16, tag, sumHtml, dcell) {
+        const ring = (i) => (i < 8 ? ' new' : '') + (i === 8 && tag.src ? ' src' : '');
+        document.getElementById(id).innerHTML =
+            `<div class="top"><div class="lab">${label}<span class="who">${who}</span></div>
+             <div class="lamps">${lampsHtml(bits16, ring)}</div>
+             <div class="tag">${tag.text}</div>
+             <div class="cells"><div class="cell"><div class="cs">%d</div><div class="cv">${padHtml(esc(dcell))}</div></div></div></div>
+             <div class="esum">${sumHtml}</div>`;
+    }
+    const F16u = fmt(16, false, 0x00A5), F16s = fmt(16, true, 0xFFA5), F16x = fmt(16, false, 0xFFA5);
+    extRow('ext-u', hiCode('uw = u'), 'unsigned 8-bit → reg [15:0]', '0000000010100101',
+        { text: 'new bits are 0<br><b>zero-extend</b>', src: false },
+        `<span class="new">0+0+0+0+0+0+0+0</span> + 128+32+4+1 = <b>${F16u.d0}</b>   — unchanged`, F16u.d);
+    extRow('ext-s', hiCode('sw = s'), 'signed 8-bit → reg signed [15:0]', '1111111110100101',
+        { text: 'new bits copy the sign<br><b>sign-extend</b>', src: true },
+        `<span class="new">(<span class="neg">&minus;32768</span>+16384+8192+4096+2048+1024+512+256) = <span class="neg">&minus;256</span></span> + 128+32+4+1 = <b><span class="neg">${F16s.d0}</span></b>   — unchanged`, F16s.d);
+    extRow('ext-x', hiCode('sx = s'), 'signed 8-bit → reg [15:0] (unsigned!)', '1111111110100101',
+        { text: 'same bits as sw,<br><b>read unsigned</b>', src: true },
+        `<span class="new">(32768+16384+8192+4096+2048+1024+512+256) = 65280</span> + 128+32+4+1 = <b>${F16x.d0}</b>   — changed!`, F16x.d);
+    const STEP4 = [
+        { row: 'ext-u', note: 'Widening an <b>unsigned</b> value: the eight new bits are <b>zeros</b>. <span class="mono">10100101</span> becomes <span class="mono">00000000 10100101</span> — still 165. Nothing to see, which is the point.' },
+        { row: 'ext-s', note: 'Widening a <b>signed</b> value: the eight new bits are <b>copies of the sign bit</b> — this is <b>sign extension</b>. Why it works: the eight new ones add up to exactly <span class="mono">&minus;256</span>, replacing the old <span class="mono">&minus;128</span> place with (&minus;128) + (&minus;128). Total still <b>&minus;91</b>.' },
+        { row: 'ext-x', note: 'The trap. <span class="mono">sx</span> is declared <b>unsigned</b>, but <span class="mono">s</span> is signed — and <b>the source decides the extension</b>, so the bits are still sign-extended. The unsigned reg then <b>reads</b> those ones as +65280. Same bits as <span class="mono">sw</span>, printed <b>65445</b>. Value changed.' },
+        { row: '', note: 'Gotcha 1: <span class="mono">8\'h1A5</span> is nine bits of value in an eight-bit literal. The extra bit is dropped (compiler warning in Beat 2) and <span class="mono">t</span> holds <span class="mono">a5</span>.' },
+        { row: '', note: 'Gotcha 2: with no size, <span class="mono">\'hA5</span> is a <b>32-bit</b> constant — <span class="mono">%b</span> shows all 32. (An unsized literal is unsigned, so it zero-extends.)' },
+        { row: '', note: '<span class="mono">$finish</span>. Same eight bits all the way down: 165 or &minus;91 depending on the declaration, and when they widen, <b>the source&rsquo;s signedness decides what fills the new bits</b>.' },
+    ];
+    let step4 = 0;
+    function renderRun4() {
+        const cur = step4 >= 1 && step4 <= 6 ? STEP4[step4-1] : null;
+        ['ext-u','ext-s','ext-x'].forEach(id => document.getElementById(id).classList.toggle('on', !!cur && cur.row === id));
+        document.getElementById('extnote').innerHTML = cur ? cur.note :
+            (step4 === 0 ? 'Three 16-bit regs receive the 8-bit values from Beat 3. Eight new bits appear on the left of each — <b>what fills them?</b> Step to find out.'
+                         : 'Zero-extend for unsigned, sign-extend for signed — decided by the <b>source</b>. Then the <b>destination</b> decides how to read the result. Mismatch the two and the number changes.');
+        markRun('V', cur ? OUT4[step4-1].line : 0);
+        const header = `<span class="chead">${RUN}</span>\n<span class="more">… (Beat 2 and 3 lines above) …</span>\n`;
+        document.getElementById('console4').innerHTML = consoleHtml(header, OUT4, step4, step4 >= 6, '').replace(/\n$/, '');
+        document.getElementById('stepBtn4').innerHTML = step4 >= 6 ? '&#8634; RESET<span class="k">S</span>'
+            : (step4 === 0 ? '&#9654; RUN' : '&#9654; STEP') + '<span class="k">S</span>';
+    }
+    function doStep4() { step4 = step4 >= 6 ? 0 : step4 + 1; renderRun4(); }
+    document.getElementById('stepBtn4').addEventListener('click', doStep4);
+
+    // ============ PAGE 5: the widget — one number in, both readings out ============
+    const W = { size: 8, base: 'h', neg: false, digits: 'A5' };
+    const BASES = { b: { name: 'binary', bpd: 1, valid: /[01]/, prefix: '0b' },
+                    d: { name: 'decimal', bpd: 0, valid: /[0-9]/, prefix: '' },
+                    h: { name: 'hex', bpd: 4, valid: /[0-9a-fA-F]/, prefix: '0x' } };
+    const KEYS = { b: '01', d: '0123456789', h: '0123456789ABCDEF' };
+    const MAX_DIGITS = 32;   // digits only — underscores never count
+    function seg(id, items, cur, on) {
+        document.getElementById(id).innerHTML = items.map(it =>
+            `<div class="sbtn${String(it.v) === String(cur) ? ' on' : ''}" data-v="${it.v}">${it.l}</div>`).join('');
+        document.querySelectorAll(`#${id} .sbtn`).forEach(b => b.addEventListener('click', () => on(b.dataset.v)));
+    }
+    function cleanDigits(s) {
+        const ok = BASES[W.base].valid;
+        let out = '', n = 0;
+        for (const ch of s) {
+            if (ch === '_') { out += ch; continue; }
+            if (ok.test(ch) && n < MAX_DIGITS) { out += ch; n++; }
+        }
+        return out;
+    }
+    function fieldText() { return (W.neg ? '-' : '') + W.digits; }
+    function setFromText(s) {
+        s = s.replace(/−/g, '-').trim();
+        W.neg = s.startsWith('-');
+        W.digits = cleanDigits(s.replace(/^-+/, ''));
+        const inp = document.getElementById('digits');
+        if (inp.value !== fieldText()) inp.value = fieldText();
+        buildKeypad(); renderWidget();
+    }
+    function buildKeypad() {
+        const kp = document.getElementById('keypad');
+        kp.innerHTML = KEYS[W.base].split('').map(k => `<div class="kb" data-k="${k}">${k}</div>`).join('') +
+            `<div class="kb fn" data-k="_">_</div><div class="kb neg${W.neg ? ' on' : ''}" data-k="neg">&minus;</div><div class="kb fn" data-k="bs">&#9003;</div>`;
+        kp.querySelectorAll('.kb').forEach(b => b.addEventListener('click', () => {
+            const k = b.dataset.k;
+            if (k === 'neg') setFromText((W.neg ? '' : '-') + W.digits);
+            else if (k === 'bs') setFromText((W.neg ? '-' : '') + W.digits.slice(0, -1));
+            else setFromText((W.neg ? '-' : '') + W.digits + k);
+        }));
+    }
+    function buildControls() {
+        seg('segSize', [{v:0,l:'none'},{v:4,l:'4'},{v:8,l:'8'},{v:16,l:'16'}], W.size, v => { W.size = +v; buildControls(); renderWidget(); });
+        seg('segBase', [{v:'b',l:'b'},{v:'d',l:'d'},{v:'h',l:'h'}], W.base, v => { W.base = v; setFromText(fieldText()); buildControls(); });
+        buildKeypad();
+        document.getElementById('digits').value = fieldText();
+    }
+    function widgetState() {
+        const N = W.size || 32;
+        const B = BASES[W.base];
+        const raw = W.digits.replace(/_/g, '');
+        const mag = raw.length ? BigInt(B.prefix + raw) : 0n;            // BigInt: 32 hex digits can't overflow
+        const mod = 1n << BigInt(N);
+        const extra = B.bpd && raw.length > Math.ceil(N / B.bpd);
+        const trunc = mag >= mod;
+        const magT = mag % mod;                                          // iverilog: truncate the magnitude first…
+        const v = Number(W.neg ? (mod - magT) % mod : magT);            // …then negate (two's complement)
+        return { N, B, raw, mag, magT, v, extra, trunc, fu: fmt(N, false, v), fs: fmt(N, true, v) };
+    }
+    function readRow(id, s, signed) {
+        const N = s.N, bits = s.fu.b, f = signed ? s.fs : s.fu;
+        let bitsHtml, sum;
+        if (N <= 16) {
+            const terms = [];
+            bitsHtml = `<div class="bits${N === 16 ? ' b16' : ''}">` + bits.split('').map((b, i) => {
+                const pv = (i === 0 && signed) ? -(2 ** (N-1)) : 2 ** (N-1-i);
+                if (b === '1') terms.push(pv);
+                return `<div class="bitcol${b === '1' ? ' lit' : ''}"><div class="lamp${b === '1' ? ' on' : ''}">${b}</div><div class="pv${pv < 0 ? ' neg' : ''}">${pv}</div></div>`;
+            }).join('') + '</div>';
+            sum = terms.length ? terms.map(t => t < 0 ? `<span class="neg">${String(t).replace('-', '−')}</span>` : t).join(' + ') + ` = <b>${f.d0}</b>` : `no lamps lit = <b>0</b>`;
+        } else {
+            bitsHtml = `<div class="lamps b32">${lampsHtml(bits)}</div>`;
+            sum = `<span class="r32">top bit = ${signed ? '<span class="neg">−2147483648</span>' : '2147483648'}</span><br><b>${f.d0}</b>`;
+        }
+        document.getElementById(id).innerHTML =
+            `<div class="lab"><div class="t">read ${signed ? 'signed' : 'unsigned'}</div><div class="d">reg ${signed ? 'signed ' : ''}[${N-1}:0] x${signed ? 's' : 'u'}\n$display("%d", x${signed ? 's' : 'u'})</div></div>
+             ${bitsHtml}<div class="rsum">${sum}</div>
+             <div class="cell"><div class="cs">%d</div><div class="cv">${padHtml(esc(f.d))}</div></div>`;
+    }
+    function widenStrings(s) {   // zero-extend the unsigned reg, sign-extend the signed reg, to 2N bits
+        const N = s.N, bits = s.fu.b;
+        return { z: '0'.repeat(N) + bits, s: bits[0].repeat(N) + bits };
+    }
+    function renderWidget() {
+        const s = widgetState();
+        const litText = (W.neg ? '-' : '') + (W.size || '') + "'" + W.base + (W.digits || '');
+        const big = document.getElementById('wbig');
+        big.innerHTML = (W.neg ? `<span class="lng">-</span>` : '') + (W.size ? `<span class="lsz">${W.size}</span>` : '') + `<span class="ltk">'</span>` +
+            `<span class="lbs">${W.base}</span><span class="lvl">${W.digits || '<span style="color:#34495c">?</span>'}</span>`;
+        big.className = 'big' + (litText.length > 28 ? ' micro' : litText.length > 16 ? ' tiny' : litText.length > 9 ? ' small' : '');
+        const decl = (sg) => `<span class="kw">reg</span> ${sg ? '<span class="kw">signed</span> ' : '       '}[${s.N-1}:0] x${sg ? 's' : 'u'} = ${esc(litText)};`;
+        document.getElementById('wdecl').className = 'decl' + (litText.length > 20 ? ' long' : '');
+        document.getElementById('wdecl').innerHTML = decl(false) + '\n' + decl(true) + (W.size ? '' : '\n<span style="color:#56708a">// no size → 32 bits</span>');
+        readRow('read-u', s, false);
+        readRow('read-s', s, true);
+        const wd = document.getElementById('widen');
+        if (s.N <= 16) {
+            const w = widenStrings(s), N = s.N;
+            const show = (str) => `<span class="new">${str.slice(0, N)}</span><span class="bitsx">${str.slice(N)}</span>`;
+            const zw = fmt(2*N, false, Number(BigInt('0b' + w.z))), sw = fmt(2*N, true, Number(BigInt('0b' + w.s)));
+            wd.innerHTML = `<span class="t">Moved into a ${2*N}-bit reg — the source decides what fills the ${N} new bits (Beat 4):</span>\n` +
+                `xu (unsigned) → zero-extend  ${show(w.z)}  = <span class="v">${zw.d0}</span>\n` +
+                `xs (signed)   → sign-extend  ${show(w.s)}  = <span class="v${sw.sv < 0 ? ' neg' : ''}">${sw.d0}</span>`;
+        } else {
+            wd.innerHTML = `<span class="t">32 bits is the widest this widget goes — pick a size of 4, 8 or 16 to see the value widened.</span>`;
+        }
+        let w = '';
+        if (!W.digits) w += `<span class="i">type a value — an empty literal is not legal Verilog</span>\n`;
+        else {
+            if (s.extra) w += `<span class="w">warning: Extra digits given for sized ${s.B.name} constant.</span>\n`;
+            if (s.trunc) w += `<span class="w">warning: Numeric constant truncated to ${s.N} bits.</span>\n<span class="i">  magnitude ${s.mag} needs ${s.mag.toString(2).length} bits; only the low ${s.N} are kept → ${s.magT}${W.neg ? ', then negated' : ''}</span>\n`;
+            if (!s.extra && !s.trunc) w += `<span class="ok">compiles clean</span>\n`;
+            if (W.size === 0) w += `<span class="i">no size → a 32-bit literal</span>\n`;
+            w += `<span class="call">$display("xu: %b  %h  %d   xs: %d", xu, xu, xu, xs);</span>\n` +
+                 `<span class="out">xu: ${padHtml(s.fu.b)}  ${s.fu.h}  ${padHtml(s.fu.d)}   xs: ${padHtml(s.fs.d)}</span>`;
+        }
+        document.getElementById('wwarn').innerHTML = w;
+    }
+    document.getElementById('digits').addEventListener('input', e => setFromText(e.target.value));
+    buildControls(); renderWidget();
+
+    // ============ KEYS ============
+    document.addEventListener('keydown', (e) => {
+        if (e.target && e.target.id === 'digits') { if (e.key === 'Escape') e.target.blur(); return; }
+        const k = e.key;
+        if (k >= '1' && k <= '5') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 's': case 'S': if (page === 2) doStep2(); else if (page === 3) doStep3(); else if (page === 4) doStep4(); e.preventDefault(); break;
+            case 'r': case 'R': step2 = 0; step3 = 0; step4 = 0; clearChip();
+                Object.assign(W, { size: 8, base: 'h', neg: false, digits: 'A5' }); buildControls(); renderWidget();
+                setPage(1); renderRun2(); renderRun3(); renderRun4(); e.preventDefault(); break;
+        }
+    });
+
+    // ============ SELF-TEST HOOKS (used by the build check; harmless in normal viewing) ============
+    window.__api = { setPage, doStep2, doStep3, doStep4, get step2() { return step2; }, get step3() { return step3; }, get step4() { return step4; },
+        setWidget(size, base, digits, neg) { W.size = size; W.base = base; W.neg = !!neg; W.digits = digits; buildControls(); renderWidget(); },
+        typeText(s) { setFromText(s); },
+        readCells() { return Array.from(document.querySelectorAll('#p5 .readrow .cell .cv')).map(c => c.textContent.replace(/·/g, ' ')); },
+        widenText() { const s = widgetState(); return s.N <= 16 ? widenStrings(s) : null; },
+        outLine() { const o = document.querySelector('#wwarn .out'); return o ? o.textContent.replace(/·/g, ' ') : ''; },
+        warnText() { return document.getElementById('wwarn').textContent; },
+        consoleText(id) { return document.getElementById(id).textContent.replace(/·/g, ' '); },
+        OUT, fmt };
+
+    render();
+    renderRun2();
+    renderRun3();
+    renderRun4();
+</script>
+</body>
+</html>

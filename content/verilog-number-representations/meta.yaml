@@ -1,0 +1,11 @@
+title: "Number Representations in Verilog"
+description: "How a Verilog literal is written (size, base, value) and how $display prints it in binary, decimal, and hex — with the padding rule and the %% escape."
+chapter: verilog
+section: verilog-basics
+order: 70200
+
+graphics:
+  01-video.youtube:
+    caption: "Video: Writing Verilog literals — size, base, value — and printing them with $display (Beats 1 and 2 of the interactive)"
+  02-interactive.html:
+    caption: "Verilog number representations: how a literal is written (size, base, value), how $display prints it, and a try-it converter — this topic is Beats 1, 2 and 5"
