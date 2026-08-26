@@ -1,294 +1,234 @@
-# De Morgan's Theorem and Universal Gates
+## De Morgan's Theorem and Universal Gates
 
-In the previous section, we introduced the basic logic gates—AND, OR, NOT, NAND, NOR, XOR, and XNOR—and noted that NAND and NOR are called *universal gates*. This section explores why that property matters and introduces De Morgan's theorem, one of the most important tools for translating between human-readable Boolean expressions and efficient hardware implementations.
+In the previous section we introduced the basic logic gates — AND, OR, NOT, NAND, NOR, XOR, and XNOR — and noted in passing that NAND and NOR are called *universal gates*. This section explains why that property matters and introduces De Morgan's theorem, the tool that lets a designer think in ANDs and ORs while building with NANDs and NORs. The interactive above shows both halves of the theorem as clickable truth tables, and both universal gates wired up as inverters.
 
 ## The Gap Between Logic and Hardware
 
-When engineers design digital circuits, they typically think in terms of AND, OR, and NOT operations. These operations map naturally to how humans reason about conditions: "if A *and* B are true" or "if A *or* B is true." Boolean algebra, with its familiar AND (·) and OR (+) operations, provides an intuitive framework for expressing logical relationships.
+When engineers design digital circuits, they think in AND, OR, and NOT. Those operations map directly onto how people reason about conditions — "if A *and* B," "if A *or* B" — and Boolean algebra, with its AND (·) and OR (+), is the natural language for writing a function down.
 
-However, actual digital hardware tells a different story. In CMOS technology—the dominant fabrication process for modern integrated circuits—NAND and NOR gates are fundamentally more efficient than AND and OR gates. A two-input NAND or NOR gate requires only four transistors, while a two-input AND or OR gate requires six transistors (the basic NAND or NOR plus an inverter to flip the output).
+The hardware tells a different story. In CMOS, the dominant process for modern integrated circuits, **NAND and NOR are the natural gates**. A two-input NAND or NOR is four transistors. An AND or an OR does not exist on its own: it is a NAND or NOR *followed by an inverter*, six transistors in all. The two inversion-free gates that feel most basic to a person are, to the silicon, the expensive ones.
 
-This creates a tension: engineers want to *think* in ANDs and ORs, but they want to *build* with NANDs and NORs. De Morgan's theorem bridges this gap, providing a systematic way to convert between these representations while preserving logical equivalence.
+So there is a tension. We want to *think* in ANDs and ORs and *build* in NANDs and NORs. De Morgan's theorem is the bridge — a systematic way to move between the two without changing the function.
 
 ## Transistor Economics
 
-To appreciate why this matters, consider the economics of transistor counts. In an integrated circuit containing millions or billions of gates, even small per-gate savings multiply into significant reductions in chip area, power consumption, and manufacturing cost.
+The per-gate difference looks small until it is multiplied by the size of a chip.
 
-| Gate Type | Transistors (2-input) |
-|-----------|----------------------|
-| NOT (Inverter) | 2 |
-| NAND | 4 |
-| NOR | 4 |
-| AND | 6 |
-| OR | 6 |
+| Gate (2-input) | Transistors | Built as |
+|---|---|---|
+| NOT (inverter) | 2 | — |
+| NAND | 4 | — |
+| NOR | 4 | — |
+| AND | 6 | NAND + inverter |
+| OR | 6 | NOR + inverter |
 
-The AND gate's six transistors come from implementing a NAND (four transistors) followed by an inverter (two transistors). Similarly, an OR gate is a NOR followed by an inverter. By working directly with NAND and NOR gates, designers can often eliminate unnecessary inversions and reduce transistor counts.
+Two transistors saved per gate, across the millions or billions of gates on a die, is real area, real power, and real cost. Working directly in NAND and NOR lets a designer — or, today, a synthesis tool — drop the inversions that AND and OR carry around, and often lets neighboring inversions cancel outright.
 
-Historically, this efficiency also simplified inventory management. When digital systems were built from discrete integrated circuit chips—each containing a handful of gates—stocking only NAND gates and inverters (or only NOR gates and inverters) was simpler than maintaining supplies of every gate type.
+There is a historical reason too. When digital systems were built from discrete chips, each holding a handful of gates, stocking one kind of gate plus inverters was far simpler than keeping every gate type on the shelf. A stockpile of NAND chips could build anything. The economics have changed; the universality that made it possible has not.
 
 ## De Morgan's Theorem
 
-De Morgan's theorem provides two fundamental equivalences that relate AND and OR operations through inversion. These equivalences are the key to converting between AND/OR logic and NAND/NOR implementations.
+De Morgan's theorem is a pair of identities that relate AND and OR through inversion. They are the key to every conversion in this section and the next two.
 
-### First Form: NAND Equivalence
-
-The first form of De Morgan's theorem states:
+### First Form: NAND Equals OR with Inverted Inputs
 
 $$\overline{A \cdot B} = \bar{A} + \bar{B}$$
 
-In words: the complement of A AND B equals NOT-A OR NOT-B. This means a NAND gate (left side) produces the same output as an OR gate with inverted inputs (right side).
-
-We can verify this equivalence with a truth table:
+In words: the complement of (A AND B) equals (NOT A) OR (NOT B). A NAND gate — the left side — produces exactly what an OR gate with both inputs inverted produces. Check every row:
 
 | A | B | $\bar{A}$ | $\bar{B}$ | $A \cdot B$ | $\overline{A \cdot B}$ | $\bar{A} + \bar{B}$ |
-|---|---|-----------|-----------|-------------|------------------------|---------------------|
+|---|---|---|---|---|---|---|
 | 0 | 0 | 1 | 1 | 0 | 1 | 1 |
 | 0 | 1 | 1 | 0 | 0 | 1 | 1 |
 | 1 | 0 | 0 | 1 | 0 | 1 | 1 |
 | 1 | 1 | 0 | 0 | 1 | 0 | 0 |
 
-The final two columns are identical, confirming the equivalence.
+The last two columns agree on all four rows, so the two expressions are the same function. That is the whole proof — with a finite number of input combinations, a truth table settles equivalence completely. Click the rows of the interactive's first tab, *OR + Bubbles = NAND*, to watch both circuits agree case by case.
 
-### Second Form: NOR Equivalence
-
-The second form of De Morgan's theorem states:
+### Second Form: NOR Equals AND with Inverted Inputs
 
 $$\overline{A + B} = \bar{A} \cdot \bar{B}$$
 
-In words: the complement of A OR B equals NOT-A AND NOT-B. This means a NOR gate (left side) produces the same output as an AND gate with inverted inputs (right side).
+The complement of (A OR B) equals (NOT A) AND (NOT B): a NOR gate does what an AND gate with inverted inputs does.
 
 | A | B | $\bar{A}$ | $\bar{B}$ | $A + B$ | $\overline{A + B}$ | $\bar{A} \cdot \bar{B}$ |
-|---|---|-----------|-----------|---------|--------------------|-----------------------|
+|---|---|---|---|---|---|---|
 | 0 | 0 | 1 | 1 | 0 | 1 | 1 |
 | 0 | 1 | 1 | 0 | 1 | 0 | 0 |
 | 1 | 0 | 0 | 1 | 1 | 0 | 0 |
 | 1 | 1 | 0 | 0 | 1 | 0 | 0 |
 
-Again, the final two columns match, confirming the equivalence.
+Again the final two columns match. The second tab of the interactive, *AND + Bubbles = NOR*, is this table.
 
-### The "Break the Bar, Change the Sign" Mnemonic
+### Break the Bar, Change the Sign
 
-A useful way to remember De Morgan's theorem is the phrase "break the bar, change the sign." When you have an expression with a bar (inversion) over multiple terms connected by AND or OR:
+The mnemonic for both forms is **"break the bar, change the sign."** Given an inversion bar over terms joined by AND or OR:
 
-1. **Break the bar**: Distribute the inversion to each individual term
-2. **Change the sign**: Convert AND to OR, or OR to AND
+1. **Break the bar** — distribute the inversion onto each term individually.
+2. **Change the sign** — every AND becomes OR, every OR becomes AND.
 
-For example, starting with $\overline{A \cdot B}$:
-- Break the bar: $\bar{A}$ and $\bar{B}$
-- Change the sign: AND becomes OR
-- Result: $\bar{A} + \bar{B}$
+Starting from $\overline{A \cdot B}$: break the bar to get $\bar{A}$ and $\bar{B}$, change the sign from AND to OR, and the result is $\bar{A} + \bar{B}$. It runs in reverse just as well, and it extends to any number of variables: $\overline{A \cdot B \cdot C} = \bar{A} + \bar{B} + \bar{C}$, and $\overline{A + B + C} = \bar{A} \cdot \bar{B} \cdot \bar{C}$.
 
-This mnemonic works in both directions and extends to expressions with more than two variables.
+One thing the mnemonic does *not* say: the bar breaks over the operator it sits on, not over bars that are already there. Take $\overline{\bar{A} \cdot B}$. Break the bar over the AND: $\overline{\bar{A}} + \bar{B}$. The double bar on $A$ is two inversions, which cancel, leaving $A + \bar{B}$. Students who reach for "flip everything" get $\bar{A} + \bar{B}$ here, which is wrong — the check, as always, is a truth table.
 
 ## Bubble Notation and Gate Symbols
 
-In circuit diagrams, inversion is indicated by a small circle called a *bubble*. De Morgan's theorem has an elegant visual interpretation using bubbles:
+In a schematic, an inversion is a small circle — a *bubble* — on a gate's input or output. De Morgan's theorem has a direct visual reading in bubbles:
 
-- A **NAND gate** can be drawn as an AND shape with a bubble on the output, *or equivalently* as an OR shape with bubbles on the inputs
-- A **NOR gate** can be drawn as an OR shape with a bubble on the output, *or equivalently* as an AND shape with bubbles on the inputs
+- A **NAND** is an AND shape with a bubble on its output, *or equivalently* an OR shape with bubbles on both inputs.
+- A **NOR** is an OR shape with a bubble on its output, *or equivalently* an AND shape with bubbles on both inputs.
 
-These alternative representations are not just notational conveniences—they provide visual cues about the logical function being performed. When reading a circuit diagram, seeing an OR shape with input bubbles immediately suggests "this is functioning as a NAND in terms of the original (non-inverted) signals."
+These are the same gate drawn two ways, and the choice of drawing is a message to whoever reads the diagram. An OR shape with input bubbles says "this gate is combining signals that were already inverted upstream — think of it as an OR." An AND shape with an output bubble says "think of it as an AND whose result is inverted." Both are physically the same four transistors.
 
-This flexibility in representation becomes particularly valuable when analyzing multi-level logic circuits, where signals pass through several gates in sequence. By choosing appropriate symbol representations, designers can make the logical intent of a circuit more apparent.
+The payoff comes in circuits of several gates in a row. Choosing each gate's drawing so that output bubbles land on input bubbles makes the inversions cancel *on the page*, and the diagram reads as the original AND/OR logic even though every gate in it is a NAND or a NOR. That technique — *bubble pushing* — is the subject of the next two sections; here it is enough to see where it comes from.
 
 ## Universal Gates
 
-A logic gate is called *universal* if any Boolean function can be implemented using only that gate type. Both NAND and NOR gates have this property.
+A gate is **universal** if any Boolean function can be built from copies of that gate alone. NAND and NOR both qualify.
 
-### Why NAND is Universal
+### Why NAND Is Universal
 
-To prove that NAND is universal, we need to show that it can implement the three fundamental operations: NOT, AND, and OR. Since any Boolean function can be expressed using combinations of NOT, AND, and OR, being able to build these three operations means we can build anything.
+Any Boolean function can be written with NOT, AND, and OR. So if a NAND gate can build those three, it can build anything.
 
-**NOT from NAND:**
-
-If we connect both inputs of a NAND gate to the same signal, we get an inverter:
+**NOT from NAND.** Tie both inputs of a NAND to the same signal:
 
 $$\overline{A \cdot A} = \bar{A}$$
 
-This works because A AND A simply equals A, so NAND of A with itself gives NOT-A.
+$A \cdot A$ is just $A$, so NAND-ing a signal with itself inverts it.
 
 | A | $A \cdot A$ | $\overline{A \cdot A}$ |
-|---|-------------|------------------------|
+|---|---|---|
 | 0 | 0 | 1 |
 | 1 | 1 | 0 |
 
-**AND from NAND:**
+The interactive's third tab, *NAND as Inverter*, is this two-row table with the wiring drawn.
 
-An AND gate is a NAND followed by a NOT. Since we can build NOT from NAND, we can build AND using two NAND gates:
+**AND from NAND.** An AND is a NAND followed by a NOT, and NOT is a NAND with tied inputs — two NAND gates:
 
 $$A \cdot B = \overline{\overline{A \cdot B}}$$
 
-**OR from NAND:**
+**OR from NAND.** By De Morgan's first form run backwards, $A + B = \overline{\bar{A} \cdot \bar{B}}$. Three NAND gates do it: two wired as inverters to make $\bar{A}$ and $\bar{B}$, and one to NAND those together.
 
-By De Morgan's theorem, $A + B = \overline{\bar{A} \cdot \bar{B}}$. We can implement this with three NAND gates: two configured as inverters (to produce $\bar{A}$ and $\bar{B}$) and one to NAND those results together.
+### Why NOR Is Universal
 
-### Why NOR is Universal
-
-The same logic applies to NOR gates. By tying both inputs together, a NOR gate becomes an inverter:
+The same argument with the gates swapped. Tie a NOR's inputs together and it inverts:
 
 $$\overline{A + A} = \bar{A}$$
 
-From there, OR can be built as NOR followed by NOT, and AND can be built using De Morgan's theorem: $A \cdot B = \overline{\bar{A} + \bar{B}}$.
+(the fourth tab, *NOR as Inverter*). OR is a NOR followed by a NOT; AND comes from De Morgan's second form, $A \cdot B = \overline{\bar{A} + \bar{B}}$ — two NORs as inverters feeding a third.
 
-### Practical Implications
+### What Universality Buys
 
-The universality of NAND and NOR gates means that an entire digital system—no matter how complex—can be built using only one type of gate plus (optionally) inverters. Modern synthesis tools exploit this property, converting arbitrary Boolean expressions into optimized networks of NAND gates (or NOR gates, depending on the target technology).
+Because either gate is universal, an entire digital system, however large, can be built from one gate type — plus inverters, which are so small and fast that in practice they are kept as a second part rather than made from tied-input NANDs. Modern synthesis tools rely on this: they take a behavioral description, choose a target library, and map the logic onto networks of NAND or NOR gates, cancelling inversions wherever De Morgan allows. The variety of gate types a design *needs* is minimal, no matter how complex the function.
 
-However, "all-NAND" or "all-NOR" implementation is often a simplification. In practice, designs typically use NAND gates plus inverters (or NOR gates plus inverters), because dedicated inverters are so small and fast. The key insight is that the variety of gate types needed is minimal, even for arbitrarily complex functions.
+## A Worked Conversion
 
-## NAND-Only and NOR-Only Design
+To see the theorem doing work, take a small function written the natural way and rebuild it from NANDs:
 
-When we say a circuit uses "all-NAND" or "all-NOR" implementation, we typically mean:
+$$F = A \cdot B + C$$
 
-- **All-NAND**: The circuit uses only NAND gates and inverters (where inverters may themselves be NAND gates with tied inputs)
-- **All-NOR**: The circuit uses only NOR gates and inverters (where inverters may themselves be NOR gates with tied inputs)
+Written as drawn: an AND gate for $A \cdot B$ and an OR gate to add $C$. In CMOS that is $6 + 6 = 12$ transistors.
 
-The process of converting a standard AND/OR expression to all-NAND or all-NOR form involves systematic application of De Morgan's theorem and double-inversion ($\overline{\overline{X}} = X$). We will explore specific conversion techniques when we study multi-level logic circuits in later sections.
+Now apply De Morgan to the OR. Using the first form backwards, $X + C = \overline{\bar{X} \cdot \bar{C}}$ with $X = A \cdot B$:
+
+$$F = \overline{\overline{A \cdot B} \cdot \bar{C}}$$
+
+Read the right-hand side as gates: $\overline{A \cdot B}$ is one NAND; $\bar{C}$ is an inverter; and the outer bar over the product is a second NAND combining them. Two NANDs and one inverter — $4 + 4 + 2 = 10$ transistors, for the identical function. The inversion that the AND gate was carrying around cancelled against an inversion the OR gate needed; the inverter on $C$ is the only one that survived.
+
+That is the pattern in miniature: write the function, apply De Morgan where an AND feeds an OR, and let the bars cancel. The next section, *Schematic Abstraction and Transistor Count*, does the same count on a slightly larger example, and *All-NAND and All-NOR Realizations* turns the bookkeeping into a graphical method.
 
 ## Key Takeaways
 
-De Morgan's theorem is one of the most frequently used tools in digital logic design. Its two forms—relating NAND to OR-with-inverted-inputs and NOR to AND-with-inverted-inputs—provide the foundation for converting between human-readable Boolean expressions and transistor-efficient implementations.
-
-The universality of NAND and NOR gates means that any digital function can be realized using a single gate type. This property simplifies manufacturing, reduces the variety of components needed, and enables powerful optimization algorithms in modern design tools.
-
-The bubble notation for inversion, combined with De Morgan's theorem, gives designers flexibility in how they represent circuits. By choosing gate symbols that highlight the logical intent, circuit diagrams become easier to read and analyze.
-
----
+De Morgan's theorem has two forms: $\overline{A \cdot B} = \bar{A} + \bar{B}$ (a NAND is an OR with inverted inputs) and $\overline{A + B} = \bar{A} \cdot \bar{B}$ (a NOR is an AND with inverted inputs). The mnemonic is "break the bar, change the sign," and a truth table proves either form in four rows. In CMOS a NAND or NOR costs 4 transistors while an AND or OR costs 6, because AND and OR are a NAND/NOR plus an inverter — so building in NAND/NOR and letting inversions cancel saves hardware. NAND and NOR are universal: each can make NOT (tie the inputs), and from NOT plus De Morgan it can make AND and OR, hence any function. Bubble notation draws each universal gate two ways, which is what makes the cancellation visible on a schematic.
 
 ## Review Questions
 
-**1. Why do NAND and NOR gates require fewer transistors than AND and OR gates in CMOS technology?**
+### Question 1
 
-- A) NAND and NOR operate at lower voltages
-- B) AND and OR gates are built from NAND or NOR plus an inverter
-- C) NAND and NOR gates have fewer inputs
-- D) AND and OR gates require additional power supply connections
+Why do NAND and NOR gates require fewer transistors than AND and OR gates in CMOS?
 
----
+A. NAND and NOR operate at lower voltages
+B. AND and OR gates are built as a NAND or NOR followed by an inverter
+C. NAND and NOR gates have fewer inputs
+D. AND and OR gates need extra power-supply connections
 
-**2. According to De Morgan's theorem, which expression is equivalent to $\overline{A + B}$?**
+### Question 2
 
-- A) $\bar{A} + \bar{B}$
-- B) $\bar{A} \cdot \bar{B}$
-- C) $A \cdot B$
-- D) $\overline{A} + B$
+According to De Morgan's theorem, which expression equals $\overline{A + B}$?
 
----
+A. $\bar{A} + \bar{B}$
+B. $\bar{A} \cdot \bar{B}$
+C. $A \cdot B$
+D. $\bar{A} + B$
 
-**3. How can a NAND gate be configured to function as an inverter?**
+### Question 3
 
-- A) Connect the output to one of the inputs
-- B) Connect both inputs to the same signal
-- C) Leave one input disconnected
-- D) Connect the output to ground
+How is a NAND gate wired to act as an inverter?
 
----
+A. Connect the output back to one input
+B. Connect both inputs to the same signal
+C. Leave one input disconnected
+D. Connect the output to ground
 
-**4. What does "universal gate" mean in the context of digital logic?**
+### Question 4
 
-- A) The gate works with any voltage level
-- B) Any Boolean function can be implemented using only that gate type
-- C) The gate is used in all countries' electronics standards
-- D) The gate can perform both analog and digital operations
+What does "universal gate" mean?
 
----
+A. The gate works at any voltage
+B. Any Boolean function can be built from that gate type alone
+C. The gate is used in every country's standards
+D. The gate handles both analog and digital signals
 
-**5. The mnemonic "break the bar, change the sign" helps remember De Morgan's theorem. If you start with $\overline{A \cdot B \cdot C}$, what is the equivalent expression?**
+### Question 5
 
-- A) $\bar{A} \cdot \bar{B} \cdot \bar{C}$
-- B) $\bar{A} + \bar{B} + \bar{C}$
-- C) $A + B + C$
-- D) $\overline{A + B + C}$
+Apply "break the bar, change the sign" to $\overline{A \cdot B \cdot C}$.
 
----
+A. $\bar{A} \cdot \bar{B} \cdot \bar{C}$
+B. $\bar{A} + \bar{B} + \bar{C}$
+C. $A + B + C$
+D. $\overline{A + B + C}$
 
-**6. Which statement correctly describes the relationship between a NOR gate and its De Morgan equivalent?**
+### Question 6
 
-- A) A NOR gate equals an AND gate with inverted inputs
-- B) A NOR gate equals an OR gate with inverted inputs
-- C) A NOR gate equals an AND gate with inverted output
-- D) A NOR gate equals a NAND gate with inverted inputs
+A NOR gate is equivalent to which of the following?
 
----
+A. An AND gate with inverted inputs
+B. An OR gate with inverted inputs
+C. An AND gate with an inverted output
+D. A NAND gate with inverted inputs
 
-**7. In an "all-NAND" circuit implementation, how are simple inversions (NOT operations) typically realized?**
+### Question 7
 
-- A) Using separate NOT gate chips
-- B) Using NAND gates with both inputs tied together
-- C) By omitting the inversion entirely
-- D) Using resistors to invert voltage levels
+Apply De Morgan's theorem to $\overline{\bar{A} \cdot B}$.
 
----
+A. $\bar{A} + \bar{B}$
+B. $A + \bar{B}$
+C. $\bar{A} \cdot \bar{B}$
+D. $A \cdot B$
 
-**8. Why might an engineer choose to represent a NAND gate as an OR symbol with input bubbles?**
+### Question 8
 
-- A) To reduce the number of gates in the circuit
-- B) To make the logical intent clearer when analyzing signal flow
-- C) To change the gate's electrical behavior
-- D) To indicate that the gate is defective
+$F = A \cdot B + C$ is rebuilt as $\overline{\overline{A \cdot B} \cdot \bar{C}}$. What gates does the rebuilt form use, and how many transistors?
 
----
+A. Two NANDs and one inverter — 10
+B. One NAND and one NOR — 8
+C. One AND and one OR — 12
+D. Three NANDs — 12
 
 ## Answer Explanations
 
-**1. Answer: B) AND and OR gates are built from NAND or NOR plus an inverter**
+**1. B.** In CMOS the natural gates are NAND and NOR, four transistors each. An AND or OR output needs an inverter added after the NAND or NOR — two more transistors, six in total.
 
-In CMOS technology, NAND and NOR are the "natural" gate types, requiring only 4 transistors each. To create AND or OR outputs, designers must add an inverter (2 transistors) after the NAND or NOR, resulting in 6 transistors total.
+**2. B.** De Morgan's second form: the complement of an OR is the AND of the complements. Option A is the first form applied to $\overline{A \cdot B}$; C drops the inversions; D is not a De Morgan transformation.
 
-- *Lower voltages* (A) is incorrect—all gates in a design use the same supply voltage.
-- *Fewer inputs* (C) is incorrect—the input count is the same for comparable gates.
-- *Power supply connections* (D) is incorrect—this doesn't affect transistor count.
+**3. B.** With both inputs at $A$, the gate computes $\overline{A \cdot A} = \bar{A}$. Feeding the output back (A) makes a feedback circuit, a floating input (C) is undefined, and grounding the output (D) is a short.
 
-**2. Answer: B) $\bar{A} \cdot \bar{B}$**
+**4. B.** A universal gate can build NOT, AND, and OR from copies of itself, and every Boolean function can be written in those three operations.
 
-De Morgan's second form states that $\overline{A + B} = \bar{A} \cdot \bar{B}$. The complement of an OR expression equals the AND of the complemented terms.
+**5. B.** Break the bar over each term ($\bar{A}$, $\bar{B}$, $\bar{C}$) and change the ANDs to ORs. Option A breaks the bar without changing the sign; C changes the sign without breaking the bar; D moves the bar instead of breaking it.
 
-- *$\bar{A} + \bar{B}$* (A) is the result of applying De Morgan's to $\overline{A \cdot B}$.
-- *$A \cdot B$* (C) removes the inversions entirely, which is incorrect.
-- *$\overline{A} + B$* (D) is not a valid De Morgan transformation.
+**6. A.** $\overline{A + B} = \bar{A} \cdot \bar{B}$: a NOR (OR with inverted output) is an AND acting on inverted inputs. B and C both describe a NAND.
 
-**3. Answer: B) Connect both inputs to the same signal**
+**7. B.** Break the bar over the AND: $\overline{\bar{A}} + \bar{B}$. The double inversion on $A$ cancels, giving $A + \bar{B}$. Option A is the "flip everything" mistake — the existing bar on $A$ is part of the term, not part of what breaks.
 
-When both inputs of a NAND gate receive the same signal A, the gate computes $\overline{A \cdot A} = \bar{A}$, which is simply the complement of A—an inverter function.
-
-- *Output to input* (A) would create feedback, not inversion.
-- *Disconnected input* (C) creates undefined behavior in most technologies.
-- *Output to ground* (D) would short-circuit the gate.
-
-**4. Answer: B) Any Boolean function can be implemented using only that gate type**
-
-A universal gate can implement NOT, AND, and OR—the complete set of basic operations—using only copies of itself. Since any Boolean function can be expressed with NOT, AND, and OR, a universal gate can build anything.
-
-- *Any voltage* (A), *international standards* (C), and *analog operations* (D) are not what "universal" means in this context.
-
-**5. Answer: B) $\bar{A} + \bar{B} + \bar{C}$**
-
-Applying "break the bar, change the sign": the bar breaks to cover each term individually ($\bar{A}$, $\bar{B}$, $\bar{C}$), and the AND operations change to OR, giving $\bar{A} + \bar{B} + \bar{C}$.
-
-- *$\bar{A} \cdot \bar{B} \cdot \bar{C}$* (A) breaks the bar but doesn't change the sign.
-- *$A + B + C$* (C) changes the sign but doesn't break the bar.
-- *$\overline{A + B + C}$* (D) changes the sign but moves the bar instead of breaking it.
-
-**6. Answer: A) A NOR gate equals an AND gate with inverted inputs**
-
-De Morgan's theorem: $\overline{A + B} = \bar{A} \cdot \bar{B}$. A NOR gate (OR with inverted output) equals an AND operating on inverted inputs.
-
-- *OR with inverted inputs* (B) describes a NAND gate.
-- *AND with inverted output* (C) describes a NAND gate.
-- *NAND with inverted inputs* (D) is not a direct De Morgan equivalence.
-
-**7. Answer: B) Using NAND gates with both inputs tied together**
-
-In all-NAND design, inverters are created by connecting both NAND inputs to the same signal: $\overline{A \cdot A} = \bar{A}$.
-
-- *Separate NOT chips* (A) would violate the "all-NAND" constraint.
-- *Omitting inversion* (C) would change the logic function.
-- *Resistors* (D) are not used for logic inversion in CMOS.
-
-**8. Answer: B) To make the logical intent clearer when analyzing signal flow**
-
-The alternative symbol representation (OR shape with input bubbles for NAND) is logically equivalent and can make circuit diagrams easier to read. When signals are already inverted earlier in the circuit, showing input bubbles highlights where inversions cancel.
-
-- *Reduce gate count* (A) is incorrect—the symbol choice doesn't change the circuit.
-- *Change electrical behavior* (C) is incorrect—it's purely a representational choice.
-- *Indicate defect* (D) is incorrect—this is standard notation, not an error indicator.
+**8. A.** $\overline{A \cdot B}$ is a NAND, $\bar{C}$ is an inverter, and the outer bar over their product is a second NAND: $4 + 2 + 4 = 10$ transistors, versus 12 for the AND-plus-OR original.
