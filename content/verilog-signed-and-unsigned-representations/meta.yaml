@@ -1,0 +1,11 @@
+title: "Verilog Signed and Unsigned Representations"
+description: "A reg is unsigned unless declared signed; signedness changes how %d reads the bits, not the bits themselves — 8'hA5 is 165 unsigned and −91 signed. Includes the -8'd5 negative-literal subtlety."
+chapter: verilog
+section: verilog-basics
+order: 70201
+
+graphics:
+  01-video.youtube:
+    caption: "Video: signed and unsigned registers in Verilog — the same bits print as 165 or −91, and why -8'd5 prints as 251 (Beat 3 of the interactive)"
+  02-interactive.html:
+    caption: "Same eight bits, two readings: signed and unsigned literals and registers, with place values and the %d each prints — this topic is Beat 3; Beat 5 tries any value both ways"
