@@ -342,7 +342,7 @@
           "title": "Verilog Sign Extension",
           "slug": "verilog-sign-extension",
           "type": "full",
-          "published": false
+          "published": true
         }
       ]
     },

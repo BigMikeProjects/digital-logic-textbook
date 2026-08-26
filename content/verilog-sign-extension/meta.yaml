@@ -1,0 +1,11 @@
+title: "Verilog Sign Extension"
+description: "What fills the new bits when a value is assigned to a wider register: zeros for unsigned, copies of the sign bit for signed — and why extension follows the source while reading follows the destination."
+chapter: verilog
+section: verilog-basics
+order: 70202
+
+graphics:
+  01-video.youtube:
+    caption: "Video: sign extension in Verilog — zero-extend vs sign-extend when 8 bits move into 16, and the sx = s subtlety (Beat 4 of the interactive)"
+  02-interactive.html:
+    caption: "Sign extension: what fills the new bits when a value widens, decided by the source's signedness — this topic is Beat 4; Beat 5 widens any value both ways"
