@@ -117,54 +117,54 @@ A CMOS inverter can be modeled as a switched voltage divider with $R_P$ on top a
 
 In the switched-resistor model of a CMOS inverter, what does the input $A$ control?
 
-A. The supply voltage $V_{DD}$
-B. The resistance values $R_P$ and $R_N$
-C. The physical location of the output node
+A. The supply voltage $V_{DD}$\
+B. The resistance values $R_P$ and $R_N$\
+C. The physical location of the output node\
 D. Whether the circuit has a ground connection
 
 ### Question 2
 
 Why does the output of a real inverter not reach exactly $0\ \text{V}$ in the typical high-input case?
 
-A. The NMOS is disconnected from ground
-B. The PMOS off resistance is finite, so a small divider voltage remains
-C. The input voltage is always analog
+A. The NMOS is disconnected from ground\
+B. The PMOS off resistance is finite, so a small divider voltage remains\
+C. The input voltage is always analog\
 D. The output node is not part of the voltage divider
 
 ### Question 3
 
 With $V_{DD}=5\ \text{V}$, $R_N=1\ \text{k}\Omega$, and $R_P=1\ \text{G}\Omega$, the output is closest to:
 
-A. $0\ \text{V}$ exactly
-B. $5\ \mu\text{V}$
-C. $2.5\ \text{V}$
+A. $0\ \text{V}$ exactly\
+B. $5\ \mu\text{V}$\
+C. $2.5\ \text{V}$\
 D. $5\ \text{V}$
 
 ### Question 4
 
 What causes static leakage power in this model?
 
-A. The off transistor has finite resistance, so a small current path remains
-B. The inverter output is switching quickly
-C. The truth table has an invalid row
+A. The off transistor has finite resistance, so a small current path remains\
+B. The inverter output is switching quickly\
+C. The truth table has an invalid row\
 D. The supply voltage is zero
 
 ### Question 5
 
 A weak low input leaves the NMOS at $9\ \text{k}\Omega$ instead of off, while the PMOS is on at $1\ \text{k}\Omega$ and $V_{DD}=5\ \text{V}$. What are the output voltage and the supply current?
 
-A. $5\ \text{V}$ and $0$
-B. $4.5\ \text{V}$ and $0.5\ \text{mA}$
-C. $0.5\ \text{V}$ and $5\ \text{nA}$
+A. $5\ \text{V}$ and $0$\
+B. $4.5\ \text{V}$ and $0.5\ \text{mA}$\
+C. $0.5\ \text{V}$ and $5\ \text{nA}$\
 D. $2.5\ \text{V}$ and $5\ \text{A}$
 
 ### Question 6
 
 Why is the switched-resistor model useful even though it is not a complete transistor model?
 
-A. It removes the need to understand logic levels
-B. It explains leakage, static power, and degraded outputs using a simple divider
-C. It proves real transistors have infinite off resistance
+A. It removes the need to understand logic levels\
+B. It explains leakage, static power, and degraded outputs using a simple divider\
+C. It proves real transistors have infinite off resistance\
 D. It only works for ideal switches
 
 ## Answer Explanations

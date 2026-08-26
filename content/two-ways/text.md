@@ -63,39 +63,39 @@ The two's complement of $x$ at width $n$ is $2^n - x$, and there are two equival
 ## Review Questions
 
 **1. What are the steps of the flip-and-add-one method, in order?**
-A. Add 1, then flip every bit
-B. Write the magnitude in binary, flip every bit, add 1
-C. Flip only the sign bit
+A. Add 1, then flip every bit\
+B. Write the magnitude in binary, flip every bit, add 1\
+C. Flip only the sign bit\
 D. Subtract the magnitude from $2^n - 1$ and stop
 
 **2. What is the two's complement representation of $-19$ in 6 bits?**
-A. `101101`
-B. `101100`
-C. `010011`
+A. `101101`\
+B. `101100`\
+C. `010011`\
 D. `110100`
 
 **3. Method 2 computes the two's complement of $x$ at width $n$ directly as:**
-A. $2^n - x$
-B. $2^n + x$
-C. $2^{n-1} - x$
+A. $2^n - x$\
+B. $2^n + x$\
+C. $2^{n-1} - x$\
 D. $x - 2^n$
 
 **4. Why do the two methods always produce the same bit pattern?**
-A. Coincidence — they occasionally differ for large numbers
-B. Flipping the bits computes $(2^n - 1) - x$, and adding 1 makes it exactly $2^n - x$
-C. Both methods ignore the word size
+A. Coincidence — they occasionally differ for large numbers\
+B. Flipping the bits computes $(2^n - 1) - x$, and adding 1 makes it exactly $2^n - x$\
+C. Both methods ignore the word size\
 D. Because binary numbers cannot represent negatives any other way
 
 **5. The 6-bit two's complement of $-25$ is `100111`, but the 8-bit version is `11100111`. What does this illustrate?**
-A. One of the two answers must be wrong
-B. The representation depends on the stated word size — the width is part of the answer
-C. Two's complement only works at 6 bits
+A. One of the two answers must be wrong\
+B. The representation depends on the stated word size — the width is part of the answer\
+C. Two's complement only works at 6 bits\
 D. The 8-bit version represents a different value
 
 **6. A student claims `101101` is the 6-bit two's complement of 19. What is the fastest check, and what should it show?**
-A. Add it to `010011` (19): the sum should wrap to zero in 6 bits
-B. Count the 1 bits: there should be exactly three
-C. Reverse the bits and compare
+A. Add it to `010011` (19): the sum should wrap to zero in 6 bits\
+B. Count the 1 bits: there should be exactly three\
+C. Reverse the bits and compare\
 D. Convert both to hexadecimal and compare digits
 
 ## Answer Explanations

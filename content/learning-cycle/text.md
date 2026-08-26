@@ -118,36 +118,36 @@ a trap, since the cost is paid later in your career rather than on the exam.
 
 According to this chapter, what is the main weakness of learning purely from online videos?
 
-A. Videos are less accurate than written material  
-B. Videos arrive as disconnected topics with no coherent path through a course  
-C. Videos cannot show a concept in motion  
+A. Videos are less accurate than written material\
+B. Videos arrive as disconnected topics with no coherent path through a course\
+C. Videos cannot show a concept in motion\
 D. Videos take longer than reading
 
 ### Question 2
 
 Two reasons are given for reading about a topic you have already watched. Which pair is correct?
 
-A. Reading is faster, and reading is more enjoyable  
-B. Reading is more accurate, and reading is required for the exam  
-C. Reading presents the idea in a different format, and it lets you jump to a specific point without re-watching  
+A. Reading is faster, and reading is more enjoyable\
+B. Reading is more accurate, and reading is required for the exam\
+C. Reading presents the idea in a different format, and it lets you jump to a specific point without re-watching\
 D. Reading replaces the need to interact with the graphics
 
 ### Question 3
 
 What distinguishes the outer "Internalize" loop from the inner triangle?
 
-A. It is done in a study group rather than alone  
-B. It happens only after the final exam  
-C. It uses none of the technology — sketching, explaining, solving, and recalling without the tools  
+A. It is done in a study group rather than alone\
+B. It happens only after the final exam\
+C. It uses none of the technology — sketching, explaining, solving, and recalling without the tools\
 D. It covers harder topics than the triangle does
 
 ### Question 4
 
 Why is cramming described as an especially tempting trap in this particular course?
 
-A. The exams are unusually difficult  
-B. The material is not hard enough to stop you getting away with it, so the cost shows up later in your career  
-C. There is no written material to review  
+A. The exams are unusually difficult\
+B. The material is not hard enough to stop you getting away with it, so the cost shows up later in your career\
+C. There is no written material to review\
 D. The topics are unrelated, so order does not matter
 
 ## Answer Explanations

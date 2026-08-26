@@ -75,54 +75,54 @@ The two's complement number wheel arranges all $2^n$ bit patterns of an $n$-bit 
 
 On a 4-bit two's complement wheel, what does one step counterclockwise from $0$ (`0000`) land on?
 
-A. `0001`, the value $+1$
-B. `1000`, the value $-8$
-C. `1111`, the value $-1$
+A. `0001`, the value $+1$\
+B. `1000`, the value $-8$\
+C. `1111`, the value $-1$\
 D. `0111`, the value $+7$
 
 ### Question 2
 
 Starting at $-4$ and stepping five positions clockwise on a 4-bit wheel gives:
 
-A. $+1$
-B. $-9$
-C. $+9$
+A. $+1$\
+B. $-9$\
+C. $+9$\
 D. $-1$
 
 ### Question 3
 
 Which pair of values sits side by side at the seam of the 4-bit wheel?
 
-A. $0$ and $-1$
-B. $+7$ and $-8$
-C. $+7$ and $0$
+A. $0$ and $-1$\
+B. $+7$ and $-8$\
+C. $+7$ and $0$\
 D. $-8$ and $-1$
 
 ### Question 4
 
 In four bits, $7 + 1$ produces the pattern `1000`. What has happened?
 
-A. The result is $+8$, correctly represented
-B. Overflow: the sum stepped past the most positive value and reads as $-8$
-C. Underflow: the sum stepped past the most negative value
+A. The result is $+8$, correctly represented\
+B. Overflow: the sum stepped past the most positive value and reads as $-8$\
+C. Underflow: the sum stepped past the most negative value\
 D. Nothing; `1000` is an invalid pattern and the adder rejects it
 
 ### Question 5
 
 Which addition can *never* overflow in two's complement?
 
-A. Two positive numbers
-B. Two negative numbers
-C. A positive number and a negative number
+A. Two positive numbers\
+B. Two negative numbers\
+C. A positive number and a negative number\
 D. Any addition whose result is zero
 
 ### Question 6
 
 How many positions does a 5-bit two's complement wheel have, and what is its most negative value?
 
-A. 32 positions, $-16$
-B. 32 positions, $-32$
-C. 16 positions, $-8$
+A. 32 positions, $-16$\
+B. 32 positions, $-32$\
+C. 16 positions, $-8$\
 D. 5 positions, $-5$
 
 ## Answer Explanations

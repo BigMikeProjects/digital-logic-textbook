@@ -46,39 +46,39 @@ Verilog is this course's hardware description language, and the essential adjust
 ## Review Questions
 
 **1. What is the most important mental adjustment when moving from ordinary programming to Verilog?**
-A. Verilog uses different keywords than most languages
-B. Circuits are physical and concurrent — everything operates at once, not line by line
-C. Verilog files must be shorter than software programs
+A. Verilog uses different keywords than most languages\
+B. Circuits are physical and concurrent — everything operates at once, not line by line\
+C. Verilog files must be shorter than software programs\
 D. Verilog can only describe circuits with fewer than 100 gates
 
 **2. Two assignments, `b = a` and `a = b`, execute *concurrently* on a clock tick in Verilog. If `a = 1` and `b = 0` beforehand, what happens?**
-A. Both end up 1
-B. Both end up 0
-C. The values swap: `a = 0`, `b = 1`
+A. Both end up 1\
+B. Both end up 0\
+C. The values swap: `a = 0`, `b = 1`\
 D. The simulator reports an error
 
 **3. A Verilog source file naturally splits into two parts. What are they?**
-A. Comments and code
-B. Code that describes the hardware, and code that runs it by driving signals
-C. Inputs and outputs
+A. Comments and code\
+B. Code that describes the hardware, and code that runs it by driving signals\
+C. Inputs and outputs\
 D. The synthesizable half and the illegal half
 
 **4. How do you debug a Verilog simulation, given that there is no print-and-breakpoint workflow?**
-A. By examining the signals over time as waveforms
-B. By reading the synthesized transistor netlist
-C. By running the code line by line in a debugger
+A. By examining the signals over time as waveforms\
+B. By reading the synthesized transistor netlist\
+C. By running the code line by line in a debugger\
 D. Verilog designs cannot be debugged
 
 **5. Why does this course teach plain Verilog before SystemVerilog?**
-A. SystemVerilog no longer works with modern tools
-B. VHDL requires Verilog as a prerequisite
-C. SystemVerilog hides some underlying mechanisms; learning Verilog first exposes the details
+A. SystemVerilog no longer works with modern tools\
+B. VHDL requires Verilog as a prerequisite\
+C. SystemVerilog hides some underlying mechanisms; learning Verilog first exposes the details\
 D. Plain Verilog is the only HDL used in industry
 
 **6. Why did hardware description languages replace hand-drawn schematics as the way chips are designed?**
-A. Schematics could not legally be patented
-B. Text descriptions scale: they can be simulated, synthesized to gates automatically, and managed at millions-of-gates size where drawing collapses
-C. HDLs run faster than the circuits they describe
+A. Schematics could not legally be patented\
+B. Text descriptions scale: they can be simulated, synthesized to gates automatically, and managed at millions-of-gates size where drawing collapses\
+C. HDLs run faster than the circuits they describe\
 D. Schematic symbols were never standardized
 
 ## Answer Explanations

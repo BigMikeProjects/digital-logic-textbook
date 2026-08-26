@@ -93,54 +93,54 @@ A Verilog `reg` is unsigned unless declared `reg signed`, and a literal is unsig
 
 A register is declared `reg [7:0] u;` with no other keywords. How does Verilog treat it?
 
-A. As signed, because 8-bit registers are always signed
-B. As unsigned — that is the default
-C. As signed only when it holds a value with the top bit set
+A. As signed, because 8-bit registers are always signed\
+B. As unsigned — that is the default\
+C. As signed only when it holds a value with the top bit set\
 D. It depends on the base of the literal assigned to it
 
 ### Question 2
 
 `u` (unsigned) and `s` (signed) both hold `10100101`. Which specifier prints *different* text for the two registers?
 
-A. `%b`
-B. `%h`
-C. `%d`
+A. `%b`\
+B. `%h`\
+C. `%d`\
 D. All three print different text
 
 ### Question 3
 
 What does `%d` print for `reg signed [7:0] s = 8'shA5;`?
 
-A. 165
-B. −91
-C. −165
+A. 165\
+B. −91\
+C. −165\
 D. 91
 
 ### Question 4
 
 Why is the top place value $-128$ in the signed reading but $+128$ in the unsigned reading?
 
-A. Signed registers have seven bits, not eight
-B. In two's complement the top bit is the sign bit, carrying a negative weight
-C. Verilog subtracts 256 from every signed value
+A. Signed registers have seven bits, not eight\
+B. In two's complement the top bit is the sign bit, carrying a negative weight\
+C. Verilog subtracts 256 from every signed value\
 D. The unsigned reading ignores the top bit
 
 ### Question 5
 
 `$display("%d", -8'd5);` prints 251. What happened?
 
-A. Verilog ignored the minus sign
-B. The minus sign negated the bits to `11111011`, but the result is still unsigned, so `%d` read it as 251
-C. `8'd5` overflowed
+A. Verilog ignored the minus sign\
+B. The minus sign negated the bits to `11111011`, but the result is still unsigned, so `%d` read it as 251\
+C. `8'd5` overflowed\
 D. `%d` always prints positive numbers
 
 ### Question 6
 
 Which of these makes `%d` print −5 for a negated literal?
 
-A. `-8'd5`
-B. `8'd5` with the minus sign moved into the format string
-C. `-8'sd5`, or assigning the value to a `reg signed`
+A. `-8'd5`\
+B. `8'd5` with the minus sign moved into the format string\
+C. `-8'sd5`, or assigning the value to a `reg signed`\
 D. Printing with `%b` instead of `%d`
 
 ## Answer Explanations

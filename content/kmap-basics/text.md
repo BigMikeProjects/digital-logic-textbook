@@ -67,39 +67,39 @@ A Karnaugh map is a truth table re-drawn as a $2^n$-cell grid, with one cell per
 ## Review Questions
 
 **1. How many cells does the Karnaugh map of a four-variable function have?**
-A. 4
-B. 8
-C. 16
+A. 4\
+B. 8\
+C. 16\
 D. 32
 
 **2. Why are the row and column labels of a K-map written in Gray code (00, 01, 11, 10)?**
-A. To save space on the page
-B. So that adjacent cells differ in exactly one variable, making them combinable
-C. Because binary counting order is mathematically invalid
+A. To save space on the page\
+B. So that adjacent cells differ in exactly one variable, making them combinable\
+C. Because binary counting order is mathematically invalid\
 D. To match the order of the minterm numbers
 
 **3. Which of the following is a legal Karnaugh map group?**
-A. A group of 3 adjacent cells
-B. A diagonal pair of cells
-C. A rectangular group of 4 cells
+A. A group of 3 adjacent cells\
+B. A diagonal pair of cells\
+C. A rectangular group of 4 cells\
 D. A group of 6 cells
 
 **4. When you read a product term from a group, which variables appear in it?**
-A. The variables that change across the group
-B. All of the function's variables
-C. Only complemented variables
+A. The variables that change across the group\
+B. All of the function's variables\
+C. Only complemented variables\
 D. The variables that stay constant across the group
 
 **5. A group of four `1`s on a three-variable map covers minterms 0, 1, 4, 5, in which $B$ is always 0 while $A$ and $C$ vary. What product term does it represent?**
-A. $\bar{B}$
-B. $A\,C$
-C. $\bar{A}\,\bar{B}$
+A. $\bar{B}$\
+B. $A\,C$\
+C. $\bar{A}\,\bar{B}$\
 D. $B$
 
 **6. What does making K-map groups as large as possible accomplish?**
-A. It increases the number of literals in each term
-B. It guarantees every `1` is covered exactly once
-C. It eliminates more variables, producing simpler terms and a smaller circuit
+A. It increases the number of literals in each term\
+B. It guarantees every `1` is covered exactly once\
+C. It eliminates more variables, producing simpler terms and a smaller circuit\
 D. It is required only for four-variable maps
 
 ## Answer Explanations

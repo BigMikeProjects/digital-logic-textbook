@@ -61,39 +61,39 @@ Karnaugh-map grouping and Boolean-algebra simplification are the same operation 
 ## Review Questions
 
 **1. Two product terms can be combined by Boolean algebra when they differ in how many variables?**
-A. Exactly one
-B. Exactly two
-C. None — they must be identical
+A. Exactly one\
+B. Exactly two\
+C. None — they must be identical\
 D. Any number
 
 **2. Why are the axes of a Karnaugh map labeled in Gray code?**
-A. To make the map look symmetric
-B. So that adjacent cells differ in exactly one variable, matching logical adjacency
-C. To match the order of the minterm numbers
+A. To make the map look symmetric\
+B. So that adjacent cells differ in exactly one variable, matching logical adjacency\
+C. To match the order of the minterm numbers\
 D. It is an arbitrary convention with no effect
 
 **3. When you factor a common part out of two adjacent terms, which identity finishes the simplification?**
-A. $V \cdot \bar{V} = 0$
-B. $V \cdot V = V$
-C. $V + \bar{V} = 1$
+A. $V \cdot \bar{V} = 0$\
+B. $V \cdot V = V$\
+C. $V + \bar{V} = 1$\
 D. $V + V = V$
 
 **4. Combining two adjacent `1`s into a group of two eliminates how many variables from the term?**
-A. Zero
-B. One
-C. Two
+A. Zero\
+B. One\
+C. Two\
 D. Three
 
 **5. The four `1`s of $F = \bar{X}\bar{Y}Z + \bar{X}YZ + X\bar{Y}Z + XYZ$ form a single group of four. What does the function simplify to?**
-A. $Z$
-B. $X Z$
-C. $\bar{X} Z$
+A. $Z$\
+B. $X Z$\
+C. $\bar{X} Z$\
 D. $X + Y + Z$
 
 **6. What is the main point this topic makes about Karnaugh maps?**
-A. They replace Boolean algebra with a faster but unrelated technique
-B. They only work for functions of three variables
-C. Grouping cells is a visual form of the same factoring-and-canceling that Boolean algebra performs
+A. They replace Boolean algebra with a faster but unrelated technique\
+B. They only work for functions of three variables\
+C. Grouping cells is a visual form of the same factoring-and-canceling that Boolean algebra performs\
 D. They give different answers than algebraic simplification
 
 ## Answer Explanations

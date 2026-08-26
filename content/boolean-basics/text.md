@@ -88,39 +88,39 @@ Boolean algebra runs on a small set of identities: the single-variable propertie
 ## Review Questions
 
 **1. Which property says that $A + 1 = 1$?**
-A. Identity
-B. Null
-C. Idempotent
+A. Identity\
+B. Null\
+C. Idempotent\
 D. Complement
 
 **2. Using the duality rule, what is the dual of the identity $A \cdot 0 = 0$?**
-A. $A + 0 = A$
-B. $A \cdot 1 = A$
-C. $A + 1 = 1$
+A. $A + 0 = A$\
+B. $A \cdot 1 = A$\
+C. $A + 1 = 1$\
 D. $\bar{A} \cdot 1 = \bar{A}$
 
 **3. What does $A + \bar{A}$ simplify to, and by which property?**
-A. $A$, by the idempotent property
-B. $0$, by the null property
-C. $1$, by the complement property
+A. $A$, by the idempotent property\
+B. $0$, by the null property\
+C. $1$, by the complement property\
 D. $\bar{A}$, by involution
 
 **4. Apply De Morgan's theorem to $\overline{A + B}$.**
-A. $\bar{A} + \bar{B}$
-B. $\bar{A} \cdot \bar{B}$
-C. $A \cdot B$
+A. $\bar{A} + \bar{B}$\
+B. $\bar{A} \cdot \bar{B}$\
+C. $A \cdot B$\
 D. $\overline{A} + B$
 
 **5. How can you check whether a proposed identity like $A + B\cdot C = (A+B)\cdot(A+C)$ is valid?**
-A. Build both sides' truth tables and compare the output columns
-B. Test it with $A=B=C=1$ only
-C. Check whether it looks like an ordinary-algebra rule
+A. Build both sides' truth tables and compare the output columns\
+B. Test it with $A=B=C=1$ only\
+C. Check whether it looks like an ordinary-algebra rule\
 D. Boolean identities cannot be checked, only memorized
 
 **6. In the worked example, $A\cdot(B + \bar{B})$ was reduced to $A$. Which two properties were used, in order?**
-A. Null, then identity
-B. Complement, then identity
-C. Idempotent, then null
+A. Null, then identity\
+B. Complement, then identity\
+C. Idempotent, then null\
 D. Absorption, then involution
 
 ## Answer Explanations

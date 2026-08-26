@@ -182,54 +182,54 @@ This habit prevents a common beginner mistake: converting a bit pattern as if bi
 
 The bit pattern `1111` is observed on a four-bit bus. What value does it represent?
 
-A. Always 15
-B. Always -1
-C. It depends on the representation rule
+A. Always 15\
+B. Always -1\
+C. It depends on the representation rule\
 D. It cannot represent a valid value
 
 ### Question 2
 
 Why is hexadecimal commonly used in digital logic documentation?
 
-A. Hexadecimal is what the hardware stores internally
-B. One hexadecimal digit corresponds exactly to four binary bits
-C. Hexadecimal eliminates overflow
+A. Hexadecimal is what the hardware stores internally\
+B. One hexadecimal digit corresponds exactly to four binary bits\
+C. Hexadecimal eliminates overflow\
 D. Hexadecimal can represent only signed values
 
 ### Question 3
 
 How many distinct patterns can be represented with eight bits?
 
-A. 8
-B. 16
-C. 128
+A. 8\
+B. 16\
+C. 128\
 D. 256
 
 ### Question 4
 
 In four-bit two's complement, what does `1000` represent?
 
-A. 8
-B. -8
-C. -1
+A. 8\
+B. -8\
+C. -1\
 D. 0
 
 ### Question 5
 
 An 8-bit unsigned counter holding 255 is incremented by one, and the design simply lets the addition proceed. What does the counter read next?
 
-A. 256
-B. 255
-C. 0
+A. 256\
+B. 255\
+C. 0\
 D. The hardware halts with an error
 
 ### Question 6
 
 One block drives a four-bit bus intending two's complement; the receiving block reads the bus as unsigned. The driver sends the value $-1$. What does the receiver see, and where is the fault?
 
-A. 15; the receiving block's gates are defective
-B. 15; the fault is the mismatched interface contract, not any circuit
-C. -1; representations do not affect received values
+A. 15; the receiving block's gates are defective\
+B. 15; the fault is the mismatched interface contract, not any circuit\
+C. -1; representations do not affect received values\
 D. 1; the sign bit is dropped in transmission
 
 ## Answer Explanations

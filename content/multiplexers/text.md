@@ -164,46 +164,46 @@ and an **`always` block with `case`** for wider or larger multiplexers.
 
 **1. In a 2:1 multiplexer with select line $S$, data inputs $D0$ and $D1$, and output $Y$, what does
 $S = 1$ produce?**
-A. $Y = D0$
-B. $Y = D1$
-C. $Y = D0 + D1$
+A. $Y = D0$\
+B. $Y = D1$\
+C. $Y = D0 + D1$\
 D. $Y = 0$
 
 **2. How many select lines does a 16:1 multiplexer require?**
-A. 2
-B. 4
-C. 8
+A. 2\
+B. 4\
+C. 8\
 D. 16
 
 **3. Which Boolean expression describes a one-bit 2:1 multiplexer?**
-A. $Y = S \cdot D0 + \bar{S} \cdot D1$
-B. $Y = \bar{S} \cdot D0 + S \cdot D1$
-C. $Y = D0 \cdot D1$
+A. $Y = S \cdot D0 + \bar{S} \cdot D1$\
+B. $Y = \bar{S} \cdot D0 + S \cdot D1$\
+C. $Y = D0 \cdot D1$\
 D. $Y = \bar{S} + D0 \cdot D1$
 
 **4. In the gate-level construction, why is it safe to merge both data paths with a single OR gate?**
-A. Because OR gates ignore their second input
-B. Because the AND gates invert one of the paths
+A. Because OR gates ignore their second input\
+B. Because the AND gates invert one of the paths\
 C. Because the select line guarantees only one AND path is active at a time, and anything OR'd with
 0 is unchanged
 D. Because the data inputs are always complementary
 
 **5. How is a multiplexer widened to handle multi-bit data lines?**
-A. By adding more select lines
-B. By replicating the same one-bit mux circuit once per bit, sharing the select line
-C. By replacing the AND gates with XOR gates
+A. By adding more select lines\
+B. By replicating the same one-bit mux circuit once per bit, sharing the select line\
+C. By replacing the AND gates with XOR gates\
 D. By cascading the output back into the input
 
 **6. In the Verilog literal `2'b01`, what does the leading `2` indicate?**
-A. The value two
-B. That the signal is the second input
-C. The number of bits in the literal
+A. The value two\
+B. That the signal is the second input\
+C. The number of bits in the literal\
 D. That the literal is in base 2 notation only
 
 **7. In the 4:1 Verilog module, the ports are declared `[7:0]`. What does that tell you?**
-A. There are eight data inputs to choose from
-B. Each data line and the output are eight bits wide
-C. The select line is eight bits wide
+A. There are eight data inputs to choose from\
+B. Each data line and the output are eight bits wide\
+C. The select line is eight bits wide\
 D. The module has eight outputs
 
 ## Answer Explanations

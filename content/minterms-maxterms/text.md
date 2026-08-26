@@ -82,39 +82,39 @@ A truth table and a Boolean expression carry the same information, and minterms 
 ## Review Questions
 
 **1. What is a minterm?**
-A. A sum term that is `0` for exactly one row of the truth table
-B. A product term that is `1` for exactly one row of the truth table
-C. The smallest number in a minterm list
+A. A sum term that is `0` for exactly one row of the truth table\
+B. A product term that is `1` for exactly one row of the truth table\
+C. The smallest number in a minterm list\
 D. Any product term in a Boolean expression
 
 **2. In a minterm, how does an input variable appear if its value in that row is `0`?**
-A. Uncomplemented
-B. It is omitted from the term
-C. Complemented
+A. Uncomplemented\
+B. It is omitted from the term\
+C. Complemented\
 D. Replaced with a constant `0`
 
 **3. With $A$ as the most-significant bit, what minterm corresponds to row 6 of a three-variable truth table?**
-A. $\bar{A}\,B\,C$
-B. $A\,B\,C$
-C. $A\,B\,\bar{C}$
+A. $\bar{A}\,B\,C$\
+B. $A\,B\,C$\
+C. $A\,B\,\bar{C}$\
 D. $A\,\bar{B}\,\bar{C}$
 
 **4. Minterms are naturally associated with which canonical form?**
-A. Product of sums (POS)
-B. Sum of products (SOP)
-C. Neither
+A. Product of sums (POS)\
+B. Sum of products (SOP)\
+C. Neither\
 D. Both equally
 
 **5. A three-variable function is given by $F = \sum m(4, 6)$. What is its equivalent maxterm list?**
-A. $\prod M(4, 6)$
-B. $\prod M(0, 1, 2, 3, 5, 7)$
-C. $\prod M(0, 1, 2, 3, 4, 5, 6, 7)$
+A. $\prod M(4, 6)$\
+B. $\prod M(0, 1, 2, 3, 5, 7)$\
+C. $\prod M(0, 1, 2, 3, 4, 5, 6, 7)$\
 D. $\prod M(1, 3, 5, 7)$
 
 **6. For its own row, a maxterm evaluates to what value?**
-A. `1`
-B. `0`
-C. It depends on the other variables
+A. `1`\
+B. `0`\
+C. It depends on the other variables\
 D. Undefined
 
 ## Answer Explanations

@@ -77,45 +77,45 @@ A timing diagram shows *when* signals change, plotting each signal's value again
 ## Review Questions
 
 **1. What does a timing diagram primarily show that a truth table does not?**
-A. The number of gates in a circuit
-B. How signals change over time
-C. The minimal sum-of-products expression
+A. The number of gates in a circuit\
+B. How signals change over time\
+C. The minimal sum-of-products expression\
 D. The power consumption of the circuit
 
 **2. In an *idealized* timing diagram, how are gate delays treated?**
-A. They are exaggerated to make them visible
-B. They are measured precisely for each gate
-C. They are ignored, so responses appear instantaneous
+A. They are exaggerated to make them visible\
+B. They are measured precisely for each gate\
+C. They are ignored, so responses appear instantaneous\
 D. They are replaced by clock edges
 
 **3. For the circuit $Y = (A \cdot B) + C$, input $A$ rises from 0 to 1 while $B = 0$ and $C = 0$. What happens to the output $Y$?**
-A. $Y$ rises to 1 immediately
-B. $Y$ stays at 0
-C. $Y$ briefly glitches then settles at 1
+A. $Y$ rises to 1 immediately\
+B. $Y$ stays at 0\
+C. $Y$ briefly glitches then settles at 1\
 D. $Y$ becomes undefined
 
 **4. Still on $Y = (A \cdot B) + C$, the input $C$ is driven to 1 while the product term $A \cdot B = 0$. What is the output?**
-A. 0, because the product term is 0
-B. Undefined, because the inputs conflict
-C. 1, because an OR with any 1 input is 1
+A. 0, because the product term is 0\
+B. Undefined, because the inputs conflict\
+C. 1, because an OR with any 1 input is 1\
 D. It depends on the previous value of $Y$
 
 **5. Why can an input transition sometimes leave the output unchanged?**
-A. Timing diagrams cannot represent simultaneous changes
-B. The change may not propagate given the other inputs (e.g., ANDed with 0, or the output is already 1)
-C. The output only updates on a clock edge
+A. Timing diagrams cannot represent simultaneous changes\
+B. The change may not propagate given the other inputs (e.g., ANDed with 0, or the output is already 1)\
+C. The output only updates on a clock edge\
 D. Inputs never actually affect the output
 
 **6. In a *real* (non-idealized) circuit, how does a change at input $B$ reach the output of $Y = (A\cdot B)+C$?**
-A. Instantaneously, with no delay
-B. It cascades with delay: $B$ → product term → OR output
-C. Only after the next clock cycle
+A. Instantaneously, with no delay\
+B. It cascades with delay: $B$ → product term → OR output\
+C. Only after the next clock cycle\
 D. It never reaches the output
 
 **7. On a timing diagram, a signal transitions from `1` to `0`. What is this transition called?**
-A. A rising edge
-B. A falling edge
-C. A glitch
+A. A rising edge\
+B. A falling edge\
+C. A glitch\
 D. A vertical slice
 
 ## Answer Explanations

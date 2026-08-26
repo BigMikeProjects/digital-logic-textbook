@@ -112,54 +112,54 @@ Verilog work comes in pairs: a design file that *describes* hardware and a testb
 
 What does the `module ... endmodule` pair define in a Verilog design file?
 
-A. A function that runs once when the simulation starts
-B. A named block of hardware with a boundary of ports
-C. A loop that repeats for every input combination
+A. A function that runs once when the simulation starts\
+B. A named block of hardware with a boundary of ports\
+C. A loop that repeats for every input combination\
 D. A comment block ignored by the simulator
 
 ### Question 2
 
 The testbench's `module xor_gate_tb;` line has no port list. Why?
 
-A. Testbenches are not allowed to contain signals
-B. The port list is optional for all modules
-C. Nothing sits above the testbench — it is the outermost box, so it has no external connections
+A. Testbenches are not allowed to contain signals\
+B. The port list is optional for all modules\
+C. Nothing sits above the testbench — it is the outermost box, so it has no external connections\
 D. Ports are only used by sequential circuits
 
 ### Question 3
 
 In the testbench, `a` and `b` are declared `reg` while `y` is a `wire`. What is the working rule of thumb?
 
-A. `reg` for signals the bench drives; `wire` for signals it only watches
-B. `reg` for inputs of any module; `wire` for outputs of any module
-C. `reg` for one-bit signals; `wire` for multi-bit signals
+A. `reg` for signals the bench drives; `wire` for signals it only watches\
+B. `reg` for inputs of any module; `wire` for outputs of any module\
+C. `reg` for one-bit signals; `wire` for multi-bit signals\
 D. The two keywords are interchangeable in a testbench
 
 ### Question 4
 
 What does the line `xor_gate dut (.a(a), .b(b), .y(y));` do?
 
-A. Runs the design once and stores its output
-B. Builds one copy of the design and connects the bench's signals to its ports by name
-C. Declares three new wires named a, b, and y
+A. Runs the design once and stores its output\
+B. Builds one copy of the design and connects the bench's signals to its ports by name\
+C. Declares three new wires named a, b, and y\
 D. Compares the design's output against the truth table
 
 ### Question 5
 
 How does `assign y = a ^ b;` differ from an assignment statement in a software program?
 
-A. It runs faster because hardware is parallel
-B. It executes exactly once, when the simulation starts
-C. It declares a permanent connection — y follows a ^ b continuously, like real wiring
+A. It runs faster because hardware is parallel\
+B. It executes exactly once, when the simulation starts\
+C. It declares a permanent connection — y follows a ^ b continuously, like real wiring\
 D. It only takes effect when the testbench calls it
 
 ### Question 6
 
 The simulation prints the XOR truth table. Which file did the printing, and why does that matter?
 
-A. The design — modules print their outputs automatically
-B. The simulator — it prints every signal by default
-C. The testbench — the design has no way to print or report; the bench is the only source of evidence about its behavior
+A. The design — modules print their outputs automatically\
+B. The simulator — it prints every signal by default\
+C. The testbench — the design has no way to print or report; the bench is the only source of evidence about its behavior\
 D. Both files print alternate lines
 
 ## Answer Explanations

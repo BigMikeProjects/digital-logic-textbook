@@ -83,54 +83,54 @@ Assigning a narrow value to a wider register has to fill the new bits. An unsign
 
 An unsigned 8-bit register holding `10100101` is assigned to an unsigned 16-bit register. What are the eight new bits?
 
-A. All zeros
-B. All ones
-C. A copy of the low eight bits
+A. All zeros\
+B. All ones\
+C. A copy of the low eight bits\
 D. Undefined until the register is written again
 
 ### Question 2
 
 A signed 8-bit register holding `10100101` (−91) is assigned to a signed 16-bit register. What are the eight new bits, and why?
 
-A. Zeros, because new bits are always cleared
-B. Ones — copies of the sign bit — so the value stays −91
-C. Ones, because 16-bit registers store negative numbers as ones
+A. Zeros, because new bits are always cleared\
+B. Ones — copies of the sign bit — so the value stays −91\
+C. Ones, because 16-bit registers store negative numbers as ones\
 D. Alternating ones and zeros
 
 ### Question 3
 
 What does the 16-bit signed register hold after `sw = s`, and what does `%d` print?
 
-A. `0000000010100101`, 165
-B. `1111111110100101`, −91
-C. `1111111110100101`, 65445
+A. `0000000010100101`, 165\
+B. `1111111110100101`, −91\
+C. `1111111110100101`, 65445\
 D. `0000000010100101`, −91
 
 ### Question 4
 
 Why does sign extension use ones rather than zeros for a negative value?
 
-A. Because ones are easier for hardware to copy
-B. Because the copied ones reproduce the old sign bit's negative weight in the wider register, preserving the value
-C. Because zeros would make the register overflow
+A. Because ones are easier for hardware to copy\
+B. Because the copied ones reproduce the old sign bit's negative weight in the wider register, preserving the value\
+C. Because zeros would make the register overflow\
 D. Because Verilog requires the top bit of every register to be 1
 
 ### Question 5
 
 The signed value `s` (−91) is assigned to an *unsigned* 16-bit register `sx`. What does `%d` print for `sx`, and why?
 
-A. −91, because the source was signed
-B. 165, because unsigned registers ignore the sign bit
-C. 65445, because the value was sign-extended (following the source) but read as unsigned (following the destination)
+A. −91, because the source was signed\
+B. 165, because unsigned registers ignore the sign bit\
+C. 65445, because the value was sign-extended (following the source) but read as unsigned (following the destination)\
 D. An error, because signed values cannot be assigned to unsigned registers
 
 ### Question 6
 
 Which statement summarizes the rule?
 
-A. Extension follows the destination; reading follows the source
-B. Extension follows the source; reading follows the destination
-C. Both extension and reading follow the destination
+A. Extension follows the destination; reading follows the source\
+B. Extension follows the source; reading follows the destination\
+C. Both extension and reading follow the destination\
 D. Both extension and reading follow the source
 
 ## Answer Explanations

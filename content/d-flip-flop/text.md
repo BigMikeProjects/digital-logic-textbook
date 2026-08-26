@@ -125,44 +125,44 @@ There is one instructive exception. If the simulation is set up so that $D$ chan
 
 **1.** What is the fundamental difference between a D latch and a D flip-flop?
 
-A) The latch stores one bit and the flip-flop stores two
-B) The latch is level-sensitive and tracks $D$ while its enable is high; the flip-flop is edge-triggered and samples $D$ only at a clock edge
-C) The flip-flop can store a 0 but the latch cannot
+A) The latch stores one bit and the flip-flop stores two\
+B) The latch is level-sensitive and tracks $D$ while its enable is high; the flip-flop is edge-triggered and samples $D$ only at a clock edge\
+C) The flip-flop can store a 0 but the latch cannot\
 D) The latch requires a clock and the flip-flop does not
 
 **2.** In the two-latch build of a positive-edge-triggered D flip-flop, when is the **capture** latch transparent?
 
-A) While the clock is high
-B) While the clock is low
-C) Only at the instant of the rising edge
+A) While the clock is high\
+B) While the clock is low\
+C) Only at the instant of the rising edge\
 D) Always — it is a straight-through path
 
 **3.** Why can no signal pass directly from $D$ to $Q$ in a single clock phase?
 
-A) Because the inverter between the two latches blocks it
-B) Because the output latch has a longer propagation delay
-C) Because the two latches are enabled by opposite polarities of the clock, so one is always closed
+A) Because the inverter between the two latches blocks it\
+B) Because the output latch has a longer propagation delay\
+C) Because the two latches are enabled by opposite polarities of the clock, so one is always closed\
 D) Because the flip-flop contains no feedback
 
 **4.** A positive-edge D flip-flop has $Q = 0$. While the clock is high, $D$ changes $0 \to 1 \to 0 \to 1$. What is $Q$ at the end of that high phase?
 
-A) 1
-B) 0
-C) It toggles with each change on $D$
+A) 1\
+B) 0\
+C) It toggles with each change on $D$\
 D) Undefined
 
 **5.** A D latch (enable driven by the clock) and a positive-edge D flip-flop receive the same $D$ and clock. Under what condition do their outputs agree everywhere?
 
-A) They can never agree, since one is a latch and the other a flip-flop
-B) When $D$ changes only while the clock is high
-C) When $D$ changes only while the clock is low, so nothing changes inside a transparent window
+A) They can never agree, since one is a latch and the other a flip-flop\
+B) When $D$ changes only while the clock is high\
+C) When $D$ changes only while the clock is low, so nothing changes inside a transparent window\
 D) Only when $D$ is held constant for the entire time
 
 **6.** To determine the output of a positive-edge D flip-flop from a timing diagram, what do you read?
 
-A) The value of $D$ at the midpoint of each high phase
-B) The value of $D$ just before each rising edge
-C) The average value of $D$ over each clock period
+A) The value of $D$ at the midpoint of each high phase\
+B) The value of $D$ just before each rising edge\
+C) The average value of $D$ over each clock period\
 D) The value of $D$ just after each falling edge
 
 **7.** In the Verilog model below, what does the `posedge` keyword establish?
@@ -171,16 +171,16 @@ D) The value of $D$ just after each falling edge
 always @(posedge CLK) Q <= D;
 ```
 
-A) That `Q` is a wire rather than a register
-B) That the block re-evaluates whenever `CLK` or `D` changes
-C) That the block executes only on the rising transition of `CLK`, making the storage edge-triggered
+A) That `Q` is a wire rather than a register\
+B) That the block re-evaluates whenever `CLK` or `D` changes\
+C) That the block executes only on the rising transition of `CLK`, making the storage edge-triggered\
 D) That `Q` is reset to 0 at the start of simulation
 
 **8.** A narrow glitch appears on $D$ entirely within one clock-high phase. What happens?
 
-A) Both a latch and a flip-flop capture it
-B) Neither device responds to it
-C) A latch passes it through to its output; the edge-triggered flip-flop never sees it, because its capture latch is closed during the high phase
+A) Both a latch and a flip-flop capture it\
+B) Neither device responds to it\
+C) A latch passes it through to its output; the edge-triggered flip-flop never sees it, because its capture latch is closed during the high phase\
 D) It forces the flip-flop into an undefined state
 
 ## Answers

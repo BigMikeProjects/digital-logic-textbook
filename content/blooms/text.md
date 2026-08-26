@@ -168,36 +168,36 @@ The course is designed to move you upward. Expect that progression. Early topics
 
 Which task best represents the "analyze" level of Bloom's taxonomy in digital logic?
 
-A. Memorizing the truth table for an AND gate  
-B. Determining the function of an unfamiliar gate-level circuit  
-C. Naming the symbol for an XOR gate  
+A. Memorizing the truth table for an AND gate\
+B. Determining the function of an unfamiliar gate-level circuit\
+C. Naming the symbol for an XOR gate\
 D. Copying a Verilog statement from an example
 
 ### Question 2
 
 Why is "create" an important level in a digital logic course?
 
-A. It means students no longer need basic facts  
-B. It means students can synthesize circuits that solve new problems  
-C. It means every design has only one correct implementation  
+A. It means students no longer need basic facts\
+B. It means students can synthesize circuits that solve new problems\
+C. It means every design has only one correct implementation\
 D. It means transistor-level details can be ignored
 
 ### Question 3
 
 A truth table, Boolean expression, Verilog assignment, and schematic can all describe the same circuit. What idea does this illustrate?
 
-A. Abstraction levels  
-B. Decimal notation  
-C. Fanout  
+A. Abstraction levels\
+B. Decimal notation\
+C. Fanout\
 D. Propagation delay
 
 ### Question 4
 
 Two circuits produce the same output for every input combination. Why might an engineer still prefer one over the other?
 
-A. Equivalent circuits are always identical internally  
-B. Only the circuit with more gates can be correct  
-C. They may differ in cost, delay, power, readability, or scalability  
+A. Equivalent circuits are always identical internally\
+B. Only the circuit with more gates can be correct\
+C. They may differ in cost, delay, power, readability, or scalability\
 D. Digital circuits cannot be compared once they work
 
 ## Answer Explanations

@@ -45,39 +45,39 @@ A schematic is communication: it encodes a net list, and every convention exists
 ## Review Questions
 
 **1. Two wires cross on a schematic with no junction dot. What does this mean?**
-A. The wires are connected
-B. The wires are not connected — they merely cross
-C. The connection is optional
+A. The wires are connected\
+B. The wires are not connected — they merely cross\
+C. The connection is optional\
 D. The schematic contains an error
 
 **2. Why should a four-way junction be staggered into two T-junctions?**
-A. Four-way junctions are electrically impossible
-B. A single dot with four wires is ambiguous and fragile — the stagger makes each connection unmistakable
-C. T-junctions use less wire
+A. Four-way junctions are electrically impossible\
+B. A single dot with four wires is ambiguous and fragile — the stagger makes each connection unmistakable\
+C. T-junctions use less wire\
 D. Staggering changes the net list to a simpler one
 
 **3. One gate output drives the inputs of three other gates. What is this called?**
-A. A fan-in of three
-B. A fan-out of three
-C. A three-way junction
+A. A fan-in of three\
+B. A fan-out of three\
+C. A three-way junction\
 D. A feedback path
 
 **4. An AND-shaped symbol has a small circle on its output. What is the gate?**
-A. An AND gate — the circle is decorative
-B. A NAND gate — the bubble means the output is inverted
-C. An OR gate
+A. An AND gate — the circle is decorative\
+B. A NAND gate — the bubble means the output is inverted\
+C. An OR gate\
 D. A buffer
 
 **5. A clock signal connects to many components across a large schematic. What is the recommended way to draw it?**
-A. One long wire snaking to every component
-B. Give the net a name and label each connection point — the wire is understood, not drawn
-C. Omit the clock from the schematic entirely
+A. One long wire snaking to every component\
+B. Give the net a name and label each connection point — the wire is understood, not drawn\
+C. Omit the clock from the schematic entirely\
 D. Draw the clock in a different color
 
 **6. Schematics are normally drawn reading left to right. What is the natural exception?**
-A. Power supply wires
-B. Feedback paths, which genuinely run backward
-C. Any gate with more than two inputs
+A. Power supply wires\
+B. Feedback paths, which genuinely run backward\
+C. Any gate with more than two inputs\
 D. Wires longer than the page width
 
 ## Answer Explanations

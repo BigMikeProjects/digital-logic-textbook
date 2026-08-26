@@ -82,39 +82,39 @@ Two's complement represents all three kinds of signed values with one clean sche
 ## Review Questions
 
 **1. What is an advantage of two's complement regarding zero?**
-A. Zero has two representations, one positive and one negative
-B. Zero has exactly one representation — the all-zeros pattern
-C. Zero cannot be represented, saving a pattern
+A. Zero has two representations, one positive and one negative\
+B. Zero has exactly one representation — the all-zeros pattern\
+C. Zero cannot be represented, saving a pattern\
 D. Zero is represented by the all-ones pattern
 
 **2. Using the weighted view of the sign bit, what is the value of the 4-bit pattern $1101_2$?**
-A. $-3$
-B. $13$
-C. $-5$
+A. $-3$\
+B. $13$\
+C. $-5$\
 D. $-13$
 
 **3. What is the two's complement encoding of $-6$ in 4 bits?**
-A. `0110`
-B. `1001`
-C. `1010`
+A. `0110`\
+B. `1001`\
+C. `1010`\
 D. `1110`
 
 **4. The $x - 2^n$ check reads a pattern as unsigned and subtracts $2^n$. Checking the 5-bit pattern `11001`: unsigned it is 25, so its signed value is:**
-A. $-7$, because $25 - 32 = -7$
-B. $+25$, because the check changes nothing
-C. $-25$, because the sign bit negates the reading
+A. $-7$, because $25 - 32 = -7$\
+B. $+25$, because the check changes nothing\
+C. $-25$, because the sign bit negates the reading\
 D. $7$, because $32 - 25 = 7$
 
 **5. How is a POSITIVE number like $+5$ encoded in two's complement?**
-A. Magnitude → flip every bit → add 1
-B. Just convert the magnitude to binary — the complement steps are skipped, and the MSB is 0
-C. Set the sign bit to 1 and append the magnitude
+A. Magnitude → flip every bit → add 1\
+B. Just convert the magnitude to binary — the complement steps are skipped, and the MSB is 0\
+C. Set the sign bit to 1 and append the magnitude\
 D. Subtract it from $2^n$
 
 **6. What is the range of values a 6-bit two's complement number can represent?**
-A. $-32$ to $+31$
-B. $-31$ to $+32$
-C. $-64$ to $+63$
+A. $-32$ to $+31$\
+B. $-31$ to $+32$\
+C. $-64$ to $+63$\
 D. $0$ to $63$
 
 ## Answer Explanations

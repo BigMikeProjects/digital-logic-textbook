@@ -99,45 +99,45 @@ Hexadecimal and decimal convert through two mirror-image procedures. **Hex → d
 ## Review Questions
 
 **1. What is the decimal value of the hexadecimal number `A9`?**
-A. 109
-B. 169
-C. 190
+A. 109\
+B. 169\
+C. 190\
 D. 259
 
 **2. When converting a hex number to decimal by positional expansion, what are the place weights, starting from the rightmost digit?**
-A. $1, 2, 4, 8, \dots$ (powers of 2)
-B. $1, 10, 100, \dots$ (powers of 10)
-C. $1, 16, 256, \dots$ (powers of 16)
+A. $1, 2, 4, 8, \dots$ (powers of 2)\
+B. $1, 10, 100, \dots$ (powers of 10)\
+C. $1, 16, 256, \dots$ (powers of 16)\
 D. $16, 256, 4096, \dots$ (starting at $16^1$)
 
 **3. Converting decimal `47` to hex by repeated division by 16, what are the remainders and how are they read?**
-A. Remainders 2 then 15, read top-down, giving `2F`
-B. Remainders 15 then 2, read bottom-up, giving `2F`
-C. Remainders 4 then 7, read bottom-up, giving `47`
+A. Remainders 2 then 15, read top-down, giving `2F`\
+B. Remainders 15 then 2, read bottom-up, giving `2F`\
+C. Remainders 4 then 7, read bottom-up, giving `47`\
 D. Remainders 15 then 2, read top-down, giving `F2`
 
 **4. In the repeated-division method, what tells you to stop dividing?**
-A. When the remainder becomes 0
-B. When the quotient becomes 0
-C. When you have exactly two digits
+A. When the remainder becomes 0\
+B. When the quotient becomes 0\
+C. When you have exactly two digits\
 D. When the remainder exceeds 15
 
 **5. Why does the video recommend converting through hexadecimal rather than binary?**
-A. Binary cannot represent numbers larger than 255
-B. Dividing by 16 takes far fewer steps than dividing by 2
-C. Hex is the only base a computer can store
+A. Binary cannot represent numbers larger than 255\
+B. Dividing by 16 takes far fewer steps than dividing by 2\
+C. Hex is the only base a computer can store\
 D. Decimal-to-binary conversion gives different answers
 
 **6. A student converts a decimal number to `1C8` and wants to check the answer. What is the fastest verification, and what should it produce?**
-A. Divide `1C8` by 16 again; it should give 0
-B. Expand `1C8` in base 16: $256 + 192 + 8 = 456$, matching the original decimal
-C. Convert `1C8` to binary; it should have exactly 8 bits
+A. Divide `1C8` by 16 again; it should give 0\
+B. Expand `1C8` in base 16: $256 + 192 + 8 = 456$, matching the original decimal\
+C. Convert `1C8` to binary; it should have exactly 8 bits\
 D. Add the digits $1 + 12 + 8 = 21$; it should equal the original
 
 **7. During repeated division by 16, a step produces quotient 46 and remainder 14. What goes in the digit column for that step?**
-A. `14`
-B. `E`
-C. `F`
+A. `14`\
+B. `E`\
+C. `F`\
 D. `46`
 
 ## Answer Explanations

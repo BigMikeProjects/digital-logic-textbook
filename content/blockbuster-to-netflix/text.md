@@ -80,36 +80,36 @@ Analog systems store information as a continuous physical signal, so they degrad
 
 Why can a DVD be copied perfectly, while a copy of a VHS tape is always a little worse than the original?
 
-A. DVDs are made of more durable material  
-B. A DVD stores numbers, and the numbers can be read exactly and rewritten exactly; a tape stores a continuous physical signal whose flaws are copied and compounded  
-C. DVD copying machines are more precise than VHS ones  
+A. DVDs are made of more durable material\
+B. A DVD stores numbers, and the numbers can be read exactly and rewritten exactly; a tape stores a continuous physical signal whose flaws are copied and compounded\
+C. DVD copying machines are more precise than VHS ones\
 D. VHS tapes hold more information than DVDs
 
 ### Question 2
 
 A movie plays flawlessly from a lightly scratched DVD, but a deeper scratch makes it freeze completely. What does this illustrate?
 
-A. Digital systems degrade gradually, like analog ones  
-B. DVDs were poorly designed  
-C. Digital systems tolerate imperfection up to a threshold, then fail suddenly — the digital cliff  
+A. Digital systems degrade gradually, like analog ones\
+B. DVDs were poorly designed\
+C. Digital systems tolerate imperfection up to a threshold, then fail suddenly — the digital cliff\
 D. Scratches convert digital information into analog information
 
 ### Question 3
 
 Early Netflix beat Blockbuster *without* streaming. What was its key move?
 
-A. Building its own delivery trucks  
-B. Digitizing the choosing of movies (an online catalog) while using the existing postal system for physical delivery  
-C. Inventing better compression than its competitors  
+A. Building its own delivery trucks\
+B. Digitizing the choosing of movies (an online catalog) while using the existing postal system for physical delivery\
+C. Inventing better compression than its competitors\
 D. Opening more stores than Blockbuster
 
 ### Question 4
 
 Streaming services keep copies of popular shows on servers near each city. Which older idea is this a digital version of?
 
-A. Blockbuster keeping popular movies on shelves in local stores, close to customers  
-B. VHS tapes storing video as a magnetic signal  
-C. Mailing DVDs in envelopes  
+A. Blockbuster keeping popular movies on shelves in local stores, close to customers\
+B. VHS tapes storing video as a magnetic signal\
+C. Mailing DVDs in envelopes\
 D. Paying late fees to encourage returns
 
 ## Answer Explanations

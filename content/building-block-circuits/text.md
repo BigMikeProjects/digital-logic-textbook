@@ -87,39 +87,39 @@ in schematics to organize a design. Finally, every block in this section is cove
 ## Review Questions
 
 **1. What best describes a "building block circuit" as used in this section?**
-A. A single logic gate
-B. A reusable mid-level combinational component assembled from basic gates and used as a part in larger designs
-C. A sequential circuit that stores state
+A. A single logic gate\
+B. A reusable mid-level combinational component assembled from basic gates and used as a part in larger designs\
+C. A sequential circuit that stores state\
 D. A physical breadboard
 
 **2. Treating a building block as a "black box" means you rely on which of the following?**
-A. The exact transistor layout inside it
-B. Its input/output behavior, without worrying about the internal gates
-C. Its physical size on the chip
+A. The exact transistor layout inside it\
+B. Its input/output behavior, without worrying about the internal gates\
+C. Its physical size on the chip\
 D. The color of its schematic symbol
 
 **3. Which two blocks form a dual pair, where one operation undoes the other?**
-A. Comparator and adder
-B. Parity circuit and multiplexer
-C. Encoder and decoder
+A. Comparator and adder\
+B. Parity circuit and multiplexer\
+C. Encoder and decoder\
 D. Tri-state device and comparator
 
 **4. Why is the adder not covered as one of the blocks in this section?**
-A. It is not a building block circuit
-B. It is sequential, not combinational
-C. It is important and large enough to warrant its own section
+A. It is not a building block circuit\
+B. It is sequential, not combinational\
+C. It is important and large enough to warrant its own section\
 D. It cannot be drawn as a schematic symbol
 
 **5. Which building block is described as having a distinctive trapezoidal schematic symbol?**
-A. The decoder
-B. The comparator
-C. The multiplexer
+A. The decoder\
+B. The comparator\
+C. The multiplexer\
 D. The parity circuit
 
 **6. What is the four-part cadence used to cover each block in this section?**
-A. Functionality, gate/transistor-level construction, applications, and Verilog
-B. History, cost, packaging, and testing
-C. Truth table, K-map, NAND realization, and layout
+A. Functionality, gate/transistor-level construction, applications, and Verilog\
+B. History, cost, packaging, and testing\
+C. Truth table, K-map, NAND realization, and layout\
 D. Inputs, clock, reset, and output
 
 ## Answer Explanations

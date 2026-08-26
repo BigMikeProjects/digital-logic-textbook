@@ -116,39 +116,39 @@ Instantiation is how Verilog builds hierarchy: define a module once, then place 
 ## Review Questions
 
 **1. In the line `half_adder ha0 (.a(a), .b(b), .sum(s1), .carry(c1));`, what are `half_adder` and `ha0` respectively?**
-A. The module name (which part to place) and the instance name (this copy's name)
-B. The instance name and the module name
-C. Two different module types
+A. The module name (which part to place) and the instance name (this copy's name)\
+B. The instance name and the module name\
+C. Two different module types\
 D. The input and output of the circuit
 
 **2. Why does each placed copy need an instance name?**
-A. Verilog requires all lines to start with two words
-B. With more than one copy of the same module, the description must distinguish which copy is meant
-C. The instance name sets the module's propagation delay
+A. Verilog requires all lines to start with two words\
+B. With more than one copy of the same module, the description must distinguish which copy is meant\
+C. The instance name sets the module's propagation delay\
 D. Instance names are optional decoration
 
 **3. What does the hookup `.sum(s1)` mean?**
-A. Wire s1 is renamed to sum
-B. The copy's `sum` port connects to the outer module's wire `s1`
-C. The value of sum is always 1
+A. Wire s1 is renamed to sum\
+B. The copy's `sum` port connects to the outer module's wire `s1`\
+C. The value of sum is always 1\
 D. s1 is an input to the half adder
 
 **4. The wires `s1`, `c1`, `c2` are declared inside `full_adder`. Who can see them?**
-A. Any module anywhere in the design
-B. Only the code inside `full_adder` — from outside, the ports are the only surface
-C. Only the testbench
+A. Any module anywhere in the design\
+B. Only the code inside `full_adder` — from outside, the ports are the only surface\
+C. Only the testbench\
 D. Only `ha0`, but not `ha1`
 
 **5. Named port mapping means `.b(cin), .a(s1)` would behave differently from `.a(s1), .b(cin)`. True or false, and why?**
-A. True — connections are assigned in the order written
-B. True — but only for output ports
-C. False — hookups are by name, so their order in the list never matters
+A. True — connections are assigned in the order written\
+B. True — but only for output ports\
+C. False — hookups are by name, so their order in the list never matters\
 D. False — because a and b are interchangeable in any circuit
 
 **6. How do the two instance lines differ from two calls to a software function?**
-A. They don't — instantiation is Verilog's word for a function call
-B. Each instance is a separate physical copy of the circuit; both exist and compute at every instant
-C. Instances run one after the other, like statements
+A. They don't — instantiation is Verilog's word for a function call\
+B. Each instance is a separate physical copy of the circuit; both exist and compute at every instant\
+C. Instances run one after the other, like statements\
 D. The second instance reuses the first one's gates to save hardware
 
 ## Answer Explanations

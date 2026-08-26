@@ -135,45 +135,45 @@ Use the interactive tool in the graphics panel to check your work!
 ## Review Questions
 
 **1. What is the main advantage of using complement representation for negative numbers?**
-A. It uses fewer bits
-B. It allows subtraction using only addition circuits
-C. It's easier to read
+A. It uses fewer bits\
+B. It allows subtraction using only addition circuits\
+C. It's easier to read\
 D. It works only with even numbers
 
 **2. To calculate the nine's complement of a number, what do you do to each digit?**
-A. Add 9 to each digit
-B. Multiply each digit by 9
-C. Subtract each digit from 9
+A. Add 9 to each digit\
+B. Multiply each digit by 9\
+C. Subtract each digit from 9\
 D. Divide each digit by 9
 
 **3. What is the nine's complement of 318?**
-A. 318
-B. 681
-C. 682
+A. 318\
+B. 681\
+C. 682\
 D. 691
 
 **4. How do you convert from nine's complement to ten's complement?**
-A. Subtract 1
-B. Add 1
-C. Multiply by 10
+A. Subtract 1\
+B. Add 1\
+C. Multiply by 10\
 D. Divide by 9
 
 **5. Why does nine's complement calculation never require borrowing?**
-A. Because 9 is always greater than or equal to any single digit
-B. Because we only use small numbers
-C. Because borrowing is optional
+A. Because 9 is always greater than or equal to any single digit\
+B. Because we only use small numbers\
+C. Because borrowing is optional\
 D. Because we use calculators
 
 **6. Using ten's complement, what is 725 − 318?**
-A. 1407
-B. 407
-C. 317
+A. 1407\
+B. 407\
+C. 317\
 D. 682
 
 **7. What is the ten's complement of 421?**
-A. 578
-B. 579
-C. 580
+A. 578\
+B. 579\
+C. 580\
 D. 421
 
 ## Answer Explanations

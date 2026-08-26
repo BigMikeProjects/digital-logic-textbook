@@ -47,39 +47,39 @@ Boolean algebra began with George Boole in 1854 as a way to apply mathematical r
 ## Review Questions
 
 **1. What was George Boole's original motivation for developing Boolean algebra in 1854?**
-A. To design the first electronic computers
-B. To apply the rigor of mathematics to human thought and logic
-C. To minimize the number of gates in a switching circuit
+A. To design the first electronic computers\
+B. To apply the rigor of mathematics to human thought and logic\
+C. To minimize the number of gates in a switching circuit\
 D. To create a visual diagram for logical relationships
 
 **2. What did Claude Shannon establish in his 1937 master's thesis?**
-A. That Boolean algebra precisely describes switching circuits (logic gates)
-B. That Karnaugh maps could be solved by computer
-C. That ten-variable functions cannot be minimized exactly
+A. That Boolean algebra precisely describes switching circuits (logic gates)\
+B. That Karnaugh maps could be solved by computer\
+C. That ten-variable functions cannot be minimized exactly\
 D. That Boolean algebra was mathematically inconsistent
 
 **3. What is the key innovation of the Karnaugh map's layout compared to earlier diagrams?**
-A. It can represent functions of any number of variables
-B. It eliminates the need for Boolean algebra entirely
-C. Visual adjacency between cells corresponds to logical adjacency (a one-variable difference)
+A. It can represent functions of any number of variables\
+B. It eliminates the need for Boolean algebra entirely\
+C. Visual adjacency between cells corresponds to logical adjacency (a one-variable difference)\
 D. It stores the full truth table in hardware
 
 **4. Why is the Quine–McCluskey algorithm impractical for large functions?**
-A. It is only a heuristic and gives wrong answers
-B. It cannot be implemented in software
-C. It requires a Karnaugh map to be drawn first
+A. It is only a heuristic and gives wrong answers\
+B. It cannot be implemented in software\
+C. It requires a Karnaugh map to be drawn first\
 D. It scales exponentially and becomes impractical beyond about ten variables
 
 **5. In modern FPGA-based design, why is hand minimization of small functions often unnecessary?**
-A. Boolean algebra is no longer used in industry
-B. Small functions are dropped directly into lookup tables (LUTs) that store the full truth table
-C. Quine–McCluskey runs automatically on every circuit
+A. Boolean algebra is no longer used in industry\
+B. Small functions are dropped directly into lookup tables (LUTs) that store the full truth table\
+C. Quine–McCluskey runs automatically on every circuit\
 D. Karnaugh maps have been mathematically disproven
 
 **6. According to this section, why are Karnaugh maps still taught today?**
-A. Because engineers minimize circuits by hand on the job daily
-B. Because synthesis tools cannot perform logic minimization
-C. Because the ideas they make concrete — prime implicants, grouping, minimization, and the link to Boolean algebra — are foundational to understanding digital logic
+A. Because engineers minimize circuits by hand on the job daily\
+B. Because synthesis tools cannot perform logic minimization\
+C. Because the ideas they make concrete — prime implicants, grouping, minimization, and the link to Boolean algebra — are foundational to understanding digital logic\
 D. Because lookup tables are limited to two variables
 
 ## Answer Explanations

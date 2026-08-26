@@ -175,46 +175,46 @@ comparison — signed comparison comes later.
 ## Review Questions
 
 **1. In a multi-bit magnitude comparison, which bit position determines the result?**
-A. The least significant bit
-B. The most significant bit where $A$ and $B$ differ
-C. The most significant bit, always
+A. The least significant bit\
+B. The most significant bit where $A$ and $B$ differ\
+C. The most significant bit, always\
 D. The bit position with the largest number of 1s
 
 **2. What does the output $x_i$ of an equivalence (XNOR) gate indicate?**
-A. That $A_i$ is greater than $B_i$
-B. That $A_i$ and $B_i$ differ
-C. That $A_i$ and $B_i$ match
+A. That $A_i$ is greater than $B_i$\
+B. That $A_i$ and $B_i$ differ\
+C. That $A_i$ and $B_i$ match\
 D. That all lower bits have been compared
 
 **3. In the greater-than cascade, what is the role of the $x$ terms multiplying a bit's
 $A_i \cdot \overline{B_i}$ product?**
-A. They invert the comparison at that bit
-B. They enable that position only if every higher bit tied
-C. They convert the result to unsigned
+A. They invert the comparison at that bit\
+B. They enable that position only if every higher bit tied\
+C. They convert the result to unsigned\
 D. They select between $A$ and $B$
 
 **4. Given $A = 1010$ and $B = 1001$, which term of the greater-than cascade asserts?**
-A. $A_3 \overline{B_3}$
-B. $x_3 A_2 \overline{B_2}$
-C. $x_3 x_2 A_1 \overline{B_1}$
+A. $A_3 \overline{B_3}$\
+B. $x_3 A_2 \overline{B_2}$\
+C. $x_3 x_2 A_1 \overline{B_1}$\
 D. None — the numbers are equal
 
 **5. How is the $A < B$ output most efficiently produced?**
-A. With a second AND-OR cascade mirroring the greater-than logic
-B. By complementing the $A > B$ output alone
-C. As $\overline{(A{>}B) + (A{=}B)}$ — neither greater nor equal
+A. With a second AND-OR cascade mirroring the greater-than logic\
+B. By complementing the $A > B$ output alone\
+C. As $\overline{(A{>}B) + (A{=}B)}$ — neither greater nor equal\
 D. By comparing the least significant bits
 
 **6. Why does the Verilog `always` block assign $0$ to all three outputs before the `if` chain?**
-A. To make the code shorter
-B. So that no path leaves an output un-assigned, which would infer a latch
-C. Because `reg` outputs must be initialized to zero
+A. To make the code shorter\
+B. So that no path leaves an output un-assigned, which would infer a latch\
+C. Because `reg` outputs must be initialized to zero\
 D. To force the outputs to be one-hot
 
 **7. What does the expression `&(a ~^ b)` compute?**
-A. Whether $a$ is greater than $b$
-B. The bitwise AND of $a$ and $b$
-C. Equality — a bitwise XNOR of the vectors, AND-reduced to a single bit
+A. Whether $a$ is greater than $b$\
+B. The bitwise AND of $a$ and $b$\
+C. Equality — a bitwise XNOR of the vectors, AND-reduced to a single bit\
 D. The number of bit positions where $a$ and $b$ differ
 
 ## Answer Explanations

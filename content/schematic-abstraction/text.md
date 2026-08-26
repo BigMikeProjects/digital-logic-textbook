@@ -79,54 +79,54 @@ A schematic is one implementation of a function, not the only one. Read literall
 
 Read literally, $F = \bar{A}B + CD$ needs which gates?
 
-A. One inverter, two AND gates, one OR gate
-B. Two inverters and two OR gates
-C. Three NAND gates
+A. One inverter, two AND gates, one OR gate\
+B. Two inverters and two OR gates\
+C. Three NAND gates\
 D. One AND gate and one OR gate
 
 ### Question 2
 
 In CMOS, why does a two-input AND gate cost 6 transistors when a NAND costs 4?
 
-A. AND gates have wider transistors
-B. An AND is a NAND followed by a 2-transistor inverter
-C. AND gates need a second power supply
+A. AND gates have wider transistors\
+B. An AND is a NAND followed by a 2-transistor inverter\
+C. AND gates need a second power supply\
 D. The extra transistors buffer the inputs
 
 ### Question 3
 
 What is the transistor count of the literal inverter–AND–AND–OR implementation of $F$?
 
-A. 14
-B. 16
-C. 20
+A. 14\
+B. 16\
+C. 20\
 D. 24
 
 ### Question 4
 
 In the all-NAND version, why can the OR gate be replaced by a NAND drawn as an OR shape with input bubbles?
 
-A. Because NAND gates are faster than OR gates
-B. Because by De Morgan's theorem an OR of two signals equals the NAND of their complements, and the input bubbles supply the complements
-C. Because the OR gate was redundant
+A. Because NAND gates are faster than OR gates\
+B. Because by De Morgan's theorem an OR of two signals equals the NAND of their complements, and the input bubbles supply the complements\
+C. Because the OR gate was redundant\
 D. Because bubbles have no effect on the function
 
 ### Question 5
 
 Along each internal wire of the NAND version, an output bubble meets an input bubble. What is the effect?
 
-A. The signal is inverted once
-B. The two inversions cancel, so the signal passes through unchanged
-C. An extra inverter is required
+A. The signal is inverted once\
+B. The two inversions cancel, so the signal passes through unchanged\
+C. An extra inverter is required\
 D. The wire must be removed
 
 ### Question 6
 
 The NAND-NAND implementation uses 14 transistors instead of 20. Where did the six savings come from?
 
-A. The inverter on $A$ was eliminated
-B. NAND gates use fewer transistors than inverters
-C. The three hidden output inverters inside the AND, AND, and OR gates were no longer needed
+A. The inverter on $A$ was eliminated\
+B. NAND gates use fewer transistors than inverters\
+C. The three hidden output inverters inside the AND, AND, and OR gates were no longer needed\
 D. One of the gates was removed
 
 ## Answer Explanations

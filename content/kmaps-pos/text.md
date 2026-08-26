@@ -66,39 +66,39 @@ A Karnaugh map reads out sum-of-products naturally because grouping is a union o
 ## Review Questions
 
 **1. When using a Karnaugh map to find a minimal product of sums, which cells do you group?**
-A. The `1` cells, as in SOP minimization
-B. The `0` cells
-C. Only the don't-care cells
+A. The `1` cells, as in SOP minimization\
+B. The `0` cells\
+C. Only the don't-care cells\
 D. Every cell on the map
 
 **2. Why does circling the zeros of $F$ give a minimal expression for $\bar{F}$?**
-A. Because zeros are always grouped in pairs
-B. Because the zeros of $F$ are exactly the ones of $\bar{F}$
-C. Because $\bar{F}$ has no don't-cares
+A. Because zeros are always grouped in pairs\
+B. Because the zeros of $F$ are exactly the ones of $\bar{F}$\
+C. Because $\bar{F}$ has no don't-cares\
 D. Because a product of sums has no minterms
 
 **3. After reading a minimal SOP for $\bar{F}$ off the map, what converts it into a minimal POS for $F$?**
-A. Adding an extra inverter to each input
-B. Re-circling the ones
-C. Complementing the result and applying DeMorgan's theorem
+A. Adding an extra inverter to each input\
+B. Re-circling the ones\
+C. Complementing the result and applying DeMorgan's theorem\
 D. Increasing the size of every group
 
 **4. A group of zeros holds $B = 0$ and $D = 0$ constant while $A$ and $C$ vary. What product term does it contribute to $\bar{F}$?**
-A. $B\,D$
-B. $\bar{B}\bar{D}$
-C. $B + D$
+A. $B\,D$\
+B. $\bar{B}\bar{D}$\
+C. $B + D$\
 D. $\bar{A}\bar{C}$
 
 **5. Applying DeMorgan's theorem to the term $\bar{A}\bar{B}$ from $\bar{F}$ produces which sum term in $F$?**
-A. $\bar{A} + \bar{B}$
-B. $A\,B$
-C. $A + B$
+A. $\bar{A} + \bar{B}$\
+B. $A\,B$\
+C. $A + B$\
 D. $\bar{A}\,\bar{B}$
 
 **6. How are don't-care cells used when circling zeros for a POS minimization?**
-A. They must all be covered, like the zeros
-B. They are included only when they make a group larger, and ignored otherwise
-C. They are always left out of every group
+A. They must all be covered, like the zeros\
+B. They are included only when they make a group larger, and ignored otherwise\
+C. They are always left out of every group\
 D. They are grouped separately from the zeros
 
 ## Answer Explanations

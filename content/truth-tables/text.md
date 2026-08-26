@@ -155,60 +155,81 @@ A truth table lists every possible input combination and the output for each one
 
 ## Review Questions
 
-1. A truth table has four Boolean inputs. How many input rows does it need?
-   A. 4
-   B. 8
-   C. 16
-   D. 32
+### Question 1
 
-2. In a three-input table ordered as $A,B,C$, which input normally changes fastest?
-   A. $A$
-   B. $B$
-   C. $C$
-   D. All inputs change at the same rate
+A truth table has four Boolean inputs. How many input rows does it need?
 
-3. In Boolean algebra, what does the expression $A + B$ mean?
-   A. $A$ AND $B$
-   B. $A$ OR $B$
-   C. $A$ XOR $B$
-   D. $A$ NOT $B$
+A. 4\
+B. 8\
+C. 16\
+D. 32
 
-4. Which row makes the product term $\bar{A}B\bar{C}$ equal to 1?
-   A. $000$
-   B. $010$
-   C. $101$
-   D. $111$
+### Question 2
 
-5. What is the most useful way to think about product-of-sums expressions?
-   A. They identify where the output must be 0
-   B. They can only describe XOR circuits
-   C. They always require fewer gates than SOP
-   D. They ignore complemented variables
+In a three-input table ordered as $A,B,C$, which input normally changes fastest?
 
-6. Why are helper columns useful when building a truth table?
-   A. They reduce the number of input rows
-   B. They allow inputs to be listed in any order
-   C. They break a larger expression into smaller pieces that are easier to evaluate
-   D. They replace the need for Boolean expressions
+A. $A$\
+B. $B$\
+C. $C$\
+D. All inputs change at the same rate
 
-7. A specification says: "unlock the door when the badge is valid and the lockdown switch is not on." With badge $B$ and lockdown $L$, which expression matches, and on which single row is it 1?
-   A. $B + \bar{L}$, true on three rows
-   B. $B \cdot \bar{L}$, true on row $B=1, L=0$
-   C. $\bar{B} \cdot L$, true on row $B=0, L=1$
-   D. $B \cdot L$, true on row $B=1, L=1$
+### Question 3
+
+In Boolean algebra, what does the expression $A + B$ mean?
+
+A. $A$ AND $B$\
+B. $A$ OR $B$\
+C. $A$ XOR $B$\
+D. $A$ NOT $B$
+
+### Question 4
+
+Which row makes the product term $\bar{A}B\bar{C}$ equal to 1?
+
+A. $000$\
+B. $010$\
+C. $101$\
+D. $111$
+
+### Question 5
+
+What is the most useful way to think about product-of-sums expressions?
+
+A. They identify where the output must be 0\
+B. They can only describe XOR circuits\
+C. They always require fewer gates than SOP\
+D. They ignore complemented variables
+
+### Question 6
+
+Why are helper columns useful when building a truth table?
+
+A. They reduce the number of input rows\
+B. They allow inputs to be listed in any order\
+C. They break a larger expression into smaller pieces that are easier to evaluate\
+D. They replace the need for Boolean expressions
+
+### Question 7
+
+A specification says: "unlock the door when the badge is valid and the lockdown switch is not on." With badge $B$ and lockdown $L$, which expression matches, and on which single row is it 1?
+
+A. $B + \bar{L}$, true on three rows\
+B. $B \cdot \bar{L}$, true on row $B=1, L=0$\
+C. $\bar{B} \cdot L$, true on row $B=0, L=1$\
+D. $B \cdot L$, true on row $B=1, L=1$
 
 ## Answer Explanations
 
-1. **C.** Four inputs give $2^4 = 16$ possible input combinations, so the table needs 16 input rows.
+**1. C.** Four inputs give $2^4 = 16$ possible input combinations, so the table needs 16 input rows.
 
-2. **C.** In the usual $A,B,C$ order, $C$ is the least-significant bit, so it alternates every row.
+**2. C.** In the usual $A,B,C$ order, $C$ is the least-significant bit, so it alternates every row.
 
-3. **B.** In Boolean algebra, plus means OR. The expression $A + B$ is true when $A$ is 1, $B$ is 1, or both are 1.
+**3. B.** In Boolean algebra, plus means OR. The expression $A + B$ is true when $A$ is 1, $B$ is 1, or both are 1.
 
-4. **B.** The term $\bar{A}B\bar{C}$ requires $A=0$, $B=1$, and $C=0$, which is row $010$.
+**4. B.** The term $\bar{A}B\bar{C}$ requires $A=0$, $B=1$, and $C=0$, which is row $010$.
 
-5. **A.** POS is usually easiest to read by finding where each OR term becomes 0, then ANDing the columns together.
+**5. A.** POS is usually easiest to read by finding where each OR term becomes 0, then ANDing the columns together.
 
-6. **C.** Helper columns let you evaluate one term or subcircuit at a time, then combine those intermediate results for the final output.
+**6. C.** Helper columns let you evaluate one term or subcircuit at a time, then combine those intermediate results for the final output.
 
-7. **B.** "Badge valid AND lockdown not on" is $B \cdot \bar{L}$, a product term mentioning both variables, so it selects exactly one row: $B=1, L=0$. Choice A uses OR, which would unlock the door in three situations, including lockdown-off with no badge at all. Choice C unlocks for an invalid badge during lockdown, and choice D unlocks *only* during lockdown — both reversals of a complement, which is precisely the kind of ambiguity building the table catches.
+**7. B.** "Badge valid AND lockdown not on" is $B \cdot \bar{L}$, a product term mentioning both variables, so it selects exactly one row: $B=1, L=0$. Choice A uses OR, which would unlock the door in three situations, including lockdown-off with no badge at all. Choice C unlocks for an invalid badge during lockdown, and choice D unlocks *only* during lockdown — both reversals of a complement, which is precisely the kind of ambiguity building the table catches.

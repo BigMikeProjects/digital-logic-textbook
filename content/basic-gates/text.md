@@ -173,54 +173,54 @@ Logic gates are the building blocks of every digital system, and each one is a f
 
 What is the primary purpose of using logic gates as abstractions in digital design?
 
-A. They make circuits run faster than transistors alone  
-B. They allow describing digital behavior without circuit implementation details  
-C. They reduce the physical size of digital circuits  
+A. They make circuits run faster than transistors alone\
+B. They allow describing digital behavior without circuit implementation details\
+C. They reduce the physical size of digital circuits\
 D. They eliminate the need for Boolean algebra
 
 ### Question 2
 
 For a two-input AND gate, how many input combinations produce an output of 1?
 
-A. One  
-B. Two  
-C. Three  
+A. One\
+B. Two\
+C. Three\
 D. Four
 
 ### Question 3
 
 What does a "bubble" on a logic gate symbol indicate?
 
-A. The gate has multiple outputs  
-B. The signal is being amplified  
-C. The signal is being inverted (complemented)  
+A. The gate has multiple outputs\
+B. The signal is being amplified\
+C. The signal is being inverted (complemented)\
 D. The gate requires external power
 
 ### Question 4
 
 Which statement correctly describes the XOR gate's behavior?
 
-A. Output is 1 when any input is 1  
-B. Output is 1 when all inputs are 1  
-C. Output is 1 when inputs have the same value  
+A. Output is 1 when any input is 1\
+B. Output is 1 when all inputs are 1\
+C. Output is 1 when inputs have the same value\
 D. Output is 1 when inputs have different values
 
 ### Question 5
 
 Why are NAND and NOR gates called "universal gates"?
 
-A. They are used in every country's electronics standards  
-B. Any other logic gate can be built using only that gate type  
-C. They can operate at any voltage level  
+A. They are used in every country's electronics standards\
+B. Any other logic gate can be built using only that gate type\
+C. They can operate at any voltage level\
 D. They work with both analog and digital signals
 
 ### Question 6
 
 A warning light should turn on when a machine is powered ($P = 1$) but its safety guard is *not* closed ($G = 0$). Which expression describes the light?
 
-A. $Y = P \cdot G$  
-B. $Y = P + \bar{G}$  
-C. $Y = P \cdot \bar{G}$  
+A. $Y = P \cdot G$\
+B. $Y = P + \bar{G}$\
+C. $Y = P \cdot \bar{G}$\
 D. $Y = \overline{P \cdot G}$
 
 ## Answer Explanations

@@ -81,39 +81,39 @@ that explain why it is built the way it is.
 ## Review Questions
 
 **1. What distinguishes a memory element from a combinational circuit?**
-A. It uses fewer gates
-B. It can hold a stored value after the setting input is removed
-C. Its output always equals its current inputs
+A. It uses fewer gates\
+B. It can hold a stored value after the setting input is removed\
+C. Its output always equals its current inputs\
 D. It has no inputs
 
 **2. "Bistable," as used to describe the SR latch, means the circuit:**
-A. Has two inputs
-B. Runs on two power supplies
-C. Settles into one of two stable states (0 or 1)
+A. Has two inputs\
+B. Runs on two power supplies\
+C. Settles into one of two stable states (0 or 1)\
 D. Changes state twice per clock
 
 **3. The S′-R′ latch is traditionally built from which cross-coupled gates?**
-A. NAND gates
-B. XOR gates
-C. AND gates
+A. NAND gates\
+B. XOR gates\
+C. AND gates\
 D. Buffers
 
 **4. What does the D (data) latch replace the set/reset controls with?**
-A. A clock only
-B. A single data input captured at an enable time
-C. Two enables
+A. A clock only\
+B. A single data input captured at an enable time\
+C. Two enables\
 D. Nothing — it keeps set and reset
 
 **5. In what sense is the D latch "imperfect," motivating the flip-flop?**
-A. It cannot store a 1
-B. It is level-dependent — it can change any time its enable is active
-C. It needs three gates
+A. It cannot store a 1\
+B. It is level-dependent — it can change any time its enable is active\
+C. It needs three gates\
 D. It has no data input
 
 **6. What is the defining improvement of a flip-flop over a latch?**
-A. It stores more bits
-B. It is edge-triggered — it changes state only on a clock edge
-C. It removes the need for a data input
+A. It stores more bits\
+B. It is edge-triggered — it changes state only on a clock edge\
+C. It removes the need for a data input\
 D. It is purely combinational
 
 ## Answer Explanations

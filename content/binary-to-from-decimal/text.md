@@ -87,45 +87,45 @@ Computers use binary because hardware is made of two-state switches: two levels 
 ## Review Questions
 
 **1. Why is binary, rather than decimal, used inside digital hardware?**
-A. Binary numbers are always shorter than decimal numbers
-B. Transistors are two-state switches, and two well-separated levels are cheap to build and resist noise
-C. Decimal cannot represent fractions
+A. Binary numbers are always shorter than decimal numbers\
+B. Transistors are two-state switches, and two well-separated levels are cheap to build and resist noise\
+C. Decimal cannot represent fractions\
 D. Binary avoids the need for any voltage at all
 
 **2. What is the decimal value of $10110_2$?**
-A. 18
-B. 20
-C. 22
+A. 18\
+B. 20\
+C. 22\
 D. 26
 
 **3. In the division method for decimal → binary, how do you read the remainders to get the answer?**
-A. Top to bottom, because the first remainder is the MSB
-B. Bottom to top, because the first remainder is the LSB
-C. In any order, since position does not matter
+A. Top to bottom, because the first remainder is the MSB\
+B. Bottom to top, because the first remainder is the LSB\
+C. In any order, since position does not matter\
 D. Left to right across the quotients
 
 **4. Using the powers-of-two method, what is $37_{10}$ in binary?**
-A. `100101`
-B. `101001`
-C. `110010`
+A. `100101`\
+B. `101001`\
+C. `110010`\
 D. `100110`
 
 **5. How many distinct values can be represented with $n$ bits?**
-A. $2n$
-B. $n^2$
-C. $2^n$
+A. $2n$\
+B. $n^2$\
+C. $2^n$\
 D. $10^n$
 
 **6. Converting $13_{10}$ by the division method gives remainders 1, 0, 1, 1 in the order they are produced. What is the binary result, and why?**
-A. `1011`, reading the remainders in the order produced
-B. `1101`, because the remainders are read bottom-up (first remainder is the LSB)
-C. `0110`, after dropping the first remainder
+A. `1011`, reading the remainders in the order produced\
+B. `1101`, because the remainders are read bottom-up (first remainder is the LSB)\
+C. `0110`, after dropping the first remainder\
 D. `1110`, because the last remainder is the LSB
 
 **7. A student converts $45_{10}$ to binary and gets $101101_2$. What is the fastest way to check the answer, and what should it produce?**
-A. Expand the place values: $32 + 8 + 4 + 1 = 45$, matching the starting number
-B. Divide $101101$ by 2 and confirm the quotient is even
-C. Count the bits and confirm there are six
+A. Expand the place values: $32 + 8 + 4 + 1 = 45$, matching the starting number\
+B. Divide $101101$ by 2 and confirm the quotient is even\
+C. Count the bits and confirm there are six\
 D. Re-run the same method and hope for the same answer
 
 ## Answer Explanations

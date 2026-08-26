@@ -83,54 +83,54 @@ Binary uses two symbols because hardware is built from switches, and a bit is on
 
 What is the decimal value of $1011_2$?
 
-A. 7
-B. 11
-C. 13
+A. 7\
+B. 11\
+C. 13\
 D. 15
 
 ### Question 2
 
 In the four-bit number $1101_2$, which bit is the MSB, and what is its place value?
 
-A. The rightmost bit, worth 1
-B. The rightmost bit, worth 8
-C. The leftmost bit, worth 8
+A. The rightmost bit, worth 1\
+B. The rightmost bit, worth 8\
+C. The leftmost bit, worth 8\
 D. The leftmost bit, worth 3
 
 ### Question 3
 
 Counting up in binary, what value comes immediately after $0111$?
 
-A. $0112$
-B. $1000$
-C. $1111$
+A. $0112$\
+B. $1000$\
+C. $1111$\
 D. $0110$
 
 ### Question 4
 
 A byte contains how many nibbles?
 
-A. 1
-B. 2
-C. 4
+A. 1\
+B. 2\
+C. 4\
 D. 8
 
 ### Question 5
 
 How many distinct patterns can an 8-bit number represent, and what is its unsigned range?
 
-A. 8 patterns, 0 to 7
-B. 128 patterns, 0 to 127
-C. 255 patterns, 0 to 254
+A. 8 patterns, 0 to 7\
+B. 128 patterns, 0 to 127\
+C. 255 patterns, 0 to 254\
 D. 256 patterns, 0 to 255
 
 ### Question 6
 
 A three-input truth table lists its input combinations in binary counting order. How many rows does it have, and what pattern is in its last row?
 
-A. 3 rows, ending at $011$
-B. 6 rows, ending at $110$
-C. 8 rows, ending at $111$
+A. 3 rows, ending at $011$\
+B. 6 rows, ending at $110$\
+C. 8 rows, ending at $111$\
 D. 9 rows, ending at $1000$
 
 ## Answer Explanations

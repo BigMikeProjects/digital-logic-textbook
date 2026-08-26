@@ -126,45 +126,45 @@ Hexadecimal is base 16, a compact human-readable shorthand for binary that makes
 ## Review Questions
 
 **1. Why is hexadecimal preferred over binary for humans reading and writing long values?**
-A. It lets the hardware store numbers using fewer transistors
-B. It is more compact and less error-prone to read, copy, and compare
-C. It allows fractional values that binary cannot represent
+A. It lets the hardware store numbers using fewer transistors\
+B. It is more compact and less error-prone to read, copy, and compare\
+C. It allows fractional values that binary cannot represent\
 D. It is the only base a computer can actually process
 
 **2. What is the hexadecimal digit for the 4-bit pattern `1011`?**
-A. 9
-B. A
-C. B
+A. 9\
+B. A\
+C. B\
 D. D
 
 **3. Hexadecimal is base 16 because each hex digit maps to how many bits?**
-A. 2 bits
-B. 3 bits
-C. 4 bits
+A. 2 bits\
+B. 3 bits\
+C. 4 bits\
 D. 8 bits
 
 **4. What is the binary expansion of the hex value `A`?**
-A. `1000`
-B. `1010`
-C. `1100`
+A. `1000`\
+B. `1010`\
+C. `1100`\
 D. `1110`
 
 **5. A 10-bit unsigned value is written in hexadecimal by padding the high bits with zeros. What is the largest value its most-significant hex digit can take?**
-A. F
-B. 7
-C. 3
+A. F\
+B. 7\
+C. 3\
 D. 1
 
 **6. In Verilog, what does the literal `8'hB5` represent?**
-A. The 8-bit binary pattern `10110101`
-B. The decimal number 85
-C. A hexadecimal value that is 8 hex digits wide
+A. The 8-bit binary pattern `10110101`\
+B. The decimal number 85\
+C. A hexadecimal value that is 8 hex digits wide\
 D. An error, because `B` is not a valid digit
 
 **7. How many hex digits does it take to write one byte (8 bits), and why?**
-A. One, because a hex digit can hold any value up to 255
-B. Two, because a byte is two nibbles and each nibble is one hex digit
-C. Three, because 8 bits don't divide evenly into groups of four
+A. One, because a hex digit can hold any value up to 255\
+B. Two, because a byte is two nibbles and each nibble is one hex digit\
+C. Three, because 8 bits don't divide evenly into groups of four\
 D. It varies with the value stored in the byte
 
 ## Answer Explanations

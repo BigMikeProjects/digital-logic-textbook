@@ -75,39 +75,39 @@ Binary addition works just like decimal addition: proceed column by column from 
 ## Review Questions
 
 **1. When adding two binary numbers, in what order are the columns processed, and what does each column produce?**
-A. Left to right, producing only a sum bit
-B. Right to left, producing a sum bit and a carry into the next column
-C. Left to right, producing a carry into the previous column
+A. Left to right, producing only a sum bit\
+B. Right to left, producing a sum bit and a carry into the next column\
+C. Left to right, producing a carry into the previous column\
 D. In any order, since columns are independent
 
 **2. What is $0111_2 + 0001_2$?**
-A. $0110_2$
-B. $1000_2$
-C. $1110_2$
+A. $0110_2$\
+B. $1000_2$\
+C. $1110_2$\
 D. $0111_2$
 
 **3. In the design hierarchy described, which ordering (simplest building block to most complex) is correct?**
-A. Gate → transistor → full adder → processor
-B. Full adder → gate → transistor → processor
-C. Transistor/switch → gate → full adder → multi-bit adder → processor
+A. Gate → transistor → full adder → processor\
+B. Full adder → gate → transistor → processor\
+C. Transistor/switch → gate → full adder → multi-bit adder → processor\
 D. Processor → multi-bit adder → gate → transistor
 
 **4. What is the main benefit of abstraction (hiding a block's internal details) in digital design?**
-A. It makes the circuit use less power automatically
-B. It lets you reuse the block as a part, reasoning only about its inputs and outputs
-C. It removes the need for transistors
+A. It makes the circuit use less power automatically\
+B. It lets you reuse the block as a part, reasoning only about its inputs and outputs\
+C. It removes the need for transistors\
 D. It guarantees the fastest possible design
 
 **5. The section highlights a trade-off when designing adders. Which trade-off is emphasized?**
-A. Speed versus size and power
-B. Cost versus color
-C. Binary versus decimal representation
+A. Speed versus size and power\
+B. Cost versus color\
+C. Binary versus decimal representation\
 D. Number of inputs versus number of outputs
 
 **6. According to the overview, how do the ripple-carry adder and the carry look-ahead adder compare?**
-A. The ripple-carry adder is faster but larger; the look-ahead adder is slower but smaller
-B. They are identical in speed, size, and power
-C. The ripple-carry adder is simple but slower; the look-ahead adder is faster but larger and uses more power
+A. The ripple-carry adder is faster but larger; the look-ahead adder is slower but smaller\
+B. They are identical in speed, size, and power\
+C. The ripple-carry adder is simple but slower; the look-ahead adder is faster but larger and uses more power\
 D. The look-ahead adder is always the best choice for every job
 
 ## Answer Explanations

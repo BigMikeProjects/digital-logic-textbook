@@ -77,39 +77,39 @@ Minimization means writing $F$ as a minimal sum of products — fewest product t
 ## Review Questions
 
 **1. What does "minimal" mean in a minimal sum-of-products form?**
-A. The fewest variables in the whole function
-B. The fewest product terms, then the fewest total literals
-C. The largest possible groups regardless of count
+A. The fewest variables in the whole function\
+B. The fewest product terms, then the fewest total literals\
+C. The largest possible groups regardless of count\
 D. Exactly one product term
 
 **2. Which of the following is a *literal*?**
-A. $B \cdot C$
-B. $\bar{A}$
-C. $A + B$
+A. $B \cdot C$\
+B. $\bar{A}$\
+C. $A + B$\
 D. A group of four cells
 
 **3. Why might a don't-care cell be included in a group?**
-A. It must always be treated as a 1
-B. It makes the map symmetric
-C. Treating it as a 1 can enlarge a group and simplify the term
+A. It must always be treated as a 1\
+B. It makes the map symmetric\
+C. Treating it as a 1 can enlarge a group and simplify the term\
 D. Don't-cares are required in every prime implicant
 
 **4. What makes a group of cells a valid *implicant* of $F$?**
-A. It contains at least one don't-care
-B. It is a single minterm only
-C. It sits entirely on `1`s (and don't-cares) — it never covers a `0`
+A. It contains at least one don't-care\
+B. It is a single minterm only\
+C. It sits entirely on `1`s (and don't-cares) — it never covers a `0`\
 D. It is the largest group on the map
 
 **5. A *prime implicant* is best described as:**
-A. Any single `1` on the map
-B. An implicant that cannot be made any larger
-C. A product term that covers a `0`
+A. Any single `1` on the map\
+B. An implicant that cannot be made any larger\
+C. A product term that covers a `0`\
 D. The only group containing a don't-care
 
 **6. In $F = \sum m(1,3,5,7,9,11,13,14,15) + d(4,6)$, why is the prime implicant $\bar{A}B$ not part of the minimal solution?**
-A. It covers a `0`, so it isn't an implicant
-B. Its `1` cells ($m_5, m_7$) are already covered by $D$, so it isn't essential
-C. It isn't a power-of-two group
+A. It covers a `0`, so it isn't an implicant\
+B. Its `1` cells ($m_5, m_7$) are already covered by $D$, so it isn't essential\
+C. It isn't a power-of-two group\
 D. It uses a don't-care
 
 ## Answer Explanations

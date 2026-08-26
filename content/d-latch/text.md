@@ -152,44 +152,44 @@ Simulating the two side by side confirms they agree: $Q$ follows $D$ while $EN =
 
 **1.** In the standard D latch build, what drives the $R'$ input of the S'-R' core?
 
-A) $D$ ANDed with $EN$, inverted
-B) $\overline{D}$ NANDed with $EN$
-C) $EN$ alone, through an inverter
+A) $D$ ANDed with $EN$, inverted\
+B) $\overline{D}$ NANDed with $EN$\
+C) $EN$ alone, through an inverter\
 D) The $Q$ output fed back through a NAND gate
 
 **2.** With $EN = 0$, what are the values of $S'$ and $R'$?
 
-A) $S' = 0$, $R' = 0$
-B) $S' = 0$, $R' = 1$
-C) $S' = 1$, $R' = 1$
+A) $S' = 0$, $R' = 0$\
+B) $S' = 0$, $R' = 1$\
+C) $S' = 1$, $R' = 1$\
 D) They depend on $D$
 
 **3.** Why can a D latch never enter the forbidden state of the S'-R' latch?
 
-A) The enable input is checked by additional error-detection logic
-B) The front gates are driven by $D$ and $\overline{D}$, so $S'$ and $R'$ can never both be asserted
-C) The NAND gates in the core are replaced by NOR gates
+A) The enable input is checked by additional error-detection logic\
+B) The front gates are driven by $D$ and $\overline{D}$, so $S'$ and $R'$ can never both be asserted\
+C) The NAND gates in the core are replaced by NOR gates\
 D) The forbidden state is avoided only if the designer never asserts $EN$ and $D$ together
 
 **4.** A D latch has $Q = 1$. The enable is then held at 0 while $D$ changes $1 \to 0 \to 1 \to 0$. What is $Q$ at the end of that sequence?
 
-A) 0
-B) 1
-C) It toggles with each change on $D$
+A) 0\
+B) 1\
+C) It toggles with each change on $D$\
 D) Undefined
 
 **5.** During a single enable window, $D$ changes several times before $EN$ falls. What value does the latch store?
 
-A) The first value $D$ took inside the window
-B) The value $D$ held at the moment $EN$ rose
-C) The value $D$ held just before $EN$ fell
+A) The first value $D$ took inside the window\
+B) The value $D$ held at the moment $EN$ rose\
+C) The value $D$ held just before $EN$ fell\
 D) The logical OR of every value $D$ took inside the window
 
 **6.** What does the characteristic equation $Q^+ = D \cdot EN + Q \cdot \overline{EN}$ describe?
 
-A) That $Q$ is the AND of the data and enable inputs
-B) That the next output is $D$ when the latch is transparent, and the current output when it is latched
-C) That the latch responds only to the rising edge of $EN$
+A) That $Q$ is the AND of the data and enable inputs\
+B) That the next output is $D$ when the latch is transparent, and the current output when it is latched\
+C) That the latch responds only to the rising edge of $EN$\
 D) That $Q$ and $\overline{Q}$ are complementary
 
 **7.** In the Verilog model below, why does the synthesizer infer a latch?
@@ -201,16 +201,16 @@ always @(*) begin
 end
 ```
 
-A) Because the sensitivity list uses `@(*)`
-B) Because `Q` is declared as `reg`
-C) Because `Q` is not assigned when `EN` is 0, so it must hold its previous value
+A) Because the sensitivity list uses `@(*)`\
+B) Because `Q` is declared as `reg`\
+C) Because `Q` is not assigned when `EN` is 0, so it must hold its previous value\
 D) Because blocking assignment is used instead of nonblocking
 
 **8.** Why is a level-sensitive latch awkward as the storage element in a large synchronous system?
 
-A) It cannot store a 0, only a 1
-B) It requires two enable inputs
-C) It consumes more gates than an S-R latch
+A) It cannot store a 0, only a 1\
+B) It requires two enable inputs\
+C) It consumes more gates than an S-R latch\
 D) It accepts data for the entire time the enable is high, so the stored bit depends on the last change to $D$ before the enable falls
 
 ## Answers

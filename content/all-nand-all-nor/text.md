@@ -155,63 +155,63 @@ NAND and NOR are universal, so any AND/OR/inverter circuit can be rebuilt from o
 
 What does it mean to call NAND and NOR "universal" gates?
 
-A. They are the fastest gates available in CMOS
-B. Either gate alone can implement any Boolean function
-C. They require no transistors to build
+A. They are the fastest gates available in CMOS\
+B. Either gate alone can implement any Boolean function\
+C. They require no transistors to build\
 D. They can only implement sum-of-products expressions
 
 ### Question 2
 
 To convert an OR gate into a NAND while keeping its shape-distinctive symbol, where do the bubbles go?
 
-A. One bubble on the output
-B. Bubbles on the inputs
-C. No bubbles are needed
+A. One bubble on the output\
+B. Bubbles on the inputs\
+C. No bubbles are needed\
 D. One bubble on each input and one on the output
 
 ### Question 3
 
 During bubble matching, an output bubble feeds directly into an input bubble on the next gate. What happens?
 
-A. The signal is inverted once
-B. An extra inverter must be added
-C. The two bubbles cancel and the signal passes through unchanged
+A. The signal is inverted once\
+B. An extra inverter must be added\
+C. The two bubbles cancel and the signal passes through unchanged\
 D. The circuit becomes invalid
 
 ### Question 4
 
 Why does an all-NAND realization generally use fewer transistors than the literal AND/OR/inverter version of the same function?
 
-A. NAND gates use fewer transistors than inverters
-B. The AND/OR build needs output inverters (each AND/OR is a NAND/NOR plus an inverter) that the all-NAND build sheds
-C. NAND gates do not need a power supply
+A. NAND gates use fewer transistors than inverters\
+B. The AND/OR build needs output inverters (each AND/OR is a NAND/NOR plus an inverter) that the all-NAND build sheds\
+C. NAND gates do not need a power supply\
 D. Bubble pushing deletes gates from the circuit
 
 ### Question 5
 
 In Example 1, the inverter on $c$ from the natural circuit disappeared in the all-NAND version. Why?
 
-A. $\bar{c}$ was no longer needed
-B. The OR-shape NAND's input bubble inverts $c$ for free, so routing $c$ straight in supplies $\bar{c}$
-C. The inverter was merged into the final output inverter
+A. $\bar{c}$ was no longer needed\
+B. The OR-shape NAND's input bubble inverts $c$ for free, so routing $c$ straight in supplies $\bar{c}$\
+C. The inverter was merged into the final output inverter\
 D. NAND gates ignore inverted inputs
 
 ### Question 6
 
 Why did the all-NOR realization of $G = (a + \bar{b}\,c)(\bar{d} + e)$ come out the most efficient, at 20 transistors?
 
-A. NOR gates are always cheaper than NAND gates
-B. The expression is a product of sums, a form that NOR gates fit with the fewest added inverters
-C. The function was algebraically simplified first
+A. NOR gates are always cheaper than NAND gates\
+B. The expression is a product of sums, a form that NOR gates fit with the fewest added inverters\
+C. The function was algebraically simplified first\
 D. All-NOR circuits never need inverters
 
 ### Question 7
 
 After converting a circuit by bubble pushing, what is the reliable way to confirm it still computes the original function?
 
-A. Count the gates — the count must be unchanged
-B. Compare truth tables, by hand or by simulating both circuits over every input combination
-C. Check that every gate has a bubble
+A. Count the gates — the count must be unchanged\
+B. Compare truth tables, by hand or by simulating both circuits over every input combination\
+C. Check that every gate has a bubble\
 D. Confirm the transistor count went down
 
 ## Answer Explanations

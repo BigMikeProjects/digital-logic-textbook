@@ -74,39 +74,39 @@ A single control line converts an ordinary adder into an adder/subtractor, cashi
 ## Review Questions
 
 **1. What is the main advantage of two's complement that this circuit exploits?**
-A. It stores numbers using fewer bits
-B. Subtraction can be done by adding the two's-complement negative, reusing an adder
-C. It removes the need for a carry-in
+A. It stores numbers using fewer bits\
+B. Subtraction can be done by adding the two's-complement negative, reusing an adder\
+C. It removes the need for a carry-in\
 D. It makes multiplication a single gate
 
 **2. Used as a programmable inverter, what does an XOR gate output for data bit $X$ when its control input is `1`?**
-A. $X$ (unchanged)
-B. `0`
-C. $\bar{X}$ (inverted)
+A. $X$ (unchanged)\
+B. `0`\
+C. $\bar{X}$ (inverted)\
 D. `1`
 
 **3. In the add/subtract circuit, the `sub` control line is connected to two places. Which two?**
-A. The A inputs and the B inputs
-B. The XOR gates on the B vector and the least-significant carry-in
-C. Every carry between stages
+A. The A inputs and the B inputs\
+B. The XOR gates on the B vector and the least-significant carry-in\
+C. Every carry between stages\
 D. The output bits and the A inputs
 
 **4. Negating a number in two's complement requires flipping all the bits and then doing what?**
-A. Shifting left by one
-B. Adding one
-C. Inverting again
+A. Shifting left by one\
+B. Adding one\
+C. Inverting again\
 D. Nothing else
 
 **5. With $A = 0101$ (5), $B = 0011$ (3), and $\text{sub} = 1$, what does the circuit compute, and what is the result?**
-A. $5 + 3 = 8$
-B. $5 - 3 = 2$
-C. $3 - 5 = -2$
+A. $5 + 3 = 8$\
+B. $5 - 3 = 2$\
+C. $3 - 5 = -2$\
 D. $5 \times 3 = 15$
 
 **6. Why does the least-significant stage use a full adder (with a carry-in) rather than a half adder?**
-A. Half adders cannot add two bits
-B. So the `sub` line can inject the two's-complement `+1` through the carry-in
-C. To make the circuit faster
+A. Half adders cannot add two bits\
+B. So the `sub` line can inject the two's-complement `+1` through the carry-in\
+C. To make the circuit faster\
 D. Because the most-significant bit needs it
 
 ## Answer Explanations

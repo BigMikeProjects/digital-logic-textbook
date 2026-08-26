@@ -107,45 +107,45 @@ Digital signals take exactly two values, 0 and 1, because logic circuits are bui
 
 Why can a truth table capture a logic function's behavior *completely*?
 
-A. Because logic functions are always simple  
-B. Because each variable takes only two values, so a function of $n$ inputs has exactly $2^n$ input combinations to list  
-C. Because truth tables round off unlikely input combinations  
+A. Because logic functions are always simple\
+B. Because each variable takes only two values, so a function of $n$ inputs has exactly $2^n$ input combinations to list\
+C. Because truth tables round off unlikely input combinations\
 D. Because transistors can store entire tables
 
 ### Question 2
 
 For the expression $F = \bar{A}(C + B\bar{C})$, what is $F(1, 1, 0)$?
 
-A. 0  
-B. 1  
-C. It depends on the order of operations chosen  
+A. 0\
+B. 1\
+C. It depends on the order of operations chosen\
 D. It cannot be evaluated without a circuit diagram
 
 ### Question 3
 
 In Boolean algebra's order of operations, which is applied *first*?
 
-A. OR  
-B. AND  
-C. Parentheses  
+A. OR\
+B. AND\
+C. Parentheses\
 D. Complements (overbars)
 
 ### Question 4
 
 Which statement correctly applies De Morgan's theorem to $\overline{X + Y}$?
 
-A. $\bar{X} + \bar{Y}$  
-B. $\bar{X} \cdot \bar{Y}$  
-C. $X \cdot Y$  
+A. $\bar{X} + \bar{Y}$\
+B. $\bar{X} \cdot \bar{Y}$\
+C. $X \cdot Y$\
 D. $\overline{X \cdot Y}$
 
 ### Question 5
 
 What establishes that two Boolean expressions are equal?
 
-A. They use the same variables  
-B. They have the same number of operations  
-C. Their truth tables produce identical output columns for every input combination  
+A. They use the same variables\
+B. They have the same number of operations\
+C. Their truth tables produce identical output columns for every input combination\
 D. They both contain a complement
 
 ## Answer Explanations

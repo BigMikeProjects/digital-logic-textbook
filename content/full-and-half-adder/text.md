@@ -100,39 +100,39 @@ Binary addition is done one column at a time, and the circuit for a single colum
 ## Review Questions
 
 **1. What distinguishes a full adder from a half adder?**
-A. The full adder has a carry-in input; the half adder does not
-B. The half adder produces a carry-out; the full adder does not
-C. The full adder adds decimal numbers; the half adder adds binary
+A. The full adder has a carry-in input; the half adder does not\
+B. The half adder produces a carry-out; the full adder does not\
+C. The full adder adds decimal numbers; the half adder adds binary\
 D. The half adder is faster because it uses more gates
 
 **2. For a half adder, which expressions give the sum and carry?**
-A. $S = A \cdot B$, $C = A \oplus B$
-B. $S = A \oplus B$, $C = A \cdot B$
-C. $S = A + B$, $C = A \cdot B$
+A. $S = A \cdot B$, $C = A \oplus B$\
+B. $S = A \oplus B$, $C = A \cdot B$\
+C. $S = A + B$, $C = A \cdot B$\
 D. $S = A \oplus B$, $C = A + B$
 
 **3. Reading a full adder's output bits $C_{out}S$ as a 2-bit number, what do they represent?**
-A. The larger of the two data inputs
-B. The number of `1`s among the three inputs $A$, $B$, $C_{in}$
-C. The bitwise AND of all three inputs
+A. The larger of the two data inputs\
+B. The number of `1`s among the three inputs $A$, $B$, $C_{in}$\
+C. The bitwise AND of all three inputs\
 D. Always the value of the carry-in
 
 **4. The Karnaugh map for a full adder's *sum* output shows a checkerboard pattern. What does that indicate?**
-A. The sum is always 0
-B. The map cannot be minimized
-C. The sum is an exclusive-OR function
+A. The sum is always 0\
+B. The map cannot be minimized\
+C. The sum is an exclusive-OR function\
 D. The sum requires a carry look-ahead
 
 **5. Compared with the two-level (all-NAND) full adder, the full adder built from two half adders generally has which trade-off?**
-A. Fewer transistors but a longer critical path
-B. More transistors and a shorter critical path
-C. Fewer transistors and a shorter critical path
+A. Fewer transistors but a longer critical path\
+B. More transistors and a shorter critical path\
+C. Fewer transistors and a shorter critical path\
 D. Identical transistor count and delay
 
 **6. Why does a ripple-carry adder get slower as it gets wider?**
-A. Wider adders need a higher clock voltage
-B. Each column must wait for the carry to propagate from the column before it
-C. The half adder can only handle 4 bits
+A. Wider adders need a higher clock voltage\
+B. Each column must wait for the carry to propagate from the column before it\
+C. The half adder can only handle 4 bits\
 D. XOR gates stop working beyond 8 bits
 
 ## Answer Explanations

@@ -44,36 +44,36 @@ Understanding this does not mean rejecting progress. It means recognizing that t
 
 According to this topic, why does vinyl continue to matter to listeners?
 
-A. Its analog sound quality is measurably better than digital audio
-B. Its physical constraints structure listening and encourage engagement with the whole album
-C. Records are more durable than digital files
+A. Its analog sound quality is measurably better than digital audio\
+B. Its physical constraints structure listening and encourage engagement with the whole album\
+C. Records are more durable than digital files\
 D. Vinyl is cheaper to produce than streaming infrastructure
 
 ### Question 2
 
 What does the "friction" of playing a vinyl record — committing to a side, standing up to skip a track — do to listener behavior?
 
-A. It makes skipping less automatic and listening more deliberate
-B. It prevents listeners from ever skipping songs
-C. It degrades the audio quality with each play
+A. It makes skipping less automatic and listening more deliberate\
+B. It prevents listeners from ever skipping songs\
+C. It degrades the audio quality with each play\
 D. It forces listeners to buy more records
 
 ### Question 3
 
 The topic says engineers and users often evaluate technologies differently. Which pairing matches the topic's claim?
 
-A. Engineers measure cost; users measure speed
-B. Engineers measure what a system enables; users experience how it shapes behavior
-C. Engineers value meaning; users value capacity
+A. Engineers measure cost; users measure speed\
+B. Engineers measure what a system enables; users experience how it shapes behavior\
+C. Engineers value meaning; users value capacity\
 D. Engineers and users both evaluate systems purely on performance
 
 ### Question 4
 
 What happened to album art as music formats were optimized, and what does the topic conclude from it?
 
-A. Art improved as screens got sharper, showing optimization helps every dimension
-B. Art was banned from digital formats for licensing reasons
-C. The 12-inch canvas shrank to a booklet, then a thumbnail — a real loss that no efficiency metric captured
+A. Art improved as screens got sharper, showing optimization helps every dimension\
+B. Art was banned from digital formats for licensing reasons\
+C. The 12-inch canvas shrank to a booklet, then a thumbnail — a real loss that no efficiency metric captured\
 D. Artists stopped making album art because digital music has no covers
 
 ## Answer Explanations

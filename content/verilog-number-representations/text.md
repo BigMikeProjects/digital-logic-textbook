@@ -112,54 +112,54 @@ A Verilog literal is a constant written as size, tick, base, value — `8'hA5` i
 
 In the literal `8'hA5`, what do the three parts mean?
 
-A. 8 is the value, h is a variable name, A5 is a memory address
-B. 8 is the size in bits, h says the digits are hexadecimal, A5 is the value
-C. 8 is the number of digits, h means "high," A5 is a label
+A. 8 is the value, h is a variable name, A5 is a memory address\
+B. 8 is the size in bits, h says the digits are hexadecimal, A5 is the value\
+C. 8 is the number of digits, h means "high," A5 is a label\
 D. 8 is the base, h is the size, A5 is the value
 
 ### Question 2
 
 Which of the following literals is *not* the same bit pattern as `8'b1010_0101`?
 
-A. `8'd165`
-B. `8'hA5`
-C. `8'ha5`
+A. `8'd165`\
+B. `8'hA5`\
+C. `8'ha5`\
 D. `8'd101`
 
 ### Question 3
 
 What does the line `$display("b=%b", b);` print when `b` holds the 8-bit value `10100101`?
 
-A. `b=%b`
-B. `b=165`
-C. `b=10100101`
+A. `b=%b`\
+B. `b=165`\
+C. `b=10100101`\
 D. `b=a5`
 
 ### Question 4
 
 In `$display("%%d of h -> %d", h);`, what is the purpose of the `%%`?
 
-A. It prints the value of `h` twice
-B. It prints a literal percent sign, so the text `%d` appears in the output
-C. It converts `h` to decimal and then to hex
+A. It prints the value of `h` twice\
+B. It prints a literal percent sign, so the text `%d` appears in the output\
+C. It converts `h` to decimal and then to hex\
 D. It marks the start of a comment
 
 ### Question 5
 
 `n` is an 8-bit register holding 5. `%d` prints it as `[  5]` — two spaces, then 5. Why?
 
-A. The value is actually 005; the zeros are shown as spaces
-B. `%d` pads the field to the width of the largest value an 8-bit register can hold, 255, which has three digits
-C. The simulator always prints three characters for every specifier
+A. The value is actually 005; the zeros are shown as spaces\
+B. `%d` pads the field to the width of the largest value an 8-bit register can hold, 255, which has three digits\
+C. The simulator always prints three characters for every specifier\
 D. The two spaces are the two leading zero bits of the value
 
 ### Question 6
 
 Which statement about underscores in a Verilog literal is correct?
 
-A. An underscore changes the value by inserting a zero bit
-B. Underscores are only allowed in hexadecimal literals
-C. Underscores are ignored by the simulator and exist only to make the literal easier to read
+A. An underscore changes the value by inserting a zero bit\
+B. Underscores are only allowed in hexadecimal literals\
+C. Underscores are ignored by the simulator and exist only to make the literal easier to read\
 D. An underscore marks the boundary between the size and the value
 
 ## Answer Explanations
