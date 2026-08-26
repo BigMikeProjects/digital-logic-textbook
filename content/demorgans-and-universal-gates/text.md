@@ -147,72 +147,72 @@ De Morgan's theorem has two forms: $\overline{A \cdot B} = \bar{A} + \bar{B}$ (a
 
 Why do NAND and NOR gates require fewer transistors than AND and OR gates in CMOS?
 
-A. NAND and NOR operate at lower voltages
-B. AND and OR gates are built as a NAND or NOR followed by an inverter
-C. NAND and NOR gates have fewer inputs
+A. NAND and NOR operate at lower voltages\
+B. AND and OR gates are built as a NAND or NOR followed by an inverter\
+C. NAND and NOR gates have fewer inputs\
 D. AND and OR gates need extra power-supply connections
 
 ### Question 2
 
 According to De Morgan's theorem, which expression equals $\overline{A + B}$?
 
-A. $\bar{A} + \bar{B}$
-B. $\bar{A} \cdot \bar{B}$
-C. $A \cdot B$
+A. $\bar{A} + \bar{B}$\
+B. $\bar{A} \cdot \bar{B}$\
+C. $A \cdot B$\
 D. $\bar{A} + B$
 
 ### Question 3
 
 How is a NAND gate wired to act as an inverter?
 
-A. Connect the output back to one input
-B. Connect both inputs to the same signal
-C. Leave one input disconnected
+A. Connect the output back to one input\
+B. Connect both inputs to the same signal\
+C. Leave one input disconnected\
 D. Connect the output to ground
 
 ### Question 4
 
 What does "universal gate" mean?
 
-A. The gate works at any voltage
-B. Any Boolean function can be built from that gate type alone
-C. The gate is used in every country's standards
+A. The gate works at any voltage\
+B. Any Boolean function can be built from that gate type alone\
+C. The gate is used in every country's standards\
 D. The gate handles both analog and digital signals
 
 ### Question 5
 
 Apply "break the bar, change the sign" to $\overline{A \cdot B \cdot C}$.
 
-A. $\bar{A} \cdot \bar{B} \cdot \bar{C}$
-B. $\bar{A} + \bar{B} + \bar{C}$
-C. $A + B + C$
+A. $\bar{A} \cdot \bar{B} \cdot \bar{C}$\
+B. $\bar{A} + \bar{B} + \bar{C}$\
+C. $A + B + C$\
 D. $\overline{A + B + C}$
 
 ### Question 6
 
 A NOR gate is equivalent to which of the following?
 
-A. An AND gate with inverted inputs
-B. An OR gate with inverted inputs
-C. An AND gate with an inverted output
+A. An AND gate with inverted inputs\
+B. An OR gate with inverted inputs\
+C. An AND gate with an inverted output\
 D. A NAND gate with inverted inputs
 
 ### Question 7
 
 Apply De Morgan's theorem to $\overline{\bar{A} \cdot B}$.
 
-A. $\bar{A} + \bar{B}$
-B. $A + \bar{B}$
-C. $\bar{A} \cdot \bar{B}$
+A. $\bar{A} + \bar{B}$\
+B. $A + \bar{B}$\
+C. $\bar{A} \cdot \bar{B}$\
 D. $A \cdot B$
 
 ### Question 8
 
 $F = A \cdot B + C$ is rebuilt as $\overline{\overline{A \cdot B} \cdot \bar{C}}$. What gates does the rebuilt form use, and how many transistors?
 
-A. Two NANDs and one inverter — 10
-B. One NAND and one NOR — 8
-C. One AND and one OR — 12
+A. Two NANDs and one inverter — 10\
+B. One NAND and one NOR — 8\
+C. One AND and one OR — 12\
 D. Three NANDs — 12
 
 ## Answer Explanations
