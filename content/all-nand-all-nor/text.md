@@ -43,6 +43,8 @@ Implement it **exactly as written**, no algebraic simplification. Reading the ex
 - An OR gate forms the sum $\bar{c} + \bar{x}\,y$ (an inverter on $c$ supplies $\bar{c}$).
 - A final AND gate forms $F = \bar{a}\,b \cdot (\bar{c} + \bar{x}\,y)$.
 
+![F drawn as written: inverters on a, x, and c, two AND gates, an OR gate, and a final AND gate, with each gate's transistor cost marked and a total of 30.](./images/f-natural-30t.svg)
+
 Now convert. Every AND becomes an AND-shape NAND with an output bubble; the OR becomes an OR-shape NAND with input bubbles. Then match the bubbles wire by wire:
 
 1. The $\bar{x}y$ NAND's output bubble lands on an input bubble of the OR-shape NAND — **cancel**; the OR receives $\bar{x}y$ clean.
@@ -51,6 +53,8 @@ Now convert. Every AND becomes an AND-shape NAND with an output bubble; the OR b
 4. The final NAND's output bubble would deliver $\bar{F}$ — insert an **inverter** to get $F$.
 
 The result is the identical function built entirely from NAND gates and inverters, with the AND and OR shapes still visible: four NANDs, and four inverters ($a$, $x$, the $\bar{a}b$ wire, and the output).
+
+![F as all-NAND: the two product gates and the final gate are AND shapes with output bubbles, the OR shape carries input bubbles; the cancelling pair and the free complement on c are ringed, and the two leftover bubbles get inverters; 24 transistors.](./images/f-all-nand-24t.svg)
 
 **Why it is cheaper.** In CMOS an inverter costs 2 transistors and a two-input NAND or NOR costs 4. An ordinary AND or OR does not exist on its own — it is a NAND/NOR *followed by an inverter*, $4 + 2 = 6$ transistors. Count the natural build against the all-NAND build:
 
@@ -67,7 +71,9 @@ This is worth holding as a **level-of-abstraction** idea. You normally *think an
 
 ## Example 2 — $F$ with NOR Gates
 
-Take the same $F$ and the same starting AND/OR/inverter circuit, but push the bubbles the other way. Now each AND becomes an AND-shape NOR with **input** bubbles, and the OR becomes an OR-shape NOR with an **output** bubble. Match as before: an input bubble already sitting where a complement is wanted ($\bar{a}$, for example) does that job for free; where a NOR's input has no bubble but the wire needs one (as for $\bar{c}$), insert an inverter to form it.
+Take the same $F$ and the same starting AND/OR/inverter circuit, but push the bubbles the other way. Now each AND becomes an AND-shape NOR with **input** bubbles, and the OR becomes an OR-shape NOR with an **output** bubble. Match as before: an input bubble already sitting where a complement is wanted ($\bar{a}$, for example) does that job for free; where a NOR's input has no bubble but the wire needs one (as for $\bar{c}$), insert an inverter to form it. One more inverter appears on the $\bar{a}b$ wire: the final AND shape's input bubble wants $\overline{\bar{a}b}$, and the product gate delivers $\bar{a}b$ uninverted. At the other input the OR shape's output bubble lands on the AND shape's input bubble and cancels, and the output comes out clean — no inverter needed there.
+
+![F as all-NOR: the two product gates and the final gate are AND shapes with input bubbles, the OR shape carries an output bubble that cancels against the final gate's input bubble; inverters on b, y, c, and the a-bar-b wire; 24 transistors.](./images/f-all-nor-24t.svg)
 
 The transistor count comes out the same as the all-NAND version:
 
@@ -83,7 +89,11 @@ $$G = (a + \bar{b}\,c)(\bar{d} + e)$$
 
 Lay it out by Boolean precedence again. The product $\bar{b}\,c$ is formed first (an inverter gives $\bar{b}$), then OR'd with $a$ to make $a + \bar{b}\,c$. Separately an OR makes $\bar{d} + e$ (an inverter gives $\bar{d}$). A final AND multiplies the two sums to produce $G$.
 
+![G drawn as written: inverters on b and d, an AND gate feeding an OR gate, a second OR gate, and a final AND gate; 28 transistors.](./images/g-natural-28t.svg)
+
 Convert to NAND exactly as in Example 1 — ANDs get output bubbles, ORs get input bubbles — then match: $\bar{b}$ and $c$ feed the first NAND as before; $\bar{d}$ comes free by routing $d$ into a bubble; $e$ needs its bubble cancelled so it arrives uncomplemented; $a$ needs an inverter for the same reason; and the final output needs an inverter to deliver $G$ instead of $\bar{G}$.
+
+![G as all-NAND: the product gate and the final gate carry output bubbles, the two OR shapes carry input bubbles; inverters on b, a, e, and the output; 24 transistors.](./images/g-all-nand-24t.svg)
 
 | Realization | Gates | Inverters | Transistors |
 |---|---|---|---|
@@ -94,7 +104,9 @@ The all-NAND build saves **4 transistors** here — less than in Example 1, beca
 
 ## Example 4 — $G$ with NOR Gates
 
-Now convert the same $G$ to all-NOR: ANDs get input bubbles, ORs get output bubbles. This time the matching falls out unusually cleanly. Input $b$ routed into a bubble gives $\bar{b}$; $c$ needs its bubble cancelled; $d$ has no input bubble and passes straight through; and several output/input bubble pairs along the connecting wires cancel on their own. Only **two** inverters are needed in the whole circuit.
+Now convert the same $G$ to all-NOR: ANDs get input bubbles, ORs get output bubbles. This time the matching falls out unusually cleanly. Input $b$ routed into a bubble gives $\bar{b}$; $c$ needs its bubble cancelled; $d$ simply keeps the inverter it already had, since the OR shape it feeds has no input bubble; and both OR shapes' output bubbles land on the final AND shape's input bubbles and cancel on their own. Only **two** inverters are needed in the whole circuit, and the output needs none.
+
+![G as all-NOR: the product gate and the final gate carry input bubbles, the two OR shapes carry output bubbles that cancel against the final gate; inverters only on c and d; 20 transistors.](./images/g-all-nor-20t.svg)
 
 | Realization | Gates | Inverters | Transistors |
 |---|---|---|---|
