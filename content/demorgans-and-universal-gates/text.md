@@ -60,16 +60,16 @@ The complement of (A OR B) equals (NOT A) AND (NOT B): a NOR gate does what an A
 
 Again the final two columns match. The second tab of the interactive, *AND + Bubbles = NOR*, is this table.
 
-### Break the Bar, Change the Sign
+### Break the Line, Change the Sign
 
-The mnemonic for both forms is **"break the bar, change the sign."** Given an inversion bar over terms joined by AND or OR:
+The mnemonic for both forms is **"break the line, change the sign."** Given an inversion bar over terms joined by AND or OR:
 
-1. **Break the bar** — distribute the inversion onto each term individually.
+1. **Break the line** — distribute the inversion onto each term individually.
 2. **Change the sign** — every AND becomes OR, every OR becomes AND.
 
-Starting from $\overline{A \cdot B}$: break the bar to get $\bar{A}$ and $\bar{B}$, change the sign from AND to OR, and the result is $\bar{A} + \bar{B}$. It runs in reverse just as well, and it extends to any number of variables: $\overline{A \cdot B \cdot C} = \bar{A} + \bar{B} + \bar{C}$, and $\overline{A + B + C} = \bar{A} \cdot \bar{B} \cdot \bar{C}$.
+Starting from $\overline{A \cdot B}$: break the line to get $\bar{A}$ and $\bar{B}$, change the sign from AND to OR, and the result is $\bar{A} + \bar{B}$. It runs in reverse just as well, and it extends to any number of variables: $\overline{A \cdot B \cdot C} = \bar{A} + \bar{B} + \bar{C}$, and $\overline{A + B + C} = \bar{A} \cdot \bar{B} \cdot \bar{C}$.
 
-One thing the mnemonic does *not* say: the bar breaks over the operator it sits on, not over bars that are already there. Take $\overline{\bar{A} \cdot B}$. Break the bar over the AND: $\overline{\bar{A}} + \bar{B}$. The double bar on $A$ is two inversions, which cancel, leaving $A + \bar{B}$. Students who reach for "flip everything" get $\bar{A} + \bar{B}$ here, which is wrong — the check, as always, is a truth table.
+One thing the mnemonic does *not* say: the line breaks over the operator it sits on, not over bars that are already there. Take $\overline{\bar{A} \cdot B}$. Break the line over the AND: $\overline{\bar{A}} + \bar{B}$. The double bar on $A$ is two inversions, which cancel, leaving $A + \bar{B}$. Students who reach for "flip everything" get $\bar{A} + \bar{B}$ here, which is wrong — the check, as always, is a truth table.
 
 ## Bubble Notation and Gate Symbols
 
@@ -139,7 +139,7 @@ That is the pattern in miniature: write the function, apply De Morgan where an A
 
 ## Key Takeaways
 
-De Morgan's theorem has two forms: $\overline{A \cdot B} = \bar{A} + \bar{B}$ (a NAND is an OR with inverted inputs) and $\overline{A + B} = \bar{A} \cdot \bar{B}$ (a NOR is an AND with inverted inputs). The mnemonic is "break the bar, change the sign," and a truth table proves either form in four rows. In CMOS a NAND or NOR costs 4 transistors while an AND or OR costs 6, because AND and OR are a NAND/NOR plus an inverter — so building in NAND/NOR and letting inversions cancel saves hardware. NAND and NOR are universal: each can make NOT (tie the inputs), and from NOT plus De Morgan it can make AND and OR, hence any function. Bubble notation draws each universal gate two ways, which is what makes the cancellation visible on a schematic.
+De Morgan's theorem has two forms: $\overline{A \cdot B} = \bar{A} + \bar{B}$ (a NAND is an OR with inverted inputs) and $\overline{A + B} = \bar{A} \cdot \bar{B}$ (a NOR is an AND with inverted inputs). The mnemonic is "break the line, change the sign," and a truth table proves either form in four rows. In CMOS a NAND or NOR costs 4 transistors while an AND or OR costs 6, because AND and OR are a NAND/NOR plus an inverter — so building in NAND/NOR and letting inversions cancel saves hardware. NAND and NOR are universal: each can make NOT (tie the inputs), and from NOT plus De Morgan it can make AND and OR, hence any function. Bubble notation draws each universal gate two ways, which is what makes the cancellation visible on a schematic.
 
 ## Review Questions
 
@@ -181,7 +181,7 @@ D. The gate handles both analog and digital signals
 
 ### Question 5
 
-Apply "break the bar, change the sign" to $\overline{A \cdot B \cdot C}$.
+Apply "break the line, change the sign" to $\overline{A \cdot B \cdot C}$.
 
 A. $\bar{A} \cdot \bar{B} \cdot \bar{C}$\
 B. $\bar{A} + \bar{B} + \bar{C}$\
@@ -225,10 +225,10 @@ D. Three NANDs — 12
 
 **4. B.** A universal gate can build NOT, AND, and OR from copies of itself, and every Boolean function can be written in those three operations.
 
-**5. B.** Break the bar over each term ($\bar{A}$, $\bar{B}$, $\bar{C}$) and change the ANDs to ORs. Option A breaks the bar without changing the sign; C changes the sign without breaking the bar; D moves the bar instead of breaking it.
+**5. B.** Break the line over each term ($\bar{A}$, $\bar{B}$, $\bar{C}$) and change the ANDs to ORs. Option A breaks the line without changing the sign; C changes the sign without breaking the line; D moves the line instead of breaking it.
 
 **6. A.** $\overline{A + B} = \bar{A} \cdot \bar{B}$: a NOR (OR with inverted output) is an AND acting on inverted inputs. B and C both describe a NAND.
 
-**7. B.** Break the bar over the AND: $\overline{\bar{A}} + \bar{B}$. The double inversion on $A$ cancels, giving $A + \bar{B}$. Option A is the "flip everything" mistake — the existing bar on $A$ is part of the term, not part of what breaks.
+**7. B.** Break the line over the AND: $\overline{\bar{A}} + \bar{B}$. The double inversion on $A$ cancels, giving $A + \bar{B}$. Option A is the "flip everything" mistake — the existing bar on $A$ is part of the term, not part of what breaks.
 
 **8. A.** $\overline{A \cdot B}$ is a NAND, $\bar{C}$ is an inverter, and the outer bar over their product is a second NAND: $4 + 2 + 4 = 10$ transistors, versus 12 for the AND-plus-OR original.
