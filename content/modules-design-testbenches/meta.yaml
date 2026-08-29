@@ -7,3 +7,5 @@ order: 70100
 graphics:
   01-modules-design-testbenches.youtube:
     caption: "Video: the separation between design (RTL) and testbench — describing hardware vs. driving its signals, with a counter example"
+  02-interactive.html:
+    caption: "Interactive: testbench on the left, design module on the right — click any signal or module name to see how the testbench's reg/wire declarations, the DUT instantiation, and the counter's ports connect"
