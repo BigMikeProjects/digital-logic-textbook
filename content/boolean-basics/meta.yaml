@@ -7,3 +7,5 @@ order: 30300
 graphics:
   01-boolean-basics.youtube:
     caption: "Video: the core Boolean identities — identity, null, idempotent, complement, involution, the duality rule, distributive/absorption, and De Morgan's theorem with bubble pushing"
+  02-interactive.html:
+    caption: "Interactive: the Boolean identities in five acts — flip cards for the single-variable properties (identity, null, idempotent, complement, involution), the duality rule, the multi-variable laws, De Morgan's theorem, and bubble pushing through gates"

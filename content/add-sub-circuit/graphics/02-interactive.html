@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>4-Bit Ripple Add/Subtract</title>
+<style>
+  html,body{height:100%;margin:0;overflow:hidden;background:#060d18;}
+  body{display:flex;align-items:center;justify-content:center;}
+  .viewport-container{width:100%;max-width:100vw;aspect-ratio:16/9;max-height:100vh;position:relative;overflow:hidden;}
+  .design-surface{width:1920px;height:1080px;position:absolute;top:0;left:0;transform-origin:top left;
+    background:#0b1526;font-family:"Inter","Segoe UI",Helvetica,Arial,sans-serif;color:#e6edf7;}
+  .slide{position:absolute;inset:0;display:none;}
+  .slide.active{display:block;}
+  svg{position:absolute;inset:0;}
+  .fade{transition:opacity .18s linear;}
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+  <div class="design-surface" id="designSurface">
+    <div class="slide" id="s1"><svg id="svg1" viewBox="0 0 1920 1080"></svg></div>
+    <div class="slide" id="s2"><svg id="svg2" viewBox="0 0 1920 1080"></svg></div>
+    <div class="slide" id="s3"><svg id="svg3" viewBox="0 0 1920 1080"></svg></div>
+  </div>
+</div>
+
+<script>
+/* ===================== PALETTE ===================== */
+const C = {
+  bg:'#0b1526', panel:'#12203a', panel2:'#0f1b30',
+  ink:'#e6edf7', muted:'#8ea3c0', dim:'#6a7d9c',
+  line:'#5e7492',      // wire at logic 0 — must still read on a projector
+  hi:'#22d3ee',        // logic 1 / HIGH
+  amber:'#fbbf24',     // control, SUB, overflow, warnings
+  violet:'#a78bfa',    // XOR elements
+  edge:'#35486b',
+  faFill:'#1b3054', faEdge:'#5b82b8', faInk:'#8fa8c9',
+  band:'#101d33', bandEdge:'#16274a'
+};
+
+/* ===================== STATE =====================
+   slide 1 = the plain ripple-carry adder   (C0 grounded — it can only add)
+   slide 2 = XOR as a programmable inverter (the tool)
+   slide 3 = the add/subtract circuit       (C and V flags shown here)      */
+const st = { slide:1, stage:1, A:0b0101, B:0b0010, SUB:0, cur:0, ex:0 };
+const MAXSTAGE = {1:3, 2:3, 3:3};
+const CIRCUIT = 3;
+
+/* SUB does not exist until the +1 does */
+function allowSub(){
+  if(st.slide===1) return false;                    // plain adder — no SUB at all
+  if(st.slide===CIRCUIT && st.stage<3) return false;
+  return true;
+}
+
+const EXAMPLES = [
+  {A:0b0111, B:0b0001, SUB:0},   // +7 + 1  -> signed overflow
+  {A:0b1000, B:0b0001, SUB:1},   // -8 - 1  -> signed overflow
+  {A:0b0011, B:0b0101, SUB:1},   //  3 - 5  -> unsigned out of range (borrow)
+  {A:0b1001, B:0b1000, SUB:0},   //  9 + 8  -> unsigned out of range (carry)
+  {A:0b0110, B:0b0011, SUB:1}    //  6 - 3  -> both readings fine
+];
+
+/* ===================== LOGIC (mirrors verify.py) ===================== */
+function model(A,B,SUB){
+  const a=[0,1,2,3].map(i=>(A>>i)&1);
+  const b=[0,1,2,3].map(i=>(B>>i)&1);
+  const bx=[0,1,2,3].map(i=>b[i]^SUB);
+  const c=[SUB], s=[];
+  for(let i=0;i<4;i++){
+    s.push(a[i]^bx[i]^c[i]);
+    c.push((a[i]&bx[i])|(bx[i]&c[i])|(a[i]&c[i]));
+  }
+  const S=s.reduce((acc,v,i)=>acc|(v<<i),0);
+  return {a,b,bx,c,s,S,C3:c[3],C4:c[4],V:c[3]^c[4]};
+}
+const sgn   = x => (x&8) ? x-16 : x;
+const bits4 = x => [3,2,1,0].map(i=>(x>>i)&1);
+
+/* The two range checks.  Verified exhaustively: these are EXACTLY the C and V
+   flags, and the displayed value differs from the true value precisely when
+   the corresponding check fails.  No false alarms, no silent wrong answers.  */
+function ranges(A,B,SUB){
+  const trueU = SUB ? A-B : A+B;
+  const trueS = SUB ? sgn(A)-sgn(B) : sgn(A)+sgn(B);
+  return {trueU, trueS, uOK: trueU>=0 && trueU<=15, sOK: trueS>=-8 && trueS<=7};
+}
+
+/* ===================== SVG HELPERS ===================== */
+const NS='http://www.w3.org/2000/svg';
+function el(t,at={},parent=null){
+  const e=document.createElementNS(NS,t);
+  for(const k in at) if(at[k]!==null && at[k]!==undefined) e.setAttribute(k,at[k]);
+  if(parent) parent.appendChild(e);
+  return e;
+}
+function txt(p,x,y,s,o={}){
+  const t=el('text',{x,y,'text-anchor':o.anchor||'middle','font-size':o.size||20,
+    'font-weight':o.weight||500, fill:o.fill||C.ink,
+    'font-family':o.mono?'"JetBrains Mono","SF Mono",Consolas,monospace':'inherit',
+    'letter-spacing':o.ls||0, opacity:(o.op===undefined?1:o.op),
+    id:o.id||null, class:o.cls||null},p);
+  t.textContent=s;
+  return t;
+}
+function wire(p,pts,o={}){
+  return el('polyline',{points:pts.map(q=>q.join(',')).join(' '),fill:'none',
+    stroke:o.stroke||C.line,'stroke-width':o.sw||2.5,
+    'stroke-linejoin':'round','stroke-linecap':'round',
+    opacity:(o.op===undefined?1:o.op), id:o.id||null, class:o.cls||null},p);
+}
+function box(p,cx,cy,w,h,o={}){
+  return el('rect',{x:cx-w/2,y:cy-h/2,width:w,height:h,rx:(o.rx===undefined?4:o.rx),
+    fill:o.fill||C.panel, stroke:o.stroke||C.edge,'stroke-width':o.sw||2,
+    opacity:(o.op===undefined?1:o.op), id:o.id||null, class:o.cls||null},p);
+}
+function dot(p,x,y,o={}){
+  return el('circle',{cx:x,cy:y,r:o.r||4.5,fill:o.fill||C.line,
+    opacity:(o.op===undefined?1:o.op), id:o.id||null, class:o.cls||null},p);
+}
+/* arrowheads as explicit polygons — SVG markers are unreliable under transforms */
+function arrow(p,x,y,dir,o={}){
+  const s=o.s||7;
+  const pts = dir==='left'  ? `${x},${y} ${x+s*1.6},${y-s} ${x+s*1.6},${y+s}`
+            : dir==='right' ? `${x},${y} ${x-s*1.6},${y-s} ${x-s*1.6},${y+s}`
+            : dir==='down'  ? `${x},${y} ${x-s},${y-s*1.6} ${x+s},${y-s*1.6}`
+            :                 `${x},${y} ${x-s},${y+s*1.6} ${x+s},${y+s*1.6}`;
+  return el('polygon',{points:pts,fill:o.fill||C.line,
+    opacity:(o.op===undefined?1:o.op), id:o.id||null, class:o.cls||null},p);
+}
+
+/* Where the XOR's outer arc sits at a given pin height.  The arc is the
+   quadratic  M(x0-10,yt) Q(x0-10+0.30h, cy) (x0-10,yb) ;  y is linear in t,
+   so t=(y-yt)/h  and  x = (x0-10) + 2t(1-t)(0.30h).   Input wires must STOP
+   here — running them to the gate back buries them in the body.            */
+function xorIn(x0,yt,yb,y){
+  const h=yb-yt, t=(y-yt)/h;
+  return (x0-10) + 2*t*(1-t)*(0.30*h);
+}
+
+/* IEEE distinctive-shape gates, pointing right */
+function xorGate(p,x0,yt,yb,o={}){
+  const x1=(o.x1!==undefined)?o.x1:x0+70, cy=(yt+yb)/2, h=yb-yt;
+  const g=el('g',{opacity:(o.op===undefined?1:o.op),id:o.id||null,class:o.cls||null},p);
+  const stroke=o.stroke||C.violet, sw=2.6;
+  el('path',{d:`M ${x0} ${yt} C ${x0+h*0.5} ${yt} ${x1-h*0.4} ${cy-h*0.27} ${x1} ${cy}`,
+    fill:'none',stroke,'stroke-width':sw,'stroke-linecap':'round'},g);
+  el('path',{d:`M ${x0} ${yb} C ${x0+h*0.5} ${yb} ${x1-h*0.4} ${cy+h*0.27} ${x1} ${cy}`,
+    fill:'none',stroke,'stroke-width':sw,'stroke-linecap':'round'},g);
+  el('path',{d:`M ${x0} ${yt} Q ${x0+h*0.30} ${cy} ${x0} ${yb}`,
+    fill:'none',stroke,'stroke-width':sw,'stroke-linecap':'round'},g);
+  el('path',{d:`M ${x0-10} ${yt} Q ${x0+h*0.30-10} ${cy} ${x0-10} ${yb}`,
+    fill:'none',stroke,'stroke-width':sw,'stroke-linecap':'round'},g);
+  return g;
+}
+function notGate(p,x0,cy,o={}){
+  const w=46,h=44,stroke=o.stroke||C.violet;
+  const g=el('g',{},p);
+  el('polygon',{points:`${x0},${cy-h/2} ${x0},${cy+h/2} ${x0+w},${cy}`,
+    fill:'none',stroke,'stroke-width':2.6,'stroke-linejoin':'round'},g);
+  el('circle',{cx:x0+w+7,cy:cy,r:7,fill:'none',stroke,'stroke-width':2.6},g);
+  return g;
+}
+/* full adder: shadow + strong fill + bright border */
+function faBox(p,cx,cy,w,h,label,o={}){
+  const g=el('g',{},p);
+  el('rect',{x:cx-w/2+5,y:cy-h/2+6,width:w,height:h,rx:10,fill:'#050b14',opacity:.55},g);
+  el('rect',{x:cx-w/2,y:cy-h/2,width:w,height:h,rx:10,
+    fill:o.fill||C.faFill,stroke:o.stroke||C.faEdge,'stroke-width':3},g);
+  el('line',{x1:cx-w/2+14,y1:cy-h/2+46,x2:cx+w/2-14,y2:cy-h/2+46,
+    stroke:o.stroke||C.faEdge,'stroke-width':1.5,opacity:.45},g);
+  txt(g,cx,cy-h/2+34,o.header||'FULL ADDER',{size:13,weight:700,fill:o.ink||C.faInk,ls:2.5});
+  txt(g,cx,cy+h/2-42,label,{size:36,weight:800,fill:'#eaf2fd'});
+  return g;
+}
+/* clickable bit cell */
+function bitCell(p,cx,cy,id,o={}){
+  const w=o.w||36,h=o.h||34;
+  const g=el('g',{id:id+'_g',style:o.click?'cursor:pointer':''},p);
+  box(g,cx,cy,w,h,{id:id+'_r',fill:C.panel2,stroke:C.edge,rx:5});
+  txt(g,cx,cy+8,'0',{id:id+'_t',size:22,weight:700,mono:true,fill:C.dim});
+  if(o.click) g.addEventListener('click',o.click);
+  return g;
+}
+function setBit(id,v,o={}){
+  const r=document.getElementById(id+'_r'), t=document.getElementById(id+'_t');
+  if(!r) return;
+  const on=o.color||C.hi;
+  t.textContent=String(v);
+  t.setAttribute('fill', v?'#062028':C.dim);
+  r.setAttribute('fill', v?on:C.panel2);
+  r.setAttribute('stroke', o.sel?C.amber:(v?on:C.edge));
+  r.setAttribute('stroke-width', o.sel?4:2);
+}
+function setWire(id,v,col){
+  const w=document.getElementById(id);
+  if(!w) return;
+  w.setAttribute('stroke', v?(col||C.hi):C.line);
+  w.setAttribute('stroke-width', v?3.4:2.5);
+}
+function setFill(id,v,col){
+  const e=document.getElementById(id);
+  if(e) e.setAttribute('fill', v?(col||C.hi):C.line);
+}
+
+const BITOF=[3,2,1,0];
+const CX=[400,780,1160,1540];
+const RAIL_Y=95, TRUNK_X=1760;
+
+/* Shared bit-slice geometry, used by BOTH the plain adder (slide 1) and the
+   add/subtract circuit (slide 3), so slide 3 is visibly the same machine:
+     A cell   at cx+70   -> straight vertical drop into the adder
+     B cell   at cx-160  -> vertical drop, one right angle, on to the adder
+     SUB lane at cx-115  -> (slide 3 only) drops into the XOR
+     XOR      cx-70 .. cx ;  output drops at cx, dead centre of the adder
+     FA       cx, cy 545, 210 x 160        carry chain at y 575, right to left  */
+
+function bands(p){
+  for(let k=0;k<4;k++)
+    el('rect',{x:CX[k]-187,y:118,width:374,height:652,rx:14,
+      fill:C.band,stroke:C.bandEdge,'stroke-width':1.5},p);
+}
+function groundSymbol(p,g){
+  wire(g,[[1645,575],[1730,575]],{sw:3});
+  arrow(g,1645,575,'left',{});
+  wire(g,[[1730,562],[1730,588]],{sw:3});
+  wire(g,[[1738,568],[1738,582]],{sw:3});
+}
+
+/* =====================================================================
+   SLIDE 1 — the plain 4-bit ripple-carry adder.  C0 grounded.
+   ===================================================================== */
+function buildAdder(){
+  const p=document.getElementById('svg1');
+  p.innerHTML='';
+
+  txt(p,110,42,'4-Bit Ripple-Carry Adder',{anchor:'start',size:30,weight:700});
+  txt(p,110,70,'four identical cells · one carry chain',{anchor:'start',size:17,weight:500,fill:C.muted,ls:1.2});
+
+  bands(p);
+
+  /* C0 tied to ground — always, on this slide */
+  const gZ=el('g',{id:'p_zero'},p);
+  groundSymbol(p,gZ);
+  txt(gZ,1700,556,'C₀=0',{size:15,weight:700,fill:C.muted,mono:true,id:'p_c0lbl'});
+  /* the spotlight (stage 3) */
+  const gSpot=el('g',{id:'p_spot',class:'fade'},p);
+  el('circle',{cx:1690,cy:575,r:44,fill:'none',stroke:C.amber,'stroke-width':3,
+    'stroke-dasharray':'7 6'},gSpot);
+  txt(gSpot,1690,650,'unused',{size:16,weight:700,fill:C.amber,ls:1});
+
+  for(let k=0;k<4;k++){
+    const cx=CX[k], i=BITOF[k];
+
+    txt(p,cx+70,135,'A'+i,{size:15,weight:700,fill:C.muted});
+    bitCell(p,cx+70,161,'pa'+i,{click:()=>{st.A^=(1<<i); st.cur=3-i; render();}});
+    wire(p,[[cx+70,178],[cx+70,465]],{id:'pw_a'+i});
+    arrow(p,cx+70,467,'down',{id:'paa'+i});
+
+    txt(p,cx-160,195,'B'+i,{size:15,weight:700,fill:C.muted});
+    bitCell(p,cx-160,221,'pb'+i,{click:()=>{st.B^=(1<<i); st.cur=7-i; render();}});
+    wire(p,[[cx-160,238],[cx-160,385],[cx,385],[cx,465]],{id:'pw_b'+i});
+    arrow(p,cx,467,'down',{id:'pab'+i});
+
+    faBox(p,cx,545,210,160,'FA'+['₀','₁','₂','₃'][i]);
+
+    wire(p,[[cx,625],[cx,690]],{id:'pw_s'+i});
+    bitCell(p,cx,712,'ps'+i);
+    txt(p,cx,758,'S'+i,{size:15,weight:700,fill:C.muted});
+
+    if(k>0){
+      wire(p,[[cx-105,575],[cx-275,575]],{id:'pw_c'+(i+1),sw:3});
+      arrow(p,cx-275,575,'left',{id:'pac'+(i+1)});
+      txt(p,cx-190,560,'',{id:'pt_c'+(i+1),cls:'fade p_carry',
+        size:15,weight:700,fill:C.muted,mono:true});
+    }
+  }
+
+  /* C4 — the carry out */
+  wire(p,[[295,575],[190,575]],{id:'pw_c4',sw:3});
+  arrow(p,190,575,'left',{id:'pac4'});
+  txt(p,140,536,'C₄',{size:19,weight:700,fill:C.muted});
+  bitCell(p,140,570,'pC4',{w:44,h:38});
+  txt(p,140,612,'carry out',{size:12,weight:600,fill:C.dim});
+
+  /* readout — a plain adder is an unsigned adder */
+  box(p,960,850,1180,110,{fill:C.panel2,stroke:C.edge,rx:10});
+  txt(p,960,838,'',{id:'p_read',size:26,weight:700,mono:true});
+  txt(p,960,884,'',{id:'p_warn',size:18,weight:700});
+
+  txt(p,960,970,'',{id:'p_cap',size:21,weight:600,fill:C.amber});
+  txt(p,110,1046,'← → select bit   ↑ ↓ / click toggle   E example   1–3 stage   SPACE next   ⌫ back   R restart',
+    {anchor:'start',size:14,weight:500,fill:C.dim,ls:.4});
+}
+
+function renderAdder(){
+  const stg=st.stage, m=model(st.A,st.B,0);   // SUB is not a thing on this slide
+  const trueU=st.A+st.B, fits=(trueU<=15);
+
+  document.querySelectorAll('.p_carry').forEach(e=>e.style.opacity=(stg>=2)?1:0);
+  document.getElementById('p_spot').style.opacity=(stg>=3)?1:0;
+  document.getElementById('p_c0lbl').setAttribute('fill', stg>=3?C.amber:C.muted);
+
+  for(let i=0;i<4;i++){
+    setBit('pa'+i,m.a[i],{sel:(3-i)===st.cur});
+    setBit('pb'+i,m.b[i],{sel:(7-i)===st.cur});
+    setBit('ps'+i,m.s[i]);
+    setWire('pw_a'+i,m.a[i]);  setFill('paa'+i,m.a[i]);
+    setWire('pw_b'+i,m.b[i]);  setFill('pab'+i,m.b[i]);
+    setWire('pw_s'+i,m.s[i]);
+    if(i<3){
+      setWire('pw_c'+(i+1),m.c[i+1]);  setFill('pac'+(i+1),m.c[i+1]);
+      const tc=document.getElementById('pt_c'+(i+1));
+      tc.textContent=`C${i+1}=${m.c[i+1]}`;
+      tc.setAttribute('fill', m.c[i+1]?C.hi:C.muted);
+    }
+  }
+  setWire('pw_c4',m.C4);  setFill('pac4',m.C4);
+  setBit('pC4',m.C4);
+
+  document.getElementById('p_read').textContent =
+    `${st.A} + ${st.B}   →   ${bits4(m.S).join('')}   =   ${m.S}`;
+  const w=document.getElementById('p_warn');
+  w.textContent = fits ? '✓ fits in 4 bits'
+                       : `⚠ CARRY OUT — the true sum is ${trueU}, and it does not fit in 4 bits`;
+  w.setAttribute('fill', fits?C.dim:C.amber);
+
+  document.getElementById('p_cap').textContent={
+    1:'Four identical full adders.  A + B.  That is the whole machine.',
+    2:'Each carry-out feeds the next cell to its left.  The answer is not final until the ripple arrives.',
+    3:'Every full adder takes three inputs.  The ones column is only using two.  Hold that thought.'
+  }[stg];
+}
+
+/* =====================================================================
+   SLIDE 2 — XOR as a programmable inverter
+   ===================================================================== */
+function buildXor(){
+  const p=document.getElementById('svg2');
+  p.innerHTML='';
+  txt(p,110,46,'XOR: the programmable inverter',{anchor:'start',size:30,weight:700});
+  txt(p,110,74,'one gate, two personalities',{anchor:'start',size:17,weight:500,fill:C.muted,ls:1.2});
+
+  /* stage 1 — truth table */
+  const g1=el('g',{id:'x_tt',class:'fade'},p);
+  const TX=180, TY=170, RW=[90,90,150], RH=64;
+  let x=TX;
+  ['CTRL','X','X ⊕ CTRL'].forEach((c,ci)=>{
+    txt(g1,x+RW[ci]/2,TY+34,c,{size:19,weight:700,fill:C.muted,ls:1}); x+=RW[ci];
+  });
+  [[0,0,0],[0,1,1],[1,0,1],[1,1,0]].forEach((r,ri)=>{
+    const y=TY+50+ri*RH, pass=(r[0]===0);
+    box(g1,TX+165,y+RH/2,330,RH-6,{fill:pass?'#101d33':'#1b1a2e',
+      stroke:pass?C.edge:'#3a3357',rx:6});
+    let xx=TX;
+    r.forEach((v,ci)=>{
+      const col = ci===0?C.amber : (ci===2?C.violet:C.hi);
+      txt(g1,xx+RW[ci]/2,y+RH/2+9,String(v),{size:25,weight:700,mono:true,fill:v?col:C.dim});
+      xx+=RW[ci];
+    });
+  });
+  wire(g1,[[TX+345,TY+52],[TX+362,TY+52],[TX+362,TY+176],[TX+345,TY+176]],{stroke:C.dim,sw:2});
+  txt(g1,TX+378,TY+120,'CTRL = 0  →  pass',{anchor:'start',size:18,weight:700,fill:C.hi});
+  wire(g1,[[TX+345,TY+180],[TX+362,TY+180],[TX+362,TY+304],[TX+345,TY+304]],{stroke:C.dim,sw:2});
+  txt(g1,TX+378,TY+248,'CTRL = 1  →  invert',{anchor:'start',size:18,weight:700,fill:C.violet});
+
+  /* stage 2 — the two equivalences */
+  const g2=el('g',{id:'x_eq',class:'fade'},p);
+  const eq=(y,ctrl)=>{
+    const bx=1060;
+    xorGate(g2,bx,y-32,y+32,{});
+    wire(g2,[[bx-90,y-18],[xorIn(bx,y-32,y+32,y-18),y-18]],{stroke:C.hi,sw:2.6});
+    txt(g2,bx-108,y-11,'X',{size:20,weight:700,fill:C.hi});
+    wire(g2,[[bx-90,y+18],[xorIn(bx,y-32,y+32,y+18),y+18]],{stroke:ctrl?C.amber:C.line,sw:2.6});
+    txt(g2,bx-108,y+25,String(ctrl),{size:22,weight:700,mono:true,fill:ctrl?C.amber:C.dim});
+    wire(g2,[[bx+70,y],[bx+130,y]],{stroke:C.violet,sw:2.6});
+    txt(g2,bx+168,y+9,'≡',{size:34,weight:700,fill:C.muted});
+    if(!ctrl){
+      wire(g2,[[bx+210,y],[bx+400,y]],{stroke:C.hi,sw:2.6});
+      txt(g2,bx+305,y-22,'plain wire',{size:16,weight:600,fill:C.hi});
+      txt(g2,bx+430,y+9,'X',{anchor:'start',size:22,weight:700,fill:C.hi});
+    }else{
+      wire(g2,[[bx+210,y],[bx+252,y]],{stroke:C.hi,sw:2.6});
+      notGate(g2,bx+252,y,{});
+      wire(g2,[[bx+312,y],[bx+400,y]],{stroke:C.violet,sw:2.6});
+      txt(g2,bx+305,y-32,'inverter',{size:16,weight:600,fill:C.violet});
+      txt(g2,bx+430,y+9,'X′',{anchor:'start',size:22,weight:700,fill:C.violet});
+    }
+  };
+  eq(250,0); eq(430,1);
+
+  /* stage 3 — four bits, one control line (live)
+     Both inputs approach the gate from the LEFT and stop on the outer arc.
+     The SUB lane sits clear of the gate body and clear of the B cell; it turns
+     at the LOWER pin and B turns at the upper one, so the two never cross.   */
+  const g3=el('g',{id:'x_fan',class:'fade'},p);
+  txt(g3,960,596,'four bits, one control line',{size:19,weight:700,fill:C.muted,ls:1});
+  const FX=[620,860,1100,1340];
+  const GX=-20, GT=726, GB=786;        // gate back / top / bottom, relative to cx
+  wire(g3,[[535,624],[1498,624]],{id:'x_rail',sw:3});
+  for(let k=0;k<4;k++){
+    const cx=FX[k], i=BITOF[k];
+
+    /* B : cell above the gate, drops, one right angle into the UPPER pin */
+    txt(g3,cx-46,658,'B'+i,{size:14,weight:700,fill:C.muted});
+    bitCell(g3,cx-46,686,'xb'+i,{click:()=>{st.B^=(1<<i); st.cur=7-i; render();}});
+    wire(g3,[[cx-46,703],[cx-46,742],[xorIn(cx+GX,GT,GB,742),742]],{id:'xwb'+i});
+
+    /* SUB : taps the rail well clear of the gate, drops, into the LOWER pin */
+    wire(g3,[[cx-85,624],[cx-85,770],[xorIn(cx+GX,GT,GB,770),770]],{id:'xws'+i});
+    dot(g3,cx-85,624,{id:'xd'+i});
+
+    xorGate(g3,cx+GX,GT,GB,{});
+    wire(g3,[[cx+50,756],[cx+50,806]],{id:'xwo'+i});
+    arrow(g3,cx+50,808,'down',{id:'xao'+i});
+    bitCell(g3,cx+50,832,'xx'+i);
+    txt(g3,cx+50,872,'B′'+i,{size:14,weight:700,fill:C.violet});
+  }
+  bitCell(g3,1520,624,'xsub',{w:44,h:38,click:()=>{st.SUB^=1; render();}});
+  txt(g3,1520,668,'SUB',{size:15,weight:700,fill:C.amber,ls:1.2});
+
+  txt(p,960,948,'',{id:'x_cap',size:21,weight:600,fill:C.amber});
+  txt(p,110,1046,'← → select bit   ↑ ↓ / click toggle   S sub   1–3 stage   SPACE next   ⌫ back   R restart',
+    {anchor:'start',size:14,weight:500,fill:C.dim,ls:.4});
+}
+
+function renderXor(){
+  const stg=st.stage, m=model(st.A,st.B,st.SUB);
+  document.getElementById('x_tt').style.opacity  = stg>=1?1:0;
+  document.getElementById('x_eq').style.opacity  = stg>=2?1:0;
+  document.getElementById('x_fan').style.opacity = stg>=3?1:0;
+
+  for(let i=0;i<4;i++){
+    setBit('xb'+i,m.b[i],{sel:(7-i)===st.cur});
+    setBit('xx'+i,m.bx[i],{color:C.violet});
+    setWire('xwb'+i,m.b[i]);
+    setWire('xws'+i,st.SUB,C.amber);
+    setFill('xd'+i,st.SUB,C.amber);
+    setWire('xwo'+i,m.bx[i],C.violet);
+    setFill('xao'+i,m.bx[i],C.violet);
+  }
+  setBit('xsub',st.SUB,{color:C.amber});
+  setWire('x_rail',st.SUB,C.amber);
+
+  document.getElementById('x_cap').textContent={
+    1:'The truth table already says it: the top half passes X through, the bottom half flips it.',
+    2:'Tie the control to 0 and the gate is a wire.  Tie it to 1 and it is an inverter.',
+    3:'One control line, four conditional inverters.  Hold on to that — we are about to need it.'
+  }[stg];
+}
+
+/* =====================================================================
+   SLIDE 3 — the add/subtract circuit, with the C and V flags on it
+   ===================================================================== */
+function buildCircuit(){
+  const p=document.getElementById('svg3');
+  p.innerHTML='';
+
+  txt(p,110,42,'4-Bit Ripple Add / Subtract',{anchor:'start',size:30,weight:700});
+  txt(p,110,70,'the same adder · two tricks',{anchor:'start',size:17,weight:500,fill:C.muted,ls:1.2});
+
+  bands(p);
+
+  /* SUB rail + trunk (stage >= 2) */
+  const gRail=el('g',{id:'c_rail',class:'fade'},p);
+  wire(gRail,[[285,RAIL_Y],[TRUNK_X,RAIL_Y],[TRUNK_X,933]],{id:'w_rail',sw:3});
+  bitCell(gRail,TRUNK_X,952,'sub',{w:44,h:38,click:()=>{if(allowSub()){st.SUB^=1;render();}}});
+  txt(gRail,TRUNK_X,1000,'SUB',{size:17,weight:700,fill:C.amber,ls:1.5});
+
+  /* C0 still grounded (stages 1-2) */
+  const gZ=el('g',{id:'c_zero',class:'fade'},p);
+  groundSymbol(p,gZ);
+  txt(gZ,1700,556,'C₀=0',{size:15,weight:700,fill:C.muted,mono:true});
+
+  /* SUB takes over C0 (stage 3) */
+  const gC0=el('g',{id:'c_c0',class:'fade'},p);
+  wire(gC0,[[TRUNK_X,575],[1645,575]],{id:'w_c0',sw:3});
+  arrow(gC0,1645,575,'left',{id:'a_c0'});
+  dot(gC0,TRUNK_X,575,{id:'d_c0'});
+  txt(gC0,1700,556,'C₀',{size:17,weight:700,fill:C.amber,id:'t_c0',mono:true});
+
+  for(let k=0;k<4;k++){
+    const cx=CX[k], i=BITOF[k];
+
+    txt(p,cx+70,135,'A'+i,{size:15,weight:700,fill:C.muted});
+    bitCell(p,cx+70,161,'a'+i,{click:()=>{st.A^=(1<<i); st.cur=3-i; render();}});
+    wire(p,[[cx+70,178],[cx+70,465]],{id:'w_a'+i});
+    arrow(p,cx+70,467,'down',{id:'aa'+i});
+
+    txt(p,cx-160,195,'B'+i,{size:15,weight:700,fill:C.muted});
+    bitCell(p,cx-160,221,'b'+i,{click:()=>{st.B^=(1<<i); st.cur=7-i; render();}});
+    /* stage 1: the slide-1 wire, untouched */
+    wire(p,[[cx-160,238],[cx-160,385],[cx,385],[cx,465]],{id:'w_bdir'+i,cls:'fade c_direct'});
+    arrow(p,cx,467,'down',{id:'ab'+i,cls:'fade c_direct'});
+    /* stage 2+: the same wire, cut, with the gate dropped into the gap */
+    wire(p,[[cx-160,238],[cx-160,385],[xorIn(cx-70,340,400,385),385]],{id:'w_bx'+i,cls:'fade c_xor'});
+
+    wire(p,[[cx-115,RAIL_Y],[cx-115,355],[xorIn(cx-70,340,400,355),355]],{id:'w_sd'+i,cls:'fade c_xor'});
+    dot(p,cx-115,RAIL_Y,{id:'d_sd'+i,cls:'fade c_xor'});
+
+    xorGate(p,cx-70,340,400,{x1:cx,id:'xg'+i,cls:'fade c_xor'});
+    wire(p,[[cx,370],[cx,465]],{id:'w_xo'+i,cls:'fade c_xor'});
+    arrow(p,cx,467,'down',{id:'ax'+i,cls:'fade c_xor'});
+    txt(p,cx+12,410,'',{id:'t_bx'+i,cls:'fade c_xor',anchor:'start',size:16,weight:700,
+      fill:C.violet,mono:true});
+
+    faBox(p,cx,545,210,160,'FA'+['₀','₁','₂','₃'][i]);
+
+    wire(p,[[cx,625],[cx,690]],{id:'w_s'+i});
+    bitCell(p,cx,712,'s'+i);
+    txt(p,cx,758,'S'+i,{size:15,weight:700,fill:C.muted});
+
+    if(k>0){
+      wire(p,[[cx-105,575],[cx-275,575]],{id:'w_c'+(i+1),sw:3});
+      arrow(p,cx-275,575,'left',{id:'ac'+(i+1)});
+      txt(p,cx-190,560,'',{id:'t_c'+(i+1),size:15,weight:700,fill:C.muted,mono:true});
+    }
+  }
+
+  /* ---------------- the flags ---------------- */
+  /* C4 : out of FA3, down the left margin, on to the V gate */
+  wire(p,[[295,575],[200,575],[200,830],[xorIn(650,785,845,830),830]],{id:'w_c4',sw:3});
+  dot(p,200,700,{id:'d_c4'});
+  wire(p,[[200,700],[162,700]],{id:'w_ctap',sw:3});
+  txt(p,140,668,'C',{size:19,weight:700,fill:C.muted});
+  bitCell(p,140,700,'fC',{w:44,h:38});
+  txt(p,140,742,'',{id:'t_cmeans',size:12,weight:600,fill:C.dim});
+
+  /* C3 : tapped in the gutter between FA3 and FA2 */
+  dot(p,590,575,{id:'d_c3t'});
+  wire(p,[[590,575],[590,800],[xorIn(650,785,845,800),800]],{id:'w_c3t',sw:3});
+
+  /* V = C3 XOR C4 */
+  xorGate(p,650,785,845,{x1:720,id:'vg'});
+  wire(p,[[720,815],[772,815]],{id:'w_v',sw:3});
+  arrow(p,774,815,'right',{id:'av'});
+  txt(p,806,783,'V',{size:19,weight:700,fill:C.muted});
+  bitCell(p,806,815,'fV',{w:44,h:38});
+  txt(p,806,857,'1 = overflow',{size:12,weight:600,fill:C.dim});
+
+  /* ---------------- readout with the range check ---------------- */
+  box(p,1310,855,840,150,{fill:C.panel2,stroke:C.edge,rx:10});
+  txt(p,1310,812,'',{id:'r_op',size:24,weight:700,mono:true});
+  txt(p,930,862,'unsigned',{anchor:'start',size:17,weight:700,fill:C.muted});
+  txt(p,1130,862,'',{id:'r_uval',anchor:'end',size:20,weight:700,mono:true});
+  txt(p,1170,862,'',{id:'r_ustat',anchor:'start',size:17,weight:700});
+  txt(p,930,906,'signed',{anchor:'start',size:17,weight:700,fill:C.muted});
+  txt(p,1130,906,'',{id:'r_sval',anchor:'end',size:20,weight:700,mono:true});
+  txt(p,1170,906,'',{id:'r_sstat',anchor:'start',size:17,weight:700});
+
+  txt(p,960,978,'',{id:'c_cap',size:21,weight:600,fill:C.amber});
+  txt(p,110,1046,'← → select bit   ↑ ↓ / click toggle   S sub   E example   1–3 stage   SPACE next   ⌫ back   R restart',
+    {anchor:'start',size:14,weight:500,fill:C.dim,ls:.4});
+}
+
+function renderCircuit(){
+  const stg=st.stage, m=model(st.A,st.B,st.SUB), rg=ranges(st.A,st.B,st.SUB);
+
+  document.querySelectorAll('.c_direct').forEach(e=>e.style.opacity = (stg===1)?1:0);
+  document.querySelectorAll('.c_xor').forEach(e=>e.style.opacity    = (stg>=2)?1:0);
+  document.getElementById('c_rail').style.opacity = (stg>=2)?1:0;
+  document.getElementById('c_c0').style.opacity   = (stg>=3)?1:0;
+  document.getElementById('c_zero').style.opacity = (stg<3)?1:0;
+
+  for(let i=0;i<4;i++){
+    setBit('a'+i,m.a[i],{sel:(3-i)===st.cur});
+    setBit('b'+i,m.b[i],{sel:(7-i)===st.cur});
+    setBit('s'+i,m.s[i]);
+    setWire('w_a'+i,m.a[i]);            setFill('aa'+i,m.a[i]);
+    setWire('w_bdir'+i,m.b[i]);         setFill('ab'+i,m.b[i]);
+    setWire('w_bx'+i,m.b[i]);
+    setWire('w_sd'+i,st.SUB,C.amber);   setFill('d_sd'+i,st.SUB,C.amber);
+    setWire('w_xo'+i,m.bx[i],C.violet); setFill('ax'+i,m.bx[i],C.violet);
+    setWire('w_s'+i,m.s[i]);
+    const tb=document.getElementById('t_bx'+i);
+    tb.textContent='B′='+m.bx[i];
+    tb.setAttribute('fill', m.bx[i]?C.violet:C.dim);
+    if(i<3){
+      setWire('w_c'+(i+1),m.c[i+1]);    setFill('ac'+(i+1),m.c[i+1]);
+      const tc=document.getElementById('t_c'+(i+1));
+      tc.textContent=`C${i+1}=${m.c[i+1]}`;
+      tc.setAttribute('fill', m.c[i+1]?C.hi:C.muted);
+    }
+  }
+
+  setBit('sub',st.SUB,{color:C.amber});
+  setWire('w_rail',st.SUB,C.amber);
+  setWire('w_c0',st.SUB,C.amber);
+  setFill('a_c0',st.SUB,C.amber);
+  setFill('d_c0',st.SUB,C.amber);
+  document.getElementById('t_c0').textContent=`C₀=${st.SUB}`;
+
+  /* flags */
+  setWire('w_c4',m.C4);        setWire('w_ctap',m.C4);   setFill('d_c4',m.C4);
+  setWire('w_c3t',m.C3);       setFill('d_c3t',m.C3);
+  setWire('w_v',m.V,C.amber);  setFill('av',m.V,C.amber);
+  setBit('fC',m.C4);
+  setBit('fV',m.V,{color:C.amber});
+  document.getElementById('t_cmeans').textContent = st.SUB ? '1 = no borrow' : '1 = carry out';
+
+  /* readout + out-of-range warning */
+  document.getElementById('r_op').textContent =
+    `${st.A} ${st.SUB?'−':'+'} ${st.B}   →   ${bits4(m.S).join('')}`;
+
+  const uv=document.getElementById('r_uval'), us=document.getElementById('r_ustat');
+  uv.textContent=String(m.S);
+  uv.setAttribute('fill', rg.uOK?C.ink:C.amber);
+  us.textContent = rg.uOK ? '✓ in range' : `⚠ OUT OF RANGE — true value is ${rg.trueU}`;
+  us.setAttribute('fill', rg.uOK?C.dim:C.amber);
+
+  const sv=document.getElementById('r_sval'), ss=document.getElementById('r_sstat');
+  sv.textContent=String(sgn(m.S));
+  sv.setAttribute('fill', rg.sOK?C.ink:C.amber);
+  ss.textContent = rg.sOK ? '✓ in range' : `⚠ OUT OF RANGE — true value is ${rg.trueS}`;
+  ss.setAttribute('fill', rg.sOK?C.dim:C.amber);
+
+  document.getElementById('c_cap').textContent={
+    1:'The same adder as before.  C₀ still tied to 0.',
+    2:'Cut every B line and drop in an XOR.  One shared control: SUB.  With SUB = 0, nothing has changed.',
+    3:'SUB takes over C₀ — the input we were already paying for.  Invert, and add one:  A + B′ + SUB.'
+  }[stg];
+}
+
+/* ===================== RENDER / NAV ===================== */
+function render(){
+  for(let i=1;i<=3;i++)
+    document.getElementById('s'+i).classList.toggle('active', st.slide===i);
+  if(st.slide===1) renderAdder();
+  if(st.slide===2) renderXor();
+  if(st.slide===3) renderCircuit();
+}
+function next(){
+  if(st.stage<MAXSTAGE[st.slide]) st.stage++;
+  else if(st.slide<3){ st.slide++; st.stage=1; }
+  render();
+}
+function prev(){
+  if(st.stage>1) st.stage--;
+  else if(st.slide>1){ st.slide--; st.stage=MAXSTAGE[st.slide]; }
+  render();
+}
+function restart(){
+  st.slide=1; st.stage=1; st.A=0b0101; st.B=0b0010; st.SUB=0; st.cur=0; st.ex=0;
+  render();
+}
+function toggleCur(){
+  if(st.cur<4) st.A ^= (1<<(3-st.cur));
+  else         st.B ^= (1<<(7-st.cur));
+  render();
+}
+
+document.addEventListener('keydown',e=>{
+  const k=e.key;
+  if(k===' '||k==='PageDown'){ e.preventDefault(); next(); return; }
+  if(k==='Backspace'||k==='PageUp'){ e.preventDefault(); prev(); return; }
+  if(k==='r'||k==='R'){ restart(); return; }
+  if(k==='ArrowRight'){ e.preventDefault(); st.cur=(st.cur+1)%8; render(); return; }
+  if(k==='ArrowLeft'){ e.preventDefault(); st.cur=(st.cur+7)%8; render(); return; }
+  if(k==='ArrowUp'||k==='ArrowDown'){ e.preventDefault(); toggleCur(); return; }
+  if(k>='1'&&k<='4'){ const n=+k; if(n<=MAXSTAGE[st.slide]){ st.stage=n; render(); } return; }
+  if(k==='s'||k==='S'){ if(allowSub()){ st.SUB^=1; render(); } return; }
+  if(k==='e'||k==='E'){
+    const x=EXAMPLES[st.ex % EXAMPLES.length];
+    st.A=x.A; st.B=x.B;
+    if(allowSub()) st.SUB=x.SUB;
+    st.ex++; render(); return;
+  }
+});
+
+/* ===================== RESIZE ===================== */
+const DESIGN_WIDTH=1920;
+function autoResize(){
+  const c=document.getElementById('viewportContainer');
+  const s=document.getElementById('designSurface');
+  const vw=window.innerWidth, vh=window.innerHeight;
+  let cw,ch;
+  if(vw/vh > 16/9){ ch=vh; cw=ch*(16/9); } else { cw=vw; ch=cw*(9/16); }
+  c.style.width=cw+'px'; c.style.height=ch+'px';
+  s.style.transform=`scale(${cw/DESIGN_WIDTH})`;
+}
+
+buildAdder(); buildXor(); buildCircuit();
+render();
+autoResize();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(autoResize,50);});
+</script>
+</body>
+</html>

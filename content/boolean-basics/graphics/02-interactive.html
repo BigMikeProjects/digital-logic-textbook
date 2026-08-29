@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basic Boolean Identities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #14182b 0%, #0d1322 100%);
+}
+body { display: flex; align-items: center; justify-content: center; }
+
+/* ---- Colorblind-safe palette (Okabe-Ito derived) ----
+   OR/sum   -> blue   #4d9de0  (glyph +, tag OR, left)
+   AND/prod -> amber  #E69F00  (glyph ·, tag AND, right)
+   correct  -> green  #009E73  (glyph check)
+   wrong    -> verm.  #D55E00  (glyph cross)
+   Color is NEVER the only signal: glyph + label + position back it up. */
+
+.viewport-container {
+    width: 100%; max-width: 100vw;
+    aspect-ratio: 16 / 9; max-height: 100vh;
+    position: relative; overflow: hidden;
+}
+.design-surface {
+    width: 1920px; height: 1080px;
+    position: absolute; top: 0; left: 0;
+    transform-origin: top left;
+    font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+    color: #e7ecf5;
+    padding: 48px 72px 0;
+    display: flex; flex-direction: column;
+}
+.mono { font-family: 'IBM Plex Mono', monospace; }
+.ov { text-decoration: overline; text-decoration-thickness: 2px; }
+/* double complement: outer bar raised above the inner overline so both are visible */
+/* double complement: two stacked bars, both drawn as raised borders (reliable) */
+.dbar-outer, .dbar-inner { display: inline-block; line-height: 1; border-top: 2px solid currentColor; padding-top: 5px; }
+
+/* ---- Header ---- */
+.deck-head { display: flex; align-items: baseline; justify-content: space-between; }
+h1 { color: #e7ecf5; font-size: 40px; font-weight: 700; letter-spacing: -0.5px; }
+h1 .accent { color: #4d9de0; }
+.act-label { font-size: 20px; color: #8a98b3; font-weight: 600; }
+.subtitle { color: #8a98b3; font-size: 20px; margin-top: 6px; }
+
+/* ---- Act framework ---- */
+.stage { flex: 1; position: relative; margin-top: 22px; min-height: 0; }
+.act { position: absolute; inset: 0; display: none; flex-direction: column; }
+.act.active { display: flex; animation: fade .35s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(8px);} to {opacity:1; transform:none;} }
+
+/* ---- Act 1: practice flip cards ---- */
+.card-row { display: flex; gap: 26px; justify-content: center; align-items: stretch; margin-top: 10px; }
+.flip-card { width: 300px; height: 360px; perspective: 1400px; cursor: pointer; }
+.flip-inner { position: relative; width: 100%; height: 100%; transition: transform .55s cubic-bezier(.4,0,.2,1); transform-style: preserve-3d; }
+.flip-card.flipped .flip-inner { transform: rotateY(180deg); }
+.flip-face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 18px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 26px; text-align: center; }
+.flip-front { background: rgba(77,157,224,.07); border: 2px solid #33415c; }
+.flip-card:hover .flip-front { border-color: #4d9de0; }
+.flip-back { background: #111a2e; border: 2px solid #2a3a57; transform: rotateY(180deg); justify-content: center; }
+.card-glyph { font-size: 46px; margin-bottom: 14px; }
+.card-name { font-size: 30px; font-weight: 700; color: #e7ecf5; }
+.card-hint { margin-top: 18px; font-size: 15px; color: #6c7a96; letter-spacing: .5px; text-transform: uppercase; }
+.card-hint::before { content: "▸ "; }
+
+.form { display: flex; align-items: center; gap: 12px; font-size: 26px; margin: 9px 0; }
+.tag { font-size: 12px; font-weight: 700; letter-spacing: 1px; padding: 3px 8px; border-radius: 6px; font-family: 'IBM Plex Sans'; }
+.tag.or  { color: #9cc9ec; background: rgba(77,157,224,.16); border: 1px solid #4d9de0; }
+.tag.and { color: #f0c674; background: rgba(230,159,0,.14);  border: 1px solid #E69F00; }
+.expr.or  { color: #7fbce8; }
+.expr.and { color: #e9b04a; }
+.selfdual-note { margin-top: 16px; font-size: 14px; color: #8a98b3; max-width: 230px; line-height: 1.4; }
+.selfdual-note b { color: #b9a0e0; }
+.name-note { margin-top: 16px; padding-top: 14px; border-top: 1px solid #2a3a57; font-size: 14px; color: #8a98b3; max-width: 240px; line-height: 1.45; }
+.name-note b { color: #9cc9ec; }
+
+.controls { display: flex; gap: 16px; justify-content: center; margin-top: 30px; }
+.btn { font-family: 'IBM Plex Sans'; background: rgba(77,157,224,.12); color: #cfe0f2;
+    border: 2px solid #3a4d70; border-radius: 11px; padding: 12px 26px; font-size: 17px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.btn:hover { border-color: #4d9de0; transform: translateY(-2px); }
+.btn.ghost { background: transparent; color: #8a98b3; }
+
+/* ---- Act 2: duality ---- */
+.duality-wrap { display: flex; gap: 40px; flex: 1; min-height: 0; }
+.swap-rule { width: 360px; background: rgba(185,160,224,.06); border: 2px solid #4a3f66; border-radius: 18px; padding: 30px; display: flex; flex-direction: column; justify-content: center; }
+.swap-rule h3 { font-size: 24px; color: #c4abe8; margin-bottom: 8px; }
+.swap-rule p { font-size: 16px; color: #9aa6bf; line-height: 1.5; margin-bottom: 22px; }
+.swap-pair { display: flex; align-items: center; justify-content: center; gap: 18px; font-size: 30px; font-weight: 700; margin: 14px 0; }
+.swap-pair .a { color: #7fbce8; } .swap-pair .b { color: #e9b04a; }
+.swap-arrow { color: #b9a0e0; font-size: 26px; }
+.pairs-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(2,1fr); gap: 16px; }
+.pair { background: rgba(255,255,255,.03); border: 1px solid #2a3a57; border-radius: 13px; padding: 14px 20px; display: flex; flex-direction: column; justify-content: center; }
+.pair.self { grid-column: 1 / 3; border-style: dashed; border-color: #4a3f66; background: rgba(185,160,224,.05); }
+.pair-name { font-size: 15px; font-weight: 700; color: #8a98b3; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 8px; }
+.pair-forms { display: flex; align-items: center; gap: 22px; }
+.pair-forms .arrow { color: #b9a0e0; font-size: 22px; }
+.pair .form { font-size: 23px; margin: 0; }
+.swap-hl { background: rgba(185,160,224,.28); border-radius: 5px; padding: 0 3px; outline: 1px solid #b9a0e0; }
+
+/* ---- Act 3 / structural cards ---- */
+.struct-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 22px; }
+.scard { background: rgba(255,255,255,.03); border: 2px solid #2a3a57; border-radius: 16px; padding: 22px 22px 18px; display: flex; flex-direction: column; min-height: 320px; }
+.scard h3 { font-size: 21px; color: #e7ecf5; margin-bottom: 4px; }
+.scard .sub { font-size: 14px; color: #7c89a3; margin-bottom: 16px; min-height: 34px; line-height: 1.35; }
+.scard-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+.scard .form { font-size: 22px; }
+.dual-toggle { margin-top: 14px; align-self: flex-start; font-family: 'IBM Plex Sans'; background: transparent; border: 1.5px solid #3a4d70; color: #9cc9ec; border-radius: 9px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.dual-toggle:hover { border-color: #4d9de0; }
+.dual-toggle::before { content: "⇄ "; }
+.scard.warn { border-color: #6e4a2c; background: rgba(213,94,0,.06); }
+.warn-flag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #e8915a; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 8px; }
+.verify-btn { margin-top: 12px; align-self: flex-start; background: rgba(0,158,115,.12); border: 1.5px solid #1d8a6a; color: #6fd7b5; border-radius: 9px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Sans'; }
+.verify-btn::before { content: "▦ "; }
+.verify-btn:hover { border-color: #009E73; }
+
+/* ---- Act 4 / De Morgan ---- */
+.dm-wrap { display: flex; gap: 34px; flex: 1; min-height: 0; }
+.dm-col { flex: 1; background: rgba(255,255,255,.03); border: 2px solid #2a3a57; border-radius: 18px; padding: 28px 32px; display: flex; flex-direction: column; }
+.dm-col h3 { font-size: 22px; color: #e7ecf5; margin-bottom: 18px; }
+.dm-line { display: flex; align-items: center; gap: 16px; margin: 13px 0; font-size: 26px; }
+.dm-label { width: 92px; font-family: 'IBM Plex Sans'; font-size: 13px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+.dm-guess .dm-label { color: #e8915a; }
+.dm-guess .val { color: #c98a63; }
+.dm-right .dm-label { color: #6fd7b5; }
+.dm-right .val { color: #6fd7b5; }
+.mark { font-weight: 700; margin-left: 8px; }
+.mark.x { color: #D55E00; } .mark.c { color: #009E73; }
+.dm-note { margin-top: auto; font-size: 15px; color: #8a98b3; line-height: 1.5; border-top: 1px solid #2a3a57; padding-top: 16px; }
+.dm-note b { color: #9cc9ec; }
+.bubble-row { display: flex; align-items: center; gap: 14px; margin-top: 12px; font-size: 20px; color: #cdd7e6; }
+.bubble { display:inline-flex; align-items:center; justify-content:center; width: 30px; height: 30px; border-radius: 50%; border: 2px solid #4d9de0; color:#9cc9ec; font-size: 15px; font-weight:700; }
+.dm-reveal-btn { margin-top: 14px; align-self: flex-start; }
+
+/* ---- Truth-table overlay ---- */
+.tt-overlay { position: absolute; inset: 0; background: rgba(8,12,22,.86); display: none; align-items: center; justify-content: center; z-index: 50; border-radius: 12px; }
+.tt-overlay.show { display: flex; animation: fade .25s ease; }
+.tt-panel { background: #0f1626; border: 2px solid #33415c; border-radius: 18px; padding: 30px 36px 34px; max-width: 1100px; }
+.tt-panel h3 { font-size: 24px; color: #e7ecf5; margin-bottom: 6px; }
+.tt-panel .tt-sub { font-size: 16px; color: #8a98b3; margin-bottom: 20px; }
+table.tt { border-collapse: collapse; font-family: 'IBM Plex Mono'; font-size: 19px; margin: 0 auto; }
+table.tt th, table.tt td { padding: 9px 16px; text-align: center; border: 1px solid #2a3a57; }
+table.tt th { color: #aeb9cf; font-weight: 600; background: rgba(255,255,255,.03); }
+table.tt td { color: #c5cee0; }
+table.tt .sep { border-left: 2px solid #4a5a78; }
+table.tt th.hl-or  { color: #9cc9ec; background: rgba(77,157,224,.14); }
+table.tt th.hl-and { color: #f0c674; background: rgba(230,159,0,.12); }
+table.tt td.hl-or  { color: #7fbce8; background: rgba(77,157,224,.08); font-weight:600; }
+table.tt td.hl-and { color: #e9b04a; background: rgba(230,159,0,.07); font-weight:600; }
+.tt-verdict { margin-top: 20px; text-align: center; font-size: 18px; color: #6fd7b5; }
+.tt-verdict::before { content: "✓ "; color: #009E73; font-weight: 700; }
+.tt-close { margin-top: 22px; display: block; margin-left: auto; margin-right: auto; }
+
+/* ---- Act 5 / bubble pushing ---- */
+.gate-grid { display: flex; gap: 40px; flex: 1; min-height: 0; }
+.gate-panel { flex: 1; background: rgba(255,255,255,.03); border: 2px solid #2a3a57; border-radius: 18px; padding: 24px 30px 20px; display: flex; flex-direction: column; }
+.gate-panel h3 { font-size: 24px; color: #e7ecf5; margin-bottom: 3px; }
+.gate-panel .gsub { font-size: 15px; color: #8a98b3; margin-bottom: 6px; }
+.gate-svg { width: 100%; flex: 1; min-height: 0; }
+.gate-algebra { font-size: 26px; color: #cdd7e6; text-align: center; margin: 4px 0 6px; }
+.gate-cap { font-size: 14px; color: #8a98b3; text-align: center; line-height: 1.45; min-height: 40px; padding: 0 10px; }
+.gate-ctrls { display: flex; gap: 12px; justify-content: center; margin-top: 6px; }
+
+/* ---- Footer nav ---- */
+.deck-foot { display: flex; align-items: center; justify-content: space-between; padding: 18px 0 22px; margin-top: auto; }
+.dots { display: flex; gap: 12px; align-items: center; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: #2a3a57; cursor: pointer; transition: all .2s; }
+.dot.active { background: #4d9de0; transform: scale(1.25); }
+.dot-label { font-size: 14px; color: #6c7a96; margin-left: 8px; }
+.nav-btns { display: flex; gap: 12px; }
+.nav { background: rgba(77,157,224,.1); border: 2px solid #3a4d70; color: #cfe0f2; border-radius: 11px; padding: 11px 22px; font-size: 16px; font-weight: 600; cursor: pointer; font-family: 'IBM Plex Sans'; transition: all .15s; }
+.nav:hover:not(:disabled) { border-color: #4d9de0; }
+.nav:disabled { opacity: .35; cursor: default; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="deck-head">
+        <h1>Basic <span class="accent">Boolean Identities</span></h1>
+        <div class="act-label" id="actLabel">Act 1 / 5 · Practice</div>
+    </div>
+    <div class="subtitle" id="subtitle">Click any card to test yourself — name first, then the law.</div>
+
+    <div class="stage">
+
+        <!-- ============ ACT 1 ============ -->
+        <div class="act active" id="act1">
+            <div class="card-row" id="cardRow"></div>
+            <div class="controls">
+                <button class="btn" id="revealAll">Reveal all</button>
+                <button class="btn ghost" id="resetCards">Reset</button>
+            </div>
+        </div>
+
+        <!-- ============ ACT 2 ============ -->
+        <div class="act" id="act2">
+            <div class="duality-wrap">
+                <div class="swap-rule">
+                    <h3>The duality rule</h3>
+                    <p>Swap every <b style="color:#7fbce8">OR</b> ↔ <b style="color:#e9b04a">AND</b> and every <b style="color:#7fbce8">0</b> ↔ <b style="color:#e9b04a">1</b>. A true identity stays true — so each law hands you its partner for free.</p>
+                    <div class="swap-pair"><span class="a mono">+</span><span class="swap-arrow">⇄</span><span class="b mono">·</span></div>
+                    <div class="swap-pair"><span class="a mono">0</span><span class="swap-arrow">⇄</span><span class="b mono">1</span></div>
+                </div>
+                <div class="pairs-grid" id="pairsGrid"></div>
+            </div>
+        </div>
+
+        <!-- ============ ACT 3 ============ -->
+        <div class="act" id="act3">
+            <div class="struct-grid" id="structGrid"></div>
+        </div>
+
+        <!-- ============ ACT 4 ============ -->
+        <div class="act" id="act4">
+            <div class="dm-wrap">
+                <div class="dm-col">
+                    <h3 class="mono"><span class="ov">A + B</span>&nbsp; — break the long bar</h3>
+                    <div class="dm-line dm-guess"><span class="dm-label">Naive guess</span>
+                        <span class="val mono"><span class="ov">A</span> + <span class="ov">B</span></span>
+                        <span class="mark x">✗ wrong</span></div>
+                    <div class="dm-line dm-right" id="dm1right" style="visibility:hidden">
+                        <span class="dm-label">Correct</span>
+                        <span class="val mono"><span class="ov">A</span> · <span class="ov">B</span></span>
+                        <span class="mark c">✓ verified</span></div>
+                    <div class="dm-note">Breaking the bar over a sum <b>flips the operator</b>: the long bar splits into two short bars <i>and</i> the&nbsp;+ becomes&nbsp;·.</div>
+                </div>
+                <div class="dm-col">
+                    <h3 class="mono"><span class="ov">A · B</span>&nbsp; — break the long bar</h3>
+                    <div class="dm-line dm-guess"><span class="dm-label">Naive guess</span>
+                        <span class="val mono"><span class="ov">A</span> · <span class="ov">B</span></span>
+                        <span class="mark x">✗ wrong</span></div>
+                    <div class="dm-line dm-right" id="dm2right" style="visibility:hidden">
+                        <span class="dm-label">Correct</span>
+                        <span class="val mono"><span class="ov">A</span> + <span class="ov">B</span></span>
+                        <span class="mark c">✓ verified</span></div>
+                    <div class="dm-note bubble-line">
+                        <div class="bubble-row"><span class="bubble">∘</span> Push the bubble through a gate and the gate itself changes.</div>
+                        <div style="margin-top:10px"><b>Why it matters:</b> this swap is what makes NAND and NOR <i>universal</i> — every circuit you met at the transistor level reduces to one of them.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="controls" style="margin-top:24px">
+                <button class="btn" id="dmReveal">Reveal the rule</button>
+                <button class="verify-btn btn" data-tt="dm1" style="color:#6fd7b5;border-color:#1d8a6a">Verify <span class="ov">A+B</span></button>
+                <button class="verify-btn btn" data-tt="dm2" style="color:#6fd7b5;border-color:#1d8a6a">Verify <span class="ov">A·B</span></button>
+            </div>
+        </div>
+
+        <!-- ============ ACT 5 ============ -->
+        <div class="act" id="act5">
+            <div class="gate-grid">
+                <div class="gate-panel" id="nandGate"></div>
+                <div class="gate-panel" id="norGate"></div>
+            </div>
+        </div>
+
+        <!-- ============ Truth-table overlay ============ -->
+        <div class="tt-overlay" id="ttOverlay">
+            <div class="tt-panel" id="ttPanel"></div>
+        </div>
+
+    </div>
+
+    <div class="deck-foot">
+        <div class="dots" id="dots"></div>
+        <div class="nav-btns">
+            <button class="nav" id="prevBtn">◂ Prev</button>
+            <button class="nav" id="nextBtn">Next ▸</button>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+// b = overbar helper
+function ov(x){ return '<span class="ov">'+x+'</span>'; }
+// double overbar (complement of a complement) with two visibly stacked bars
+function dbar(x){ return '<span class="dbar-outer"><span class="dbar-inner">'+x+'</span></span>'; }
+
+// Act 1 / single-variable identities. paired:false => self-dual (Involution).
+const SINGLE = [
+  { name:"Identity",   glyph:"=",  or:["A + 0", "A"],            and:["A · 1", "A"],            paired:true,
+    note:"the output is identical to the input." },
+  { name:"Null",       glyph:"∅",  or:["A + 1", "1"],            and:["A · 0", "0"],            paired:true,
+    note:"the constant nullifies A — the result ignores it." },
+  { name:"Idempotent", glyph:"≡",  or:["A + A", "A"],            and:["A · A", "A"],            paired:true,
+    note:"Latin “same power” — A combined with itself returns A." },
+  { name:"Complement", glyph:"¬",  or:["A + "+ov("A"), "1"],     and:["A · "+ov("A"), "0"],     paired:true,
+    note:"A and A′ complete the whole — together they’re everything, or nothing." },
+  { name:"Involution", glyph:"↻",  self:[dbar("A"), "A"],        paired:false,
+    note:"complement is its own inverse — apply it twice, return to start." },
+];
+
+// Act 3 / structural. each has an OR-leaning and AND-leaning form.
+const STRUCT = [
+  { name:"Commutative", sub:"Order of operands doesn't matter.",
+    a:{tag:"or",  expr:"A + B = B + A"},  b:{tag:"and", expr:"A · B = B · A"} },
+  { name:"Associative", sub:"Grouping of operands doesn't matter.",
+    a:{tag:"or",  expr:"(A + B) + C = A + (B + C)"}, b:{tag:"and", expr:"(A · B) · C = A · (B · C)"} },
+  { name:"Absorption",  sub:"A redundant term collapses away.",
+    a:{tag:"or",  expr:"A + A · B = A"},  b:{tag:"and", expr:"A · (A + B) = A"} },
+];
+
+// Truth tables. headers: list of {label, cls?}. rows: arrays of cells matching headers.
+const TT = {
+  dist: {
+    title: "A + (B · C)  =  (A + B) · (A + C)",
+    sub: "The distributive form with no decimal analog — verified exhaustively.",
+    headers: [
+      {l:"A"},{l:"B"},{l:"C"},{l:"B·C"},
+      {l:"A + (B·C)", cls:"hl-or", sep:true},
+      {l:"A+B"},{l:"A+C"},
+      {l:"(A+B)·(A+C)", cls:"hl-and"}
+    ],
+    rows: [
+      [0,0,0, 0, {v:0,cls:"hl-or",sep:true}, 0,0, {v:0,cls:"hl-and"}],
+      [0,0,1, 0, {v:0,cls:"hl-or",sep:true}, 0,1, {v:0,cls:"hl-and"}],
+      [0,1,0, 0, {v:0,cls:"hl-or",sep:true}, 1,0, {v:0,cls:"hl-and"}],
+      [0,1,1, 1, {v:1,cls:"hl-or",sep:true}, 1,1, {v:1,cls:"hl-and"}],
+      [1,0,0, 0, {v:1,cls:"hl-or",sep:true}, 1,1, {v:1,cls:"hl-and"}],
+      [1,0,1, 0, {v:1,cls:"hl-or",sep:true}, 1,1, {v:1,cls:"hl-and"}],
+      [1,1,0, 0, {v:1,cls:"hl-or",sep:true}, 1,1, {v:1,cls:"hl-and"}],
+      [1,1,1, 1, {v:1,cls:"hl-or",sep:true}, 1,1, {v:1,cls:"hl-and"}],
+    ],
+    verdict: "Columns 5 and 8 are identical in all 8 rows. The identity holds."
+  },
+  dm1: {
+    title: ov("A + B") + "  =  " + ov("A") + " · " + ov("B"),
+    sub: "De Morgan, first form — the long bar over a sum.",
+    headers: [
+      {l:"A"},{l:"B"},{l:"A+B"},
+      {l:ov("A+B"), cls:"hl-or", sep:true},
+      {l:ov("A")},{l:ov("B")},
+      {l:ov("A")+"·"+ov("B"), cls:"hl-and"}
+    ],
+    rows: [
+      [0,0, 0, {v:1,cls:"hl-or",sep:true}, 1,1, {v:1,cls:"hl-and"}],
+      [0,1, 1, {v:0,cls:"hl-or",sep:true}, 1,0, {v:0,cls:"hl-and"}],
+      [1,0, 1, {v:0,cls:"hl-or",sep:true}, 0,1, {v:0,cls:"hl-and"}],
+      [1,1, 1, {v:0,cls:"hl-or",sep:true}, 0,0, {v:0,cls:"hl-and"}],
+    ],
+    verdict: "The bar-over-sum column matches the product-of-bars column. Operator flipped."
+  },
+  dm2: {
+    title: ov("A · B") + "  =  " + ov("A") + " + " + ov("B"),
+    sub: "De Morgan, second form — the long bar over a product.",
+    headers: [
+      {l:"A"},{l:"B"},{l:"A·B"},
+      {l:ov("A·B"), cls:"hl-and", sep:true},
+      {l:ov("A")},{l:ov("B")},
+      {l:ov("A")+"+"+ov("B"), cls:"hl-or"}
+    ],
+    rows: [
+      [0,0, 0, {v:1,cls:"hl-and",sep:true}, 1,1, {v:1,cls:"hl-or"}],
+      [0,1, 0, {v:1,cls:"hl-and",sep:true}, 1,0, {v:1,cls:"hl-or"}],
+      [1,0, 0, {v:1,cls:"hl-and",sep:true}, 0,1, {v:1,cls:"hl-or"}],
+      [1,1, 1, {v:0,cls:"hl-and",sep:true}, 0,0, {v:0,cls:"hl-or"}],
+    ],
+    verdict: "The bar-over-product column matches the sum-of-bars column. Operator flipped."
+  }
+};
+
+/* ===================== RENDER ACT 1 ===================== */
+function formHTML(tagText, tagCls, expr, result){
+  return '<div class="form"><span class="tag '+tagCls+'">'+tagText+'</span>'
+       + '<span class="mono expr '+tagCls+'">'+expr+' = '+result+'</span></div>';
+}
+const cardRow = document.getElementById('cardRow');
+SINGLE.forEach((id, i) => {
+  const card = document.createElement('div');
+  card.className = 'flip-card';
+  let back;
+  if (id.paired){
+    back = formHTML('OR','or',id.or[0],id.or[1]) + formHTML('AND','and',id.and[0],id.and[1]);
+  } else {
+    back = '<div class="form"><span class="mono expr" style="color:#c4abe8;font-size:30px">'
+         + id.self[0]+' = '+id.self[1]+'</span></div>'
+         + '<div class="selfdual-note"><b>Self-dual.</b> No AND/OR or 0/1 to swap, so the duality rule maps it to itself.</div>';
+  }
+  back += '<div class="name-note"><b>Why the name:</b> '+id.note+'</div>';
+  card.innerHTML =
+    '<div class="flip-inner">'
+    + '<div class="flip-face flip-front"><div class="card-glyph">'+id.glyph+'</div>'
+    +   '<div class="card-name">'+id.name+'</div><div class="card-hint">click to reveal</div></div>'
+    + '<div class="flip-face flip-back">'+back+'</div>'
+    + '</div>';
+  card.addEventListener('click', () => card.classList.toggle('flipped'));
+  cardRow.appendChild(card);
+});
+document.getElementById('revealAll').onclick = () =>
+  document.querySelectorAll('#cardRow .flip-card').forEach(c => c.classList.add('flipped'));
+document.getElementById('resetCards').onclick = () =>
+  document.querySelectorAll('#cardRow .flip-card').forEach(c => c.classList.remove('flipped'));
+
+/* ===================== RENDER ACT 2 ===================== */
+const pairsGrid = document.getElementById('pairsGrid');
+// Every operator (+ ·) and constant (0 1) is a swap target — highlight uniformly.
+// Safe to match globally: expression strings + the "ov" spans contain no other digits/operators.
+function hlSwap(s){ return s.replace(/[+·01]/g, m => '<span class="swap-hl">'+m+'</span>'); }
+SINGLE.forEach(id => {
+  const cell = document.createElement('div');
+  if (id.paired){
+    cell.className = 'pair';
+    const o = hlSwap(id.or[0]),  a = hlSwap(id.and[0]);
+    const oR = hlSwap(id.or[1]), aR = hlSwap(id.and[1]);
+    cell.innerHTML = '<div class="pair-name">'+id.name+'</div>'
+      + '<div class="pair-forms">'
+      +   '<span class="form mono expr or">'+o+' = '+oR+'</span>'
+      +   '<span class="arrow">⇄</span>'
+      +   '<span class="form mono expr and">'+a+' = '+aR+'</span>'
+      + '</div>';
+  } else {
+    cell.className = 'pair self';
+    cell.innerHTML = '<div class="pair-name">'+id.name+' — self-dual exception</div>'
+      + '<div class="pair-forms"><span class="form mono" style="color:#c4abe8">'
+      + id.self[0]+' = '+id.self[1]+'</span>'
+      + '<span style="color:#8a98b3;font-size:15px;margin-left:8px">nothing to swap — the rule sends it back to itself</span></div>';
+  }
+  pairsGrid.appendChild(cell);
+});
+
+/* ===================== RENDER ACT 3 ===================== */
+const structGrid = document.getElementById('structGrid');
+STRUCT.forEach((s, i) => {
+  const card = document.createElement('div');
+  card.className = 'scard';
+  card.dataset.showing = 'a';
+  card.innerHTML =
+    '<h3>'+s.name+'</h3><div class="sub">'+s.sub+'</div>'
+    + '<div class="scard-body">'
+    +   '<div class="form"><span class="tag '+s.a.tag+'">'+s.a.tag.toUpperCase()+'</span>'
+    +     '<span class="mono expr '+s.a.tag+'">'+s.a.expr+'</span></div>'
+    + '</div>'
+    + '<button class="dual-toggle">Show dual</button>';
+  const body = card.querySelector('.scard-body');
+  card.querySelector('.dual-toggle').addEventListener('click', () => {
+    const showB = card.dataset.showing === 'a';
+    const f = showB ? s.b : s.a;
+    body.innerHTML = '<div class="form"><span class="tag '+f.tag+'">'+f.tag.toUpperCase()+'</span>'
+      + '<span class="mono expr '+f.tag+'">'+f.expr+'</span></div>';
+    card.dataset.showing = showB ? 'b' : 'a';
+  });
+  structGrid.appendChild(card);
+});
+// Distributive card — gets the productive-confusion treatment + verify button.
+const distCard = document.createElement('div');
+distCard.className = 'scard warn';
+distCard.dataset.showing = 'a';
+distCard.innerHTML =
+  '<h3>Distributive</h3>'
+  + '<div class="warn-flag">⚠ looks wrong?</div>'
+  + '<div class="scard-body">'
+  +   '<div class="form"><span class="tag and">AND</span><span class="mono expr and">A · (B + C) = A·B + A·C</span></div>'
+  + '</div>'
+  + '<button class="dual-toggle">Show dual</button>'
+  + '<button class="verify-btn" data-tt="dist">Verify with truth table</button>';
+const dBody = distCard.querySelector('.scard-body');
+const dForms = {
+  a:{tag:'and', expr:'A · (B + C) = A·B + A·C',     flag:''},
+  b:{tag:'or',  expr:'A + B·C = (A + B)·(A + C)',   flag:'⚠ no decimal analog'}
+};
+distCard.querySelector('.dual-toggle').addEventListener('click', () => {
+  const showB = distCard.dataset.showing === 'a';
+  const f = showB ? dForms.b : dForms.a;
+  dBody.innerHTML = '<div class="form"><span class="tag '+f.tag+'">'+f.tag.toUpperCase()+'</span>'
+    + '<span class="mono expr '+f.tag+'">'+f.expr+'</span></div>'
+    + (f.flag ? '<div style="font-size:13px;color:#e8915a;margin-top:10px">'+f.flag+'</div>' : '');
+  distCard.dataset.showing = showB ? 'b' : 'a';
+});
+structGrid.appendChild(distCard);
+
+/* ===================== TRUTH-TABLE OVERLAY ===================== */
+const ttOverlay = document.getElementById('ttOverlay');
+const ttPanel = document.getElementById('ttPanel');
+function openTT(key){
+  const t = TT[key]; if(!t) return;
+  let head = '<tr>';
+  t.headers.forEach(h => head += '<th class="'+(h.cls||'')+(h.sep?' sep':'')+'">'+h.l+'</th>');
+  head += '</tr>';
+  let body = '';
+  t.rows.forEach(r => {
+    body += '<tr>';
+    r.forEach(c => {
+      if (typeof c === 'object'){
+        body += '<td class="'+(c.cls||'')+(c.sep?' sep':'')+'">'+c.v+'</td>';
+      } else body += '<td>'+c+'</td>';
+    });
+    body += '</tr>';
+  });
+  ttPanel.innerHTML = '<h3 class="mono">'+t.title+'</h3><div class="tt-sub">'+t.sub+'</div>'
+    + '<table class="tt"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>'
+    + '<div class="tt-verdict">'+t.verdict+'</div>'
+    + '<button class="btn tt-close" id="ttClose">Close</button>';
+  ttOverlay.classList.add('show');
+  document.getElementById('ttClose').onclick = () => ttOverlay.classList.remove('show');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-tt]');
+  if (b) openTT(b.dataset.tt);
+  if (e.target === ttOverlay) ttOverlay.classList.remove('show');
+});
+
+/* ===================== ACT 4 reveal ===================== */
+document.getElementById('dmReveal').onclick = () => {
+  document.getElementById('dm1right').style.visibility = 'visible';
+  document.getElementById('dm2right').style.visibility = 'visible';
+};
+
+/* ===================== ACT 5 / bubble pushing ===================== */
+// AND and OR distinctive shapes, same path signature (M + 5 cubics + Z) so they morph.
+const AND_C = [0,0, 20,0,40,0,60,0, 93,0,120,18,120,40, 120,62,93,80,60,80, 40,80,20,80,0,80, 0,53,0,27,0,0];
+const OR_C  = [0,0, 20,1,40,2,60,4, 90,8,110,22,120,40, 110,58,90,72,60,76, 40,78,20,79,0,80, 26,53,26,27,0,0];
+const AMBER = '#E69F00', BLUE = '#4d9de0', BUBBLE = '#c4abe8';
+const GX = 130, GY = 52; // gate-local (0..120, 0..80) -> abs offset
+
+function _lerp(a,b,t){ return a+(b-a)*t; }
+function _ease(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
+function _lerpArr(a,b,t){ return a.map((v,i)=>_lerp(v,b[i],t)); }
+function _hx(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+function _col(c1,c2,t){ const a=_hx(c1),b=_hx(c2);
+  return 'rgb('+Math.round(_lerp(a[0],b[0],t))+','+Math.round(_lerp(a[1],b[1],t))+','+Math.round(_lerp(a[2],b[2],t))+')'; }
+function _pathD(c){
+  return 'M '+c[0]+' '+c[1]
+   +' C '+c[2]+' '+c[3]+' '+c[4]+' '+c[5]+' '+c[6]+' '+c[7]
+   +' C '+c[8]+' '+c[9]+' '+c[10]+' '+c[11]+' '+c[12]+' '+c[13]
+   +' C '+c[14]+' '+c[15]+' '+c[16]+' '+c[17]+' '+c[18]+' '+c[19]
+   +' C '+c[20]+' '+c[21]+' '+c[22]+' '+c[23]+' '+c[24]+' '+c[25]
+   +' C '+c[26]+' '+c[27]+' '+c[28]+' '+c[29]+' '+c[30]+' '+c[31]+' Z';
+}
+
+const gateResets = [];
+function createGate(host, cfg){
+  const u = cfg.uid;
+  host.innerHTML =
+    '<h3>'+cfg.title+'</h3><div class="gsub">'+cfg.gsub+'</div>'
+    + '<svg class="gate-svg" id="svg'+u+'" viewBox="0 25 380 130" preserveAspectRatio="xMidYMid meet">'
+    +   '<line x1="55" y1="76" x2="130" y2="76" stroke="#5b6b86" stroke-width="2.5"/>'
+    +   '<line x1="55" y1="108" x2="130" y2="108" stroke="#5b6b86" stroke-width="2.5"/>'
+    +   '<line x1="250" y1="92" x2="345" y2="92" stroke="#5b6b86" stroke-width="2.5"/>'
+    +   '<text x="44" y="81" fill="#8a98b3" font-size="16" font-family="IBM Plex Mono" text-anchor="end">A</text>'
+    +   '<text x="44" y="113" fill="#8a98b3" font-size="16" font-family="IBM Plex Mono" text-anchor="end">B</text>'
+    +   '<text x="356" y="97" fill="#8a98b3" font-size="16" font-family="IBM Plex Mono">Y</text>'
+    +   '<g transform="translate('+GX+','+GY+')"><path id="path'+u+'" fill="none" stroke-width="3"/></g>'
+    +   '<text id="tag'+u+'" x="190" y="98" font-size="18" font-weight="700" font-family="IBM Plex Sans" text-anchor="middle"></text>'
+    +   '<circle id="ob'+u+'" cy="92" r="7.5" fill="#0d1322" stroke="'+BUBBLE+'" stroke-width="2.5"/>'
+    +   '<circle id="it'+u+'" r="7.5" fill="#0d1322" stroke="'+BUBBLE+'" stroke-width="2.5" opacity="0"/>'
+    +   '<circle id="ib'+u+'" r="7.5" fill="#0d1322" stroke="'+BUBBLE+'" stroke-width="2.5" opacity="0"/>'
+    + '</svg>'
+    + '<div class="gate-algebra mono">'+cfg.algebra+'</div>'
+    + '<div class="gate-cap">'+cfg.cap+'</div>'
+    + '<div class="gate-ctrls"><button class="btn" id="play'+u+'">▸ Push the bubble</button>'
+    +   '<button class="btn ghost" id="rst'+u+'">◂ Push back</button></div>';
+
+  const path = host.querySelector('#path'+u);
+  const tag  = host.querySelector('#tag'+u);
+  const ob   = host.querySelector('#ob'+u);
+  const it   = host.querySelector('#it'+u);
+  const ib   = host.querySelector('#ib'+u);
+
+  function update(p){
+    const e = _ease(p);
+    path.setAttribute('d', _pathD(_lerpArr(cfg.startC, cfg.endC, e)));
+    const col = _col(cfg.startColor, cfg.endColor, e);
+    path.setAttribute('stroke', col);
+    tag.textContent = e < 0.5 ? cfg.startTag : cfg.endTag;
+    tag.setAttribute('fill', col);
+    // output bubble: travels back into the body during first half, then fades
+    if (p <= 0.5){
+      const t1 = _ease(p/0.5);
+      ob.setAttribute('cx', _lerp(258,190,t1));
+      ob.setAttribute('opacity', 1 - Math.max(0,(t1-0.55)/0.45));
+    } else ob.setAttribute('opacity', 0);
+    // input bubbles: emerge from center and split to both inputs in second half
+    if (p < 0.5){
+      it.setAttribute('opacity',0); ib.setAttribute('opacity',0);
+      it.setAttribute('cx',190); it.setAttribute('cy',92);
+      ib.setAttribute('cx',190); ib.setAttribute('cy',92);
+    } else {
+      const t2 = _ease((p-0.5)/0.5);
+      it.setAttribute('cx', _lerp(190,123,t2)); it.setAttribute('cy', _lerp(92,76,t2));  it.setAttribute('opacity', t2);
+      ib.setAttribute('cx', _lerp(190,123,t2)); ib.setAttribute('cy', _lerp(92,108,t2)); ib.setAttribute('opacity', t2);
+    }
+  }
+  let raf = null, curP = 0; const DUR = 1700;
+  function animateTo(target){
+    cancelAnimationFrame(raf);
+    const from = curP, dist = Math.abs(target - from);
+    if (dist < 0.001){ curP = target; update(curP); return; }
+    let t0 = null; const dur = DUR * dist;       // duration scales with distance, so speed is constant
+    function step(ts){
+      if(t0===null) t0=ts;
+      const k = Math.min(1,(ts-t0)/dur);
+      curP = from + (target-from)*k;
+      update(curP);
+      if(k<1) raf=requestAnimationFrame(step);
+    }
+    raf = requestAnimationFrame(step);
+  }
+  function reset(){ cancelAnimationFrame(raf); curP = 0; update(0); }  // instant reset, used on slide entry
+  host.querySelector('#play'+u).onclick = () => animateTo(1);
+  host.querySelector('#rst'+u).onclick  = () => animateTo(0);
+  host.querySelector('#svg'+u).addEventListener('click', e => { if(e.target.tagName !== 'BUTTON') animateTo(curP < 0.5 ? 1 : 0); });
+  update(0);
+  gateResets.push(reset);
+}
+
+createGate(document.getElementById('nandGate'), {
+  uid:'N', title:'NAND  =  AND, then invert',
+  gsub:'Push the output bubble back and the gate flips to OR.',
+  startC:AND_C, endC:OR_C, startColor:AMBER, endColor:BLUE, startTag:'AND', endTag:'OR',
+  algebra: ov('A · B')+' &nbsp;=&nbsp; '+ov('A')+' + '+ov('B'),
+  cap:'The one output bubble splits into a bubble on each input — and AND becomes OR.'
+});
+createGate(document.getElementById('norGate'), {
+  uid:'R', title:'NOR  =  OR, then invert',
+  gsub:'Push the output bubble back and the gate flips to AND.',
+  startC:OR_C, endC:AND_C, startColor:BLUE, endColor:AMBER, startTag:'OR', endTag:'AND',
+  algebra: ov('A + B')+' &nbsp;=&nbsp; '+ov('A')+' · '+ov('B'),
+  cap:'The one output bubble splits into a bubble on each input — and OR becomes AND.'
+});
+
+/* ===================== NAV ===================== */
+const ACTS = [
+  { id:'act1', label:'Act 1 / 5 · Practice',     name:'Practice',
+    sub:'Click any card to test yourself — name first, then the law.' },
+  { id:'act2', label:'Act 2 / 5 · Duality',      name:'Duality',
+    sub:'One rule halves the catalog: the swap you kept seeing has a name.' },
+  { id:'act3', label:'Act 3 / 5 · Structural',   name:'Structural',
+    sub:'Multi-variable laws — toggle each one to its dual. One of them looks wrong.' },
+  { id:'act4', label:'Act 4 / 5 · De Morgan',    name:'De Morgan',
+    sub:'Breaking a long bar flips the operator — the move behind NAND/NOR universality.' },
+  { id:'act5', label:'Act 5 / 5 · Bubble Pushing', name:'Bubble Pushing',
+    sub:'Push the output bubble through a gate and the gate itself flips — De Morgan, drawn.' },
+];
+let cur = 0;
+const dots = document.getElementById('dots');
+ACTS.forEach((a, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' active':'');
+  d.title = a.name;
+  d.onclick = () => goTo(i);
+  dots.appendChild(d);
+});
+const dotLabel = document.createElement('span');
+dotLabel.className = 'dot-label';
+dotLabel.textContent = ACTS[0].name;
+dots.appendChild(dotLabel);
+
+function goTo(i){
+  if (i<0 || i>=ACTS.length) return;
+  ttOverlay.classList.remove('show');
+  document.getElementById(ACTS[cur].id).classList.remove('active');
+  cur = i;
+  const a = ACTS[cur];
+  document.getElementById(a.id).classList.add('active');
+  document.getElementById('actLabel').textContent = a.label;
+  document.getElementById('subtitle').textContent = a.sub;
+  [...dots.querySelectorAll('.dot')].forEach((d,idx)=>d.classList.toggle('active', idx===cur));
+  dotLabel.textContent = a.name;
+  document.getElementById('prevBtn').disabled = cur===0;
+  document.getElementById('nextBtn').disabled = cur===ACTS.length-1;
+  if (a.id === 'act5') gateResets.forEach(r => r());
+}
+document.getElementById('prevBtn').onclick = () => goTo(cur-1);
+document.getElementById('nextBtn').onclick = () => goTo(cur+1);
+document.addEventListener('keydown', e => {
+  if (e.key==='ArrowRight'||e.key==='PageDown') goTo(cur+1);
+  if (e.key==='ArrowLeft' ||e.key==='PageUp')   goTo(cur-1);
+  if (e.key==='Escape') ttOverlay.classList.remove('show');
+});
+goTo(0);
+
+/* ===================== RESPONSIVE SCALE ===================== */
+const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+function autoResize(){
+  const c = document.getElementById('viewportContainer');
+  const s = document.getElementById('designSurface');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let cw, ch;
+  if (vw/vh > 16/9){ ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+  c.style.width = cw+'px'; c.style.height = ch+'px';
+  s.style.transform = 'scale('+(cw/DESIGN_WIDTH)+')';
+}
+autoResize();
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt=setTimeout(autoResize,50); });
+window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+</script>
+</body>
+</html>
