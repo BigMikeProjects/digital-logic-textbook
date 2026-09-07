@@ -16,6 +16,10 @@ A handful of definitions, each building on the last, are all you need.
 
 **Prime implicant (PI).** An implicant that **cannot be made any larger** — grow the group to the biggest legal power-of-two size, and it becomes prime. Removing any further literal would make it cover a `0`. Prime implicants are the maximal groups.
 
+![Two copies of the same four-variable map side by side. On the left, the pair m14 and m15 is circled in gray and labelled ABC, three literals covering two cells. An arrow labelled "grow it" points to the right-hand map, where the group has doubled to include m6 and m7, is circled in amber, and is labelled BC, two literals covering four cells.](./images/kmap-implicant-grows.svg)
+
+Notice the trade in that figure: every literal you drop doubles the group. That is why "largest group" and "fewest literals" are the same instruction.
+
 **Essential prime implicant (EPI).** A prime implicant that is the **only** PI covering some particular on-set `1` cell — a *distinguished* cell. Because nothing else can cover that `1`, an essential PI must appear in **every** minimal solution.
 
 These nest neatly:
@@ -38,26 +42,25 @@ Take the four-variable function
 
 $$F(A,B,C,D) = \sum m(1,3,5,7,9,11,13,14,15) + d(4,6)$$
 
-where $m(\dots)$ are the `1`s and $d(4,6)$ are don't-cares. On a map with $A B$ on the rows and $C D$ on the columns (both Gray-coded):
+where $m(\dots)$ are the `1`s and $d(4,6)$ are don't-cares. On a map with $A B$ on the rows and $C D$ on the columns (both Gray-coded), the function looks like this — each cell carries its minterm number, and the two shaded cells are the don't-cares:
 
-| $AB \backslash CD$ | 00 | 01 | 11 | 10 |
-|---|----|----|----|----|
-| **00** | 0 | 1 | 1 | 0 |
-| **01** | X | 1 | 1 | X |
-| **11** | 0 | 1 | 1 | 1 |
-| **10** | 0 | 1 | 1 | 0 |
+![Four-variable Karnaugh map of F with AB down the rows and CD across the columns, both in Gray-code order 00, 01, 11, 10. Each cell is numbered with its minterm. Ones sit at m1, m3, m5, m7, m9, m11, m13, m14 and m15; the shaded don't-care cells m4 and m6 hold X; the rest hold 0.](./images/kmap-worked-map.svg)
 
-Finding the prime implicants:
+Finding the prime implicants — each one grown until it cannot grow further:
 
 - **$D$** — the two middle columns ($CD = 01, 11$) are all `1`, an entire **group of eight**. Every variable but $D$ cancels, leaving the lone literal $D$.
 - **$BC$** — the cells where $B = 1$ and $C = 1$ form a **group of four**, $\{m_6, m_7, m_{14}, m_{15}\}$. This group only closes up because the **don't-care $m_6$** is pulled in as a `1`; without it, the best you could do is the smaller $\{m_{14}, m_{15}\}$.
 - **$\bar{A}B$** — the $AB = 01$ row, $\{m_4, m_5, m_6, m_7\}$, is also a legal group of four (its cells are `1`s and X's). It is a prime implicant too.
+
+![The same map with its three prime implicants outlined in color: D in cyan spans the two middle columns as a group of eight; BC in amber covers m6, m7, m14 and m15 as a group of four; A-bar B in violet covers the whole AB = 01 row as a group of four. Notes explain that BC closes up only because the don't-care m6 is read as a 1.](./images/kmap-prime-implicants.svg)
 
 Now decide which are essential:
 
 - **$m_1$ is covered only by $D$** — no other PI reaches it. So **$D$ is essential**.
 - **$m_{14}$ is covered only by $BC$** — so **$BC$ is essential**.
 - **$\bar{A}B$ is *not* essential**: its only `1` cells are $m_5$ and $m_7$, and both are already covered by $D$. Drop it.
+
+![The same map showing the chosen cover: D in cyan and BC in amber are filled in, each with a dashed ring around the one cell that only it reaches - m1 for D and m14 for BC - which is what makes them essential. A-bar B is drawn as a dashed red outline and dropped, because its only ones, m5 and m7, already sit inside D. The result is F = D + BC.](./images/kmap-essential-cover.svg)
 
 The two essential prime implicants already cover every `1`, so the minimized result is:
 

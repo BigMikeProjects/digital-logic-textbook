@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" role="img" aria-label="Two copies of the map side by side: on the left the pair m14 and m15 circled in gray, the product term A B C with three literals; on the right that group grown to include m6 and m7, circled in amber, the prime implicant B C with two literals">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+  </style>
+<defs><marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L11,6 L0,11 z" fill="#8198af"/></marker></defs>
+<text class="title" x="36" y="50">An implicant grows until it is prime</text>
+<text class="sub" x="36" y="82">Both groups are legal. Only the one on the right cannot be made any bigger.</text>
+<text x="252" y="132" text-anchor="middle" font-size="22" font-weight="700" fill="#41556b">an implicant</text>
+<text x="722" y="132" text-anchor="middle" font-size="22" font-weight="700" fill="#e0890b">a prime implicant</text>
+<rect x="120" y="256" width="66" height="66" fill="#eef3f8"/>
+<rect x="318" y="256" width="66" height="66" fill="#eef3f8"/>
+<line class="grid" x1="186" y1="190" x2="186" y2="454"/>
+<line class="grid" x1="120" y1="256" x2="384" y2="256"/>
+<line class="gridh" x1="252" y1="190" x2="252" y2="454"/>
+<line class="gridh" x1="120" y1="322" x2="384" y2="322"/>
+<line class="grid" x1="318" y1="190" x2="318" y2="454"/>
+<line class="grid" x1="120" y1="388" x2="384" y2="388"/>
+<rect class="frame" x="120" y="190" width="264" height="264"/>
+<rect x="260.0" y="330.0" width="116.0" height="50.0" rx="16" fill="#8198af" fill-opacity="0.16" stroke="#8198af" stroke-width="4"/>
+<text class="hdr" x="153" y="176" text-anchor="middle" font-size="17">00</text>
+<text class="hdr" x="219" y="176" text-anchor="middle" font-size="17">01</text>
+<text class="hdr" x="285" y="176" text-anchor="middle" font-size="17">11</text>
+<text class="hdr" x="351" y="176" text-anchor="middle" font-size="17">10</text>
+<text class="hdr" x="104" y="229" text-anchor="end" font-size="17">00</text>
+<text class="hdr" x="104" y="295" text-anchor="end" font-size="17">01</text>
+<text class="hdr" x="104" y="361" text-anchor="end" font-size="17">11</text>
+<text class="hdr" x="104" y="427" text-anchor="end" font-size="17">10</text>
+<text class="val0" x="153" y="232" text-anchor="middle" font-size="26">0</text>
+<text class="val" x="219" y="232" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="285" y="232" text-anchor="middle" font-size="26">1</text>
+<text class="val0" x="351" y="232" text-anchor="middle" font-size="26">0</text>
+<text class="valx" x="153" y="298" text-anchor="middle" font-size="26">X</text>
+<text class="val" x="219" y="298" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="285" y="298" text-anchor="middle" font-size="26">1</text>
+<text class="valx" x="351" y="298" text-anchor="middle" font-size="26">X</text>
+<text class="val0" x="153" y="364" text-anchor="middle" font-size="26">0</text>
+<text class="val" x="219" y="364" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="285" y="364" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="351" y="364" text-anchor="middle" font-size="26">1</text>
+<text class="val0" x="153" y="430" text-anchor="middle" font-size="26">0</text>
+<text class="val" x="219" y="430" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="285" y="430" text-anchor="middle" font-size="26">1</text>
+<text class="val0" x="351" y="430" text-anchor="middle" font-size="26">0</text>
+<rect x="590" y="256" width="66" height="66" fill="#eef3f8"/>
+<rect x="788" y="256" width="66" height="66" fill="#eef3f8"/>
+<line class="grid" x1="656" y1="190" x2="656" y2="454"/>
+<line class="grid" x1="590" y1="256" x2="854" y2="256"/>
+<line class="gridh" x1="722" y1="190" x2="722" y2="454"/>
+<line class="gridh" x1="590" y1="322" x2="854" y2="322"/>
+<line class="grid" x1="788" y1="190" x2="788" y2="454"/>
+<line class="grid" x1="590" y1="388" x2="854" y2="388"/>
+<rect class="frame" x="590" y="190" width="264" height="264"/>
+<rect x="730.0" y="264.0" width="116.0" height="116.0" rx="16" fill="#e0890b" fill-opacity="0.18" stroke="#e0890b" stroke-width="4.5"/>
+<text class="hdr" x="623" y="176" text-anchor="middle" font-size="17">00</text>
+<text class="hdr" x="689" y="176" text-anchor="middle" font-size="17">01</text>
+<text class="hdr" x="755" y="176" text-anchor="middle" font-size="17">11</text>
+<text class="hdr" x="821" y="176" text-anchor="middle" font-size="17">10</text>
+<text class="hdr" x="574" y="229" text-anchor="end" font-size="17">00</text>
+<text class="hdr" x="574" y="295" text-anchor="end" font-size="17">01</text>
+<text class="hdr" x="574" y="361" text-anchor="end" font-size="17">11</text>
+<text class="hdr" x="574" y="427" text-anchor="end" font-size="17">10</text>
+<text class="val0" x="623" y="232" text-anchor="middle" font-size="26">0</text>
+<text class="val" x="689" y="232" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="755" y="232" text-anchor="middle" font-size="26">1</text>
+<text class="val0" x="821" y="232" text-anchor="middle" font-size="26">0</text>
+<text class="valx" x="623" y="298" text-anchor="middle" font-size="26">X</text>
+<text class="val" x="689" y="298" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="755" y="298" text-anchor="middle" font-size="26">1</text>
+<text class="valx" x="821" y="298" text-anchor="middle" font-size="26">X</text>
+<text class="val0" x="623" y="364" text-anchor="middle" font-size="26">0</text>
+<text class="val" x="689" y="364" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="755" y="364" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="821" y="364" text-anchor="middle" font-size="26">1</text>
+<text class="val0" x="623" y="430" text-anchor="middle" font-size="26">0</text>
+<text class="val" x="689" y="430" text-anchor="middle" font-size="26">1</text>
+<text class="val" x="755" y="430" text-anchor="middle" font-size="26">1</text>
+<text class="val0" x="821" y="430" text-anchor="middle" font-size="26">0</text>
+<path d="M424,322 H544" fill="none" stroke="#8198af" stroke-width="4" marker-end="url(#ah)"/>
+<text x="487" y="306" text-anchor="middle" font-size="19" fill="#41556b">grow it</text>
+<text x="252" y="500" text-anchor="middle" font-size="24" font-weight="700" fill="#41556b">ABC</text>
+<text x="252" y="528" text-anchor="middle" font-size="18" fill="#8198af">three literals, two cells</text>
+<text x="722" y="500" text-anchor="middle" font-size="24" font-weight="700" fill="#e0890b">BC</text>
+<text x="722" y="528" text-anchor="middle" font-size="18" fill="#e0890b">two literals, four cells</text>
+<text class="note" x="36" y="574">Dropping the literal A doubled the group. Drop another and the group would</text>
+<text class="note" x="36" y="602">swallow a 0, so BC is as large as it gets.</text>
+</svg>

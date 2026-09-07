@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 790" role="img" aria-label="The same map with its three prime implicants circled: D in cyan covering the two middle columns as a group of eight, BC in amber covering m6, m7, m14 and m15 as a group of four, and A-bar B in violet covering the AB = 01 row as a group of four">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+  </style>
+<text class="title" x="36" y="52">Step 1 &#8212; the three prime implicants</text>
+<text class="sub" x="36" y="86">Each group is grown as large as it legally can be: only 1s and X&#8217;s inside, never a 0.</text>
+<text x="404" y="128" text-anchor="middle" font-size="26" font-weight="700" fill="#0aa5c4">D</text>
+<text x="404" y="152" text-anchor="middle" font-size="17" fill="#0aa5c4">group of 8</text>
+<path d="M322,170 v10 H486 v-10" fill="none" stroke="#0aa5c4" stroke-width="3" stroke-linejoin="round"/>
+<rect x="220" y="328" width="92" height="92" fill="#eef3f8"/>
+<rect x="496" y="328" width="92" height="92" fill="#eef3f8"/>
+<line class="grid" x1="312" y1="236" x2="312" y2="604"/>
+<line class="grid" x1="220" y1="328" x2="588" y2="328"/>
+<line class="gridh" x1="404" y1="236" x2="404" y2="604"/>
+<line class="gridh" x1="220" y1="420" x2="588" y2="420"/>
+<line class="grid" x1="496" y1="236" x2="496" y2="604"/>
+<line class="grid" x1="220" y1="512" x2="588" y2="512"/>
+<rect class="frame" x="220" y="236" width="368" height="368"/>
+<rect x="318.0" y="242.0" width="172.0" height="356.0" rx="16" fill="#0aa5c4" fill-opacity="0.13" stroke="#0aa5c4" stroke-width="4.5"/>
+<rect x="418.0" y="342.0" width="156.0" height="156.0" rx="16" fill="#e0890b" fill-opacity="0.15" stroke="#e0890b" stroke-width="4.5"/>
+<rect x="242.0" y="350.0" width="324.0" height="48.0" rx="16" fill="#7c3aed" fill-opacity="0.13" stroke="#7c3aed" stroke-width="4.5"/>
+<text class="hdr" x="266" y="222" text-anchor="middle" font-size="22">00</text>
+<text class="hdr" x="358" y="222" text-anchor="middle" font-size="22">01</text>
+<text class="hdr" x="450" y="222" text-anchor="middle" font-size="22">11</text>
+<text class="hdr" x="542" y="222" text-anchor="middle" font-size="22">10</text>
+<text class="hdr" x="204" y="290" text-anchor="end" font-size="22">00</text>
+<text class="hdr" x="204" y="382" text-anchor="end" font-size="22">01</text>
+<text class="hdr" x="204" y="474" text-anchor="end" font-size="22">11</text>
+<text class="hdr" x="204" y="566" text-anchor="end" font-size="22">10</text>
+<text class="corner" x="204" y="222" text-anchor="end">AB \ CD</text>
+<text class="val0" x="266" y="294" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="228" y="257" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m0</text>
+<text class="val" x="358" y="294" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="320" y="257" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m1</text>
+<text class="val" x="450" y="294" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="412" y="257" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m3</text>
+<text class="val0" x="542" y="294" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="504" y="257" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m2</text>
+<text class="valx" x="266" y="386" text-anchor="middle" font-size="34">X</text>
+<text class="idx" x="228" y="349" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m4</text>
+<text class="val" x="358" y="386" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="320" y="349" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m5</text>
+<text class="val" x="450" y="386" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="412" y="349" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m7</text>
+<text class="valx" x="542" y="386" text-anchor="middle" font-size="34">X</text>
+<text class="idx" x="504" y="349" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m6</text>
+<text class="val0" x="266" y="478" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="228" y="441" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m12</text>
+<text class="val" x="358" y="478" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="320" y="441" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m13</text>
+<text class="val" x="450" y="478" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="412" y="441" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m15</text>
+<text class="val" x="542" y="478" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="504" y="441" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m14</text>
+<text class="val0" x="266" y="570" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="228" y="533" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m8</text>
+<text class="val" x="358" y="570" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="320" y="533" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m9</text>
+<text class="val" x="450" y="570" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="412" y="533" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m11</text>
+<text class="val0" x="542" y="570" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="504" y="533" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m10</text>
+<text x="610" y="414" text-anchor="start" font-size="26" font-weight="700" fill="#e0890b">BC</text>
+<text x="610" y="438" text-anchor="start" font-size="17" fill="#e0890b">group of 4</text>
+<g fill="#7c3aed" color="#7c3aed"><text class="x" x="36" y="370.0" text-anchor="start" font-size="26" font-weight="700">AB</text><line x1="37.6" y1="349.2" x2="54.2" y2="349.2" stroke="currentColor" stroke-width="2.0" stroke-linecap="round"/><text x="36" y="394.0" text-anchor="start" font-size="17">group of 4</text></g>
+<circle cx="44" cy="652" r="6" fill="#0aa5c4"/>
+<text class="note" x="62" y="658">D is the two middle columns, all eight cells where D = 1. Every other</text>
+<text class="note" x="62" y="686">variable cancels.</text>
+<circle cx="44" cy="714" r="6" fill="#e0890b"/>
+<text class="note" x="62" y="720">BC closes up only because the don&#8217;t-care m6 is read as a 1. Without it</text>
+<text class="note" x="62" y="748">the best available is the pair m14, m15.</text>
+<circle cx="44" cy="776" r="6" fill="#7c3aed"/>
+<text class="note" x="62" y="782">A&#772;B is legal too &#8212; a group may sit on X&#8217;s as well as 1s</text>
+<text class="note" x="62" y="810">&#8212; and it cannot grow, so it is prime.</text>
+</svg>
