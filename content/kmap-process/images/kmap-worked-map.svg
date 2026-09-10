@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 560" role="img" aria-label="Four-variable Karnaugh map of F with AB on the rows and CD on the columns in Gray-code order; ones at m1, m3, m5, m7, m9, m11, m13, m14 and m15, don't-cares at m4 and m6, zeros elsewhere">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 620" role="img" aria-label="Four-variable Karnaugh map of F with AB on the rows and CD on the columns in Gray-code order; ones at m1, m3, m5, m7, m9, m11, m13, m14 and m15, don't-cares at m4 and m6, zeros elsewhere">
   <style>
     svg { background: #fff; }
     text { font-family: Inter, Helvetica, Arial, sans-serif; }

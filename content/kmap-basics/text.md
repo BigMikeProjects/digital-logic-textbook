@@ -1,31 +1,32 @@
 # Karnaugh Map Basics
 
-The introduction to Karnaugh maps made the case for *why* the tool exists: it turns the algebra of Boolean simplification into something you can see, because the map is laid out so that visual adjacency matches logical adjacency. This section covers the mechanics — how to construct a Karnaugh map, how to fill it from a truth table, and how to read a simplified sum-of-products expression off of it by grouping. The vocabulary of minterms carries straight over: every cell of a map is one minterm.
+The introduction to Karnaugh maps made the case for *why* the tool exists: it turns Boolean simplification into something you can see, because the map is laid out so that visual adjacency matches logical adjacency. This section covers the mechanics — how to construct a Karnaugh map, how to fill it from a truth table, and how to read a simplified sum-of-products expression off of it by grouping. The vocabulary of minterms carries straight over: every cell of a map is one minterm.
 
 ## What a Karnaugh Map Is
 
-A Karnaugh map (K-map) is a grid that holds exactly the same information as a truth table, but arranged spatially. A function of $n$ variables has $2^n$ input combinations, so its map has **$2^n$ cells** — one per minterm. A two-variable function gets a $2 \times 2$ map (4 cells), three variables get a $2 \times 4$ map (8 cells), and four variables get a $4 \times 4$ map (16 cells).
+A Karnaugh map (K-map) holds exactly the same information as a truth table, arranged spatially instead of as a list. A function of $n$ variables has $2^n$ input combinations, so its map has **$2^n$ cells** — one per minterm. A two-variable function gets a $2 \times 2$ map, three variables get a $2 \times 4$ map, and four variables get a $4 \times 4$ map.
 
-The input variables are split between the rows and the columns. With three variables $A$, $B$, $C$ (taking $A$ as the most-significant bit, as usual), $A$ labels the two rows and $B\,C$ label the four columns. Each cell sits at the intersection of a row code and a column code, and the minterm number of a cell is just the binary value formed by reading its row and column bits together.
+The input variables split between the rows and the columns. With three variables $A$, $B$, $C$ (taking $A$ as the most-significant bit, as usual), $A$ labels the two rows and $B\,C$ label the four columns. Each cell sits at the intersection of a row code and a column code, and the minterm number of a cell is just the binary value formed by reading its row bits and column bits together.
 
-## Gray Code: Why the Axes Are Ordered 00, 01, 11, 10
+![Three Karnaugh maps side by side: a two-variable 2-by-2 map with A on the row and B on the column, a three-variable 2-by-4 map with A on the rows and B C on the columns, and a four-variable 4-by-4 map with A B on the rows and C D on the columns. Every cell is labelled with its minterm index.](./images/kmap-sizes.svg)
 
-The single most important detail of a K-map is the ordering of the row and column labels. They are **not** in plain binary counting order (00, 01, 10, 11). Instead they follow **Gray code** — 00, 01, 11, 10 — in which *exactly one bit changes* between any two neighbors.
+## Why the Axes Are in Gray Code
 
-This ordering is what makes the map work. Because adjacent labels differ in a single bit, two cells that touch edge-to-edge differ in exactly one variable. That is precisely the condition under which the Boolean identity $X\,\bar{Y} + X\,Y = X$ lets you merge two terms into one. So in a K-map, *physically adjacent cells are logically combinable* — adjacency on the page is a visual proxy for the algebra. The edges also **wrap around**: the leftmost and rightmost columns are neighbors, and on a four-variable map the top and bottom rows are neighbors too, so the map behaves like the surface of a torus.
+The single most important detail of a K-map is the ordering of the row and column labels. They are **not** in plain binary counting order (00, 01, 10, 11). They follow **Gray code** — 00, 01, 11, 10 — in which *exactly one bit changes* between any two neighbors.
+
+That ordering is what makes the map work. Because adjacent labels differ in a single bit, two cells that touch edge-to-edge differ in exactly one variable, and that is precisely the condition under which the Boolean identity $X\,\bar{Y} + X\,Y = X$ lets you merge two terms into one. So in a K-map, *physically adjacent cells are logically combinable* — adjacency on the page is a visual proxy for the algebra. The edges also **wrap around**: the leftmost and rightmost columns are neighbors, and on a four-variable map the top and bottom rows are neighbors too, so the map behaves like the surface of a torus.
+
+![Two label strips compared. In binary counting order 00, 01, 10, 11 the step from 01 to 10 changes two bits and so does the wrap from 11 back to 00, both marked in red. In Gray-code order 00, 01, 11, 10 every step and the wrap change exactly one bit, all marked in green. Below, the identity X Y-bar plus X Y equals X.](./images/kmap-gray-order.svg)
 
 ## Filling the Map and Forming Groups
 
-To use a map, you transfer the function onto it: write a `1` in every cell whose minterm makes the output `1`, and a `0` (or leave it blank) everywhere else. You can do this directly from a truth table or from a $\Sigma m$ minterm list.
+To use a map, transfer the function onto it: write a `1` in every cell whose minterm makes the output `1`, and a `0` (or nothing at all) everywhere else. You can work either from a truth table or from a $\Sigma m$ minterm list.
 
-Simplification is then a matter of **grouping** the `1`s. The rules are:
+Simplification is then a matter of **grouping** the `1`s. A group must be rectangular and must hold a number of cells that is a **power of two** — 1, 2, 4, 8, or 16 — and it should be made as large as the `1`s allow, because a larger group eliminates more variables and yields a simpler term. Beyond that the rules are permissive: groups may overlap, and they may wrap across the map's edges. The one requirement on the set of groups as a whole is that every `1` ends up covered by at least one of them.
 
-- Groups must be rectangular and contain a number of cells that is a **power of two** — 1, 2, 4, 8, or 16.
-- Groups should be made **as large as possible**, because a larger group eliminates more variables and yields a simpler term.
-- Groups may **overlap**, and they may **wrap** across the map's edges.
-- Every `1` must be covered by at least one group.
+![Six small three-variable maps. Four legal groups are outlined in amber and ticked: a rectangle of four cells, a pair, two overlapping groups, and a pair that wraps across the left and right edges. Two illegal shapes are outlined in dashed red and crossed: an L-shaped group of three cells and a diagonal pair.](./images/kmap-group-rules.svg)
 
-Each group corresponds to a single product term. To read the term, find which variables stay **constant** across all the cells in the group; the variables that change drop out. A variable that is constantly `1` appears uncomplemented, and one that is constantly `0` appears complemented. The simplified function is the **sum (OR) of the product terms** from all the groups. A group of the largest possible size that can't be enlarged further is called a **prime implicant** — the building block of a minimal expression.
+Each group corresponds to a single product term. To read the term, find which variables stay **constant** across all the cells in the group; the variables that change drop out. A variable that is constantly `1` appears uncomplemented, and one that is constantly `0` appears complemented. The simplified function is the **sum (OR) of the product terms** from all the groups. A group that cannot be made any larger is called a **prime implicant**, and the next topic builds a full minimization procedure on that idea.
 
 ## A Worked Example
 
@@ -33,21 +34,15 @@ Suppose a three-variable function is `1` for minterms 0, 1, 4, 5, and 7:
 
 $$F = \sum m(0, 1, 4, 5, 7)$$
 
-| # | $A$ | $B$ | $C$ | $F$ |
-|---|-----|-----|-----|-----|
-| 0 | 0 | 0 | 0 | 1 |
-| 1 | 0 | 0 | 1 | 1 |
-| 2 | 0 | 1 | 0 | 0 |
-| 3 | 0 | 1 | 1 | 0 |
-| 4 | 1 | 0 | 0 | 1 |
-| 5 | 1 | 0 | 1 | 1 |
-| 6 | 1 | 1 | 0 | 0 |
-| 7 | 1 | 1 | 1 | 1 |
+Each row of that function's truth table becomes one cell of the map. Row 5, for instance, is $A\,B\,C = 101$, so its `1` goes in the $A = 1$ row under the $B\,C = 01$ column.
 
-On the map ($A$ on the rows, $B\,C$ on the columns in Gray order), the `1`s form two natural groups:
+![A three-variable truth table for F equal to sum m(0, 1, 4, 5, 7) on the left, with the five rows whose output is 1 tinted and row 5 outlined, and an arrow to the same function drawn on a three-variable Karnaugh map on the right with cell m5 outlined to match.](./images/kmap-table-to-map.svg)
 
-- **A group of four** covering minterms 0, 1, 4, 5. Across these cells $B$ is always `0` while $A$ and $C$ both vary, so this group reduces to the single literal $\bar{B}$.
-- **A group of two** covering minterms 5 and 7. Here $A = 1$ and $C = 1$ throughout while $B$ varies, giving the term $A\,C$. (Minterm 5 is shared with the first group — overlap is allowed and often helpful.)
+With the map filled in, the `1`s fall into two natural groups.
+
+![The three-variable map of F equal to sum m(0, 1, 4, 5, 7) with two groups drawn: an amber group of four covering m0, m1, m4 and m5, which reads as B-bar, and a violet group of two covering m5 and m7, which reads as A C. The result is F equals B-bar plus A C.](./images/kmap-worked-groups.svg)
+
+The group of four covers minterms 0, 1, 4, and 5. Across those cells $B$ is always `0` while $A$ and $C$ both vary, so the group reduces to the single literal $\bar{B}$. The group of two covers minterms 5 and 7, where $A = 1$ and $C = 1$ throughout while $B$ varies, giving the term $A\,C$. Minterm 5 belongs to both groups — overlap is allowed, and here it is what makes the pair available at all.
 
 ORing the two terms gives the minimized result:
 
@@ -62,7 +57,7 @@ assign F = ~B | (A & C);
 
 ## Key Takeaways
 
-A Karnaugh map is a truth table re-drawn as a $2^n$-cell grid, with one cell per minterm and the row and column labels written in Gray code so that adjacent cells differ in exactly one variable. That adjacency is the whole point: neighbors can be combined algebraically, the edges wrap, and simplification becomes the visual task of covering the `1`s with as few and as large rectangular groups as possible (sizes that are powers of two). Each group yields one product term built from the variables that stay constant across it, and the OR of those terms is a minimized sum-of-products expression. The largest non-extendable groups are the prime implicants. The interactive map for this topic lets you build product-term expressions on two-, three-, and four-variable maps and watch the groups and the $\Sigma m$ list update as you go.
+A Karnaugh map is a truth table re-drawn as a $2^n$-cell grid, with one cell per minterm and the row and column labels written in Gray code so that adjacent cells differ in exactly one variable. That adjacency is the whole point: neighbors can be combined algebraically, the edges wrap, and simplification becomes the visual task of covering the `1`s with as few and as large rectangular groups as possible, at sizes that are powers of two. Each group yields one product term built from the variables that stay constant across it, and the OR of those terms is a minimized sum-of-products expression. A group that cannot be made any larger is a prime implicant. The interactive map for this topic lets you build product-term expressions on two-, three-, and four-variable maps and watch the groups and the $\Sigma m$ list update as you go.
 
 ## Review Questions
 
@@ -114,4 +109,4 @@ D. It is required only for four-variable maps
 
 **5. A.** Across minterms 0, 1, 4, 5 the only variable that never changes is $B$, which is always `0`. A constantly-`0` variable appears complemented, so the term is $\bar{B}$; $A$ and $C$ vary and drop out.
 
-**6. C.** A larger group holds more variables constant—relative to its size—so more variables cancel, leaving a term with fewer literals. Fewer literals means fewer gate inputs and a smaller circuit. Coverage (option B) is a separate requirement, and the size rule applies to maps of every size.
+**6. C.** A larger group holds more variables constant relative to its size, so more variables cancel, leaving a term with fewer literals. Fewer literals means fewer gate inputs and a smaller circuit. Coverage (option B) is a separate requirement, and the size rule applies to maps of every size.

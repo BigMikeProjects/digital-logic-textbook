@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 430" role="img" aria-label="Eight numbered chips for rows 0 through 7. Rows 4 and 6, where F is 1, are cyan and form the minterm list sum m(4, 6). The remaining six rows, where F is 0, are amber and form the maxterm list product M(0, 1, 2, 3, 5, 7). Together the two lists account for every row exactly once.">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+    .cell   { font-size: 21px; font-weight: 600; fill: #41556b; }
+    .cap    { font-size: 21px; font-weight: 700; fill: #41556b; }
+    .capsub { font-size: 17px; fill: #8198af; }
+  </style>
+<text class="title" x="36" y="52">The two lists are exact complements</text>
+<text class="sub" x="36" y="88">Every row number lands in one list or the other, never both and never neither.</text>
+<rect x="133" y="152" width="72" height="72" rx="12" fill="#fdf4e3" stroke="#e0890b" stroke-width="2.5"/>
+<text x="169" y="197" text-anchor="middle" font-size="30" font-weight="700" fill="#9a6300">0</text>
+<text x="169" y="219" text-anchor="middle" font-size="14" fill="#9a6300">F = 0</text>
+<rect x="219" y="152" width="72" height="72" rx="12" fill="#fdf4e3" stroke="#e0890b" stroke-width="2.5"/>
+<text x="255" y="197" text-anchor="middle" font-size="30" font-weight="700" fill="#9a6300">1</text>
+<text x="255" y="219" text-anchor="middle" font-size="14" fill="#9a6300">F = 0</text>
+<rect x="305" y="152" width="72" height="72" rx="12" fill="#fdf4e3" stroke="#e0890b" stroke-width="2.5"/>
+<text x="341" y="197" text-anchor="middle" font-size="30" font-weight="700" fill="#9a6300">2</text>
+<text x="341" y="219" text-anchor="middle" font-size="14" fill="#9a6300">F = 0</text>
+<rect x="391" y="152" width="72" height="72" rx="12" fill="#fdf4e3" stroke="#e0890b" stroke-width="2.5"/>
+<text x="427" y="197" text-anchor="middle" font-size="30" font-weight="700" fill="#9a6300">3</text>
+<text x="427" y="219" text-anchor="middle" font-size="14" fill="#9a6300">F = 0</text>
+<rect x="477" y="152" width="72" height="72" rx="12" fill="#e6f7fb" stroke="#0aa5c4" stroke-width="2.5"/>
+<text x="513" y="197" text-anchor="middle" font-size="30" font-weight="700" fill="#006f86">4</text>
+<text x="513" y="219" text-anchor="middle" font-size="14" fill="#006f86">F = 1</text>
+<rect x="563" y="152" width="72" height="72" rx="12" fill="#fdf4e3" stroke="#e0890b" stroke-width="2.5"/>
+<text x="599" y="197" text-anchor="middle" font-size="30" font-weight="700" fill="#9a6300">5</text>
+<text x="599" y="219" text-anchor="middle" font-size="14" fill="#9a6300">F = 0</text>
+<rect x="649" y="152" width="72" height="72" rx="12" fill="#e6f7fb" stroke="#0aa5c4" stroke-width="2.5"/>
+<text x="685" y="197" text-anchor="middle" font-size="30" font-weight="700" fill="#006f86">6</text>
+<text x="685" y="219" text-anchor="middle" font-size="14" fill="#006f86">F = 1</text>
+<rect x="735" y="152" width="72" height="72" rx="12" fill="#fdf4e3" stroke="#e0890b" stroke-width="2.5"/>
+<text x="771" y="197" text-anchor="middle" font-size="30" font-weight="700" fill="#9a6300">7</text>
+<text x="771" y="219" text-anchor="middle" font-size="14" fill="#9a6300">F = 0</text>
+<circle cx="52" cy="283" r="7" fill="#0aa5c4"/>
+<text x="70" y="290" font-size="20" font-weight="700" fill="#006f86">&#931;m(4, 6)</text>
+<text class="note" x="330" y="290">the rows where F = 1 &#8212; these become minterms</text>
+<circle cx="52" cy="321" r="7" fill="#e0890b"/>
+<text x="70" y="328" font-size="20" font-weight="700" fill="#9a6300">&#928;M(0, 1, 2, 3, 5, 7)</text>
+<text class="note" x="330" y="328">the rows where F = 0 &#8212; these become maxterms</text>
+<text class="note" x="36" y="375">Converting between the forms is bookkeeping: take the row numbers the other list leaves out.</text>
+<text class="note" x="36" y="401">Either list alone describes the function completely.</text>
+</svg>

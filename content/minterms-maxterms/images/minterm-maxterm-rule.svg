@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 668" role="img" aria-label="Row 4 of a three-variable truth table, where A B C is 1 0 0, feeding two panels. The cyan minterm panel complements every 0 input and ANDs the literals to give m4 = A B-bar C-bar. The amber maxterm panel complements every 1 input and ORs the literals to give M4 = (A-bar + B + C).">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+    .cell   { font-size: 21px; font-weight: 600; fill: #41556b; }
+    .cap    { font-size: 21px; font-weight: 700; fill: #41556b; }
+    .capsub { font-size: 17px; fill: #8198af; }
+  </style>
+<defs><marker id="a-006f86" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L11,6 L0,11 z" fill="#006f86"/></marker><marker id="a-9a6300" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L11,6 L0,11 z" fill="#9a6300"/></marker></defs>
+<text class="title" x="36" y="52">One row, two readings</text>
+<text class="sub" x="36" y="88">Every row has both a minterm and a maxterm. The rule for one is the rule for the other, flipped.</text>
+<rect x="342" y="122" width="74" height="36" fill="#eef2f7" stroke="#aab9c9" stroke-width="2"/>
+<text class="hdr" x="379" y="147" text-anchor="middle">#</text>
+<rect x="342" y="158" width="74" height="42" fill="#ffffff" stroke="#aab9c9" stroke-width="2"/>
+<text x="379" y="187" text-anchor="middle" font-size="22" font-weight="700" fill="#102a43">4</text>
+<rect x="416" y="122" width="74" height="36" fill="#eef2f7" stroke="#aab9c9" stroke-width="2"/>
+<text class="hdr" x="453" y="147" text-anchor="middle">A</text>
+<rect x="416" y="158" width="74" height="42" fill="#ffffff" stroke="#aab9c9" stroke-width="2"/>
+<text x="453" y="187" text-anchor="middle" font-size="22" font-weight="700" fill="#41556b">1</text>
+<rect x="490" y="122" width="74" height="36" fill="#eef2f7" stroke="#aab9c9" stroke-width="2"/>
+<text class="hdr" x="527" y="147" text-anchor="middle">B</text>
+<rect x="490" y="158" width="74" height="42" fill="#ffffff" stroke="#aab9c9" stroke-width="2"/>
+<text x="527" y="187" text-anchor="middle" font-size="22" font-weight="700" fill="#41556b">0</text>
+<rect x="564" y="122" width="74" height="36" fill="#eef2f7" stroke="#aab9c9" stroke-width="2"/>
+<text class="hdr" x="601" y="147" text-anchor="middle">C</text>
+<rect x="564" y="158" width="74" height="42" fill="#ffffff" stroke="#aab9c9" stroke-width="2"/>
+<text x="601" y="187" text-anchor="middle" font-size="22" font-weight="700" fill="#41556b">0</text>
+<text class="capsub" x="328" y="187" text-anchor="end">row 4 of a three-variable table</text>
+<path d="M412,206 L255,232" fill="none" stroke="#0aa5c4" stroke-width="3" marker-end="url(#a-006f86)"/>
+<rect x="40" y="246" width="430" height="346" rx="16" fill="#e6f7fb" stroke="#0aa5c4" stroke-width="2.5"/>
+<text x="66" y="288" font-size="23" font-weight="700" fill="#006f86">Minterm </text>
+<text x="165" y="288" font-size="23" font-weight="700" fill="#006f86">m<tspan font-size="15" dy="5">4</tspan></text>
+<text class="capsub" x="66" y="316">a 0 input is complemented, a 1 input is not</text>
+<text class="cell" x="74" y="364">A = 1</text>
+<path d="M162,357 H208" fill="none" stroke="#0aa5c4" stroke-width="2.5" marker-end="url(#a-006f86)"/>
+<text x="226.0" y="364.0" text-anchor="start" font-size="22" font-weight="700" fill="#006f86">A</text>
+<text class="capsub" x="272" y="364">as it stands</text>
+<text class="cell" x="74" y="408">B = 0</text>
+<path d="M162,401 H208" fill="none" stroke="#0aa5c4" stroke-width="2.5" marker-end="url(#a-006f86)"/>
+<text x="226.0" y="408.0" text-anchor="start" font-size="22" font-weight="700" fill="#006f86">B</text><line x1="227.8" y1="390.4" x2="238.8" y2="390.4" stroke="#006f86" stroke-width="2.0" stroke-linecap="round"/>
+<text class="capsub" x="272" y="408">complemented</text>
+<text class="cell" x="74" y="452">C = 0</text>
+<path d="M162,445 H208" fill="none" stroke="#0aa5c4" stroke-width="2.5" marker-end="url(#a-006f86)"/>
+<text x="226.0" y="452.0" text-anchor="start" font-size="22" font-weight="700" fill="#006f86">C</text><line x1="227.8" y1="434.4" x2="238.8" y2="434.4" stroke="#006f86" stroke-width="2.0" stroke-linecap="round"/>
+<text class="capsub" x="272" y="452">complemented</text>
+<line x1="66" y1="498" x2="444" y2="498" stroke="#0aa5c4" stroke-width="1.5" stroke-opacity="0.5"/>
+<text x="66" y="544" font-size="26" font-weight="700" fill="#006f86">m<tspan font-size="17" dy="5">4</tspan></text>
+<text x="110.0" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#006f86">=</text><text x="126.1" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#006f86"> </text><text x="133.4" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#006f86">A</text><text x="151.1" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#006f86">B</text><line x1="153.2" y1="523.2" x2="166.2" y2="523.2" stroke="#006f86" stroke-width="2.0" stroke-linecap="round"/><text x="170.8" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#006f86">C</text><line x1="172.9" y1="523.2" x2="185.9" y2="523.2" stroke="#006f86" stroke-width="2.0" stroke-linecap="round"/>
+<text class="capsub" x="444" y="544" text-anchor="end">AND the literals</text>
+<text x="66" y="580" font-size="16" font-weight="700" fill="#8198af">m<tspan font-size="11" dy="3">4</tspan></text>
+<text class="capsub" x="92" y="580">is 1 on row 4 and 0 on every other row.</text>
+<path d="M568,206 L725,232" fill="none" stroke="#e0890b" stroke-width="3" marker-end="url(#a-9a6300)"/>
+<rect x="510" y="246" width="430" height="346" rx="16" fill="#fdf4e3" stroke="#e0890b" stroke-width="2.5"/>
+<text x="536" y="288" font-size="23" font-weight="700" fill="#9a6300">Maxterm </text>
+<text x="643" y="288" font-size="23" font-weight="700" fill="#9a6300">M<tspan font-size="15" dy="5">4</tspan></text>
+<text class="capsub" x="536" y="316">a 1 input is complemented, a 0 input is not</text>
+<text class="cell" x="544" y="364">A = 1</text>
+<path d="M632,357 H678" fill="none" stroke="#e0890b" stroke-width="2.5" marker-end="url(#a-9a6300)"/>
+<text x="696.0" y="364.0" text-anchor="start" font-size="22" font-weight="700" fill="#9a6300">A</text><line x1="697.8" y1="346.4" x2="708.8" y2="346.4" stroke="#9a6300" stroke-width="2.0" stroke-linecap="round"/>
+<text class="capsub" x="742" y="364">complemented</text>
+<text class="cell" x="544" y="408">B = 0</text>
+<path d="M632,401 H678" fill="none" stroke="#e0890b" stroke-width="2.5" marker-end="url(#a-9a6300)"/>
+<text x="696.0" y="408.0" text-anchor="start" font-size="22" font-weight="700" fill="#9a6300">B</text>
+<text class="capsub" x="742" y="408">as it stands</text>
+<text class="cell" x="544" y="452">C = 0</text>
+<path d="M632,445 H678" fill="none" stroke="#e0890b" stroke-width="2.5" marker-end="url(#a-9a6300)"/>
+<text x="696.0" y="452.0" text-anchor="start" font-size="22" font-weight="700" fill="#9a6300">C</text>
+<text class="capsub" x="742" y="452">as it stands</text>
+<line x1="536" y1="498" x2="914" y2="498" stroke="#e0890b" stroke-width="1.5" stroke-opacity="0.5"/>
+<text x="536" y="544" font-size="26" font-weight="700" fill="#9a6300">M<tspan font-size="17" dy="5">4</tspan></text>
+<text x="580.0" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#9a6300">=</text><text x="596.1" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#9a6300"> </text><text x="603.4" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#9a6300">(</text><text x="612.8" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#9a6300">A</text><line x1="614.8" y1="523.2" x2="627.8" y2="523.2" stroke="#9a6300" stroke-width="2.0" stroke-linecap="round"/><text x="632.5" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#9a6300">+</text><text x="648.6" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#9a6300">B</text><text x="666.3" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#9a6300">+</text><text x="682.4" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#9a6300">C</text><text x="700.1" y="544.0" text-anchor="start" font-size="26" font-weight="700" fill="#9a6300">)</text>
+<text class="capsub" x="914" y="544" text-anchor="end">OR the literals</text>
+<text x="536" y="580" font-size="16" font-weight="700" fill="#8198af">M<tspan font-size="11" dy="3">4</tspan></text>
+<text class="capsub" x="562" y="580">is 0 on row 4 and 1 on every other row.</text>
+<text class="note" x="36" y="636">OR the minterms of every 1 row for the canonical sum of products; AND the maxterms of every</text>
+<text class="note" x="36" y="662">0 row for the canonical product of sums.</text>
+</svg>

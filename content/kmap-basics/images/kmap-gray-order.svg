@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 636" role="img" aria-label="Two label strips compared. In binary counting order 00, 01, 10, 11 the step from 01 to 10 changes two bits and so does the wrap from 11 back to 00, both marked in red. In Gray-code order 00, 01, 11, 10 every step and the wrap change exactly one bit, all marked in green. Below, the identity X Y-bar plus X Y equals X.">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+    .cap    { font-size: 20px; font-weight: 700; fill: #41556b; }
+    .capsub { font-size: 17px; fill: #8198af; }
+  </style>
+<text class="title" x="36" y="52">Why the axes are Gray-coded</text>
+<text class="sub" x="36" y="88">The labels are not in counting order. Counting order would put cells side by side that have nothing in common.</text>
+<text class="cap" x="44" y="138">Binary counting order</text>
+<text class="capsub" x="44" y="164">&#10007; breaks adjacency</text>
+<rect x="44" y="250" width="74" height="56" rx="10" fill="#f6f8fb" stroke="#52677e" stroke-width="2.5"/>
+<text x="81" y="288" text-anchor="middle" font-size="25" font-weight="700" fill="#102a43">00</text>
+<rect x="152" y="250" width="74" height="56" rx="10" fill="#f6f8fb" stroke="#52677e" stroke-width="2.5"/>
+<text x="189" y="288" text-anchor="middle" font-size="25" font-weight="700" fill="#102a43">01</text>
+<rect x="260" y="250" width="74" height="56" rx="10" fill="#f6f8fb" stroke="#52677e" stroke-width="2.5"/>
+<text x="297" y="288" text-anchor="middle" font-size="25" font-weight="700" fill="#102a43">10</text>
+<rect x="368" y="250" width="74" height="56" rx="10" fill="#f6f8fb" stroke="#52677e" stroke-width="2.5"/>
+<text x="405" y="288" text-anchor="middle" font-size="25" font-weight="700" fill="#102a43">11</text>
+<path d="M81,306 Q135,354 189,306" fill="none" stroke="#15803d" stroke-width="3"/>
+<text x="135" y="378" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">1 bit</text>
+<path d="M189,306 Q243,354 297,306" fill="none" stroke="#d23b54" stroke-width="3"/>
+<text x="243" y="378" text-anchor="middle" font-size="18" font-weight="700" fill="#d23b54">2 bits</text>
+<path d="M297,306 Q351,354 405,306" fill="none" stroke="#15803d" stroke-width="3"/>
+<text x="351" y="378" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">1 bit</text>
+<path d="M405,250 Q243,198 81,250" fill="none" stroke="#d23b54" stroke-width="3" stroke-dasharray="9 7"/>
+<text x="243" y="178" text-anchor="middle" font-size="17" font-weight="700" fill="#d23b54">wrap: 2 bits</text>
+<text class="cap" x="530" y="138">Gray-code order</text>
+<text class="capsub" x="530" y="164">&#10003; what a K-map uses</text>
+<rect x="530" y="250" width="74" height="56" rx="10" fill="#f6f8fb" stroke="#52677e" stroke-width="2.5"/>
+<text x="567" y="288" text-anchor="middle" font-size="25" font-weight="700" fill="#102a43">00</text>
+<rect x="638" y="250" width="74" height="56" rx="10" fill="#f6f8fb" stroke="#52677e" stroke-width="2.5"/>
+<text x="675" y="288" text-anchor="middle" font-size="25" font-weight="700" fill="#102a43">01</text>
+<rect x="746" y="250" width="74" height="56" rx="10" fill="#f6f8fb" stroke="#52677e" stroke-width="2.5"/>
+<text x="783" y="288" text-anchor="middle" font-size="25" font-weight="700" fill="#102a43">11</text>
+<rect x="854" y="250" width="74" height="56" rx="10" fill="#f6f8fb" stroke="#52677e" stroke-width="2.5"/>
+<text x="891" y="288" text-anchor="middle" font-size="25" font-weight="700" fill="#102a43">10</text>
+<path d="M567,306 Q621,354 675,306" fill="none" stroke="#15803d" stroke-width="3"/>
+<text x="621" y="378" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">1 bit</text>
+<path d="M675,306 Q729,354 783,306" fill="none" stroke="#15803d" stroke-width="3"/>
+<text x="729" y="378" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">1 bit</text>
+<path d="M783,306 Q837,354 891,306" fill="none" stroke="#15803d" stroke-width="3"/>
+<text x="837" y="378" text-anchor="middle" font-size="18" font-weight="700" fill="#15803d">1 bit</text>
+<path d="M891,250 Q729,198 567,250" fill="none" stroke="#15803d" stroke-width="3" stroke-dasharray="9 7"/>
+<text x="729" y="178" text-anchor="middle" font-size="17" font-weight="700" fill="#15803d">wrap: 1 bit</text>
+<text class="note" x="44" y="420">Two of the four steps flip two bits at once.</text>
+<text class="note" x="44" y="446">Cells that touch would differ in two</text>
+<text class="note" x="44" y="472">variables, and the map's whole premise &#8212;</text>
+<text class="note" x="44" y="498">neighbours combine &#8212; would be false.</text>
+<text class="note" x="530" y="420">Every step flips exactly one bit, the wrap</text>
+<text class="note" x="530" y="446">from the last column back to the first</text>
+<text class="note" x="530" y="472">included. Touching cells differ in exactly</text>
+<text class="note" x="530" y="498">one variable, so they always combine.</text>
+<line x1="36" y1="532" x2="944" y2="532" stroke="#aab9c9" stroke-width="2"/>
+<text x="44.0" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43">X</text><text x="64.4" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43">Y</text><line x1="66.8" y1="566.0" x2="81.8" y2="566.0" stroke="#102a43" stroke-width="2.2" stroke-linecap="round"/><text x="87.2" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43"> </text><text x="95.6" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43">+</text><text x="114.2" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43"> </text><text x="122.6" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43">X</text><text x="143.0" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43">Y</text><text x="163.4" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43"> </text><text x="171.8" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43">=</text><text x="190.4" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43"> </text><text x="198.8" y="590.0" text-anchor="start" font-size="30" font-weight="700" fill="#102a43">X</text>
+<text class="note" x="286" y="580">Two cells that agree on every variable but one merge into a single term,</text>
+<text class="note" x="286" y="606">and the odd variable drops out. Gray order is what puts them side by side.</text>
+</svg>

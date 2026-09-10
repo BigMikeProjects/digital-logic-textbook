@@ -6,11 +6,7 @@ A truth table completely specifies a Boolean function: it lists, for every combi
 
 A **minterm** is a single product (AND) term that is equal to `1` for exactly one row of the truth table. To form the minterm for a given row, look across that row's input values and apply one simple rule: a variable that is `0` appears **complemented**, and a variable that is `1` appears **uncomplemented**.
 
-Consider a three-variable function of $A$, $B$, and $C$. We fix a **variable hierarchy** so the rows have a consistent numbering: $A$ is the most-significant bit and $C$ is the least-significant bit. Row 0 is then $ABC = 000$, row 7 is $111$, and every row's number is just the binary value of its inputs. With that convention:
-
-- Row 0 ($000$) gives the minterm $\bar{A}\,\bar{B}\,\bar{C}$ — all three bits are `0`, so all three variables are complemented.
-- Row 7 ($111$) gives the minterm $A\,B\,C$ — all three bits are `1`, so none are complemented.
-- Row 4 ($100$) gives $A\,\bar{B}\,\bar{C}$.
+Consider a three-variable function of $A$, $B$, and $C$. We fix a **variable hierarchy** so the rows have a consistent numbering: $A$ is the most-significant bit and $C$ is the least-significant bit. Row 0 is then $ABC = 000$, row 7 is $111$, and every row's number is just the binary value of its inputs. Under that convention row 0 gives the minterm $\bar{A}\,\bar{B}\,\bar{C}$, because all three bits are `0` and so all three variables are complemented; row 7 gives $A\,B\,C$, because none of them are; and row 4, $100$, gives the mixed case $A\,\bar{B}\,\bar{C}$.
 
 Each minterm $m_i$ is `1` for its own row and `0` everywhere else. To describe a whole function, we simply **OR together the minterms of every row where the output is `1`**. The result is the **canonical sum of products (SOP)** — a sum (OR) of product (AND) terms.
 
@@ -22,9 +18,11 @@ This is a **minterm list**. The $\Sigma m$ notation means "the sum of the minter
 
 ## Maxterms and the Canonical Product of Sums
 
-Corresponding to every minterm is a **maxterm**, and the relationship between them is a *duality*. Where a minterm maps the rows where the output is `1`, a maxterm maps the rows where the output is `0`.
+Corresponding to every minterm is a **maxterm**, and the relationship between them is a *duality*. A minterm singles out a row where the output is `1`; a maxterm singles out a row where the output is `0`.
 
-A **maxterm** $M_i$ is a single sum (OR) term that is equal to `0` for exactly one row. Forming a maxterm flips the literal rule used for minterms: a variable that is `1` appears **complemented**, and a variable that is `0` appears **uncomplemented**, and the literals are joined by OR rather than AND. For example, row 2 ($010$) gives the maxterm $(A + \bar{B} + C)$. You can check it: substituting $A=0, B=1, C=0$ makes every literal `0`, so the whole sum is `0` — exactly for row 2 and no other.
+A **maxterm** $M_i$ is a single sum (OR) term that is equal to `0` for exactly one row. Forming a maxterm flips the literal rule used for minterms: a variable that is `1` appears **complemented**, a variable that is `0` appears **uncomplemented**, and the literals are joined by OR rather than AND. Row 2, $010$, therefore gives the maxterm $(A + \bar{B} + C)$. You can check it: substituting $A=0$, $B=1$, $C=0$ makes every literal `0`, so the whole sum is `0` — exactly for row 2 and no other.
+
+![Row 4 of a three-variable truth table, where A B C is 1 0 0, feeding two panels. The cyan minterm panel complements every 0 input and ANDs the literals to give m4 = A B-bar C-bar. The amber maxterm panel complements every 1 input and ORs the literals to give M4 = (A-bar + B + C).](./images/minterm-maxterm-rule.svg)
 
 To describe a function, we **AND together the maxterms of every row where the output is `0`**, giving the **canonical product of sums (POS)** — a product (AND) of sum (OR) terms. The matching shorthand lists the row numbers where the output is `0`:
 
@@ -34,38 +32,27 @@ The extra complementing step is what makes the POS form feel less natural than S
 
 ## Two Views of the Same Function
 
-The minterm list and the maxterm list of a function are **exact complements**: every row number is either in one list or the other, and together they account for all the rows. If a row makes the output `1`, its index appears in the minterm list; if it makes the output `0`, its index appears in the maxterm list. This makes converting between the two forms trivial — you just take the row numbers that the other list leaves out.
+The minterm list and the maxterm list of a function are **exact complements**: every row number is either in one list or the other, and together they account for all the rows. If a row makes the output `1`, its index appears in the minterm list; if it makes the output `0`, its index appears in the maxterm list. That makes converting between the two forms trivial — you just take the row numbers that the other list leaves out.
+
+![Eight numbered chips for rows 0 through 7. Rows 4 and 6, where F is 1, are cyan and form the minterm list sum m(4, 6). The remaining six rows, where F is 0, are amber and form the maxterm list product M(0, 1, 2, 3, 5, 7). Together the two lists account for every row exactly once.](./images/minterm-maxterm-complement.svg)
 
 The interactive truth table for this topic makes the duality concrete. Toggle each row's output between `0` and `1` and watch the canonical SOP and POS expressions, and their $\Sigma m$ and $\Pi M$ shorthands, build up in real time. Switching between the Minterms and Maxterms tabs shows the literals flip and the index lists swap to their complements, while the underlying function stays the same.
 
 ## A Worked Example
 
-Suppose a three-variable function $F$ is `1` only at rows 4 and 6:
+Suppose a three-variable function $F$ is `1` only at rows 4 and 6. Writing out both terms for every row shows what each row contributes and which of the two lists it joins.
 
-| # | $A$ | $B$ | $C$ | $F$ |
-|---|-----|-----|-----|-----|
-| 0 | 0 | 0 | 0 | 0 |
-| 1 | 0 | 0 | 1 | 0 |
-| 2 | 0 | 1 | 0 | 0 |
-| 3 | 0 | 1 | 1 | 0 |
-| 4 | 1 | 0 | 0 | 1 |
-| 5 | 1 | 0 | 1 | 0 |
-| 6 | 1 | 1 | 0 | 1 |
-| 7 | 1 | 1 | 1 | 0 |
+![A three-variable truth table for F equal to sum m(4, 6), with a minterm column and a maxterm column. Rows 4 and 6, where F is 1, have their minterm cells shaded cyan; the other six rows have their maxterm cells shaded amber. Below, the canonical sum of products A B-bar C-bar plus A B C-bar equals sum m(4, 6), and the canonical product of sums equals product M(0, 1, 2, 3, 5, 7).](./images/canonical-forms-table.svg)
 
-Reading off the two `1` rows gives the canonical SOP directly:
+Reading off the two `1` rows gives the canonical SOP directly. Row 4 ($100$) contributes $A\,\bar{B}\,\bar{C}$ and row 6 ($110$) contributes $A\,B\,\bar{C}$, so
 
-$$F = A\,\bar{B}\,\bar{C} \;+\; A\,B\,\bar{C}$$
+$$F = A\,\bar{B}\,\bar{C} \;+\; A\,B\,\bar{C} \;=\; \sum m(4, 6)$$
 
-Row 4 ($100$) contributes $A\,\bar{B}\,\bar{C}$ (minterm 4) and row 6 ($110$) contributes $A\,B\,\bar{C}$ (minterm 6). In shorthand:
-
-$$F = \sum m(4, 6)$$
-
-To convert to a maxterm list, simply take the row numbers that are *not* in the minterm list — every row where the output is `0`:
+To convert to a maxterm list, take the row numbers that are *not* in the minterm list — every row where the output is `0`:
 
 $$F = \prod M(0, 1, 2, 3, 5, 7)$$
 
-Both expressions describe the identical truth table. In hardware terms, this canonical SOP maps straight onto a behavioral description — for instance, in Verilog the same function can be written from the minterm list as a sum of product terms:
+Both expressions describe the identical truth table. In hardware terms, the canonical SOP maps straight onto a behavioral description — in Verilog, the same function written from the minterm list as a sum of product terms:
 
 ```verilog
 // F = Σm(4, 6)
