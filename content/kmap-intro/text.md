@@ -2,6 +2,8 @@
 
 The Karnaugh map is one of the most recognizable tools in any digital logic course. Before learning *how* to draw and group one, it is worth stepping back to ask where it came from and why it still appears in every textbook even though no practicing engineer minimizes circuits by hand anymore. The short answer is that the Karnaugh map is the visual endpoint of a long line of attempts to make Boolean algebra something you can *see* — and that the ideas it makes visible are still the foundation of how we reason about digital logic. This section tells that story. The mechanics of building and solving maps are covered separately.
 
+![A vertical timeline. Boole's algebra of logic in 1854, Marquand's logic diagram in 1881, Shannon's 1937 thesis linking Boolean algebra to switching circuits, Veitch's 1952 chart, and the Karnaugh map in 1953, highlighted, are marked as worked by hand. Below a dashed line, Quine-McCluskey in the 1950s, heuristic minimizers in the 1980s, and synthesis tools and lookup tables from the 1990s onward are marked as worked by software.](./images/kmap-timeline.svg)
+
 ## From Logic to Algebra
 
 The story begins with **George Boole** in 1854. Boole almost certainly had no notion of computers — none existed, and none would for nearly a century. His goal was philosophical and mathematical: to apply the rigor of algebra to human reasoning. We naturally think in terms of operations like *and*, *or*, and *not*, and Boole set out to build a generalization of ordinary algebra that could capture those logical relationships formally. The result was what we now call **Boolean algebra**, a system in which variables take only two values and combine through logical operations such as $Y = A \cdot B$ (AND), $Y = A + B$ (OR), and $Y = \bar{A}$ (NOT).
@@ -12,7 +14,7 @@ What makes Boole's work remarkable in hindsight is how far ahead of its applicat
 
 Once a formal algebra of logic existed, a natural next question followed: could these relationships be *drawn* rather than only written? A symbolic expression is precise, but a picture can reveal structure that symbols hide.
 
-An early answer came from **Alan Marquand** of Princeton, who in 1881 devised a *logic diagram* — a grid layout for displaying Boolean relationships. Like Boole, Marquand was working well before digital logic gates existed, so he was not thinking about hardware. He was simply looking for a graphical way to lay out logical relationships on a page.
+An early answer came from **Allan Marquand** of Princeton, who in 1881 devised a *logic diagram* — a grid layout for displaying Boolean relationships. Like Boole, Marquand was working well before digital logic gates existed, so he was not thinking about hardware. He was simply looking for a graphical way to lay out logical relationships on a page.
 
 The connection between Boolean algebra and physical hardware was made decisively by **Claude Shannon** in 1937, in what is often called the most famous master's thesis ever written. Shannon showed that Boolean algebra precisely describes **switching circuits** — that is, networks of switches and, by extension, logic gates. This was the moment Boole's century-old abstraction became the mathematics of real machines. The same $A \cdot B$ that once described a statement of logic now described a circuit that conducts only when two switches are both closed.
 

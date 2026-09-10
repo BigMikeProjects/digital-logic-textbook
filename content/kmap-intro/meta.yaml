@@ -7,3 +7,5 @@ order: 30400
 graphics:
   01-video.youtube:
     caption: "Video: the historical and modern context of Karnaugh maps"
+  02-interactive.html:
+    caption: "Interactive: the two parallel tracks — Boole and Shannon's algebra, Marquand and Veitch's diagrams — converging on Karnaugh in 1953, then the computational era that automated it (Quine–McCluskey, Espresso, modern synthesis)"

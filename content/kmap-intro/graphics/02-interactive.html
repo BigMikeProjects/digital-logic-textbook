@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karnaugh Maps — A History</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #1a1a2e;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .viewport-container {
+    width: 100%;
+    max-width: 100vw;
+    aspect-ratio: 16 / 9;
+    max-height: 100vh;
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto;
+  }
+
+  .design-surface {
+    width: 1920px;
+    height: 1080px;
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: top left;
+    background: #f0f0ee;
+  }
+
+  /* ── Slide panels — stacked, only active one visible ── */
+  .slide {
+    width: 1920px;
+    height: 1080px;
+    position: absolute;
+    top: 0; left: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ════════════════════════════════════════
+     SHARED COMPONENTS
+  ════════════════════════════════════════ */
+
+  .header {
+    background: #0f1b35;
+    padding: 28px 60px 22px;
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    flex-shrink: 0;
+  }
+  .header-title    { font-size: 38px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+  .header-subtitle { font-size: 22px; font-weight: 400; color: #a0b0cc; letter-spacing: 1px; text-transform: uppercase; }
+  .slide-badge     { margin-left: auto; font-size: 16px; color: #5577aa; letter-spacing: 1px; }
+
+  /* Progress dots */
+  .progress-dots {
+    position: absolute;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; transition: background 0.3s; }
+
+  /* Key legend */
+  .key-legend {
+    position: absolute;
+    bottom: 20px;
+    right: 50px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .key-chip {
+    background: #0f1b35;
+    color: #a0b0cc;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 15px; font-weight: 600; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid #2a3a55;
+  }
+  .key-chip .key-label {
+    background: #ffffff22;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 13px;
+    font-family: monospace;
+  }
+
+  /* Corner nav hint (bottom-left) */
+  .nav-hint {
+    position: absolute;
+    bottom: 22px;
+    left: 50px;
+    font-size: 15px;
+    color: #888;
+    display: flex; align-items: center; gap: 8px;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .nav-hint.visible { opacity: 1; }
+
+
+  /* ════════════════════════════════════════
+     SLIDE 1 — THE TWO TRACKS
+     Branch-off-spine layout matching Slide 2.
+     Each track has its own vertical spine;
+     figure cards branch off to the outer side
+     via a horizontal connector, leaving the
+     spine unobstructed.
+  ════════════════════════════════════════ */
+
+  #slide1 .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 140px 1fr;
+    grid-template-rows: 48px 1fr;
+    padding: 0 40px 52px;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* Track label headers */
+  .track-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 0 4px;
+  }
+  .track-pip { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
+  .track-header-text { font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+
+  .track-left  .track-pip  { background: #1a3a6b; }
+  .track-left  .track-header-text { color: #1a3a6b; }
+  .track-right .track-pip  { background: #8b5a00; transform: rotate(45deg); }
+  .track-right .track-header-text { color: #8b5a00; }
+
+  /* Track body: spine runs down inner edge; cards branch outward */
+  .track-body {
+    display: flex; flex-direction: column;
+    position: relative;
+    padding-top: 10px; padding-bottom: 10px;
+  }
+
+  /* Spine: pinned to the inner edge of each track column */
+  .track-left.track-body  { padding-right: 0; }
+  .track-right.track-body { padding-left: 0; }
+
+  .track-body::before {
+    content: '';
+    position: absolute;
+    top: 10px; bottom: 10px;
+    width: 5px; border-radius: 3px; z-index: 1;
+  }
+  /* Left track spine: right edge of column */
+  .track-left.track-body::before  {
+    right: 0;
+    background: linear-gradient(to bottom, #1a3a6b, #1a3a6b55);
+  }
+  /* Right track spine: left edge of column */
+  .track-right.track-body::before {
+    left: 0;
+    background: linear-gradient(to bottom, #8b5a00, #8b5a0055);
+  }
+
+  /* Center convergence column */
+  .track-center {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 20px;
+    position: relative; z-index: 10;
+  }
+
+  /* ── Figure rows: spine-node + connector + card ──
+     Left track: card | connector | node  (card on left, node on right)
+     Right track: node | connector | card (node on left, card on right)
+  */
+  .figure {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    position: relative; z-index: 2;
+    opacity: 0; transform: translateX(-12px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+    min-height: 0;
+  }
+  .track-right .figure { transform: translateX(12px); }
+  .figure.visible { opacity: 1; transform: translateX(0); }
+
+  /* Left track: card floats left, node pins to right (spine) */
+  .track-left .figure  { flex-direction: row;         padding-right: 0; }
+  /* Right track: node pins to left (spine), card floats right */
+  .track-right .figure { flex-direction: row-reverse; padding-left: 0; }
+
+  /* Spine node (circle on the spine line) */
+  .fig-node {
+    width: 20px; height: 20px; border-radius: 50%;
+    flex-shrink: 0; z-index: 3;
+  }
+  .track-left  .fig-node { background: #1a3a6b; margin-right: 0; }
+  .track-right .fig-node { background: #8b5a00; margin-left: 0; }
+
+  /* Horizontal branch connector */
+  .fig-connector {
+    height: 4px; border-radius: 2px; flex-shrink: 0;
+    width: 40px;
+  }
+  .track-left  .fig-connector { background: linear-gradient(to left,  transparent, #1a3a6b88); }
+  .track-right .fig-connector { background: linear-gradient(to right, transparent, #8b5a0088); }
+
+  /* Figure card */
+  .fig-card {
+    flex: 1;
+    background: white;
+    border-radius: 14px;
+    padding: 18px 24px;
+    box-shadow: 0 4px 18px #0002;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 0;
+  }
+  .track-left  .fig-card { border-left:  6px solid #1a3a6b; }
+  .track-right .fig-card { border-right: 6px solid #8b5a00; align-items: flex-end; text-align: right; }
+
+  /* Medallion inside card */
+  .medallion {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 800; color: white;
+    flex-shrink: 0; margin-bottom: 10px;
+  }
+  .track-left  .medallion { background: #1a3a6b; box-shadow: 0 3px 12px #1a3a6b44; }
+  .track-right .medallion {
+    background: #8b5a00;
+    border-radius: 14px; transform: rotate(45deg);
+    box-shadow: 0 3px 12px #8b5a0044;
+  }
+  .track-right .medallion .initials { transform: rotate(-45deg); display: block; }
+
+  .year-tag   { font-size: 17px; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px; }
+  .track-left  .year-tag { color: #1a3a6b; }
+  .track-right .year-tag { color: #7a4f00; }
+
+  .figure-name { font-size: 18px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+  .figure-role { font-size: 13px; color: #555; line-height: 1.4; font-style: italic; }
+
+  /* Convergence node */
+  .convergence {
+    display: flex; flex-direction: column; align-items: center;
+    opacity: 0; transform: scale(0.88);
+    transition: opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s;
+  }
+  .convergence.visible { opacity: 1; transform: scale(1); }
+
+  .convergence-lines {
+    position: absolute;
+    bottom: 152px; left: 0; right: 0;
+    height: 60px;
+    pointer-events: none;
+    opacity: 0; transition: opacity 0.5s ease;
+  }
+  .convergence-lines.visible { opacity: 1; }
+
+  .convergence-medallion {
+    width: 110px; height: 110px; border-radius: 50%;
+    background: linear-gradient(135deg, #1a3a6b 0%, #6B3FA0 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 800; color: white;
+    box-shadow: 0 6px 28px #6B3FA055, 0 0 0 4px #f0f0ee, 0 0 0 7px #6B3FA044;
+    flex-shrink: 0;
+  }
+  .convergence-year  { font-size: 22px; font-weight: 700; color: #4a2880; margin-top: 10px; }
+  .convergence-name  { font-size: 20px; font-weight: 700; color: #1a1a2e; margin-top: 2px; text-align: center; }
+  .convergence-role  { font-size: 13px; color: #555; text-align: center; max-width: 180px; margin-top: 3px; line-height: 1.35; font-style: italic; }
+  .convergence-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #6B3FA0; margin-top: 6px; }
+
+  #slide1 .dot.filled { background: #1a3a6b; }
+
+
+  /* ════════════════════════════════════════
+     SLIDE 2 — AFTER KARNAUGH
+  ════════════════════════════════════════ */
+
+  #slide2 .main {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 20px 80px 62px;
+    gap: 14px;
+    position: relative;
+  }
+
+  /* Vertical spine */
+  .spine {
+    position: absolute;
+    top: 50px; bottom: 100px; left: 50%;
+    width: 5px; border-radius: 3px;
+    transform: translateX(-50%);
+    background: linear-gradient(to bottom, #6B3FA0, #6B3FA044);
+    z-index: 0;
+  }
+
+  /* Era rows */
+  .era-row {
+    display: flex; align-items: center;
+    width: 100%; max-width: 1600px;
+    flex: 0 0 auto; position: relative; z-index: 2;
+    opacity: 0; transform: translateY(14px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  .era-row.visible { opacity: 1; transform: translateY(0); }
+  .era-row.left  { flex-direction: row; }
+  .era-row.right { flex-direction: row-reverse; }
+
+  .era-card {
+    width: 680px; background: white; border-radius: 16px;
+    padding: 20px 34px;
+    box-shadow: 0 4px 20px #0002;
+    flex-shrink: 0;
+  }
+  .era-row.left  .era-card { border-left:  7px solid #6B3FA0; }
+  .era-row.right .era-card { border-right: 7px solid #4a2880; }
+
+  .era-year {
+    font-size: 16px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .era-row.left  .era-year { color: #6B3FA0; }
+  .era-row.right .era-year { color: #4a2880; }
+
+  .era-name    { font-size: 26px; font-weight: 800; color: #1a1a2e; margin-bottom: 6px; }
+  .era-tagline { font-size: 17px; color: #444; font-style: italic; margin-bottom: 12px; line-height: 1.4; }
+
+  .era-bullets { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .era-bullets li {
+    font-size: 15px; color: #333; line-height: 1.4;
+    padding-left: 20px; position: relative;
+  }
+  .era-bullets li::before { content: '▸'; position: absolute; left: 0; }
+  .era-row.left  .era-bullets li::before { color: #6B3FA0; }
+  .era-row.right .era-bullets li::before { color: #4a2880; }
+
+  /* Spine nodes */
+  .spine-node {
+    width: 80px; height: 80px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 800; color: white;
+    flex-shrink: 0; position: relative; z-index: 3;
+  }
+  .node-qm {
+    background: #6B3FA0; border-radius: 50%;
+    box-shadow: 0 4px 18px #6B3FA044, 0 0 0 4px #f0f0ee, 0 0 0 7px #6B3FA033;
+  }
+  .node-esp {
+    background: #4a2880; border-radius: 14px; transform: rotate(45deg);
+    box-shadow: 0 4px 18px #4a288044, 0 0 0 4px #f0f0ee, 0 0 0 7px #4a288033;
+  }
+  .node-esp .node-init { transform: rotate(-45deg); display: block; }
+  .node-eda {
+    background: #2d1760;
+    clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  }
+
+  /* Connectors */
+  .connector { flex: 1; height: 4px; border-radius: 2px; }
+  .era-row.left  .connector { background: linear-gradient(to right, transparent, #6B3FA066); }
+  .era-row.right .connector { background: linear-gradient(to left,  transparent, #4a288066); }
+
+  /* Matters banner */
+  .matters-banner {
+    width: 100%; max-width: 1600px; align-self: center; flex-shrink: 0;
+    margin-top: 10px;
+    background: #0f1b35; border-radius: 12px;
+    padding: 18px 40px;
+    display: flex; align-items: center; gap: 24px;
+    opacity: 0; transform: translateY(10px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    z-index: 10;
+  }
+  .matters-banner.visible { opacity: 1; transform: translateY(0); }
+  .matters-icon { font-size: 32px; flex-shrink: 0; }
+  .matters-text { font-size: 18px; color: #c0d0e8; line-height: 1.5; flex: 1; }
+  .matters-text strong { color: #fff; }
+
+  #slide2 .dot.filled { background: #6B3FA0; }
+
+</style>
+</head>
+<body>
+
+<div class="viewport-container" id="viewportContainer">
+  <div class="design-surface" id="designSurface">
+
+    <!-- ══════════════════════════════════
+         SLIDE 1 — THE TWO TRACKS
+    ══════════════════════════════════ -->
+    <div class="slide active" id="slide1">
+
+      <div class="header">
+        <div class="header-title">Karnaugh Maps</div>
+        <div class="header-subtitle">A History of Two Parallel Ideas</div>
+        <div class="slide-badge">SLIDE 1 OF 2</div>
+      </div>
+
+      <div class="main">
+
+        <!-- Track headers -->
+        <div class="track-header track-left">
+          <div class="track-pip"></div>
+          <div class="track-header-text">The Algebra Track</div>
+        </div>
+        <div></div><!-- center spacer -->
+        <div class="track-header track-right" style="justify-content:flex-end;">
+          <div class="track-header-text">The Visualization Track</div>
+          <div class="track-pip"></div>
+        </div>
+
+        <!-- Left track: spine on right edge, cards branch left -->
+        <div class="track-body track-left">
+
+          <div class="figure" id="s1-boole">
+            <div class="fig-card">
+              <div class="medallion"><span>GB</span></div>
+              <div class="year-tag">1854</div>
+              <div class="figure-name">George Boole</div>
+              <div class="figure-role"><em>An Investigation of the Laws of Thought</em><br>Boolean algebra as pure mathematics</div>
+            </div>
+            <div class="fig-connector"></div>
+            <div class="fig-node"></div>
+          </div>
+
+          <div class="figure" id="s1-shannon">
+            <div class="fig-card">
+              <div class="medallion"><span>CS</span></div>
+              <div class="year-tag">1937</div>
+              <div class="figure-name">Claude Shannon</div>
+              <div class="figure-role">Master's thesis, MIT<br>Boolean algebra <em>describes</em> switching circuits</div>
+            </div>
+            <div class="fig-connector"></div>
+            <div class="fig-node"></div>
+          </div>
+
+        </div>
+
+        <!-- Center convergence -->
+        <div class="track-center">
+          <svg class="convergence-lines" id="s1-convlines" viewBox="0 0 80 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0" y1="0" x2="40" y2="55" stroke="#1a3a6b" stroke-width="3" stroke-dasharray="6,3" opacity="0.7"/>
+            <line x1="80" y1="0" x2="40" y2="55" stroke="#8b5a00" stroke-width="3" stroke-dasharray="6,3" opacity="0.7"/>
+            <polygon points="35,50 45,50 40,60" fill="#6B3FA0" opacity="0.85"/>
+          </svg>
+          <div class="convergence" id="s1-karnaugh">
+            <div class="convergence-medallion">MK</div>
+            <div class="convergence-year">1953</div>
+            <div class="convergence-name">Maurice Karnaugh</div>
+            <div class="convergence-role">Bell Labs — The two tracks meet</div>
+            <div class="convergence-label">↓ Convergence Point</div>
+          </div>
+        </div>
+
+        <!-- Right track: spine on left edge, cards branch right -->
+        <div class="track-body track-right">
+
+          <div class="figure" id="s1-marquand">
+            <div class="fig-node"></div>
+            <div class="fig-connector"></div>
+            <div class="fig-card">
+              <div class="medallion"><span class="initials">AM</span></div>
+              <div class="year-tag">1881</div>
+              <div class="figure-name">Allan Marquand</div>
+              <div class="figure-role">Princeton — Logical diagram<br>Grid layout for Boolean relationships</div>
+            </div>
+          </div>
+
+          <div class="figure" id="s1-veitch">
+            <div class="fig-node"></div>
+            <div class="fig-connector"></div>
+            <div class="fig-card">
+              <div class="medallion"><span class="initials">EV</span></div>
+              <div class="year-tag">1952</div>
+              <div class="figure-name">Edward W. Veitch</div>
+              <div class="figure-role">"A Chart Method for Simplifying Truth Functions"<br>Rediscovers Marquand for switching circuits</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div><!-- /main -->
+
+      <!-- Progress dots -->
+      <div class="progress-dots">
+        <div class="dot" id="s1d0"></div>
+        <div class="dot" id="s1d1"></div>
+        <div class="dot" id="s1d2"></div>
+        <div class="dot" id="s1d3"></div>
+        <div class="dot" id="s1d4"></div>
+      </div>
+
+      <!-- Key legend -->
+      <div class="key-legend">
+        <div class="key-chip">
+          <span class="key-label">SPACE</span> or <span class="key-label">→</span> Reveal next
+        </div>
+        <div class="key-chip" id="s1-nextchip" style="display:none;">
+          <span class="key-label">→</span> Next slide
+        </div>
+      </div>
+
+      <!-- Nav hint -->
+      <div class="nav-hint" id="s1-nexthint">
+        <span style="color:#6B3FA0;">▶</span>
+        Press <strong style="margin:0 4px;">→</strong> for Slide 2: After Karnaugh
+      </div>
+
+    </div><!-- /slide1 -->
+
+
+    <!-- ══════════════════════════════════
+         SLIDE 2 — AFTER KARNAUGH
+    ══════════════════════════════════ -->
+    <div class="slide" id="slide2">
+
+      <div class="header">
+        <div class="header-title">Karnaugh Maps</div>
+        <div class="header-subtitle">After Karnaugh — The Computational Era</div>
+        <div class="slide-badge">SLIDE 2 OF 2</div>
+      </div>
+
+      <div class="main">
+
+        <div class="spine"></div>
+
+        <!-- Quine-McCluskey -->
+        <div class="era-row left" id="s2-qm">
+          <div class="era-card">
+            <div class="era-year">1956</div>
+            <div class="era-name">Quine–McCluskey Algorithm</div>
+            <div class="era-tagline">The first computer-based logic minimizer — exhaustive and exact</div>
+            <ul class="era-bullets">
+              <li>Willard Quine (1952) at Harvard, Edward McCluskey (1956) at Bell Labs</li>
+              <li>Finds all prime implicants by exhaustive search — guaranteed minimum</li>
+              <li>Scales exponentially: impractical beyond ~10 variables</li>
+              <li>Directly extends the K-map's prime implicant concept to software</li>
+            </ul>
+          </div>
+          <div class="connector"></div>
+          <div class="spine-node node-qm">QM</div>
+          <div style="flex:1"></div>
+        </div>
+
+        <!-- Espresso -->
+        <div class="era-row right" id="s2-esp">
+          <div class="era-card">
+            <div class="era-year">1984</div>
+            <div class="era-name">Espresso</div>
+            <div class="era-tagline">UC Berkeley — heuristic minimization that scales</div>
+            <ul class="era-bullets">
+              <li>Brayton, Hachtel, McMullen, Sangiovanni-Vincentelli — UC Berkeley</li>
+              <li>Heuristic (not exhaustive) — trades guaranteed optimality for speed</li>
+              <li>Still the most widely used two-level minimizer in EDA today</li>
+              <li>Incorporated into virtually every logic synthesis tool chain</li>
+            </ul>
+          </div>
+          <div class="connector"></div>
+          <div class="spine-node node-esp"><span class="node-init">E</span></div>
+          <div style="flex:1"></div>
+        </div>
+
+        <!-- Modern EDA -->
+        <div class="era-row left" id="s2-eda">
+          <div class="era-card">
+            <div class="era-year">1990s – Present</div>
+            <div class="era-name">Modern EDA Synthesis</div>
+            <div class="era-tagline">Multi-level optimization — logic, timing, area, and power simultaneously</div>
+            <ul class="era-bullets">
+              <li>Synopsys Design Compiler, Xilinx Vivado, Intel Quartus, Cadence Genus</li>
+              <li>HDL (Verilog / VHDL) → optimized netlist → technology mapping</li>
+              <li>Logic minimization still occurs — tools apply K-map equivalent algorithms across millions of nodes simultaneously, then map results onto the target technology</li>
+              <li>The <em>criterion</em> depends on the target: LUTs on FPGAs, cell libraries on ASICs</li>
+              <li>You describe <em>behavior</em>; the tool picks the minimization</li>
+            </ul>
+          </div>
+          <div class="connector"></div>
+          <div class="spine-node node-eda" style="font-size:14px;">EDA</div>
+          <div style="flex:1"></div>
+        </div>
+
+        <!-- Why it still matters -->
+        <div class="matters-banner" id="s2-matters">
+          <div class="matters-icon">💡</div>
+          <div class="matters-text">
+            <strong>So why do we still teach K-maps?</strong>
+            Because the concepts — prime implicants, grouping, don't-cares, hazard identification —
+            are exactly what every downstream algorithm automates. Understanding the map
+            <em>is</em> understanding the machine.
+          </div>
+        </div>
+
+      </div><!-- /main -->
+
+      <!-- Progress dots -->
+      <div class="progress-dots">
+        <div class="dot" id="s2d0"></div>
+        <div class="dot" id="s2d1"></div>
+        <div class="dot" id="s2d2"></div>
+        <div class="dot" id="s2d3"></div>
+      </div>
+
+      <!-- Key legend -->
+      <div class="key-legend">
+        <div class="key-chip">
+          <span class="key-label">←</span> Back to Slide 1
+        </div>
+        <div class="key-chip">
+          <span class="key-label">SPACE</span> or <span class="key-label">→</span> Reveal next
+        </div>
+      </div>
+
+      <!-- Nav hint -->
+      <div class="nav-hint visible" style="opacity:0.6;">
+        <span style="color:#6B3FA0;">◀</span>
+        Press <strong style="margin:0 4px;">←</strong> to return to Slide 1
+      </div>
+
+    </div><!-- /slide2 -->
+
+  </div><!-- /design-surface -->
+</div><!-- /viewport-container -->
+
+<script>
+  // ── Responsive scaling ──────────────────────────────────────────
+  const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+  function autoResize() {
+    const container = document.getElementById('viewportContainer');
+    const surface   = document.getElementById('designSurface');
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let cw, ch;
+    if (vw / vh > 16/9) { ch = vh; cw = ch * (16/9); }
+    else                 { cw = vw; ch = cw * (9/16); }
+    container.style.width  = cw + 'px';
+    container.style.height = ch + 'px';
+    surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+  }
+  autoResize();
+  let rto;
+  window.addEventListener('resize', () => { clearTimeout(rto); rto = setTimeout(autoResize, 50); });
+
+  // ── Slide state ─────────────────────────────────────────────────
+  let currentSlide = 1;
+
+  function showSlide(n) {
+    document.getElementById('slide1').classList.toggle('active', n === 1);
+    document.getElementById('slide2').classList.toggle('active', n === 2);
+    currentSlide = n;
+  }
+
+  // ── Slide 1 reveal sequence ─────────────────────────────────────
+  const s1Steps = [
+    { ids: ['s1-boole'],                    dots: ['s1d0'] },
+    { ids: ['s1-marquand'],                 dots: ['s1d1'] },
+    { ids: ['s1-shannon'],                  dots: ['s1d2'] },
+    { ids: ['s1-veitch'],                   dots: ['s1d3'] },
+    { ids: ['s1-karnaugh','s1-convlines'],  dots: ['s1d4'], final: true },
+  ];
+  let s1Current = -1;
+  let s1Done = false;
+
+  function s1Advance() {
+    if (s1Done) { showSlide(2); return; }
+    if (s1Current >= s1Steps.length - 1) return;
+    s1Current++;
+    const step = s1Steps[s1Current];
+    step.ids.forEach(id  => document.getElementById(id).classList.add('visible'));
+    step.dots.forEach(id => document.getElementById(id).classList.add('filled'));
+    if (step.final) {
+      s1Done = true;
+      document.getElementById('s1-nexthint').classList.add('visible');
+      document.getElementById('s1-nextchip').style.display = 'flex';
+    }
+  }
+
+  function s1Retreat() {
+    if (s1Current < 0) return;
+    const step = s1Steps[s1Current];
+    step.ids.forEach(id  => document.getElementById(id).classList.remove('visible'));
+    step.dots.forEach(id => document.getElementById(id).classList.remove('filled'));
+    if (s1Done) {
+      s1Done = false;
+      document.getElementById('s1-nexthint').classList.remove('visible');
+      document.getElementById('s1-nextchip').style.display = 'none';
+    }
+    s1Current--;
+  }
+
+  // ── Slide 2 reveal sequence ─────────────────────────────────────
+  const s2Steps = [
+    { id: 's2-qm',      dot: 's2d0' },
+    { id: 's2-esp',     dot: 's2d1' },
+    { id: 's2-eda',     dot: 's2d2' },
+    { id: 's2-matters', dot: 's2d3' },
+  ];
+  let s2Current = -1;
+
+  function s2Advance() {
+    if (s2Current >= s2Steps.length - 1) return;
+    s2Current++;
+    const step = s2Steps[s2Current];
+    document.getElementById(step.id).classList.add('visible');
+    document.getElementById(step.dot).classList.add('filled');
+  }
+
+  function s2Retreat() {
+    if (s2Current < 0) { showSlide(1); return; }
+    const step = s2Steps[s2Current];
+    document.getElementById(step.id).classList.remove('visible');
+    document.getElementById(step.dot).classList.remove('filled');
+    s2Current--;
+  }
+
+  // ── Global key handler ──────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      currentSlide === 1 ? s1Advance() : s2Advance();
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      currentSlide === 1 ? s1Retreat() : s2Retreat();
+    }
+  });
+
+  // Click anywhere to advance
+  document.getElementById('designSurface').addEventListener('click', () => {
+    currentSlide === 1 ? s1Advance() : s2Advance();
+  });
+</script>
+</body>
+</html>

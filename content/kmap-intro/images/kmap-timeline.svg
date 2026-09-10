@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 884" role="img" aria-label="A vertical timeline. Boole's algebra of logic in 1854, Marquand's logic diagram in 1881, Shannon's 1937 thesis linking Boolean algebra to switching circuits, Veitch's 1952 chart, and the Karnaugh map in 1953, highlighted, are marked as worked by hand. Below a dashed line, Quine-McCluskey in the 1950s, heuristic minimizers in the 1980s, and synthesis tools and lookup tables from the 1990s onward are marked as worked by software.">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+    .yr     { font-size: 21px; font-weight: 700; }
+    .name   { font-size: 21px; font-weight: 700; fill: #102a43; }
+    .gloss  { font-size: 17px; fill: #41556b; }
+    .rail   { font-size: 16px; font-weight: 700; }
+  </style>
+<text class="title" x="36" y="52">From an algebra of logic to a tool nobody uses by hand</text>
+<text class="sub" x="36" y="88">Each step made Boolean algebra more visible &#8212; and then handed it to software.</text>
+<line x1="236" y1="146" x2="236" y2="746" stroke="#aab9c9" stroke-width="3"/>
+<rect x="58" y="146" width="7" height="332" rx="3.5" fill="#0aa5c4" fill-opacity="0.55"/><text class="rail" x="44" y="312" text-anchor="middle" fill="#0aa5c4" transform="rotate(-90 44 312)">worked by hand</text>
+<rect x="58" y="554" width="7" height="192" rx="3.5" fill="#e0890b" fill-opacity="0.55"/><text class="rail" x="44" y="650" text-anchor="middle" fill="#e0890b" transform="rotate(-90 44 650)">worked by software</text>
+<line x1="166" y1="516" x2="864" y2="516" stroke="#8198af" stroke-width="2" stroke-dasharray="8 7" stroke-opacity="0.6"/>
+<text class="gloss" x="864" y="542" text-anchor="end" fill="#8198af">from here on, the minimizing is automated</text>
+<text class="yr" x="206" y="183" text-anchor="end" fill="#6b7f95">1854</text>
+<circle cx="236" cy="176" r="7.5" fill="#fff" stroke="#6b7f95" stroke-width="3.5"/>
+<text class="name" x="266" y="178" >Boole</text>
+<text class="gloss" x="266" y="204">An algebra of logic, decades ahead of any machine that could use it.</text>
+<text class="yr" x="206" y="253" text-anchor="end" fill="#0aa5c4">1881</text>
+<circle cx="236" cy="246" r="7.5" fill="#fff" stroke="#0aa5c4" stroke-width="3.5"/>
+<text class="name" x="266" y="248" >Marquand&#8217;s logic diagram</text>
+<text class="gloss" x="266" y="274">A grid for laying out Boolean relationships. Still no hardware in sight.</text>
+<text class="yr" x="206" y="323" text-anchor="end" fill="#7c3aed">1937</text>
+<circle cx="236" cy="316" r="7.5" fill="#fff" stroke="#7c3aed" stroke-width="3.5"/>
+<text class="name" x="266" y="318" >Shannon&#8217;s thesis</text>
+<text class="gloss" x="266" y="344">Boolean algebra describes switching circuits. Abstraction meets hardware.</text>
+<text class="yr" x="206" y="393" text-anchor="end" fill="#0aa5c4">1952</text>
+<circle cx="236" cy="386" r="7.5" fill="#fff" stroke="#0aa5c4" stroke-width="3.5"/>
+<text class="name" x="266" y="388" >Veitch&#8217;s chart</text>
+<text class="gloss" x="266" y="414">Marquand&#8217;s diagram turned on circuit design, but awkward to use.</text>
+<rect x="220" y="426" width="644" height="66" rx="12" fill="#0aa5c4" fill-opacity="0.09"/>
+<text class="yr" x="206" y="463" text-anchor="end" fill="#0aa5c4">1953</text>
+<circle cx="236" cy="456" r="11" fill="#fff" stroke="#0aa5c4" stroke-width="3.5"/>
+<circle cx="236" cy="456" r="4.5" fill="#0aa5c4"/>
+<text class="name" x="266" y="458" fill="#0aa5c4" >The Karnaugh map</text>
+<text class="gloss" x="266" y="484">Gray-coded axes, so visual adjacency is logical adjacency.</text>
+<text class="yr" x="206" y="583" text-anchor="end" fill="#e0890b">1950s</text>
+<circle cx="236" cy="576" r="7.5" fill="#fff" stroke="#e0890b" stroke-width="3.5"/>
+<text class="name" x="266" y="578" >Quine&#8211;McCluskey</text>
+<text class="gloss" x="266" y="604">The same idea as an algorithm: exact, exhaustive, and exponential.</text>
+<text class="yr" x="206" y="653" text-anchor="end" fill="#e0890b">1980s</text>
+<circle cx="236" cy="646" r="7.5" fill="#fff" stroke="#e0890b" stroke-width="3.5"/>
+<text class="name" x="266" y="648" >Heuristic minimizers</text>
+<text class="gloss" x="266" y="674">Stop insisting on the exact minimum; clear the redundancy quickly.</text>
+<text class="yr" x="206" y="723" text-anchor="end" fill="#e0890b">1990s+</text>
+<circle cx="236" cy="716" r="7.5" fill="#fff" stroke="#e0890b" stroke-width="3.5"/>
+<text class="name" x="266" y="718" >Synthesis and LUTs</text>
+<text class="gloss" x="266" y="744">You describe behavior; the tools do the rest, or a LUT swallows it whole.</text>
+<line x1="36" y1="782" x2="864" y2="782" stroke="#aab9c9" stroke-width="2"/>
+<text class="note" x="36" y="824">What survives the automation is not the procedure but the ideas the map makes visible:</text>
+<text class="note" x="36" y="851">groups, prime implicants, and the link back to Boolean algebra.</text>
+</svg>
