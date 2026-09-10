@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 604" role="img" aria-label="Two three-variable Karnaugh maps side by side. On the left the same function carries a cyan pair and an amber pair, labelled X-bar Z plus X Z with three literals. An arrow leads right, annotated with the algebra X-bar Z plus X Z equals Z times X-bar plus X, which equals Z. On the right a single violet group of four covers all four 1s and is labelled Z with one literal. Below, F equals Z.">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+    .cap    { font-size: 20px; font-weight: 700; fill: #41556b; }
+    .capsub { font-size: 17px; fill: #8198af; }
+    .step   { font-size: 17px; font-weight: 700; fill: #8198af; letter-spacing: 0.06em; }
+  </style>
+<text class="title" x="36" y="52">The pairs are neighbours too</text>
+<text class="sub" x="36" y="88">Two groups of two that sit side by side merge exactly the same way &#8212; one more factor, one more cancellation.</text>
+<line class="grid" x1="146" y1="176" x2="146" y2="316"/>
+<line class="gridh" x1="216" y1="176" x2="216" y2="316"/>
+<line class="grid" x1="286" y1="176" x2="286" y2="316"/>
+<line class="gridh" x1="76" y1="246" x2="356" y2="246"/>
+<rect class="frame" x="76" y="176" width="280" height="140"/>
+<rect x="153.0" y="183.0" width="126.0" height="56.0" rx="16" fill="#0aa5c4" fill-opacity="0.16" stroke="#0aa5c4" stroke-width="4.5"/>
+<rect x="153.0" y="253.0" width="126.0" height="56.0" rx="16" fill="#e0890b" fill-opacity="0.16" stroke="#e0890b" stroke-width="4.5"/>
+<text class="hdr" x="111" y="162" text-anchor="middle" font-size="22">00</text>
+<text class="hdr" x="181" y="162" text-anchor="middle" font-size="22">01</text>
+<text class="hdr" x="251" y="162" text-anchor="middle" font-size="22">11</text>
+<text class="hdr" x="321" y="162" text-anchor="middle" font-size="22">10</text>
+<text class="hdr" x="60" y="219" text-anchor="end" font-size="22">0</text>
+<text class="hdr" x="60" y="289" text-anchor="end" font-size="22">1</text>
+<text class="corner" x="60" y="162" text-anchor="end">X \ YZ</text>
+<text class="val0" x="111" y="223" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="84" y="197" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m0</text>
+<text class="val" x="181" y="223" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="154" y="197" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m1</text>
+<text class="val" x="251" y="223" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="224" y="197" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m3</text>
+<text class="val0" x="321" y="223" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="294" y="197" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m2</text>
+<text class="val0" x="111" y="293" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="84" y="267" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m4</text>
+<text class="val" x="181" y="293" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="154" y="267" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m5</text>
+<text class="val" x="251" y="293" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="224" y="267" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m7</text>
+<text class="val0" x="321" y="293" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="294" y="267" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m6</text>
+<line class="grid" x1="718" y1="176" x2="718" y2="316"/>
+<line class="gridh" x1="788" y1="176" x2="788" y2="316"/>
+<line class="grid" x1="858" y1="176" x2="858" y2="316"/>
+<line class="gridh" x1="648" y1="246" x2="928" y2="246"/>
+<rect class="frame" x="648" y="176" width="280" height="140"/>
+<rect x="725.0" y="183.0" width="126.0" height="126.0" rx="16" fill="#7c3aed" fill-opacity="0.16" stroke="#7c3aed" stroke-width="4.5"/>
+<text class="hdr" x="683" y="162" text-anchor="middle" font-size="22">00</text>
+<text class="hdr" x="753" y="162" text-anchor="middle" font-size="22">01</text>
+<text class="hdr" x="823" y="162" text-anchor="middle" font-size="22">11</text>
+<text class="hdr" x="893" y="162" text-anchor="middle" font-size="22">10</text>
+<text class="hdr" x="632" y="219" text-anchor="end" font-size="22">0</text>
+<text class="hdr" x="632" y="289" text-anchor="end" font-size="22">1</text>
+<text class="corner" x="632" y="162" text-anchor="end">X \ YZ</text>
+<text class="val0" x="683" y="223" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="656" y="197" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m0</text>
+<text class="val" x="753" y="223" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="726" y="197" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m1</text>
+<text class="val" x="823" y="223" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="796" y="197" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m3</text>
+<text class="val0" x="893" y="223" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="866" y="197" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m2</text>
+<text class="val0" x="683" y="293" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="656" y="267" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m4</text>
+<text class="val" x="753" y="293" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="726" y="267" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m5</text>
+<text class="val" x="823" y="293" text-anchor="middle" font-size="34">1</text>
+<text class="idx" x="796" y="267" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m7</text>
+<text class="val0" x="893" y="293" text-anchor="middle" font-size="34">0</text>
+<text class="idx" x="866" y="267" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m6</text>
+<text class="cap" x="216" y="360" text-anchor="middle">Two groups of two</text>
+<text class="capsub" x="216" y="386" text-anchor="middle">X&#772;Z + XZ &#183; three literals</text>
+<text class="cap" x="788" y="360" text-anchor="middle">One group of four</text>
+<text class="capsub" x="788" y="386" text-anchor="middle">Z &#183; one literal</text>
+<defs><marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L11,6 L0,11 z" fill="#8198af"/></marker></defs>
+<text x="441.2" y="206.0" text-anchor="start" font-size="22" font-weight="700" fill="#102a43">X</text><line x1="443.0" y1="188.4" x2="454.0" y2="188.4" stroke="#102a43" stroke-width="2.0" stroke-linecap="round"/><text x="457.9" y="206.0" text-anchor="start" font-size="22" font-weight="700" fill="#102a43">Z</text><text x="472.9" y="206.0" text-anchor="start" font-size="22" font-weight="700" fill="#102a43"> </text><text x="479.1" y="206.0" text-anchor="start" font-size="22" font-weight="700" fill="#102a43">+</text><text x="492.7" y="206.0" text-anchor="start" font-size="22" font-weight="700" fill="#102a43"> </text><text x="498.9" y="206.0" text-anchor="start" font-size="22" font-weight="700" fill="#102a43">X</text><text x="513.8" y="206.0" text-anchor="start" font-size="22" font-weight="700" fill="#102a43">Z</text>
+<text x="430.9" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b">=</text><text x="444.5" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b"> </text><text x="450.7" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b">Z</text><text x="465.6" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b">(</text><text x="473.6" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b">X</text><line x1="475.3" y1="218.4" x2="486.3" y2="218.4" stroke="#41556b" stroke-width="2.0" stroke-linecap="round"/><text x="490.3" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b"> </text><text x="496.4" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b">+</text><text x="510.1" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b"> </text><text x="516.2" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b">X</text><text x="531.2" y="236.0" text-anchor="start" font-size="22" font-weight="700" fill="#41556b">)</text>
+<path d="M396,264 H574" fill="none" stroke="#8198af" stroke-width="4" marker-end="url(#ah)"/>
+<text x="464.5" y="310.0" text-anchor="start" font-size="26" font-weight="700" fill="#7c3aed">=</text><text x="480.6" y="310.0" text-anchor="start" font-size="26" font-weight="700" fill="#7c3aed"> </text><text x="487.9" y="310.0" text-anchor="start" font-size="26" font-weight="700" fill="#7c3aed">Z</text>
+<line x1="36" y1="416" x2="964" y2="416" stroke="#aab9c9" stroke-width="2"/>
+<text class="note" x="36" y="456">Now Z is the shared factor and X is the variable that varies, so X is the one that cancels. Each</text>
+<text class="note" x="36" y="482">doubling of the group size is one more round of the same two steps.</text>
+<rect x="36" y="508" width="928" height="64" rx="12" fill="#f6f8fb" stroke="#52677e" stroke-width="2.5"/>
+<text x="58.0" y="550.0" text-anchor="start" font-size="28" font-weight="700" fill="#102a43">F</text><text x="77.0" y="550.0" text-anchor="start" font-size="28" font-weight="700" fill="#102a43"> </text><text x="84.9" y="550.0" text-anchor="start" font-size="28" font-weight="700" fill="#102a43">=</text><text x="102.2" y="550.0" text-anchor="start" font-size="28" font-weight="700" fill="#102a43"> </text><text x="110.1" y="550.0" text-anchor="start" font-size="28" font-weight="700" fill="#102a43">Z</text>
+<text class="note" x="188" y="534">The four 1s are exactly the cells where Z = 1. The group of four is</text>
+<text class="note" x="188" y="558">the Z region of the map, and reading it off gives the answer directly.</text>
+</svg>
