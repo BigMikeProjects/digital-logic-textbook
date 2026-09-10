@@ -122,6 +122,12 @@
   .rail .hint kbd{ font-family:'Consolas',monospace; background:var(--surface); border:1px solid var(--line);
     border-bottom-width:2px; border-radius:6px; padding:2px 8px; font-size:15px; color:var(--ink-soft); margin:0 2px;}
   .rail .label{ font-size:18px; font-weight:700; color:var(--ink-soft); min-width:160px;}
+  .rail .hint kbd.clickable{ cursor:pointer; user-select:none; transition:background .12s ease, transform .06s ease; }
+  .rail .hint kbd.clickable:hover{ background:var(--line); color:var(--ink); }
+  .rail .hint kbd.clickable:active{ transform:translateY(1px); }
+  .rail .hint kbd.disabled{ opacity:.35; pointer-events:none; }
+  .dot{ cursor:pointer; }
+  .dot:hover{ transform:scale(1.35); background:var(--ink-mute); }
 </style>
 </head>
 <body>
@@ -156,7 +162,7 @@
     <div class="rail">
       <div class="label" id="railLabel"></div>
       <div class="dots" id="dots"></div>
-      <div class="hint"><kbd>←</kbd><kbd>→</kbd> step &nbsp;·&nbsp; <kbd>R</kbd> reset &nbsp;·&nbsp; <kbd>0</kbd>–<kbd>8</kbd> jump</div>
+      <div class="hint"><kbd class="clickable" id="navPrev" title="Previous step">←</kbd><kbd class="clickable" id="navNext" title="Next step">→</kbd> step &nbsp;·&nbsp; <kbd class="clickable" id="navReset" title="Back to the start">R</kbd> reset &nbsp;·&nbsp; <kbd>0</kbd>–<kbd>8</kbd> jump</div>
     </div>
   </div>
 </div>
@@ -534,7 +540,12 @@ let cur = 0;
 const rightCard = document.getElementById('rightCard');
 const railLabel = document.getElementById('railLabel');
 const dotsWrap = document.getElementById('dots');
-STEPS.forEach((s,i)=>{ const d=el2('div','dot'); d.id='dot'+i; dotsWrap.appendChild(d); });
+STEPS.forEach((s,i)=>{
+  const d=el2('div','dot'); d.id='dot'+i;
+  d.title = (i===0 ? 'Start' : 'Step '+i) + (s.label ? ' — '+s.label : '');
+  d.addEventListener('click', ()=>go(i));
+  dotsWrap.appendChild(d);
+});
 function el2(tag,cls){ const e=document.createElement(tag); e.className=cls; return e; }
 
 function render(){
@@ -553,8 +564,16 @@ function render(){
     const d=document.getElementById('dot'+i);
     d.className = 'dot' + (i===cur?' active':(i<cur?' done':''));
   }
+  // the key caps in the hint are styled like buttons, so keep them honest about the ends
+  document.getElementById('navPrev').classList.toggle('disabled', cur===0);
+  document.getElementById('navNext').classList.toggle('disabled', cur===STEPS.length-1);
 }
 function go(n){ cur = Math.max(0, Math.min(STEPS.length-1, n)); render(); }
+
+// Clicking is easier than the keyboard when narrating over a screen recording.
+document.getElementById('navPrev').addEventListener('click', ()=>go(cur-1));
+document.getElementById('navNext').addEventListener('click', ()=>go(cur+1));
+document.getElementById('navReset').addEventListener('click', ()=>go(0));
 
 document.addEventListener('keydown',(e)=>{
   if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){ e.preventDefault(); go(cur+1); }
