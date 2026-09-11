@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 660" role="img" aria-label="Two four-variable Karnaugh maps side by side. The left map is F, with its zeros drawn dark at cells 0, 1, 2, 8 and 10 and don't-cares at 3 and 6. An arrow labelled complement leads to the right map, F-bar, where those same cells now hold 1s and the don't-cares are unchanged.">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+    .cap    { font-size: 20px; font-weight: 700; fill: #41556b; }
+    .capsub { font-size: 17px; fill: #8198af; }
+    .step   { font-size: 17px; font-weight: 700; fill: #8198af; letter-spacing: 0.06em; }
+    .val    { fill: #b9c6d4; }
+    .val0   { fill: #102a43; }
+    .flip .val  { fill: #102a43; }
+    .flip .val0 { fill: #b9c6d4; }
+  </style>
+<text class="title" x="36" y="52">The zeros of F are the ones of F&#772;</text>
+<text class="sub" x="36" y="88">Circling the 0 cells of F is the same act as circling the 1 cells of its complement,</text>
+<text class="sub" x="36" y="116">which is something a K-map reads out naturally.</text>
+<rect x="220" y="176" width="62" height="62" fill="#eef3f8"/>
+<rect x="282" y="238" width="62" height="62" fill="#eef3f8"/>
+<line class="grid" x1="158" y1="176" x2="158" y2="424"/>
+<line class="gridh" x1="220" y1="176" x2="220" y2="424"/>
+<line class="grid" x1="282" y1="176" x2="282" y2="424"/>
+<line class="grid" x1="96" y1="238" x2="344" y2="238"/>
+<line class="gridh" x1="96" y1="300" x2="344" y2="300"/>
+<line class="grid" x1="96" y1="362" x2="344" y2="362"/>
+<rect class="frame" x="96" y="176" width="248" height="248"/>
+<text class="hdr" x="127" y="162" text-anchor="middle" font-size="17">00</text>
+<text class="hdr" x="189" y="162" text-anchor="middle" font-size="17">01</text>
+<text class="hdr" x="251" y="162" text-anchor="middle" font-size="17">11</text>
+<text class="hdr" x="313" y="162" text-anchor="middle" font-size="17">10</text>
+<text class="hdr" x="80" y="213" text-anchor="end" font-size="17">00</text>
+<text class="hdr" x="80" y="275" text-anchor="end" font-size="17">01</text>
+<text class="hdr" x="80" y="337" text-anchor="end" font-size="17">11</text>
+<text class="hdr" x="80" y="399" text-anchor="end" font-size="17">10</text>
+<text class="corner" x="80" y="162" text-anchor="end">AB \ CD</text>
+<text class="val0" x="127" y="218" text-anchor="middle" font-size="30">0</text>
+<text class="val0" x="189" y="218" text-anchor="middle" font-size="30">0</text>
+<text class="valx" x="251" y="218" text-anchor="middle" font-size="30">X</text>
+<text class="val0" x="313" y="218" text-anchor="middle" font-size="30">0</text>
+<text class="val" x="127" y="280" text-anchor="middle" font-size="30">1</text>
+<text class="val" x="189" y="280" text-anchor="middle" font-size="30">1</text>
+<text class="val" x="251" y="280" text-anchor="middle" font-size="30">1</text>
+<text class="valx" x="313" y="280" text-anchor="middle" font-size="30">X</text>
+<text class="val" x="127" y="342" text-anchor="middle" font-size="30">1</text>
+<text class="val" x="189" y="342" text-anchor="middle" font-size="30">1</text>
+<text class="val" x="251" y="342" text-anchor="middle" font-size="30">1</text>
+<text class="val" x="313" y="342" text-anchor="middle" font-size="30">1</text>
+<text class="val0" x="127" y="404" text-anchor="middle" font-size="30">0</text>
+<text class="val" x="189" y="404" text-anchor="middle" font-size="30">1</text>
+<text class="val" x="251" y="404" text-anchor="middle" font-size="30">1</text>
+<text class="val0" x="313" y="404" text-anchor="middle" font-size="30">0</text>
+<rect x="724" y="176" width="62" height="62" fill="#eef3f8"/>
+<rect x="786" y="238" width="62" height="62" fill="#eef3f8"/>
+<line class="grid" x1="662" y1="176" x2="662" y2="424"/>
+<line class="gridh" x1="724" y1="176" x2="724" y2="424"/>
+<line class="grid" x1="786" y1="176" x2="786" y2="424"/>
+<line class="grid" x1="600" y1="238" x2="848" y2="238"/>
+<line class="gridh" x1="600" y1="300" x2="848" y2="300"/>
+<line class="grid" x1="600" y1="362" x2="848" y2="362"/>
+<rect class="frame" x="600" y="176" width="248" height="248"/>
+<g class="flip"><text class="hdr" x="631" y="162" text-anchor="middle" font-size="17">00</text>
+<text class="hdr" x="693" y="162" text-anchor="middle" font-size="17">01</text>
+<text class="hdr" x="755" y="162" text-anchor="middle" font-size="17">11</text>
+<text class="hdr" x="817" y="162" text-anchor="middle" font-size="17">10</text>
+<text class="hdr" x="584" y="213" text-anchor="end" font-size="17">00</text>
+<text class="hdr" x="584" y="275" text-anchor="end" font-size="17">01</text>
+<text class="hdr" x="584" y="337" text-anchor="end" font-size="17">11</text>
+<text class="hdr" x="584" y="399" text-anchor="end" font-size="17">10</text>
+<text class="corner" x="584" y="162" text-anchor="end">AB \ CD</text>
+<text class="val" x="631" y="218" text-anchor="middle" font-size="30">1</text>
+<text class="val" x="693" y="218" text-anchor="middle" font-size="30">1</text>
+<text class="valx" x="755" y="218" text-anchor="middle" font-size="30">X</text>
+<text class="val" x="817" y="218" text-anchor="middle" font-size="30">1</text>
+<text class="val0" x="631" y="280" text-anchor="middle" font-size="30">0</text>
+<text class="val0" x="693" y="280" text-anchor="middle" font-size="30">0</text>
+<text class="val0" x="755" y="280" text-anchor="middle" font-size="30">0</text>
+<text class="valx" x="817" y="280" text-anchor="middle" font-size="30">X</text>
+<text class="val0" x="631" y="342" text-anchor="middle" font-size="30">0</text>
+<text class="val0" x="693" y="342" text-anchor="middle" font-size="30">0</text>
+<text class="val0" x="755" y="342" text-anchor="middle" font-size="30">0</text>
+<text class="val0" x="817" y="342" text-anchor="middle" font-size="30">0</text>
+<text class="val" x="631" y="404" text-anchor="middle" font-size="30">1</text>
+<text class="val0" x="693" y="404" text-anchor="middle" font-size="30">0</text>
+<text class="val0" x="755" y="404" text-anchor="middle" font-size="30">0</text>
+<text class="val" x="817" y="404" text-anchor="middle" font-size="30">1</text></g>
+<text class="cap" x="220" y="468" text-anchor="middle" font-size="26">F</text>
+<text class="capsub" x="220" y="496" text-anchor="middle">group these 0s &#8230;</text>
+<text class="cap" x="724" y="468" text-anchor="middle" font-size="26">F&#772;</text>
+<text class="capsub" x="724" y="496" text-anchor="middle">&#8230; they are these 1s</text>
+<defs><marker id="ah" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L11,6 L0,11 z" fill="#8198af"/></marker></defs>
+<path d="M386,300 H558" fill="none" stroke="#8198af" stroke-width="4" marker-end="url(#ah)"/>
+<text class="capsub" x="472" y="280" text-anchor="middle">complement</text>
+<line x1="36" y1="524" x2="964" y2="524" stroke="#aab9c9" stroke-width="2"/>
+<circle cx="44" cy="556" r="6" fill="#102a43"/>
+<text class="note" x="62" y="562">Every specified cell flips: a 0 in F is a 1 in F&#772;, and a 1 in F is a 0 in F&#772;.</text>
+<circle cx="44" cy="585" r="6" fill="#6b7f95"/>
+<text class="note" x="62" y="591">A don't-care stays a don't-care. It was never specified in F, so it is not specified in F&#772; either</text>
+<text class="note" x="62" y="616">&#8212; you may still use it to enlarge a group.</text>
+</svg>

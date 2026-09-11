@@ -241,7 +241,7 @@
   <!-- Header -->
   <div class="header">
     <div class="header-title">K-Map POS Minimization</div>
-    <div class="header-sub">F(A,B,C,D) = ΠM(0,1,2,8,10) · d(3,9,11)</div>
+    <div class="header-sub">F(A,B,C,D) = ΠM(0,1,2,8,10) · d(3,6)</div>
     <div class="step-badge" id="stepBadge">Overview</div>
   </div>
 
@@ -345,7 +345,7 @@
         <text x="610" y="244" text-anchor="middle" font-size="13"
               fill="#94a3b8">2</text>
 
-        <!-- Row 1: ones = m4,m5,m7,m6 -->
+        <!-- Row 1: ones = m4,m5,m7; m6 = DC -->
         <text x="190" y="318" text-anchor="middle" font-size="38" font-weight="700"
               font-family="Cambria,Georgia,serif" fill="#334155">1</text>
         <text x="190" y="384" text-anchor="middle" font-size="13"
@@ -361,8 +361,9 @@
         <text x="470" y="384" text-anchor="middle" font-size="13"
               fill="#94a3b8">7</text>
 
-        <text x="610" y="318" text-anchor="middle" font-size="38" font-weight="700"
-              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
+        <!-- m6 = don't care (adjacent to the zero at m2, but does not enlarge any group) -->
+        <text x="610" y="318" text-anchor="middle" font-size="36" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#9ca3af">&#215;</text>
         <text x="610" y="384" text-anchor="middle" font-size="13"
               fill="#94a3b8">6</text>
 
@@ -387,20 +388,19 @@
         <text x="610" y="524" text-anchor="middle" font-size="13"
               fill="#94a3b8">14</text>
 
-        <!-- Row 3: m8=zero, m9=DC, m11=DC, m10=zero -->
+        <!-- Row 3: m8=zero, m9=one, m11=one, m10=zero -->
         <text x="190" y="598" text-anchor="middle" font-size="38" font-weight="700"
               font-family="Cambria,Georgia,serif" fill="#0891b2">0</text>
         <text x="190" y="664" text-anchor="middle" font-size="13"
               fill="#94a3b8">8</text>
 
-        <!-- Don't care × -->
-        <text x="330" y="598" text-anchor="middle" font-size="36" font-weight="700"
-              font-family="Cambria,Georgia,serif" fill="#9ca3af">×</text>
+        <text x="330" y="598" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
         <text x="330" y="664" text-anchor="middle" font-size="13"
               fill="#94a3b8">9</text>
 
-        <text x="470" y="598" text-anchor="middle" font-size="36" font-weight="700"
-              font-family="Cambria,Georgia,serif" fill="#9ca3af">×</text>
+        <text x="470" y="598" text-anchor="middle" font-size="38" font-weight="700"
+              font-family="Cambria,Georgia,serif" fill="#334155">1</text>
         <text x="470" y="664" text-anchor="middle" font-size="13"
               fill="#94a3b8">11</text>
 
@@ -496,7 +496,7 @@
         <div class="body"        id="cardBody">
           For Product of Sums (POS) form, we minimize <strong>F′</strong> using the K-map —
           circling <strong>zeros</strong> exactly as SOP circles ones. Each group of zeros
-          yields a product term in F′. DeMorgan's theorem then converts F′ → F as a
+          yields a product term in F′. De Morgan's theorem then converts F′ → F as a
           product of sum terms.
         </div>
       </div>
@@ -583,14 +583,14 @@ const steps = [
     badge: 'Overview',
     label: 'POS vs SOP',
     headline: 'Why Circle Zeros?',
-    body: 'In POS minimization we minimize <strong>F′</strong> using the K-map, grouping <strong>zeros</strong> (maxterms) exactly as SOP groups ones. Each group becomes a product term in F′. DeMorgan\'s theorem then converts the full SOP expression for F′ into a POS expression for F.',
+    body: 'In POS minimization we minimize <strong>F′</strong> using the K-map, grouping <strong>zeros</strong> (maxterms) exactly as SOP groups ones. Each group becomes a product term in F′. De Morgan\'s theorem then converts the full SOP expression for F′ into a POS expression for F.',
     grp1:false, grp2:false, wrap:false, expr:[]
   },
   {
     badge: 'Step 1 — Identify Zeros',
     label: 'Reading the K-Map',
     headline: 'Locate Zeros & Don\'t Cares',
-    body: 'Zeros (maxterms) appear at cells 0, 1, 2 in the top row and at cells 8 and 10 in the bottom row. Cells 3, 9, and 11 are <strong>don\'t cares</strong> — they may be treated as 0 to enlarge a group, but are not required to be covered.',
+    body: 'Zeros (maxterms) appear at cells 0, 1, 2 in the top row and at cells 8 and 10 in the bottom row. Cells 3 and 6 are <strong>don\'t cares</strong> — they may be treated as 0 to enlarge a group, but are not required to be covered.',
     grp1:false, grp2:false, wrap:false, expr:[]
   },
   {
@@ -604,33 +604,33 @@ const steps = [
     badge: 'Step 3 — Group 2 (violet)',
     label: 'Group 2',
     headline: 'Four Corners: m0, m2, m8, m10 → B′D′',
-    body: 'The four corner cells wrap toroidally — left and right edges connect, top and bottom edges connect. B = 0 and D = 0 are constant in all four; A and C vary. Don\'t cares at m9 and m11 sit adjacent but aren\'t needed to complete this group of 4. The term is <strong class="violet">B′D′</strong>.',
+    body: 'The four corner cells wrap toroidally — left and right edges connect, top and bottom edges connect. B = 0 and D = 0 are constant in all four; A and C vary. m9 and m11 are 1s, so m8 and m10 cannot be grouped along the bottom row — wrapping to the corners is the only way to cover them. The term is <strong class="violet">B′D′</strong>.',
     grp1:true, grp2:true, wrap:true, expr:[]
   },
   {
     badge: 'Step 4 — Write F′',
     label: 'F′ from the Map',
     headline: 'F′ = A′B′ + B′D′',
-    body: 'Both groups together cover every zero. Cell m0 is shared between groups — perfectly acceptable. The don\'t care at m3 was used to fill out group 1; m9 and m11 were left unused. We OR the two product terms to form the minimized SOP expression for <strong>F′</strong>.',
+    body: 'Both groups together cover every zero. Cell m0 is shared between groups — perfectly acceptable. The don\'t care at m3 was used to fill out group 1; the one at m6 was left out, because pairing it with m2 would not have enlarged either group. We OR the two product terms to form the minimized SOP expression for <strong>F′</strong>.',
     grp1:true, grp2:true, wrap:true, expr:[0]
   },
   {
     badge: 'Step 5 — Complement',
-    label: 'DeMorgan Step 1 & 2',
+    label: 'De Morgan Step 1 & 2',
     headline: 'Complement Both Sides',
-    body: 'To find F, complement both sides of F′ = A′B′ + B′D′. The left side: <strong>(F′)′ = F</strong> by the double complement law. The right side still needs to be simplified using DeMorgan\'s theorem.',
+    body: 'To find F, complement both sides of F′ = A′B′ + B′D′. The left side: <strong>(F′)′ = F</strong> by the double complement law. The right side still needs to be simplified using De Morgan\'s theorem.',
     grp1:true, grp2:true, wrap:true, expr:[0,1,2]
   },
   {
-    badge: 'Step 6 — DeMorgan Outer',
-    label: 'DeMorgan on the Sum',
+    badge: 'Step 6 — De Morgan Outer',
+    label: 'De Morgan on the Sum',
     headline: '(P + Q)′ = P′ · Q′',
     body: 'The complement of a sum is the <em>product of the complements</em>. Each product term in F′ becomes its own factor: <strong>(A′B′)′</strong> and <strong>(B′D′)′</strong>, multiplied together.',
     grp1:false, grp2:false, wrap:false, expr:[0,1,2,3]
   },
   {
-    badge: 'Step 7 — DeMorgan Inner',
-    label: 'DeMorgan on Each Factor',
+    badge: 'Step 7 — De Morgan Inner',
+    label: 'De Morgan on Each Factor',
     headline: 'F = (A+B)(B+D)',
     body: 'The complement of each product: <strong>(A′B′)′ = A+B</strong> and <strong>(B′D′)′ = B+D</strong>. The complement of a product is the sum of the complements of the complements — i.e. the sum of the original literals. This is the minimal POS expression.',
     grp1:false, grp2:false, wrap:false, expr:[0,1,2,3,4,5]
