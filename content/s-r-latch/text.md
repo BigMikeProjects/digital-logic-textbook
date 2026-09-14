@@ -7,7 +7,7 @@ An S-R latch consists of two NOR gates whose outputs feed back into each other's
 Recall the NOR gate truth table:
 
 | A | B | $\overline{A + B}$ |
-|---|---|---|
+|:---:|:---:|:---:|
 | 0 | 0 | 1 |
 | 0 | 1 | 0 |
 | 1 | 0 | 0 |
@@ -36,7 +36,7 @@ Resetting the latch is symmetric to setting it. Assert $R = 1$ while keeping $S 
 The complete behavior is captured in this table:
 
 | S | R | Q (next) | $\overline{Q}$ (next) | Action |
-|---|---|---|---|---|
+|:---:|:---:|:---:|:---:|---|
 | 0 | 0 | Q (hold) | $\overline{Q}$ (hold) | No change — memory holds |
 | 1 | 0 | 1 | 0 | Set — store a 1 |
 | 0 | 1 | 0 | 1 | Reset — store a 0 |
@@ -55,7 +55,7 @@ Historically, latches are more often built from **NAND** gates than from NOR gat
 Where a NOR gate forces its output to 0 whenever *any* input is 1, a NAND gate forces its output to **1** whenever *any* input is **0**:
 
 | A | B | $\overline{A \cdot B}$ |
-|---|---|---|
+|:---:|:---:|:---:|
 | 0 | 0 | 1 |
 | 0 | 1 | 1 |
 | 1 | 0 | 1 |
@@ -71,7 +71,7 @@ Because a low input forces a NAND output high, you **assert** an input by pullin
 - **Forbidden** ($S' = 0$, $R' = 0$): both gates are forced high, giving $Q = \overline{Q} = 1$. As with the NOR latch, this breaks the complement, and releasing both inputs together races to an unpredictable state.
 
 | $S'$ | $R'$ | Q (next) | $\overline{Q}$ (next) | Action |
-|---|---|---|---|---|
+|:---:|:---:|:---:|:---:|---|
 | 1 | 1 | Q (hold) | $\overline{Q}$ (hold) | Memory holds |
 | 0 | 1 | 1 | 0 | Set — store a 1 |
 | 1 | 0 | 0 | 1 | Reset — store a 0 |

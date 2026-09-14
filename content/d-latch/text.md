@@ -84,7 +84,7 @@ This is exactly what a timing diagram is for. Draw $EN$, $D$, and $Q$ as square 
 Worked through a short sequence, with $Q$ starting at 0:
 
 | Interval | $EN$ | What $D$ does | $Q$ |
-|---|:---:|---|---|
+|:---:|:---:|---|---|
 | 1 | 0 | $D = 0$, steady | 0 — closed |
 | 2 | 1 | $D$ goes $0 \to 1 \to 0 \to 1$ | follows every change: $0 \to 1 \to 0 \to 1$ |
 | 3 | 0 | $D$ falls to 0 shortly after the edge | **1** — captured at the falling edge, held |

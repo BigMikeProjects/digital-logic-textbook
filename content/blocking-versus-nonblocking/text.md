@@ -53,7 +53,7 @@ endmodule
 When the clock rises, the simulator evaluates all three right-hand sides using the values that exist *before* any update occurs. Then it assigns all three left-hand sides simultaneously. Walking through an input sequence of $D = 1, 0, 1, 0$:
 
 | Clock Edge | D | Q1 | Q2 | Q3 | Action |
-|---|---|---|---|---|---|
+|:---:|:---:|:---:|:---:|:---:|---|
 | 1 | 1 | 1 | 0 | 0 | 1 enters the register |
 | 2 | 0 | 0 | 1 | 0 | 0 enters; 1 shifts right |
 | 3 | 1 | 1 | 0 | 1 | 1 enters; previous values shift right |
@@ -89,7 +89,7 @@ With blocking assignments, each statement completes before the next executes. On
 The input value propagates through all three flip-flops in a single clock cycle. Walking through an input sequence of $D = 1, 1, 0, 1$:
 
 | Clock Edge | D | Q1 | Q2 | Q3 | Action |
-|---|---|---|---|---|---|
+|:---:|:---:|:---:|:---:|:---:|---|
 | 1 | 1 | 1 | 1 | 1 | 1 propagates all the way through |
 | 2 | 1 | 1 | 1 | 1 | All remain 1 |
 | 3 | 0 | 0 | 0 | 0 | 0 propagates all the way through |
