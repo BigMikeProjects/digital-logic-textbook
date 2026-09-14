@@ -103,25 +103,55 @@ module.exports = {
               marginBottom: '0.5rem',
             },
             // Tables
+            //
+            // Sized to the content, not to the column. A truth table is five narrow columns of
+            // single digits; stretching it to width:100% marooned the digits in whitespace.
+            // Rules are horizontal only, digits are tabular so columns line up, and the
+            // markdown alignment (|:-:|, which remark emits as align="center") is honored
+            // rather than overridden.
             table: {
-              width: '100%',
+              width: 'auto',
+              maxWidth: '100%',
               borderCollapse: 'collapse',
-              marginTop: '1.5rem',
-              marginBottom: '1.5rem',
+              marginTop: '1.75rem',
+              marginBottom: '1.75rem',
+              fontSize: '0.9375rem',
+              lineHeight: '1.45',
+              fontVariantNumeric: 'tabular-nums',
             },
-            th: {
-              borderWidth: '1px',
-              borderColor: 'rgb(209 213 219)', // gray-300
-              backgroundColor: 'rgb(243 244 246)', // gray-100
-              padding: '0.5rem 1rem',
+            thead: {
+              borderBottomWidth: '2px',
+              borderBottomColor: 'rgb(100 116 139)', // slate-500
+            },
+            'thead th': {
+              backgroundColor: 'transparent',
+              padding: '0.4rem 1.1rem 0.5rem',
               textAlign: 'left',
               fontWeight: '600',
+              color: 'rgb(51 65 85)', // slate-700
+              verticalAlign: 'bottom',
+              borderWidth: '0',
             },
-            td: {
-              borderWidth: '1px',
-              borderColor: 'rgb(209 213 219)', // gray-300
-              padding: '0.5rem 1rem',
+            'tbody tr': {
+              borderBottomWidth: '1px',
+              borderBottomColor: 'rgb(226 232 240)', // slate-200
             },
+            'tbody tr:last-child': {
+              borderBottomWidth: '1px',
+              borderBottomColor: 'rgb(148 163 184)', // slate-400 — closes the table
+            },
+            'tbody tr:nth-child(even)': {
+              backgroundColor: 'rgb(248 250 252)', // slate-50
+            },
+            'tbody td': {
+              padding: '0.4rem 1.1rem',
+              borderWidth: '0',
+            },
+            // remark-gfm emits align="center"/"right" from |:-:| and |--:|; a blanket
+            // text-align on th/td beats the presentational attribute, so restore it here.
+            'th[align="center"], td[align="center"]': { textAlign: 'center' },
+            'th[align="right"],  td[align="right"]':  { textAlign: 'right' },
+            'th[align="left"],   td[align="left"]':   { textAlign: 'left' },
             // Blockquotes
             blockquote: {
               borderLeftWidth: '4px',
