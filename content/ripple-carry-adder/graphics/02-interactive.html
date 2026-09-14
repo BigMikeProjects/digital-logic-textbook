@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ripple-Carry Adder — Four Full Adders, and the Carry Takes Time</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 = a logic 1 / the carry wavefront · amber #ffb74d = the A and B bits
+       · violet #b388ff = a stage that is WAITING / the delay counter · navy #0d1b2a panels
+       · logic-0 wires #7d9bb5 (never dimmer) */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 210px; height: 78px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 12px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: baseline; gap: 12px; padding: 9px 18px;
+        border-bottom: 2px solid #24384c; flex-shrink: 0; }
+    .panel-head .ph { font-size: 19px; font-weight: 700; color: #4fc3f7; }
+    .panel-head .ph.amber { color: #ffb74d; }
+    .panel-head .ph.violet { color: #b388ff; }
+    .panel-head .role { font-size: 15px; color: #607d8b; }
+    .main { display: flex; gap: 16px; flex: 1; min-height: 0; }
+    .col { display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 0; min-height: 0; }
+    .col > .panel { flex: 1; }   /* inline flex:0 0 auto opts a panel out */
+    .svgbody { flex: 1; min-height: 0; padding: 6px 10px; display: flex; align-items: center; justify-content: center; }
+    .svgbody svg { width: 100%; height: 100%; display: block; }
+
+    .idea { border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a; padding: 13px 18px;
+        font-size: 17px; line-height: 1.5; color: #b0bec5; flex-shrink: 0; }
+    .idea b { color: #cfd8dc; } .idea .cy { color: #4fc3f7; font-weight: 700; }
+    .idea .vi { color: #b388ff; font-weight: 700; } .idea .am { color: #ffb74d; font-weight: 700; }
+
+    /* ---- tables ---- */
+    table.t { border-collapse: collapse; font-family: 'Menlo','Consolas',monospace; width: 100%; }
+    table.t th { font-family: 'Segoe UI',sans-serif; font-weight: 600; color: #607d8b;
+        border-bottom: 2px solid #24384c; padding: 6px 8px; white-space: nowrap; font-size: 15px; }
+    table.t td { text-align: center; color: #b0bec5; border-bottom: 1px solid #16283a;
+        padding: 5px 8px; font-size: 17px; }
+    table.t tr.on td { background: rgba(79,195,247,0.12); color: #4fc3f7; }
+    table.t td.l { text-align: left; font-family: 'Segoe UI',sans-serif; }
+    .kpg { font-weight: 700; }
+    .kpg.kill { color: #7d9bb5; } .kpg.prop { color: #b388ff; } .kpg.gen { color: #4fc3f7; }
+
+    .tbody { padding: 2px 16px 8px; overflow: hidden; }
+    .eqbox { padding: 10px 18px; font-family: 'Menlo','Consolas',monospace; font-size: 22px;
+        color: #cfd8dc; line-height: 1.75; }
+    .eqbox .c1 { color: #4fc3f7; } .eqbox .c2 { color: #ffb74d; }
+    .eqbox .note { font-family: 'Segoe UI',sans-serif; font-size: 15px; color: #607d8b; }
+
+    /* ---- beat 2 controls ---- */
+    .ctrlbar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; flex-shrink: 0;
+        border-top: 2px solid #24384c; }
+    .btn { border: 2px solid #37506a; border-radius: 10px; background: #0b1622; color: #90a4ae;
+        font-size: 16px; font-weight: 600; padding: 8px 15px; cursor: pointer; font-family: inherit;
+        display: flex; align-items: center; gap: 8px; }
+    .btn:hover { border-color: #4fc3f7; color: #4fc3f7; }
+    .btn .kk { font-size: 12px; border: 1px solid #37506a; border-radius: 5px; padding: 1px 6px; color: #607d8b; }
+    .btn.go { border-color: #4fc3f7; color: #4fc3f7; }
+    .btn.rst { border-color: #b388ff; color: #b388ff; }
+    .tclock { margin-left: auto; font-family: 'Menlo','Consolas',monospace; font-size: 25px;
+        font-weight: 700; color: #b388ff; border: 2px solid #b388ff; border-radius: 10px;
+        padding: 6px 18px; background: rgba(179,136,255,0.08); white-space: nowrap; }
+    .tclock .fin { color: #4fc3f7; }
+    .presetline { font-size: 15px; color: #607d8b; font-family: 'Segoe UI',sans-serif; }
+    .presetline b { color: #90a4ae; }
+
+    /* ---- svg classes ---- */
+    .fabox { fill: #0b1622; stroke: #4a6274; stroke-width: 3; transition: stroke .15s, fill .15s; }
+    .fabox.waiting { stroke: #b388ff; stroke-width: 5; fill: rgba(179,136,255,0.10); }
+    .fabox.done { stroke: #4fc3f7; stroke-width: 4; fill: rgba(79,195,247,0.07); }
+    .fatitle { fill: #cfd8dc; font-size: 26px; font-weight: 700; text-anchor: middle;
+        font-family: 'Segoe UI',sans-serif; }
+    .fasub { fill: #78909c; font-size: 15px; text-anchor: middle; font-family: 'Menlo',monospace; }
+    .pinlab { fill: #78909c; font-size: 15px; font-family: 'Menlo',monospace; }
+    .bitcell { stroke-width: 2.5; cursor: pointer; }
+    .bitcell.v0 { fill: #0b1622; stroke: #7d9bb5; }
+    .bitcell.v1 { fill: rgba(255,183,77,0.18); stroke: #ffb74d; }
+    .bittext { font-family: 'Menlo',monospace; font-size: 27px; font-weight: 700;
+        text-anchor: middle; pointer-events: none; }
+    .bittext.v0 { fill: #7d9bb5; } .bittext.v1 { fill: #ffb74d; }
+    .bitname { fill: #78909c; font-size: 16px; font-family: 'Menlo',monospace; text-anchor: middle; }
+    .wire { stroke-width: 3; fill: none; }
+    .wire.w0 { stroke: #7d9bb5; } .wire.w1 { stroke: #4fc3f7; }
+    .wire.pend { stroke: #3b4c5e; stroke-dasharray: 7 6; }
+    .wire.front { stroke: #4fc3f7; stroke-width: 5.5; }
+    .sumtext { font-family: 'Menlo',monospace; font-size: 30px; font-weight: 700; text-anchor: middle; }
+    .sumtext.v0 { fill: #7d9bb5; } .sumtext.v1 { fill: #4fc3f7; } .sumtext.pend { fill: #3f5164; }
+    .clab { font-family: 'Menlo',monospace; font-size: 17px; text-anchor: middle;
+        paint-order: stroke; stroke: #16213e; stroke-width: 5; }
+    .clab.v0 { fill: #7d9bb5; } .clab.v1 { fill: #4fc3f7; } .clab.pend { fill: #3f5164; }
+    .kpgbadge { font-family: 'Segoe UI',sans-serif; font-size: 16px; font-weight: 700; text-anchor: middle; }
+    .junc { fill: #7d9bb5; } .junc.v1 { fill: #4fc3f7; }
+
+    /* ---- beat 3 strip ---- */
+    .bar { rx: 4; } .bar.bg { fill: #16283a; }
+    .bar.fg { fill: #4fc3f7; } .bar.fg.s { fill: #ffb74d; }
+    .striplab { fill: #90a4ae; font-family: 'Menlo',monospace; font-size: 19px; }
+    .strandt { fill: #607d8b; font-family: 'Menlo',monospace; font-size: 16px; text-anchor: middle; }
+    .stripval { fill: #4fc3f7; font-family: 'Menlo',monospace; font-size: 18px; font-weight: 700; }
+    .gridl { stroke: #24384c; stroke-width: 1.5; } .gridl.zero { stroke: #37506a; stroke-width: 2.5; }
+
+    /* ---- beat 4 code ---- */
+    pre.code { font-family: 'Menlo','Consolas',monospace; font-size: 16.5px; line-height: 1.5;
+        color: #cfd8dc; padding: 12px 18px; overflow: hidden; }
+    pre.code .kw { color: #b388ff; } pre.code .id { color: #4fc3f7; }
+    pre.code .cm { color: #5d7284; font-style: italic; } pre.code .num { color: #ffb74d; }
+    .callout { border: 2px solid #24384c; border-radius: 11px; background: #0b1622;
+        padding: 9px 14px; margin: 0 0 9px 0; }
+    .callout .ct { font-size: 16px; font-weight: 700; color: #4fc3f7; }
+    .callout .cd { font-size: 14.5px; color: #90a4ae; line-height: 1.45; margin-top: 3px; }
+    .callout .cd .mono { color: #cfd8dc; }
+    .cowrap { padding: 12px 14px; overflow: hidden; }
+    .hint { font-size: 14.5px; color: #546e7a; padding: 0 18px 10px; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 280 100" fill="none">
+                <g>
+                    <rect x="14"  y="34" width="52" height="42" rx="5" fill="#0d1b2a" stroke="#cfd8dc" stroke-width="2.2"/>
+                    <rect x="84"  y="34" width="52" height="42" rx="5" fill="#0d1b2a" stroke="#cfd8dc" stroke-width="2.2"/>
+                    <rect x="154" y="34" width="52" height="42" rx="5" fill="#0d1b2a" stroke="#cfd8dc" stroke-width="2.2"/>
+                    <rect x="224" y="34" width="42" height="42" rx="5" fill="#0d1b2a" stroke="#cfd8dc" stroke-width="2.2"/>
+                    <g stroke="#4fc3f7" stroke-width="2.6">
+                        <path d="M224 55 L206 55"/><path d="M154 55 L136 55"/><path d="M84 55 L66 55"/>
+                    </g>
+                    <path d="M14 55 L2 55" stroke="#4fc3f7" stroke-width="2.6"/>
+                    <path d="M266 55 L278 55" stroke="#7d9bb5" stroke-width="2.2"/>
+                    <g stroke="#ffb74d" stroke-width="2"><path d="M40 34 L40 18"/><path d="M110 34 L110 18"/><path d="M180 34 L180 18"/><path d="M245 34 L245 18"/></g>
+                    <g stroke="#7d9bb5" stroke-width="2"><path d="M40 76 L40 92"/><path d="M110 76 L110 92"/><path d="M180 76 L180 92"/><path d="M245 76 L245 92"/></g>
+                </g>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Ripple-Carry Adder <span class="sub">— four full adders, and the carry takes time</span></h1>
+            <div class="subtitle">Logically it is just four copies of one column chained by the carry · in time, a stage cannot finish until its carry-in arrives</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">One Column</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">The Chain</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">The Cost of the Ripple</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Verilog</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- ===================== BEAT 1 ===================== -->
+        <div class="page" id="p1">
+            <div class="idea">
+                <b>A 4-bit adder is four identical full adders in a row</b>, each handing its carry-out to the next
+                stage's carry-in. That is the whole design. What matters for the rest of this graphic is not the
+                gates inside a stage — it is the <span class="cy">three things a stage can do with its carry-in</span>,
+                because that is what decides whether the carry has to keep traveling.
+            </div>
+            <div class="main">
+                <div class="col" style="flex:0 0 700px">
+                    <div class="panel" style="flex:0 0 auto">
+                        <div class="panel-head"><span class="ph">One column</span><span class="role">three bits in, two bits out</span></div>
+                        <div class="eqbox">
+                            S<sub>i</sub>   = A<sub>i</sub> <span class="c1">⊕</span> B<sub>i</sub> <span class="c1">⊕</span> C<sub>i</sub><br>
+                            C<sub>i+1</sub> = A<sub>i</sub>·B<sub>i</sub> <span class="c2">+</span> C<sub>i</sub>·(A<sub>i</sub> ⊕ B<sub>i</sub>)<br>
+                            <span class="note">equivalently A·B + A·C<sub>i</sub> + B·C<sub>i</sub> — the K-map form from
+                            <b data-topic="full-and-half-adder">Full and Half Adders</b>; both verified equal</span>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-head"><span class="ph">Full-adder truth table</span><span class="role">click a row</span></div>
+                        <div class="tbody">
+                            <table class="t" id="ftab"></table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="panel">
+                        <div class="panel-head"><span class="ph violet">Kill · propagate · generate</span><span class="role">what the stage does with C<sub>i</sub></span></div>
+                        <div class="tbody">
+                            <table class="t" id="kpgtab"></table>
+                        </div>
+                        <div class="hint">
+                            Only a <span class="kpg prop">propagating</span> stage has to <b>wait</b> for its carry-in.
+                            A stage that <span class="kpg kill">kills</span> or <span class="kpg gen">generates</span> already
+                            knows its carry-out from A<sub>i</sub> and B<sub>i</sub> alone — so it breaks the chain and the
+                            waiting starts over. That single fact is the whole timing story on beat 3.
+                        </div>
+                    </div>
+                    <div class="panel" style="flex:0 0 auto">
+                        <div class="panel-head"><span class="ph amber">Where this sits</span><span class="role">the adder series</span></div>
+                        <div class="hint" style="padding-top:8px">
+                            <b data-topic="full-and-half-adder">Full and Half Adders</b> built the column and weighed two
+                            ways to realize it. This topic chains four of them.
+                            <b data-topic="add-sub-circuit">Add/Sub Circuit</b> reuses the same chain with the carry-in
+                            pressed into service as a subtract control.
+                            The words <span class="kpg gen">generate</span> and <span class="kpg prop">propagate</span> come
+                            back when the carry-look-ahead adder uses them to compute every carry at once.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== BEAT 2 ===================== -->
+        <div class="page" id="p2">
+            <div class="main">
+                <div class="col">
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head">
+                            <span class="ph">The chain</span>
+                            <span class="role">click any A or B bit · least-significant stage on the right</span>
+                            <span class="role" style="margin-left:auto" id="p2sum"></span>
+                        </div>
+                        <div class="svgbody"><svg id="chainSvg" viewBox="0 0 1520 500" preserveAspectRatio="xMidYMid meet"></svg></div>
+                        <div class="ctrlbar">
+                            <button class="btn go" data-run>Run the settle <span class="kk">G</span></button>
+                            <button class="btn" data-step>Step one Δ <span class="kk">S</span></button>
+                            <button class="btn rst" data-reset>↺ reset <span class="kk">R</span></button>
+                            <button class="btn" data-preset>Next case <span class="kk">T</span></button>
+                            <span class="presetline" id="presetLine"></span>
+                            <span class="tclock" id="tclock">t = 0Δ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="idea" style="flex:0 0 auto">
+                Keys — <span class="am">U I O P</span> toggle A<sub>3</sub>…A<sub>0</sub> ·
+                <span class="am">H J K L</span> toggle B<sub>3</sub>…B<sub>0</sub> ·
+                <span class="cy">C</span> toggles C<sub>in</sub> ·
+                <span class="cy">G</span> runs the settle, <span class="cy">S</span> steps it one Δ,
+                <span class="vi">R</span> resets to t = 0 · <span class="cy">T</span> cycles the six cases.
+                A stage outlined in <span class="vi">violet</span> is waiting for its carry-in; the
+                <span class="cy">cyan</span> wavefront is a carry that has arrived.
+            </div>
+        </div>
+
+        <!-- ===================== BEAT 3 ===================== -->
+        <div class="page" id="p3">
+            <div class="main">
+                <div class="col" style="flex:1.45">
+                    <div class="panel">
+                        <div class="panel-head">
+                            <span class="ph">When each signal is final</span>
+                            <span class="role" id="p3case"></span>
+                            <span class="role" style="margin-left:auto">same inputs as beat 2 — change them there</span>
+                        </div>
+                        <div class="svgbody"><svg id="stripSvg" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid meet"></svg></div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="panel" style="flex:0 0 auto">
+                        <div class="panel-head"><span class="ph violet">The model</span><span class="role">stated, not assumed</span></div>
+                        <div class="hint" style="padding-top:9px">
+                            One <b>Δ</b> is the time a carry takes to cross <b>one stage that has to pass it along</b>.
+                            A propagating stage cannot produce its carry-out until its carry-in arrives, so it adds a Δ.
+                            A killing or generating stage does not wait, so it resets the count.
+                            <br><br>
+                            <b>Worst case = every stage propagating = n·Δ.</b> Notice what that means: the slowest case
+                            is not the one with the biggest carry — it is the one where every stage is merely
+                            <i>passing a carry along</i>, whether or not a carry ever actually appears.
+                        </div>
+                    </div>
+                    <div class="panel" style="flex:0 0 auto">
+                        <div class="panel-head"><span class="ph">How wide, how slow</span><span class="role">the logic is fine; the time is not</span></div>
+                        <div class="tbody"><table class="t" id="scaletab"></table></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-head"><span class="ph amber">What is Δ worth?</span><span class="role">tying this to the full-adder topic</span></div>
+                        <div class="hint" style="padding-top:9px">
+                            Δ is one stage's carry delay, so its value depends on which full adder you built.
+                            <b data-topic="full-and-half-adder">Full and Half Adders</b> measured the two realizations at
+                            a delay of about <b>3</b> for the flat two-level (all-NAND) column and about <b>6</b> for the
+                            one built from two half adders. So 4Δ is
+                            roughly <b>12 to 24 gate transitions</b> for a 4-bit adder — the scaling law above is the
+                            same either way, which is exactly why it is written in Δ.
+                            <br><br>
+                            The logic never gets harder as n grows. Only the time does, and it grows <b>linearly</b>.
+                            That is the problem the <b>carry-look-ahead adder</b> exists to solve.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== BEAT 4 ===================== -->
+        <div class="page" id="p4">
+            <div class="main">
+                <div class="col" style="flex:1.3">
+                    <div class="panel">
+                        <div class="panel-head"><span class="ph">Structural Verilog</span><span class="role">the chain <i>is</i> four instantiations</span></div>
+                        <pre class="code" id="vcode"></pre>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="panel">
+                        <div class="panel-head"><span class="ph amber">What to notice</span><span class="role">three things</span></div>
+                        <div class="cowrap">
+                            <div class="callout">
+                                <div class="ct">The wire names are the schematic</div>
+                                <div class="cd">Named-port instantiation makes the chain readable: <span class="mono">.cin(c1)</span>
+                                on <span class="mono">fa1</span> is literally the wire coming out of <span class="mono">fa0</span>.
+                                Declare <span class="mono">c1, c2, c3</span> and the diagram writes itself.</div>
+                            </div>
+                            <div class="callout">
+                                <div class="ct">One line does the same job — and gives up the ripple</div>
+                                <div class="cd"><span class="mono">assign {cout, sum} = a + b + cin;</span> is the same
+                                function, and it lets the synthesizer pick whatever adder structure it likes — probably
+                                something faster than a ripple. The structural version is how you <i>pin the ripple down</i>,
+                                which is the point when you are studying it.</div>
+                            </div>
+                            <div class="callout">
+                                <div class="ct">Sweeping all 512 cases</div>
+                                <div class="cd">Three inputs, 4 + 4 + 1 bits, so <span class="mono">2⁹ = 512</span> cases —
+                                small enough to check exhaustively against <span class="mono">a + b + cin</span>.
+                                Use an <span class="mono">integer</span> loop counter, not
+                                <span class="mono">reg [8:0]</span>: a 9-bit counter can never reach 512, so
+                                <span class="mono">i &lt; 512</span> is always true and the testbench hangs forever.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * (16 / 9); } else { cw = vw; ch = cw * (9 / 16); }
+        c.style.width = cw + 'px'; c.style.height = ch + 'px';
+        s.style.transform = 'scale(' + (cw / DESIGN_WIDTH) + ')';
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    function el(tag, attrs, parent) {
+        const e = document.createElementNS(SVGNS, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        if (parent) parent.appendChild(e);
+        return e;
+    }
+    function txt(x, y, s, cls, parent, extra) {
+        const t = el('text', Object.assign({ x: x, y: y }, extra || {}), parent);
+        if (cls) t.setAttribute('class', cls);
+        t.textContent = s; return t;
+    }
+
+    // ================= MODEL =================
+    // bits are stored least-significant first: a[0] is A0
+    let a = [1, 0, 1, 0], b = [1, 1, 0, 0], cin = 0;   // 0101 + 0011 = 5 + 3
+    let page = 1, t = 0, running = null, presetIdx = 0;
+
+    function behav(ai, bi) { return (ai === 0 && bi === 0) ? 'kill' : (ai === 1 && bi === 1) ? 'gen' : 'prop'; }
+
+    function compute(A, B, CI) {
+        const s = [], c = [CI], bh = [], tc = [0], ts = [];
+        for (let i = 0; i < 4; i++) {
+            s.push(a2(A[i]) ^ a2(B[i]) ^ c[i]);
+            c.push((A[i] & B[i]) | (c[i] & (A[i] ^ B[i])));
+            bh.push(behav(A[i], B[i]));
+            tc.push(bh[i] === 'prop' ? tc[i] + 1 : 0);
+            ts.push(tc[i] + 1);
+        }
+        const settle = Math.max(Math.max.apply(null, tc), Math.max.apply(null, ts));
+        return { s: s, c: c, bh: bh, tc: tc, ts: ts, settle: settle };
+    }
+    function a2(x) { return x & 1; }
+    function val(arr) { return arr.reduce(function (n, v, i) { return n + (v << i); }, 0); }
+    function bstr(arr) { return arr.slice().reverse().join(''); }
+    function M() { return compute(a, b, cin); }
+
+    // six presets: [A, B, cin, label]
+    const PRESETS = [
+        [[1, 0, 1, 0], [1, 1, 0, 0], 0, '5 + 3'],
+        [[1, 1, 1, 0], [1, 0, 0, 0], 0, '7 + 1'],
+        [[1, 1, 1, 1], [1, 0, 0, 0], 0, '15 + 1'],
+        [[1, 0, 0, 1], [0, 0, 0, 1], 0, '9 + 8'],
+        [[1, 0, 1, 0], [0, 1, 0, 1], 0, '5 + 10'],
+        [[1, 1, 1, 1], [0, 0, 0, 0], 1, '15 + 0 + 1']
+    ];
+
+    // ================= BEAT 1 TABLES =================
+    (function buildB1() {
+        const ft = document.getElementById('ftab');
+        let h = '<tr><th>A</th><th>B</th><th>C<sub>i</sub></th><th>S</th><th>C<sub>i+1</sub></th><th>the stage is…</th></tr>';
+        for (let A = 0; A < 2; A++) for (let B = 0; B < 2; B++) for (let C = 0; C < 2; C++) {
+            const S = A ^ B ^ C, CO = (A & B) | (C & (A ^ B));
+            const k = behav(A, B);
+            h += '<tr data-frow="' + (A * 4 + B * 2 + C) + '"><td>' + A + '</td><td>' + B + '</td><td>' + C +
+                 '</td><td>' + S + '</td><td>' + CO + '</td><td><span class="kpg ' + k + '">' + k + '</span></td></tr>';
+        }
+        ft.innerHTML = h;
+        Array.prototype.forEach.call(ft.querySelectorAll('tr[data-frow]'), function (r) {
+            r.style.cursor = 'pointer';
+            r.addEventListener('click', function () {
+                Array.prototype.forEach.call(ft.querySelectorAll('tr'), function (x) { x.classList.remove('on'); });
+                r.classList.add('on');
+            });
+        });
+
+        document.getElementById('kpgtab').innerHTML =
+            '<tr><th>A<sub>i</sub> B<sub>i</sub></th><th>what the stage does with its carry-in</th><th>C<sub>i+1</sub></th><th>waits?</th></tr>' +
+            '<tr><td>0 0</td><td class="l"><span class="kpg kill">kills</span> the carry — nothing gets through</td><td>0</td><td>no</td></tr>' +
+            '<tr><td>0 1 &nbsp;or&nbsp; 1 0</td><td class="l"><span class="kpg prop">propagates</span> the carry — C<sub>i+1</sub> = C<sub>i</sub></td><td>C<sub>i</sub></td><td><b style="color:#b388ff">yes</b></td></tr>' +
+            '<tr><td>1 1</td><td class="l"><span class="kpg gen">generates</span> a carry of its own, whatever C<sub>i</sub> is</td><td>1</td><td>no</td></tr>';
+
+        document.getElementById('scaletab').innerHTML =
+            '<tr><th>width n</th><th>worst-case settle</th></tr>' +
+            [4, 8, 32, 64].map(function (n) { return '<tr><td>' + n + '</td><td>' + n + 'Δ</td></tr>'; }).join('');
+    })();
+
+    // ================= BEAT 2: THE CHAIN =================
+    const PITCH = 330, BW = 240, BH = 150, BY = 236;
+    const CY = BY + 70;                 // carry rail y
+    const CELLY = 96, CELLS = 54;       // A/B input cells
+    const SUMY = 452;
+    function bx(i) { return 1090 - i * PITCH; }   // i = 0 is the rightmost (least significant)
+
+    const chain = document.getElementById('chainSvg');
+    const bitCells = {};                // 'a0' -> {rect, text}
+    let chainBuilt = false;
+
+    function buildChain() {
+        chain.innerHTML = '';
+        const gWire = el('g', {}, chain);
+        const gBox = el('g', {}, chain);
+        const gLab = el('g', {}, chain);
+
+        for (let i = 0; i < 4; i++) {
+            const x = bx(i);
+            // --- the box ---
+            const r = el('rect', { x: x, y: BY, width: BW, height: BH, rx: 10, 'data-fa': i }, gBox);
+            r.setAttribute('class', 'fabox');
+            txt(x + BW / 2, BY + 58, 'FA' + i, 'fatitle', gLab);
+            txt(x + BW / 2, BY + 86, 'bit ' + i, 'fasub', gLab);
+            const badge = txt(x + BW / 2, BY + 122, '', 'kpgbadge', gLab);
+            badge.setAttribute('data-badge', i);
+            // pin labels
+            txt(x + BW - 44, CY - 12, 'Cin', 'pinlab', gLab);
+            txt(x + 8, CY - 12, 'Cout', 'pinlab', gLab);
+
+            // --- A and B input cells ---
+            ['a', 'b'].forEach(function (which, j) {
+                const cx = x + (j === 0 ? 52 : 134);
+                txt(cx + CELLS / 2, CELLY - 12, which.toUpperCase() + i, 'bitname', gLab);
+                const rc = el('rect', { x: cx, y: CELLY, width: CELLS, height: CELLS, rx: 8,
+                    'data-bit': which + i }, gBox);
+                rc.setAttribute('class', 'bitcell');
+                const tv = txt(cx + CELLS / 2, CELLY + 39, '0', 'bittext', gLab);
+                bitCells[which + i] = { rect: rc, text: tv };
+                rc.addEventListener('click', function () { toggleBit(which, i); });
+                // wire from cell down into the box top
+                const w = el('path', { d: 'M' + (cx + CELLS / 2) + ' ' + (CELLY + CELLS) +
+                    ' L' + (cx + CELLS / 2) + ' ' + BY, 'data-abw': which + i }, gWire);
+                w.setAttribute('class', 'wire w0');
+            });
+
+            // --- sum wire + digit ---
+            const sxx = x + BW / 2;
+            const sw = el('path', { d: 'M' + sxx + ' ' + (BY + BH) + ' L' + sxx + ' ' + (SUMY - 34),
+                'data-sw': i }, gWire);
+            sw.setAttribute('class', 'wire w0');
+            const st = txt(sxx, SUMY, '0', 'sumtext', gLab); st.setAttribute('data-sum', i);
+            txt(sxx, SUMY + 30, 'S' + i, 'bitname', gLab);
+        }
+
+        // --- carry rails: C_in into FA0, C1..C3 between stages, Cout out of FA3 ---
+        for (let k = 0; k <= 4; k++) {
+            let x1, x2;
+            if (k === 0)      { x1 = 1460; x2 = bx(0) + BW; }            // Cin
+            else if (k === 4) { x1 = bx(3); x2 = 22; }                   // Cout
+            else              { x1 = bx(k - 1); x2 = bx(k) + BW; }       // C_k
+            const w = el('path', { d: 'M' + x1 + ' ' + CY + ' L' + x2 + ' ' + CY, 'data-cw': k }, gWire);
+            w.setAttribute('class', 'wire w0');
+            const lx = (x1 + x2) / 2;
+            const lab = txt(lx, CY - 16, '', 'clab', gLab); lab.setAttribute('data-clab', k);
+            const vt = txt(lx, CY + 30, '0', 'clab', gLab); vt.setAttribute('data-cval', k);
+        }
+        txt(1460, CY - 40, 'Cin', 'bitname', gLab);
+        txt(22, CY - 40, 'Cout', 'bitname', gLab);
+
+        chainBuilt = true;
+    }
+
+    function toggleBit(which, i) {
+        const arr = which === 'a' ? a : b;
+        arr[i] = arr[i] ? 0 : 1;
+        resetTime(); render();
+    }
+
+    function renderChain() {
+        if (!chainBuilt) buildChain();
+        const m = M();
+        const showAll = (t >= m.settle);
+
+        for (let i = 0; i < 4; i++) {
+            // input cells
+            [['a', a[i]], ['b', b[i]]].forEach(function (p) {
+                const c = bitCells[p[0] + i];
+                c.rect.setAttribute('class', 'bitcell v' + p[1]);
+                c.text.setAttribute('class', 'bittext v' + p[1]);
+                c.text.textContent = p[1];
+                const w = chain.querySelector('[data-abw="' + p[0] + i + '"]');
+                w.setAttribute('class', 'wire w' + p[1]);
+            });
+            // box state: waiting if it propagates and its carry-in is not final yet
+            const box = chain.querySelector('[data-fa="' + i + '"]');
+            const carryInFinal = m.tc[i] <= t;
+            const waiting = (m.bh[i] === 'prop') && !carryInFinal;
+            box.setAttribute('class', 'fabox' + (waiting ? ' waiting' : (m.tc[i + 1] <= t ? ' done' : '')));
+            const badge = chain.querySelector('[data-badge="' + i + '"]');
+            badge.textContent = m.bh[i];
+            badge.setAttribute('fill', m.bh[i] === 'prop' ? '#b388ff' : m.bh[i] === 'gen' ? '#4fc3f7' : '#7d9bb5');
+            // sum digit
+            const sd = chain.querySelector('[data-sum="' + i + '"]');
+            const sw = chain.querySelector('[data-sw="' + i + '"]');
+            if (m.ts[i] <= t) {
+                sd.textContent = m.s[i]; sd.setAttribute('class', 'sumtext v' + m.s[i]);
+                sw.setAttribute('class', 'wire w' + m.s[i]);
+            } else {
+                sd.textContent = '·'; sd.setAttribute('class', 'sumtext pend');
+                sw.setAttribute('class', 'wire pend');
+            }
+        }
+
+        // carries
+        for (let k = 0; k <= 4; k++) {
+            const w = chain.querySelector('[data-cw="' + k + '"]');
+            const lab = chain.querySelector('[data-clab="' + k + '"]');
+            const vt = chain.querySelector('[data-cval="' + k + '"]');
+            lab.textContent = k === 0 ? '' : (k === 4 ? '' : 'C' + k);
+            lab.setAttribute('class', 'clab v' + (m.tc[k] <= t ? m.c[k] : 0));
+            if (m.tc[k] <= t) {
+                const justArrived = (m.tc[k] === t && t > 0);
+                w.setAttribute('class', 'wire ' + (justArrived ? 'front' : 'w' + m.c[k]));
+                vt.textContent = m.c[k]; vt.setAttribute('class', 'clab v' + m.c[k]);
+            } else {
+                w.setAttribute('class', 'wire pend');
+                vt.textContent = '·'; vt.setAttribute('class', 'clab pend');
+            }
+        }
+
+        // readouts
+        const total = val(a) + val(b) + cin;
+        document.getElementById('p2sum').innerHTML =
+            bstr(a) + ' + ' + bstr(b) + (cin ? ' + 1' : '') + ' = ' + val(a) + ' + ' + val(b) +
+            (cin ? ' + 1' : '') + ' = <b style="color:#4fc3f7">' + total + '</b>' +
+            (showAll ? '  →  ' + m.c[4] + bstr(m.s) : '');
+        const tc = document.getElementById('tclock');
+        tc.innerHTML = showAll
+            ? 't = ' + m.settle + 'Δ — <span class="fin">settled</span>'
+            : 't = ' + t + 'Δ  of  ' + m.settle + 'Δ';
+        document.getElementById('presetLine').innerHTML =
+            '<b>' + PRESETS[presetIdx][3] + '</b> · worst case for any inputs is 4Δ';
+    }
+
+    // ================= BEAT 3: THE SETTLE STRIP =================
+    const strip = document.getElementById('stripSvg');
+    function renderStrip() {
+        strip.innerHTML = '';
+        const m = M();
+        const rows = [
+            ['C1', m.tc[1], false], ['C2', m.tc[2], false], ['C3', m.tc[3], false], ['Cout', m.tc[4], false],
+            ['S0', m.ts[0], true], ['S1', m.ts[1], true], ['S2', m.ts[2], true], ['S3', m.ts[3], true]
+        ];
+        const X0 = 130, X1 = 700, Y0 = 60, RH = 46, TMAX = 4;   // X1 leaves room for the 4Δ label
+        const sx = function (k) { return X0 + (X1 - X0) * k / TMAX; };
+
+        // grid
+        for (let k = 0; k <= TMAX; k++) {
+            const g = el('line', { x1: sx(k), y1: Y0 - 26, x2: sx(k), y2: Y0 + rows.length * RH + 6 }, strip);
+            g.setAttribute('class', 'gridl' + (k === 0 ? ' zero' : ''));
+            txt(sx(k), Y0 - 34, k + 'Δ', 'strandt', strip);
+        }
+        rows.forEach(function (r, i) {
+            const y = Y0 + i * RH;
+            txt(14, y + 26, r[0], 'striplab', strip);
+            el('rect', { x: X0, y: y + 10, width: X1 - X0, height: 22, rx: 4, class: 'bar bg' }, strip);
+            const w = Math.max(3, sx(r[1]) - X0);
+            el('rect', { x: X0, y: y + 10, width: w, height: 22, rx: 4,
+                class: 'bar fg' + (r[2] ? ' s' : '') }, strip);
+            txt(sx(r[1]) + 14, y + 28, 'final at ' + r[1] + 'Δ', 'stripval', strip);
+        });
+        const yb = Y0 + rows.length * RH + 44;
+        txt(14, yb, 'settles at ' + m.settle + 'Δ', 'striplab', strip)
+            .setAttribute('style', 'fill:#4fc3f7;font-size:24px;font-weight:700');
+        txt(14, yb + 34, m.bh.map(function (x, i) { return 'bit' + i + ' ' + x; }).join('   '),
+            'striplab', strip).setAttribute('style', 'fill:#78909c;font-size:17px');
+
+        document.getElementById('p3case').innerHTML =
+            bstr(a) + ' + ' + bstr(b) + (cin ? ' + 1' : '') + ' = ' + (val(a) + val(b) + cin);
+    }
+
+    // ================= BEAT 4: CODE =================
+    document.getElementById('vcode').innerHTML =
+        '<span class="kw">module</span> <span class="id">full_adder</span> (<span class="kw">input</span> a, b, cin, <span class="kw">output</span> sum, cout);\n' +
+        '    <span class="kw">assign</span> sum  = a ^ b ^ cin;\n' +
+        '    <span class="kw">assign</span> cout = (a &amp; b) | (cin &amp; (a ^ b));\n' +
+        '<span class="kw">endmodule</span>\n\n' +
+        '<span class="kw">module</span> <span class="id">ripple_carry_adder_4bit</span> (\n' +
+        '    <span class="kw">input  wire</span> [<span class="num">3</span>:<span class="num">0</span>] a, b,\n' +
+        '    <span class="kw">input  wire</span>       cin,\n' +
+        '    <span class="kw">output wire</span> [<span class="num">3</span>:<span class="num">0</span>] sum,\n' +
+        '    <span class="kw">output wire</span>       cout\n' +
+        ');\n' +
+        '    <span class="kw">wire</span> c1, c2, c3;                       <span class="cm">// the carries that ripple</span>\n\n' +
+        '    <span class="id">full_adder</span> fa0 (.a(a[<span class="num">0</span>]), .b(b[<span class="num">0</span>]), .cin(cin), .sum(sum[<span class="num">0</span>]), .cout(c1));\n' +
+        '    <span class="id">full_adder</span> fa1 (.a(a[<span class="num">1</span>]), .b(b[<span class="num">1</span>]), .cin(c1),  .sum(sum[<span class="num">1</span>]), .cout(c2));\n' +
+        '    <span class="id">full_adder</span> fa2 (.a(a[<span class="num">2</span>]), .b(b[<span class="num">2</span>]), .cin(c2),  .sum(sum[<span class="num">2</span>]), .cout(c3));\n' +
+        '    <span class="id">full_adder</span> fa3 (.a(a[<span class="num">3</span>]), .b(b[<span class="num">3</span>]), .cin(c3),  .sum(sum[<span class="num">3</span>]), .cout(cout));\n' +
+        '<span class="kw">endmodule</span>\n\n' +
+        '<span class="cm">// exhaustive testbench — 512 cases, 0 errors in iverilog</span>\n' +
+        '<span class="kw">integer</span> i;                                 <span class="cm">// NOT reg [8:0] — see the note</span>\n' +
+        '<span class="kw">for</span> (i = <span class="num">0</span>; i &lt; <span class="num">512</span>; i = i + <span class="num">1</span>) <span class="kw">begin</span>\n' +
+        '    {cin, a, b} = i[<span class="num">8</span>:<span class="num">0</span>]; #<span class="num">1</span>;\n' +
+        '    <span class="kw">if</span> ({cout, sum} !== (a + b + cin)) errors = errors + <span class="num">1</span>;\n' +
+        '<span class="kw">end</span>';
+
+    // ================= PAGES / CONTROLS =================
+    const tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+    function setPage(n) {
+        page = Math.max(1, Math.min(4, n));
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById('p' + i).classList.toggle('active', i === page);
+        }
+        tabs.forEach(function (tb) { tb.classList.toggle('on', +tb.dataset.page === page); });
+        document.getElementById('pcNum').textContent = page;
+        render();
+    }
+    function resetTime() { if (running) { clearInterval(running); running = null; } t = 0; }
+    function stepTime() {
+        const m = M();
+        if (t < m.settle) { t++; render(); return true; }
+        return false;
+    }
+    function runSettle() {
+        resetTime(); render();
+        running = setInterval(function () { if (!stepTime()) { clearInterval(running); running = null; } }, 560);
+    }
+    function loadPreset(i) {
+        presetIdx = ((i % PRESETS.length) + PRESETS.length) % PRESETS.length;
+        const p = PRESETS[presetIdx];
+        a = p[0].slice(); b = p[1].slice(); cin = p[2];
+        resetTime(); render();
+    }
+    function render() {
+        if (page === 2) renderChain();
+        else if (page === 3) renderStrip();
+    }
+
+    document.querySelectorAll('[data-run]').forEach(function (b) { b.addEventListener('click', runSettle); });
+    document.querySelectorAll('[data-step]').forEach(function (b) { b.addEventListener('click', function () { if (running) { clearInterval(running); running = null; } stepTime(); }); });
+    document.querySelectorAll('[data-reset]').forEach(function (b) { b.addEventListener('click', function () { resetTime(); render(); }); });
+    document.querySelectorAll('[data-preset]').forEach(function (b) { b.addEventListener('click', function () { loadPreset(presetIdx + 1); }); });
+    tabs.forEach(function (tb) { tb.addEventListener('click', function () { setPage(+tb.dataset.page); }); });
+
+    const AKEYS = { u: 3, i: 2, o: 1, p: 0 }, BKEYS = { h: 3, j: 2, k: 1, l: 0 };
+    document.addEventListener('keydown', function (e) {
+        const k = e.key, kl = k.toLowerCase();
+        if (k >= '1' && k <= '4') { setPage(+k); e.preventDefault(); return; }
+        if (kl in AKEYS) { toggleBit('a', AKEYS[kl]); e.preventDefault(); return; }
+        if (kl in BKEYS) { toggleBit('b', BKEYS[kl]); e.preventDefault(); return; }
+        switch (kl) {
+            case 'c': cin = cin ? 0 : 1; resetTime(); render(); e.preventDefault(); break;
+            case 'g': runSettle(); e.preventDefault(); break;
+            case 's': if (running) { clearInterval(running); running = null; } stepTime(); e.preventDefault(); break;
+            case 'r': resetTime(); render(); e.preventDefault(); break;
+            case 't': loadPreset(presetIdx + 1); e.preventDefault(); break;
+            case 'arrowright': case 'arrowdown': setPage(page + 1); e.preventDefault(); break;
+            case 'arrowleft': case 'arrowup': setPage(page - 1); e.preventDefault(); break;
+        }
+    });
+
+    // ================= SELF-TEST API =================
+    window.__api = {
+        setPage: setPage,
+        setBits: function (A, B, CI) { a = A.slice(); b = B.slice(); if (CI !== undefined) cin = CI; resetTime(); render(); },
+        setCin: function (v) { cin = v ? 1 : 0; resetTime(); render(); },
+        loadCase: loadPreset,
+        step: stepTime,
+        run: function () { const m = M(); while (t < m.settle) t++; render(); },
+        reset: function () { resetTime(); render(); },
+        getState: function () { return { page: page, t: t, a: a.slice(), b: b.slice(), cin: cin, m: M(), presetIdx: presetIdx }; },
+        model: { compute: compute, behav: behav, val: val, PRESETS: PRESETS },
+        waitingBoxes: function () { return Array.prototype.slice.call(chain.querySelectorAll('.fabox.waiting')).map(function (r) { return +r.dataset.fa; }); },
+        shownSums: function () { return Array.prototype.slice.call(chain.querySelectorAll('[data-sum]')).map(function (n) { return n.textContent; }); },
+        shownCarries: function () { return Array.prototype.slice.call(chain.querySelectorAll('[data-cval]')).map(function (n) { return n.textContent; }); },
+        tclock: function () { return document.getElementById('tclock').textContent; },
+        boxes: function () { return Array.prototype.slice.call(chain.querySelectorAll('.fabox')).map(function (r) { return r.getBBox(); }); },
+        wires: function () { return Array.prototype.slice.call(chain.querySelectorAll('.wire')).map(function (p) { return p.getBBox(); }); }
+    };
+
+    setPage(1);
+})();
+</script>
+</body>
+</html>

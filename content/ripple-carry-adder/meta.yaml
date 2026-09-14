@@ -3,3 +3,9 @@ description: "Multi-bit addition using chained full adders"
 chapter: combinational-logic
 section: adders
 order: 30602
+
+graphics:
+  01-video.youtube:
+    caption: "Walking through the carry chain case by case — why the worst case is every stage propagating, and the Verilog that pins the ripple down."
+  02-interactive.html:
+    caption: "Toggle any input bit and step the settle one delay unit at a time: stages that must wait for their carry-in are outlined, and the counter reads the total."
