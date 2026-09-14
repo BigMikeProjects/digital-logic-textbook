@@ -29,6 +29,30 @@ function rehypeRewriteImagePaths(contentPath: string) {
   };
 }
 
+/**
+ * Rehype plugin to wrap every table in a horizontally scrollable div.
+ *
+ * Tables are sized to their content now, so most are narrower than the prose column — but a
+ * wide one (many columns, or long cells) must scroll inside its own box rather than pushing
+ * the page sideways on a narrow screen.
+ */
+function rehypeWrapTables() {
+  return (tree: Root) => {
+    visit(tree, 'element', (node: Element, index, parent) => {
+      if (node.tagName !== 'table' || !parent || index === undefined) return;
+      const p = parent as Element;
+      if (p.tagName === 'div' && (p.properties?.className as string[] | undefined)?.includes('table-wrap')) return;
+      const wrapper: Element = {
+        type: 'element',
+        tagName: 'div',
+        properties: { className: ['table-wrap'] },
+        children: [node],
+      };
+      p.children[index] = wrapper;
+    });
+  };
+}
+
 export async function renderMarkdown(content: string, contentPath?: string): Promise<string> {
   let processor = remark()
     .use(remarkGfm)
@@ -48,6 +72,7 @@ export async function renderMarkdown(content: string, contentPath?: string): Pro
   }
 
   const result = await processor
+    .use(rehypeWrapTables)
     .use(rehypeStringify)
     .process(content);
 
