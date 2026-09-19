@@ -499,14 +499,14 @@
           "published": true
         },
         {
-          "num": "3.5.3",
+          "num": "3.5.2",
           "title": "Decoders",
           "slug": "decoders",
           "type": "full",
           "published": true
         },
         {
-          "num": "3.5.4",
+          "num": "3.5.3",
           "title": "Encoders",
           "slug": "encoders",
           "type": "full",
@@ -520,28 +520,28 @@
       "weekday": "Fri",
       "items": [
         {
-          "num": "3.5.5",
+          "num": "3.5.4",
           "title": "Comparators",
           "slug": "comparators",
           "type": "full",
           "published": true
         },
         {
-          "num": "3.5.6",
+          "num": "3.5.5",
           "title": "Parity Circuits",
           "slug": "parity-circuits",
           "type": "full",
           "published": false
         },
         {
-          "num": "3.5.7",
+          "num": "3.5.6",
           "title": "BCD-to-Seven-Segment Decoder",
           "slug": "bcd-to-seven-segment",
           "type": "full",
           "published": false
         },
         {
-          "num": "3.5.8",
+          "num": "3.5.7",
           "title": "Tri-State Buffers",
           "slug": "tri-state-buffers",
           "type": "full",

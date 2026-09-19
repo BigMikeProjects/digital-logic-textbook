@@ -2,7 +2,7 @@ title: "Comparators"
 description: "Comparing two unsigned numbers to report greater-than, equal, or less-than — the MSB-first decision, the XNOR + AND-OR gate build, applications, and Verilog"
 chapter: combinational-logic
 section: building-block-circuits
-order: 30505
+order: 30504
 
 graphics:
   01-video.youtube:
