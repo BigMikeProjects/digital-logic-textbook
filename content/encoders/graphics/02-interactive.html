@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encoder — The Four-Beat Cadence</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 asserted/1 · amber #ffb74d code+V · violet #b388ff idiom/priority */
+
+    @keyframes dash { to { stroke-dashoffset: -48; } }
+    .flow { stroke-dasharray: 14 10; animation: dash 1s linear infinite; }
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- controls ---------- */
+    .ctlrow { display: flex; gap: 12px; align-items: center; }
+    .inpill { display: flex; align-items: center; gap: 9px; cursor: pointer; user-select: none;
+        border: 2px solid #6a5324; border-radius: 999px; padding: 7px 18px;
+        background: rgba(255,183,77,0.05); transition: all .16s ease; }
+    .inpill .ipn { color: #ffb74d; font-size: 19px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .inpill .ipv { color: #7d9bb5; font-size: 22px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .inpill.on { border-color: #4fc3f7; background: rgba(79,195,247,0.12); }
+    .inpill.on .ipv { color: #4fc3f7; }
+    .inpill.win { border-color: #b388ff; background: rgba(179,136,255,0.16); }
+    .inpill.sup { opacity: .42; }
+
+    /* a two-option segmented control: which mode is live is shown by which half is filled,
+       not by reading the label on a toggle and guessing whether it is state or action */
+    .modeseg { display: inline-flex; align-items: center; gap: 0; border: 2px solid #6a4fa0;
+        border-radius: 999px; padding: 3px; background: rgba(179,136,255,0.06); user-select: none; }
+    .modeseg .seg { cursor: pointer; border-radius: 999px; padding: 7px 22px; font-size: 18px;
+        font-weight: 700; letter-spacing: 1px; color: #7a6a99;
+        font-family: 'Consolas','Courier New',monospace; transition: all .15s ease; }
+    .modeseg .seg:hover { color: #cbb4ff; }
+    .modeseg .seg.on { background: #b388ff; color: #17111f; }
+    .modeseg .mc-label { color: #b388ff; font-size: 15px; font-weight: 700; letter-spacing: 1px;
+        padding: 0 14px 0 10px; }
+    .trapbtn { cursor: pointer; user-select: none; border: 2px solid #37506a;
+        border-radius: 999px; padding: 8px 20px; color: #90a4ae; font-size: 17px;
+        background: #0d1b2a; }
+    .trapbtn:hover { border-color: #4fc3f7; color: #cfd8dc; }
+
+    .modeseg-row { display: flex; justify-content: center; margin-top: 4px; }
+
+    /* ---------- page 1 ---------- */
+    #p1 { gap: 40px; align-items: center; }
+    .fn-left { flex: 0 0 42%; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+    .fn-left > svg { width: 500px; height: 320px; }
+    .fn-right { flex: 1; display: flex; flex-direction: column; gap: 18px; }
+    .codeout { display: flex; align-items: center; gap: 22px; }
+    .cbox { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .cbox .cn { font-size: 16px; color: #5c7189; font-family: 'Consolas','Courier New',monospace; }
+    .cbox .cv { width: 92px; height: 70px; border: 2px solid #37506a; border-radius: 10px;
+        background: #0d1b2a; display: flex; align-items: center; justify-content: center;
+        font-family: 'Consolas','Courier New',monospace; font-size: 32px; color: #55697c;
+        transition: all .2s ease; }
+    .cbox .cv.on { color: #0d1b2a; background: #ffb74d; border-color: #ffb74d; }
+    .cbox .cv.von { color: #0d1b2a; background: #4fc3f7; border-color: #4fc3f7; }
+    .fn-statement { font-size: 29px; color: #cfd8dc; line-height: 1.42; }
+    .fn-statement .ic { color: #4fc3f7; font-weight: 600; }
+    .fn-statement .io { color: #ffb74d; font-weight: 600; }
+    .btable { border-collapse: collapse; font-size: 23px; align-self: flex-start; }
+    .btable th, .btable td { border: 2px solid #37506a; padding: 7px 20px; text-align: center;
+        font-family: 'Consolas','Courier New',monospace; color: #e0e0e0; transition: background .2s; }
+    .btable th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; }
+    .btable th.amb { background: rgba(255,183,77,0.12); color: #ffb74d; }
+    .btable tr.horow td { background: rgba(179,136,255,0.24); color: #fff; }
+    .btable td.dc { color: #b388ff; }
+    .problems { display: flex; flex-direction: column; gap: 12px; }
+    .prob { border-left: 4px solid #b388ff; padding: 3px 0 3px 18px; font-size: 21px;
+        color: #90a4ae; line-height: 1.4; }
+    .prob b { color: #b388ff; } .prob .num { color: #cfd8dc; font-weight: 700; }
+    .ladder { display: flex; gap: 10px; }
+    .rung { border: 2px solid #37506a; border-radius: 10px; padding: 6px 14px;
+        font-family: 'Consolas','Courier New',monospace; font-size: 17px; color: #cfd8dc; }
+    .rung b { color: #ffb74d; }
+
+    /* ---------- page 2 ---------- */
+    #p2 { flex-direction: column; align-items: center; gap: 8px; }
+    .p2-top { display: flex; align-items: center; gap: 34px; }
+    .hw-expr { font-size: 21px; font-family: 'Consolas','Courier New',monospace; color: #cfd8dc; }
+    .hw-expr .op { color: #ffb74d; } .hw-expr .hd { color: #4fc3f7; }
+    .hw-expr .add { color: #b388ff; font-weight: 700; }
+    .sch-wrap { width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+    .sch-wrap svg { width: 100%; max-width: 1420px; height: 100%; max-height: 648px; }
+    .hw-note { font-size: 19px; color: #90a4ae; text-align: center; max-width: 1500px; }
+    .hw-note b { color: #4fc3f7; } .hw-note .bad { color: #ff8a65; font-weight: 700; }
+    .hw-note .vi { color: #b388ff; font-weight: 700; }
+    .schem .rail { transition: stroke .22s; }
+    .schem .rail.on { stroke: #4fc3f7; } .schem .rail.off { stroke: #7d9bb5; }
+    /* named-net labels on the mask gates — the wires they replace were untraceable */
+    .schem .ntag { transition: fill .22s; font-family: Consolas, monospace; }
+    .schem .ntag.on { fill: #4fc3f7; } .schem .ntag.off { fill: #7d9bb5; }
+    .schem .srcdot { transition: fill .22s; }
+    .schem .gate { transition: opacity .25s; }
+    .schem .dimmed { opacity: .09; }
+    .schem .pathlab { font-size: 15px; }
+
+    /* ---------- page 3 ---------- */
+    #p3 { flex-direction: column; align-items: center; gap: 16px; }
+    .apps { display: flex; gap: 20px; width: 100%; }
+    .app-card { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 24px 22px; display: flex; flex-direction: column; gap: 14px; min-height: 556px; }
+    .app-card svg { width: 76px; height: 76px; color: #4fc3f7; }
+    .app-title { font-size: 22px; font-weight: 700; color: #e0e0e0; }
+    .app-desc { font-size: 18px; color: #90a4ae; line-height: 1.45; }
+    .app-card.link { border-color: #6a4fa0; }
+    .app-card.link svg { color: #b388ff; }
+    .app-card .tie { font-size: 14px; color: #b388ff; letter-spacing: 1px;
+        text-transform: uppercase; font-weight: 700; }
+    .trip { display: flex; align-items: center; gap: 18px; border: 2px solid #6a4fa0;
+        border-radius: 16px; background: rgba(179,136,255,0.06); padding: 14px 26px; }
+    .trip .tl { color: #b388ff; font-size: 17px; font-weight: 700; letter-spacing: 1px;
+        text-transform: uppercase; flex-shrink: 0; }
+    .trip svg { height: 180px; width: 900px; }
+    .trip .tnote { font-size: 17px; color: #90a4ae; line-height: 1.4; }
+
+    /* ---------- page 4 ---------- */
+    #p4 { flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+    .codes { display: flex; gap: 26px; align-items: flex-start; }
+    .code-card { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+    .code-label { font-size: 20px; color: #90a4ae; font-weight: 600; }
+    .code-label b { color: #4fc3f7; } .code-label .v { color: #b388ff; }
+    .code { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        padding: 14px 24px; font-family: 'Consolas','Courier New',monospace;
+        font-size: 19px; line-height: 1.4; color: #cfd8dc; white-space: pre; }
+    .code .kw { color: #4fc3f7; } .code .op { color: #ffb74d; }
+    .code .cm { color: #607d8b; } .code .lit { color: #b388ff; }
+    .gotchas { display: flex; flex-direction: column; gap: 9px; width: 1560px; }
+    .gotcha { display: flex; align-items: center; gap: 16px;
+        border: 2px solid #6a5324; border-radius: 12px; background: rgba(255,183,77,0.07);
+        padding: 9px 22px; }
+    .gotcha .g-bang { color: #ffb74d; font-size: 26px; font-weight: 700; flex-shrink: 0; }
+    .gotcha .g-txt { font-size: 17px; color: #cfd8dc; line-height: 1.4; }
+    .gotcha .g-txt code { font-family: 'Consolas','Courier New',monospace; color: #ffb74d; }
+    .idiom-tag { color: #b388ff; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 7px 24px; font-size: 21px; font-weight: 600; background: rgba(179,136,255,0.08); }
+    .idiom-tag .mono { font-family: 'Consolas','Courier New',monospace; color: #cbb4ff; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 8px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.violet { color: #b388ff; border-color: #6a4fa0; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== persistent header ===== -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="96" y="12" width="66" height="80" rx="6"/>
+                <line x1="56" y1="24" x2="96" y2="24"/>
+                <line x1="56" y1="42" x2="96" y2="42"/>
+                <line x1="56" y1="60" x2="96" y2="60"/>
+                <line x1="56" y1="78" x2="96" y2="78"/>
+                <line x1="162" y1="34" x2="200" y2="34" stroke="#ffb74d"/>
+                <line x1="162" y1="56" x2="200" y2="56" stroke="#ffb74d"/>
+                <line x1="162" y1="78" x2="200" y2="78" stroke="#4fc3f7"/>
+                <g font-family="'Consolas',monospace" stroke="none">
+                    <text x="52" y="29" font-size="12" fill="#4fc3f7" text-anchor="end">I3</text>
+                    <text x="52" y="47" font-size="12" fill="#4fc3f7" text-anchor="end">I2</text>
+                    <text x="52" y="65" font-size="12" fill="#4fc3f7" text-anchor="end">I1</text>
+                    <text x="52" y="83" font-size="12" fill="#4fc3f7" text-anchor="end">I0</text>
+                    <text x="206" y="39" font-size="12" fill="#ffb74d">A1</text>
+                    <text x="206" y="61" font-size="12" fill="#ffb74d">A0</text>
+                    <text x="206" y="83" font-size="12" fill="#4fc3f7">V</text>
+                </g>
+                <text x="129" y="46" font-size="12" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">ENC</text>
+                <text x="129" y="66" font-size="12" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Consolas',monospace">4:2</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Encoder <span class="sub">&mdash; one line in, its number out</span></h1>
+            <div class="subtitle">The four-beat cadence &middot; 4-to-2 encoder as our running example &middot; the decoder's dual</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <!-- ===== tab strip ===== -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Functionality</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Hardware</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Applications</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Verilog</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- ============ PAGE 1 ============ -->
+        <div class="page" id="p1">
+            <div class="fn-left">
+                <svg id="sym1" viewBox="-40 -10 470 290" fill="none" stroke="#8fa8bd" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="130" y="30" width="120" height="200" rx="6" stroke="#cfd8dc"/>
+                    <line class="si si-3" x1="46" y1="66"  x2="130" y2="66"/>
+                    <line class="si si-2" x1="46" y1="112" x2="130" y2="112"/>
+                    <line class="si si-1" x1="46" y1="158" x2="130" y2="158"/>
+                    <line class="si si-0" x1="46" y1="204" x2="130" y2="204"/>
+                    <line class="so so-a1" x1="250" y1="80"  x2="330" y2="80"  stroke="#ffb74d"/>
+                    <line class="so so-a0" x1="250" y1="130" x2="330" y2="130" stroke="#ffb74d"/>
+                    <line class="so so-v"  x1="250" y1="190" x2="330" y2="190" stroke="#4fc3f7"/>
+                    <g font-family="Consolas, monospace" stroke="none">
+                        <text class="sil sil-3" x="38" y="73"  font-size="20" fill="#55697c" text-anchor="end">I3</text>
+                        <text class="sil sil-2" x="38" y="119" font-size="20" fill="#55697c" text-anchor="end">I2</text>
+                        <text class="sil sil-1" x="38" y="165" font-size="20" fill="#55697c" text-anchor="end">I1</text>
+                        <text class="sil sil-0" x="38" y="211" font-size="20" fill="#55697c" text-anchor="end">I0</text>
+                        <text x="342" y="87"  font-size="19" fill="#ffb74d">A1</text>
+                        <text x="342" y="137" font-size="19" fill="#ffb74d">A0</text>
+                        <text x="342" y="197" font-size="19" fill="#4fc3f7">V</text>
+                    </g>
+                    <text x="190" y="122" font-size="17" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif" letter-spacing="1">ENCODER</text>
+                    <text x="190" y="150" font-size="19" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="Consolas, monospace">4 : 2</text>
+                </svg>
+
+                <div class="ctlrow" id="inrow1"></div>
+
+                <div class="modeseg-row"><div class="modeseg" data-modeseg><span class="mc-label">MODE</span><span class="seg" data-mode="plain">PLAIN</span><span class="seg" data-mode="pri">PRIORITY</span></div></div>
+
+                <div class="codeout">
+                    <div class="cbox"><div class="cn">A1</div><div class="cv" data-out="a1">0</div></div>
+                    <div class="cbox"><div class="cn">A0</div><div class="cv" data-out="a0">0</div></div>
+                    <div class="cbox" style="margin-left:16px"><div class="cn">V</div><div class="cv" data-out="v">0</div></div>
+                </div>
+            </div>
+
+            <div class="fn-right">
+                <div class="fn-statement">An encoder is the decoder run backwards: an
+                    <span class="ic">asserted line</span> in, and out comes
+                    <span class="io">its number</span> as a binary code.</div>
+
+                <table class="btable">
+                    <tr><th>I3</th><th>I2</th><th>I1</th><th>I0</th><th class="amb">A1</th><th class="amb">A0</th><th class="amb">V</th></tr>
+                    <tr class="brow" data-row="1"><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td></tr>
+                    <tr class="brow" data-row="2"><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td><td>1</td></tr>
+                    <tr class="brow" data-row="4"><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td></tr>
+                    <tr class="brow" data-row="8"><td>1</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td></tr>
+                    <tr class="brow" data-row="0"><td>0</td><td>0</td><td>0</td><td>0</td><td class="dc">&times;</td><td class="dc">&times;</td><td>0</td></tr>
+                </table>
+
+                <div class="problems">
+                    <div class="prob"><span class="num">1.</span> Nothing asserted gives code
+                        <b>00</b> &mdash; <b>indistinguishable</b> from I0 being asserted. That is what
+                        the <b>valid</b> output V is for.</div>
+                    <div class="prob"><span class="num">2.</span> Two inputs asserted and the plain
+                        encoder gives a <b>third, wrong answer</b>. Try I2 and I1 together: it reports
+                        <b>3</b>, an input that is not even on.</div>
+                </div>
+
+                <div class="ladder">
+                    <div class="rung">4&rarr;2 &mdash; <b>2</b> out</div>
+                    <div class="rung">8&rarr;3 &mdash; <b>3</b> out</div>
+                    <div class="rung">16&rarr;4 &mdash; <b>4</b> out</div>
+                    <div class="rung" style="border-style:dashed;">2&#8319;&rarr;n</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 2 ============ -->
+        <div class="page" id="p2">
+            <div class="p2-top">
+                <div class="hw-expr" id="hwExpr"></div>
+                <div class="modeseg" data-modeseg><span class="mc-label">MODE</span><span class="seg" data-mode="plain">PLAIN</span><span class="seg" data-mode="pri">PRIORITY</span></div>
+                <div class="trapbtn" id="trapBtn">set I2 + I1</div>
+            </div>
+
+            <div class="sch-wrap">
+                <svg class="schem" id="schem2" viewBox="0 0 1240 700"></svg>
+            </div>
+            <div class="hw-note" id="hwNote"></div>
+        </div>
+
+        <!-- ============ PAGE 3 ============ -->
+        <div class="page" id="p3">
+            <div class="apps">
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="8" y="14" width="24" height="16" rx="3"/><rect x="8" y="40" width="24" height="16" rx="3"/>
+                        <rect x="8" y="66" width="24" height="16" rx="3"/>
+                        <path d="M32,22 L58,22"/><path d="M32,48 L58,48"/><path d="M32,74 L58,74"/>
+                        <rect x="58" y="12" width="30" height="72" rx="4"/>
+                        <path d="M66,34 L80,34 M66,48 L80,48 M66,62 L80,62"/>
+                    </svg>
+                    <div class="app-title">Interrupt arbitration</div>
+                    <div class="app-desc">Several devices raise a request at once. The priority encoder
+                        reports the number of the most important one, and <b>V</b> says whether there is
+                        any request at all. This is why priority exists.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="12" y="12" width="72" height="72" rx="6"/>
+                        <path d="M36,12 L36,84 M60,12 L60,84 M12,36 L84,36 M12,60 L84,60"/>
+                        <circle cx="48" cy="48" r="7" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <div class="app-title">Keypad scanning</div>
+                    <div class="app-desc">A pressed key pulls one line; the encoder turns it into a code.
+                        Two keys at once is not hypothetical here &mdash; it is the multiple-input problem,
+                        every day.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="8" y="34" width="80" height="28" rx="4"/>
+                        <path d="M24,34 L24,62 M40,34 L40,62 M56,34 L56,62 M72,34 L72,62"/>
+                        <path d="M48,20 L48,8 M40,16 L48,8 L56,16" stroke="currentColor"/>
+                        <text x="32" y="55" font-size="18" fill="currentColor" stroke="none" font-family="Consolas, monospace">1</text>
+                    </svg>
+                    <div class="app-title">Leading-one detection</div>
+                    <div class="app-desc">A priority encoder finds the position of the most significant 1
+                        in a word &mdash; the core of floating-point normalisation and
+                        count-leading-zeros.</div>
+                </div>
+                <div class="app-card link">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="8" y="20" width="26" height="56" rx="4"/>
+                        <rect x="62" y="20" width="26" height="56" rx="4"/>
+                        <path d="M34,34 L62,34 M34,48 L62,48 M34,62 L62,62"/>
+                        <path d="M20,12 L20,20 M76,76 L76,84"/>
+                    </svg>
+                    <div class="tie">ties back to the decoder</div>
+                    <div class="app-title">The round trip</div>
+                    <div class="app-desc">Feed a decoder's one-hot output straight into an encoder and the
+                        original code comes back out. Same wires, opposite direction.</div>
+                </div>
+            </div>
+
+            <div class="trip">
+                <div class="tl">decoder&nbsp;&rarr;&nbsp;encoder</div>
+                <svg id="tripSvg" viewBox="0 0 900 180" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <text x="4" y="96" font-size="18" fill="#ffb74d" stroke="none" font-family="Consolas, monospace">code</text>
+                    <line x1="58" y1="90" x2="118" y2="90" stroke="#4fc3f7" stroke-dasharray="14 10" class="flow"/>
+                    <rect x="118" y="20" width="92" height="140" rx="6" stroke="#cfd8dc"/>
+                    <text x="164" y="96" font-size="15" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">DECODER</text>
+                    <g id="tripLines"></g>
+                    <rect x="500" y="20" width="92" height="140" rx="6" stroke="#cfd8dc"/>
+                    <text x="546" y="96" font-size="15" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">ENCODER</text>
+                    <line x1="592" y1="90" x2="656" y2="90" stroke="#4fc3f7" stroke-dasharray="14 10" class="flow"/>
+                    <text id="tripOut" x="666" y="96" font-size="18" fill="#ffb74d" stroke="none" font-family="Consolas, monospace">00</text>
+                    <text x="355" y="176" font-size="15" fill="#5c7189" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">one-hot in between &mdash; the decoder's whole output is the encoder's whole input</text>
+                </svg>
+                <div class="tnote">Press <b style="color:#b388ff">C</b> to step the code. The one-hot line
+                    in the middle is the decoder's whole output and the encoder's whole input.</div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 4 ============ -->
+        <div class="page" id="p4">
+            <div class="idiom-tag">This block's Verilog idiom: <span class="mono">casez</span> &mdash; don't-care patterns, tested in order</div>
+            <div class="codes">
+                <div class="code-card">
+                    <div class="code-label">The <b>priority</b> encoder &mdash; <span class="v">casez</span>, and the branch order <i>is</i> the priority</div>
+<div class="code"><span class="kw">module</span> enc4to2_pri (<span class="kw">input</span> [3:0] i,
+                  <span class="kw">output reg</span> [1:0] a,
+                  <span class="kw">output reg</span> v);
+  <span class="kw">always</span> @(<span class="op">*</span>) <span class="kw">begin</span>
+    a <span class="op">=</span> <span class="lit">2'b00</span>; v <span class="op">=</span> <span class="lit">1'b0</span>;   <span class="cm">// defaults first</span>
+    <span class="kw">casez</span> (i)
+      <span class="lit">4'b1???</span>: <span class="kw">begin</span> a <span class="op">=</span> <span class="lit">2'd3</span>; v <span class="op">=</span> <span class="lit">1'b1</span>; <span class="kw">end</span>
+      <span class="lit">4'b01??</span>: <span class="kw">begin</span> a <span class="op">=</span> <span class="lit">2'd2</span>; v <span class="op">=</span> <span class="lit">1'b1</span>; <span class="kw">end</span>
+      <span class="lit">4'b001?</span>: <span class="kw">begin</span> a <span class="op">=</span> <span class="lit">2'd1</span>; v <span class="op">=</span> <span class="lit">1'b1</span>; <span class="kw">end</span>
+      <span class="lit">4'b0001</span>: <span class="kw">begin</span> a <span class="op">=</span> <span class="lit">2'd0</span>; v <span class="op">=</span> <span class="lit">1'b1</span>; <span class="kw">end</span>
+    <span class="kw">endcase</span>
+  <span class="kw">end</span>
+<span class="kw">endmodule</span></div>
+                </div>
+                <div class="code-card">
+                    <div class="code-label">The <b>plain</b> encoder &mdash; three OR gates, and that is all</div>
+<div class="code"><span class="kw">module</span> enc4to2 (<span class="kw">input</span> [3:0] i,
+                <span class="kw">output</span> [1:0] a,
+                <span class="kw">output</span> v);
+  <span class="kw">assign</span> a[1] <span class="op">=</span> i[3] <span class="op">|</span> i[2];
+  <span class="kw">assign</span> a[0] <span class="op">=</span> i[3] <span class="op">|</span> i[1];
+  <span class="kw">assign</span> v    <span class="op">=</span> i[3] <span class="op">|</span> i[2] <span class="op">|</span> i[1] <span class="op">|</span> i[0];
+<span class="kw">endmodule</span></div>
+                    <div class="code-label" style="margin-top:10px">Note <b>i[0]</b> appears in neither
+                        code equation &mdash; index 0 is <span class="mono" style="font-family:Consolas,monospace;color:#ffb74d">00</span>, so it
+                        contributes nothing but its presence in <b>V</b>.</div>
+                </div>
+            </div>
+            <div class="gotchas">
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    The <code>a = 2'b00; v = 1'b0;</code> defaults are what stop the all-zeros case from
+                    inferring a <b>latch</b> &mdash; the same bug as the decoder, and the most common
+                    Verilog error in this course.</div></div>
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    <code>?</code> is a don't-care <b>only</b> in <code>casez</code>. Write the same
+                    patterns under plain <code>case</code> and they match literally &mdash; the design
+                    silently stops working.</div></div>
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    <b>Branch order carries the priority.</b> Reorder those four lines and the priority
+                    reverses. Unlike a truth-table <code>case</code>, this code is order-dependent by
+                    design.</div></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k amber">A</span><span class="k amber">S</span><span class="k amber">D</span><span class="k amber">F</span> toggle I3&ndash;I0 (or click)
+            &middot; <span class="k violet">P</span> plain/priority
+            &middot; <span class="k">T</span> trap
+            &middot; <span class="k">C</span> round trip
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ PAGE STATE ============
+    const FIRST = 1, LAST = 4;
+    let page = 1;
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+
+    // ============ CIRCUIT STATE ============
+    // i[k] = input Ik.  Multiple inputs may be asserted at once -- that is the whole point.
+    const st = { i: [0,0,0,1], pri: true };   // index 0 of the array is I0
+    const ON = '#4fc3f7', OFF = '#7d9bb5', AMB = '#ffb74d', DIMTXT = '#55697c', VIO = '#b388ff';
+
+    const schem = document.getElementById('schem2');
+
+    /* ===== page 2 schematic — the priority encoder as the two stages texts draw =====
+       STAGE 1 (mask): keep only the highest asserted input, killing everything below it, so the
+                       bus between the stages is guaranteed ONE-HOT.
+                           y3 = I3
+                           y2 = I2·I3'
+                           y1 = I1·I2'·I3'
+                           y0 = I0·I1'·I2'·I3'
+       STAGE 2 (encode): the ordinary plain encoder, which is only ever correct because stage 1
+                       handed it a one-hot input.
+                           A1 = y3+y2   A0 = y3+y1   V = y3+y2+y1+y0
+       In PLAIN mode stage 1 is bypassed — that is the whole lesson: the plain encoder is not
+       wrong about one-hot inputs, it is just never given one.                                */
+    const SNS='http://www.w3.org/2000/svg';
+    const sel=(p,t,a)=>{const e=document.createElementNS(SNS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e;};
+    function sline(p,x1,y1,x2,y2,cls){ return sel(p,'line',{x1,y1,x2,y2,class:'rail '+(cls||'')}); }
+    function stxt(p,x,y,t,fill,size,anchor,fam){
+        const e=sel(p,'text',{x,y,fill,'font-size':size||17,'text-anchor':anchor||'start',
+            'font-family':fam||"'Segoe UI',sans-serif",stroke:'none'}); e.textContent=t; return e; }
+    // AND / OR bodies, inputs on the left edge
+    function andBody(p,x,cy,w,h){ const t=cy-h/2,b=cy+h/2;
+        sel(p,'path',{d:`M${x},${t} L${x+w-h/2},${t} A${h/2},${h/2} 0 0 1 ${x+w-h/2},${b} L${x},${b} Z`,
+            fill:'#0d1b2a',stroke:'#cfd8dc','stroke-width':2.6}); return x+w; }
+    function orBody(p,x,cy,w,h){ const t=cy-h/2,b=cy+h/2;
+        sel(p,'path',{d:`M${x},${t} Q${x+w*0.32},${cy} ${x},${b} Q${x+w*0.62},${b} ${x+w},${cy} `+
+            `Q${x+w*0.62},${t} ${x},${t} Z`,fill:'#0d1b2a',stroke:'#cfd8dc','stroke-width':2.6}); return x+w; }
+
+    const ROW = {3:110, 2:220, 1:350, 0:500};          // one row per input / per one-hot line
+    const GX=430, BUSX=650, ORX=800, OUTX=1090;
+
+    function buildSchem(){
+        schem.innerHTML='';
+        const gStage1=sel(schem,'g',{id:'gMask'}), gBus=sel(schem,'g',{}), gStage2=sel(schem,'g',{});
+
+        // stage banners
+        sel(schem,'rect',{x:250,y:8,width:400,height:34,rx:17,fill:'rgba(179,136,255,0.10)',stroke:'#6a4fa0','stroke-width':1.6});
+        stxt(schem,450,31,'STAGE 1 — MASK OFF THE LOWER INPUTS','#b388ff',17,'middle');
+        sel(schem,'rect',{x:760,y:8,width:360,height:34,rx:17,fill:'rgba(79,195,247,0.08)',stroke:'#37506a','stroke-width':1.6});
+        stxt(schem,940,31,'STAGE 2 — PLAIN ENCODER','#4fc3f7',17,'middle');
+
+        const MASK=[
+            {k:2, ins:[3],     h:64},
+            {k:1, ins:[3,2],   h:92},
+            {k:0, ins:[3,2,1], h:120},
+        ];
+
+        // Mask-gate inputs are shown BY NAME, not by wire (Mike, 9-19: "the wires to the AND
+        // gates are hard to trace — follow the convention of just labeling the inputs").
+        // Same name, same wire. The three vertical distribution rails and their fan of stubs
+        // are gone; each gate carries a short stub and the name of the signal on it.
+        const LBLX = GX-34, SRCX = 300;
+
+        // input rails + labels. A rail ends at its source dot well clear of the gate label
+        // column — put the dot at the label and the two collide (the I1 source dot sat on the
+        // y1 gate's "I3" and made it read I0). Only I3 carries on, because nothing masks it.
+        for (const k of [3,2,1,0]){
+            const y=ROW[k];
+            sline(schem,78,y,(k===3?GX:SRCX),y,'r-i'+k);
+            if (k!==3) sel(schem,'circle',{cx:SRCX,cy:y,r:5.5,
+                class:'srcdot jn jn-i'+k,fill:'#7d9bb5',stroke:'none'});
+            stxt(schem,70,y+7,'I'+k,'#7d9bb5',21,'end',"Consolas, monospace").classList.add('ilab','il-'+k);
+        }
+
+        // ---- stage 1 ----
+        // y3 needs no gate: the top input is never masked by anything
+        sline(gStage1,GX,ROW[3],BUSX,ROW[3],'r-y3');
+        stxt(gStage1,GX+30,ROW[3]+34,'I3 is never masked — nothing outranks it','#5c7189',15);
+        MASK.forEach(({k,ins,h})=>{
+            const cy=ROW[k], gw=100, out=andBody(gStage1,GX,cy,gw,h);
+            const n=ins.length+1, step=h/(n+1);
+            const yTop=cy-h/2;
+            // own (un-bubbled) input on top — a short stub with the signal's name beside it
+            const yOwn = yTop+step;
+            sline(gStage1,GX-26,yOwn,GX,yOwn,'r-i'+k);
+            stxt(gStage1,LBLX-4,yOwn+6,'I'+k,'#7d9bb5',18,'end',"Consolas, monospace")
+                .classList.add('ntag','r-i'+k);
+            // bubbled inputs: the same, one per higher-priority signal
+            ins.forEach((h2,idx)=>{
+                const yy=yTop+step*(idx+2);
+                sel(gStage1,'circle',{cx:GX-7,cy:yy,r:6.5,fill:'#0d1b2a',stroke:'#cfd8dc','stroke-width':2.4});
+                sline(gStage1,GX-26,yy,GX-14,yy,'r-i'+h2);
+                stxt(gStage1,LBLX-4,yy+6,'I'+h2,'#7d9bb5',18,'end',"Consolas, monospace")
+                    .classList.add('ntag','r-i'+h2);
+            });
+            sline(gStage1,out,cy,BUSX,cy,'r-y'+k);
+        });
+        stxt(gStage1,GX-52,ROW[0]+86,'a bubble means "…and this higher input is NOT on"','#5c7189',15);
+
+        // ---- the one-hot bus between the stages ----
+        for (const k of [3,2,1,0]){
+            sel(gBus,'circle',{cx:BUSX,cy:ROW[k],r:9,class:'busdot bd-'+k,fill:'#0d1b2a',stroke:'#7d9bb5','stroke-width':2.5});
+            stxt(gBus,BUSX,ROW[k]-18,'y'+k,'#90a4ae',17,'middle',"Consolas, monospace").classList.add('buslab','bl-'+k);
+        }
+        sel(gBus,'rect',{x:BUSX-46,y:ROW[3]-52,width:92,height:ROW[0]-ROW[3]+94,rx:14,
+            fill:'none',stroke:'#37506a','stroke-width':1.6,'stroke-dasharray':'6 6'});
+        stxt(gBus,BUSX,ROW[0]+68,'','#b388ff',17,'middle').setAttribute('id','busBadge');
+
+        // ---- stage 2: the plain encoder, fed by the bus ----
+        const BVX={3:690,2:712,1:734,0:756};
+        for (const k of [3,2,1,0]) sline(gStage2,BUSX,ROW[k],BVX[k],ROW[k],'r-y'+k);
+        const OUT=[
+            {id:'a1', cy:150, srcs:[3,2],       lab:'A1', col:'#ffb74d'},
+            {id:'a0', cy:330, srcs:[3,1],       lab:'A0', col:'#ffb74d'},
+            {id:'v',  cy:520, srcs:[3,2,1,0],   lab:'V',  col:'#4fc3f7'},
+        ];
+        OUT.forEach(({id,cy,srcs,lab,col})=>{
+            const h=28+srcs.length*22, ow=110, out=orBody(gStage2,ORX,cy,ow,h);
+            const step=h/(srcs.length+1), yTop=cy-h/2;
+            srcs.forEach((k,idx)=>{
+                const yy=yTop+step*(idx+1);
+                sline(gStage2,BVX[k],ROW[k],BVX[k],yy,'r-y'+k);
+                sline(gStage2,BVX[k],yy,ORX+6,yy,'r-y'+k);
+                sel(gStage2,'circle',{cx:BVX[k],cy:ROW[k],r:5,class:'jn jn-y'+k,fill:'#7d9bb5',stroke:'none'});
+            });
+            sline(gStage2,out,cy,OUTX,cy,'r-'+id);
+            stxt(gStage2,OUTX+12,cy+8,lab+' = 0',col,23,'start',"Consolas, monospace").setAttribute('id','o'+lab);
+        });
+
+        // bypass rail used only in PLAIN mode: inputs go straight to the bus, unmasked
+        const gBy=sel(schem,'g',{id:'gBypass'});
+        for (const k of [3,2,1,0])
+            sline(gBy,SRCX,ROW[k],BUSX,ROW[k],'r-i'+k).setAttribute('stroke-dasharray','9 6');
+        stxt(gBy,SRCX,ROW[0]+118,'PLAIN: no mask stage — every asserted input reaches the encoder','#ff8a65',16);
+    }
+    buildSchem();
+
+    const sym1  = document.getElementById('sym1');
+    const hwNote = document.getElementById('hwNote');
+    const hwExpr = document.getElementById('hwExpr');
+
+    // The two circuits, exactly as verified with iverilog:
+    //   plain:    a1 = i3|i2,  a0 = i3|i1,            v = i3|i2|i1|i0
+    //   priority: a1 = i3|i2,  a0 = i3|(i1 & ~i2),    v = i3|i2|i1|i0
+    function outputs() {
+        const [i0,i1,i2,i3] = st.i;
+        const a1 = (i3 | i2) & 1;
+        const a0 = st.pri ? ((i3 | (i1 & (1-i2))) & 1) : ((i3 | i1) & 1);
+        const v  = (i3 | i2 | i1 | i0) & 1;
+        return { a1, a0, v };
+    }
+    const highest = () => st.i[3] ? 3 : st.i[2] ? 2 : st.i[1] ? 1 : st.i[0] ? 0 : -1;
+    const count   = () => st.i.reduce((a,b)=>a+b, 0);
+
+    // ---- input pill controls (built once, shared markup on page 1) ----
+    const inrow = document.getElementById('inrow1');
+    [3,2,1,0].forEach(k => {
+        const d = document.createElement('div');
+        d.className = 'inpill'; d.dataset.in = k;
+        d.innerHTML = '<span class="ipn">I' + k + '</span><span class="ipv">0</span>';
+        d.addEventListener('click', () => { st.i[k] ^= 1; renderState(); });
+        inrow.appendChild(d);
+    });
+
+    document.querySelectorAll('[data-modeseg] .seg').forEach(b =>
+        b.addEventListener('click', () => { st.pri = (b.dataset.mode === 'pri'); renderState(); }));
+    document.getElementById('trapBtn').addEventListener('click', () => {
+        st.i = [0,1,1,0]; renderState();          // I2 + I1 both asserted
+    });
+
+    function renderState() {
+        const o = outputs(), hi = highest(), n = count();
+
+        // ---- input pills ----
+        document.querySelectorAll('.inpill').forEach(p => {
+            const k = +p.dataset.in, on = !!st.i[k];
+            p.classList.toggle('on', on);
+            p.querySelector('.ipv').textContent = on ? '1' : '0';
+            p.classList.toggle('win', st.pri && on && k === hi);
+            p.classList.toggle('sup', st.pri && on && k !== hi);
+        });
+
+        // ---- page 1: symbol, output boxes, table row ----
+        for (let k = 0; k < 4; k++) {
+            const on = !!st.i[k];
+            sym1.querySelector('.si-' + k).setAttribute('stroke', on ? ON : OFF);
+            sym1.querySelector('.sil-' + k).setAttribute('fill', on ? ON : DIMTXT);
+        }
+        sym1.querySelector('.so-a1').setAttribute('stroke', o.a1 ? AMB : OFF);
+        sym1.querySelector('.so-a0').setAttribute('stroke', o.a0 ? AMB : OFF);
+        sym1.querySelector('.so-v').setAttribute('stroke',  o.v  ? ON  : OFF);
+        const setBox = (name, val, cls) => {
+            const el = document.querySelector('.cv[data-out="' + name + '"]');
+            el.textContent = val;
+            el.classList.toggle('on',  cls === 'amb' && !!val);
+            el.classList.toggle('von', cls === 'cy'  && !!val);
+        };
+        setBox('a1', o.a1, 'amb'); setBox('a0', o.a0, 'amb'); setBox('v', o.v, 'cy');
+        const mask = st.i[3]*8 + st.i[2]*4 + st.i[1]*2 + st.i[0];
+        document.querySelectorAll('.brow').forEach(r =>
+            r.classList.toggle('horow', +r.dataset.row === mask));
+
+        // ---- page 2: equations ----
+        hwExpr.innerHTML = st.pri
+            ? '<span class="hd">A1</span>=I3<span class="op">+</span>I2 &nbsp; '
+            + '<span class="hd">A0</span>=I3<span class="op">+</span>I1<span class="add">&middot;I2&#8242;</span> &nbsp; '
+            + '<span class="hd">V</span>=I3<span class="op">+</span>I2<span class="op">+</span>I1<span class="op">+</span>I0'
+            : '<span class="hd">A1</span>=I3<span class="op">+</span>I2 &nbsp; '
+            + '<span class="hd">A0</span>=I3<span class="op">+</span>I1 &nbsp; '
+            + '<span class="hd">V</span>=I3<span class="op">+</span>I2<span class="op">+</span>I1<span class="op">+</span>I0';
+        document.querySelectorAll('[data-modeseg] .seg').forEach(b =>
+            b.classList.toggle('on', (b.dataset.mode === 'pri') === st.pri));
+
+        // ---- page 2: stage 1 masks, stage 2 encodes ----
+        // In PRIORITY the mask kills every line below the highest, so the bus is one-hot.
+        // In PLAIN the mask is bypassed and the bus is simply the raw inputs — which is exactly
+        // why two asserted inputs produce a third, wrong code.
+        const i = st.i;
+        const y = st.pri
+            ? { 3: i[3], 2: i[2] & (1-i[3]), 1: i[1] & (1-i[2]) & (1-i[3]),
+                0: i[0] & (1-i[1]) & (1-i[2]) & (1-i[3]) }
+            : { 3: i[3], 2: i[2], 1: i[1], 0: i[0] };
+        const railVal = { i3:i[3], i2:i[2], i1:i[1], i0:i[0],
+                          y3:y[3], y2:y[2], y1:y[1], y0:y[0],
+                          a1:o.a1, a0:o.a0, v:o.v };
+        Object.keys(railVal).forEach(k => {
+            const hot = !!railVal[k];
+            schem.querySelectorAll('.r-' + k).forEach(el => {
+                el.classList.toggle('on', hot); el.classList.toggle('off', !hot);
+            });
+        });
+        schem.querySelectorAll('.jn').forEach(c => {
+            const k = [...c.classList].find(x => x.startsWith('jn-')).slice(3);
+            c.setAttribute('fill', railVal[k] ? ON : OFF);
+        });
+        for (let k = 0; k < 4; k++) {
+            schem.querySelector('.il-' + k).setAttribute('fill', i[k] ? ON : OFF);
+            const dot = schem.querySelector('.bd-' + k), lab = schem.querySelector('.bl-' + k);
+            dot.setAttribute('fill', y[k] ? ON : '#0d1b2a');
+            dot.setAttribute('stroke', y[k] ? ON : OFF);
+            lab.setAttribute('fill', y[k] ? ON : '#90a4ae');
+        }
+        // the mask stage only exists in the priority circuit; the bypass only in the plain one
+        document.getElementById('gMask').classList.toggle('dimmed', !st.pri);
+        document.getElementById('gBypass').classList.toggle('dimmed', st.pri);
+
+        // is what reaches stage 2 actually one-hot?
+        const hot = y[3] + y[2] + y[1] + y[0];
+        const badge = document.getElementById('busBadge');
+        badge.textContent = hot > 1 ? 'NOT one-hot — ' + hot + ' lines reach the encoder'
+                          : hot === 1 ? 'one-hot ✓' : 'nothing asserted';
+        badge.setAttribute('fill', hot > 1 ? '#ff8a65' : hot === 1 ? '#b388ff' : '#5c7189');
+
+        const put = (id, label, val) => {
+            const el = document.getElementById(id);
+            el.textContent = label + ' = ' + val;
+            el.setAttribute('fill', val ? (label === 'V' ? ON : AMB) : DIMTXT);
+        };
+        put('oA1','A1',o.a1); put('oA0','A0',o.a0); put('oV','V',o.v);
+
+        // ---- flow animation on the live paths ----
+        schem.querySelectorAll('.flow').forEach(el => el.classList.remove('flow'));
+        Object.keys(railVal).forEach(k => {
+            if (!railVal[k]) return;
+            if (st.pri && k[0] === 'i') return;          // in priority the masked rails do the talking
+            schem.querySelectorAll('.r-' + k).forEach(el => {
+                if (el.tagName === 'line' || el.tagName === 'polyline' || el.tagName === 'path')
+                    el.classList.add('flow');
+            });
+        });
+
+        // ---- the caption does the teaching ----
+        const code = '' + o.a1 + o.a0;
+        if (n === 0) {
+            hwNote.innerHTML = 'Nothing is asserted. <b>V = 0</b>, and notice the code reads '
+                + '<b>00</b> &mdash; <span class="bad">exactly what I0 alone would give</span>. '
+                + 'The code cannot tell "input 0" from "nothing at all"; only V can.';
+        } else if (n === 1) {
+            hwNote.innerHTML = 'One input asserted &mdash; I' + hi + ' &mdash; so the code is <b>'
+                + code + '</b> = ' + hi + ', and <b>V = 1</b>. '
+                + 'With exactly one input on, the plain and priority circuits <b>agree</b>. '
+                + 'Assert a second one and they part company.';
+        } else if (st.pri) {
+            hwNote.innerHTML = n + ' inputs asserted. The priority circuit reports the '
+                + '<span class="vi">highest</span>, I' + hi + ', giving <b>' + code + '</b> = ' + hi
+                + '. The lower ones are suppressed &mdash; that is what the I2&#8242; term buys you.';
+        } else {
+            const val = parseInt(code, 2);
+            const bogus = !st.i[val];
+            hwNote.innerHTML = n + ' inputs asserted, and the plain circuit reports <b>' + code
+                + '</b> = ' + val + '. '
+                + (bogus ? '<span class="bad">Input ' + val + ' is not even asserted</span> &mdash; '
+                         + 'this is not an ambiguous pick between the two, it is a third, wrong answer. '
+                         : 'It happens to name an asserted input here &mdash; try I2 with I1. ')
+                + 'Switch to PRIORITY and watch it settle on I' + hi + '.';
+        }
+
+        renderTrip();
+    }
+
+    // ---- page 3: the decoder -> encoder round trip ----
+    let tripCode = 0;
+    function renderTrip() {
+        const g = document.getElementById('tripLines');
+        let s = '';
+        for (let k = 3; k >= 0; k--) {
+            const y = 48 + (3 - k) * 32, live = (k === tripCode);
+            s += '<line x1="210" y1="' + y + '" x2="500" y2="' + y + '" stroke="'
+               + (live ? ON : '#33465e') + '" stroke-width="' + (live ? 3.4 : 2)
+               + '"' + (live ? ' stroke-dasharray="14 10" class="flow"' : '') + '/>';
+            s += '<text x="352" y="' + (y - 10) + '" font-size="13" fill="'
+               + (live ? ON : '#4a6274') + '" stroke="none" text-anchor="middle"'
+               + ' font-family="Consolas, monospace">Y' + k + '</text>';
+        }
+        g.innerHTML = s;
+        document.getElementById('tripOut').textContent =
+            (tripCode >> 1) + '' + (tripCode & 1) + '  (=' + tripCode + ')';
+    }
+
+    // A S D F toggle I3 I2 I1 I0 -- left to right, matching the on-screen order. The digits
+    // are reserved for beat navigation so every graphic in the set behaves the same way.
+    const INKEY = { a: 3, s: 2, d: 1, f: 0 };
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '4') { setPage(+k); e.preventDefault(); return; }
+        const lower = k.toLowerCase();
+        if (lower in INKEY) { st.i[INKEY[lower]] ^= 1; renderState(); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 'p': case 'P': st.pri = !st.pri; renderState(); e.preventDefault(); break;
+            case 't': case 'T': st.i = [0,1,1,0]; renderState(); e.preventDefault(); break;
+            case 'c': case 'C': tripCode = (tripCode + 1) % 4; renderTrip(); e.preventDefault(); break;
+            case 'r': case 'R': st.i = [0,0,0,1]; st.pri = true; tripCode = 0;
+                                setPage(1); renderState(); e.preventDefault(); break;
+        }
+    });
+
+    render();
+    renderState();
+</script>
+</body>
+</html>

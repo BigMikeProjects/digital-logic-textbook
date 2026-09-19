@@ -510,7 +510,7 @@
           "title": "Encoders",
           "slug": "encoders",
           "type": "full",
-          "published": false
+          "published": true
         }
       ]
     },

@@ -1,0 +1,11 @@
+title: "Encoders"
+description: ""
+chapter: combinational-logic
+section: building-block-circuits
+order: 30504
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the encoder as the decoder run backwards — one asserted line in, its binary code out, why a valid output is needed, how two asserted inputs make a plain encoder report a line that is not even on, and the masking stage that fixes it"
+  02-interactive.html:
+    caption: "Interactive: the four-beat cadence for a 4-to-2 encoder — toggle plain against priority mode and watch the plain circuit give a meaningless answer when two lines are asserted, trace the two-stage mask-then-encode hardware, and read the casez Verilog where branch order carries the priority"
