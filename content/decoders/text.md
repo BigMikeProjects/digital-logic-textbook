@@ -73,9 +73,20 @@ shuts down the whole block.
 Each AND gate needs its address bits in a particular polarity: $Y_0$ wants both bits complemented,
 $Y_3$ wants both true, and the middle two want one of each. Rather than putting an inverter in front
 of each gate, the usual construction runs **true and complement rails** across the circuit — four
-vertical wires carrying $A_1$, $\bar{A_1}$, $A_0$ and $\bar{A_0}$, produced by just two inverters.
-Every AND gate then **taps the two rails it needs**. Reading the circuit becomes a matter of looking
-at which rails a gate touches: tap $\bar{A_1}$ and $\bar{A_0}$ and you are looking at $Y_0$.
+signals, $A_1$, $\bar{A_1}$, $A_0$ and $\bar{A_0}$, produced by just two inverters and made
+available to every gate.
+
+![A gate-level 2-to-4 decoder with enable. On the left, inputs A1, A0 and EN enter; two inverters
+produce A1-bar and A0-bar, giving five named signals. On the right, four AND gates each take three
+named inputs and drive one output: Y0 from A1-bar, A0-bar and EN; Y1 from A1-bar, A0 and EN; Y2 from
+A1, A0-bar and EN; Y3 from A1, A0 and EN. Each output is labeled with the minterm it
+forms.](./images/decoder-2to4-gates.svg)
+
+Reading the circuit is then a matter of reading each gate's inputs: a gate fed by $\bar{A_1}$,
+$\bar{A_0}$ and $EN$ is $Y_0$, and the enable appears on all four. The figure names each gate's
+inputs rather than drawing a wire from every rail to every gate — with four gates drawing on five
+signals, the traced version becomes a thicket of crossings that hides the very pattern you are
+trying to see.
 
 The cost scales the way the family table suggests. An $n$-to-$2^n$ decoder needs $2^n$ AND gates of
 $n+1$ inputs each, plus $n$ inverters for the complement rails.
