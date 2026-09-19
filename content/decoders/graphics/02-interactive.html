@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decoder — The Four-Beat Cadence</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 asserted/active · amber #ffb74d input code + EN · violet #b388ff idiom */
+
+    @keyframes dash { to { stroke-dashoffset: -48; } }
+    .flow { stroke-dasharray: 14 10; animation: dash 1s linear infinite; }
+
+    /* ---------- persistent header ---------- */
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    /* ---------- tab strip ---------- */
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    /* ---------- stage / pages ---------- */
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- CODE control widget ---------- */
+    .codectl { display: inline-flex; align-items: center; gap: 18px; cursor: pointer;
+        border: 2px solid #ffb74d; border-radius: 999px; padding: 9px 26px;
+        background: rgba(255,183,77,0.08); user-select: none; }
+    .codectl .cc-label { color: #ffb74d; font-size: 19px; font-weight: 700; letter-spacing: 1px; }
+    .codectl .cc-val { color: #cfd8dc; font-size: 22px; font-family: 'Consolas','Courier New',monospace; }
+    .codectl .cc-val b { color: #ffb74d; }
+    .codectl .cc-val b.dis { color: #7a6a45; }
+    .codectl .cc-hint { color: #8a7a52; font-size: 15px; }
+
+    /* ---------- PAGE 1 — functionality ---------- */
+    #p1 { gap: 44px; align-items: center; }
+    .fn-left { flex: 0 0 45%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .fn-right { flex: 1; display: flex; flex-direction: column; gap: 22px; }
+    .fn-left > svg { width: 470px; height: 312px; }  /* 312, not 300: the EN label baseline sits at y=292 and was being shaved by the viewBox edge */
+
+    .ocells { display: flex; gap: 14px; }
+    .ocell { width: 96px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .ocell .oname { font-size: 17px; color: #5c7189; font-family: 'Consolas','Courier New',monospace; }
+    .ocell .obox { width: 96px; height: 66px; border: 2px solid #37506a; border-radius: 10px;
+        background: #0d1b2a; display: flex; align-items: center; justify-content: center;
+        font-family: 'Consolas','Courier New',monospace; font-size: 32px; color: #55697c;
+        transition: all .22s ease; }
+    .ocell .obox.on { color: #0d1b2a; background: #4fc3f7; border-color: #4fc3f7; }
+
+    .fn-statement { font-size: 29px; color: #cfd8dc; line-height: 1.45; }
+    .fn-statement .ic { color: #ffb74d; font-weight: 600; }
+    .fn-statement .io { color: #4fc3f7; font-weight: 600; }
+    .btable { border-collapse: collapse; font-size: 23px; align-self: flex-start; }
+    .btable th, .btable td { border: 2px solid #37506a; padding: 7px 22px; text-align: center;
+        font-family: 'Consolas','Courier New',monospace; color: #e0e0e0; transition: background .2s; }
+    .btable th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; }
+    .btable th.amb { background: rgba(255,183,77,0.12); color: #ffb74d; }
+    .btable tr.horow td { background: rgba(79,195,247,0.22); color: #fff; }
+    .keyidea { border-left: 4px solid #4fc3f7; padding: 4px 0 4px 20px;
+        font-size: 23px; color: #90a4ae; line-height: 1.45; }
+    .keyidea b { color: #4fc3f7; }
+    .ladder { display: flex; gap: 12px; }
+    .rung { border: 2px solid #37506a; border-radius: 10px; padding: 7px 16px;
+        font-family: 'Consolas','Courier New',monospace; font-size: 18px; color: #cfd8dc; }
+    .rung b { color: #ffb74d; }
+
+    /* ---------- PAGE 2 — hardware ---------- */
+    #p2 { flex-direction: column; align-items: center; gap: 10px; }
+    .p2-top { display: flex; align-items: center; gap: 46px; }
+    .hw-expr { font-size: 24px; font-family: 'Consolas','Courier New',monospace; color: #cfd8dc; }
+    /* Boolean complement = overbar, never a prime. HTML gets it from text-decoration;
+       SVG has no such property, so .ovl tspans get a measured <line> drawn over them. */
+    .ovb { text-decoration: overline; }
+    .hw-expr .op { color: #ffb74d; }
+    .hw-expr .hd { color: #4fc3f7; }
+    .sch-wrap { width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+    .sch-wrap svg { width: 100%; max-width: 1300px; height: 100%; max-height: 606px; }
+    .hw-note { font-size: 19px; color: #90a4ae; text-align: center; }
+    .hw-note b { color: #4fc3f7; }
+
+    /* one AND per minterm — only the firing gate is at full strength */
+    .schem .gate { opacity: .22; transition: opacity .25s; }
+    .schem.k0 .g-0, .schem.k1 .g-1, .schem.k2 .g-2, .schem.k3 .g-3 { opacity: 1; }
+    /* rails carry a real logic value: bright = 1, dim = 0 (house rule) */
+    .schem .rail { transition: stroke .25s; }
+    .schem .rail.on  { stroke: #ffb74d; }
+    .schem .rail.off { stroke: #3d5266; }
+    .schem .rpill rect { fill: #0d1b2a; stroke: #37506a; stroke-width: 2;
+        transition: stroke .25s, fill .25s; }
+    .schem .rpill text { fill: #55697c; transition: fill .25s; }
+    .schem .obar { stroke-width: 2; stroke-linecap: butt; }
+    .schem .rpill .obar { stroke: #55697c; transition: stroke .25s; }
+    .schem .mint .obar { stroke: #5c7189; }
+    .schem .rpill.on rect { stroke: #ffb74d; fill: rgba(255,183,77,0.16); }
+    .schem .rpill.on text { fill: #ffb74d; }
+    .schem .rpill.on .obar { stroke: #ffb74d; }
+
+    /* ---------- PAGE 3 — applications ---------- */
+    #p3 { align-items: center; }
+    .apps { display: flex; gap: 24px; width: 100%; }
+    .app-card { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 28px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 500px; }
+    .app-card svg { width: 92px; height: 92px; color: #4fc3f7; }
+    .app-title { font-size: 25px; font-weight: 700; color: #e0e0e0; }
+    .app-desc { font-size: 20px; color: #90a4ae; line-height: 1.5; }
+    .app-card.link { border-color: #6a4fa0; }
+    .app-card.link svg { color: #b388ff; }
+    .app-card .tie { font-size: 16px; color: #b388ff; letter-spacing: 1px;
+        text-transform: uppercase; font-weight: 700; }
+
+    /* ---------- PAGE 4 — verilog ---------- */
+    #p4 { flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+    .code-card { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+    .code-label { font-size: 22px; color: #90a4ae; font-weight: 600; }
+    .code-label b { color: #4fc3f7; } .code-label .v { color: #b388ff; }
+    .code { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        padding: 16px 30px; font-family: 'Consolas','Courier New',monospace;
+        font-size: 22px; line-height: 1.42; color: #cfd8dc; min-width: 1160px; white-space: pre; }
+    .code .kw { color: #4fc3f7; } .code .op { color: #ffb74d; }
+    .code .cm { color: #607d8b; } .code .lit { color: #b388ff; }
+    .gotcha { display: flex; align-items: center; gap: 20px; min-width: 1160px;
+        border: 2px solid #6a5324; border-radius: 14px; background: rgba(255,183,77,0.07);
+        padding: 12px 26px; }
+    .gotcha .g-bang { color: #ffb74d; font-size: 32px; font-weight: 700; flex-shrink: 0; }
+    .gotcha .g-txt { font-size: 19px; color: #cfd8dc; line-height: 1.45; }
+    .gotcha .g-txt code { font-family: 'Consolas','Courier New',monospace; color: #ffb74d; }
+    .idiom-tag { color: #b388ff; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 8px 26px; font-size: 23px; font-weight: 600; background: rgba(179,136,255,0.08); }
+    .idiom-tag .mono { font-family: 'Consolas','Courier New',monospace; color: #cbb4ff; }
+
+    /* ---------- footer ---------- */
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 10px; height: 34px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- ===== persistent header (beat-0 anchor) ===== -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="96" y="12" width="66" height="80" rx="6"/>
+                <line x1="56" y1="38" x2="96" y2="38"/>
+                <line x1="56" y1="62" x2="96" y2="62"/>
+                <line x1="129" y1="92" x2="129" y2="100" stroke="#ffb74d"/>
+                <line x1="162" y1="26" x2="200" y2="26"/>
+                <line x1="162" y1="44" x2="200" y2="44"/>
+                <line x1="162" y1="62" x2="200" y2="62"/>
+                <line x1="162" y1="80" x2="200" y2="80"/>
+                <g font-family="'Consolas',monospace" stroke="none">
+                    <text x="52" y="44" font-size="15" fill="#ffb74d" text-anchor="end">A1</text>
+                    <text x="52" y="68" font-size="15" fill="#ffb74d" text-anchor="end">A0</text>
+                    <text x="129" y="102" font-size="12" fill="#ffb74d" text-anchor="middle">EN</text>
+                    <text x="206" y="31" font-size="13" fill="#4fc3f7">Y0</text>
+                    <text x="206" y="49" font-size="13" fill="#4fc3f7">Y1</text>
+                    <text x="206" y="67" font-size="13" fill="#4fc3f7">Y2</text>
+                    <text x="206" y="85" font-size="13" fill="#4fc3f7">Y3</text>
+                </g>
+                <text x="129" y="46" font-size="13" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">DEC</text>
+                <text x="129" y="66" font-size="13" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Consolas',monospace">2:4</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Decoder <span class="sub">&mdash; a code in, one line out</span></h1>
+            <div class="subtitle">The four-beat cadence &middot; 2-to-4 decoder with enable as our running example</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <!-- ===== tab strip ===== -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Functionality</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Hardware</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Applications</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Verilog</div></div>
+    </div>
+
+    <!-- ===== pages ===== -->
+    <div class="stage">
+
+        <!-- ============ PAGE 1 — FUNCTIONALITY ============ -->
+        <div class="page" id="p1">
+            <div class="fn-left">
+                <svg id="sym1" viewBox="-30 -10 400 312" fill="none" stroke="#8fa8bd" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="110" y="40" width="110" height="190" rx="6" stroke="#cfd8dc"/>
+                    <line class="sw-a1" x1="40" y1="95"  x2="110" y2="95"  stroke="#ffb74d"/>
+                    <line class="sw-a0" x1="40" y1="150" x2="110" y2="150" stroke="#ffb74d"/>
+                    <line class="sw-en" x1="165" y1="230" x2="165" y2="272" stroke="#ffb74d"/>
+                    <line class="sy sy-0" x1="220" y1="78"  x2="300" y2="78"/>
+                    <line class="sy sy-1" x1="220" y1="126" x2="300" y2="126"/>
+                    <line class="sy sy-2" x1="220" y1="174" x2="300" y2="174"/>
+                    <line class="sy sy-3" x1="220" y1="222" x2="300" y2="222"/>
+                    <g font-family="Consolas, monospace" stroke="none">
+                        <text x="32" y="102" font-size="21" fill="#ffb74d" text-anchor="end">A1</text>
+                        <text x="32" y="157" font-size="21" fill="#ffb74d" text-anchor="end">A0</text>
+                        <text x="165" y="292" font-size="19" fill="#ffb74d" text-anchor="middle">EN</text>
+                        <text class="sl sl-0" x="310" y="85"  font-size="20" fill="#55697c">Y0</text>
+                        <text class="sl sl-1" x="310" y="133" font-size="20" fill="#55697c">Y1</text>
+                        <text class="sl sl-2" x="310" y="181" font-size="20" fill="#55697c">Y2</text>
+                        <text class="sl sl-3" x="310" y="229" font-size="20" fill="#55697c">Y3</text>
+                    </g>
+                    <text x="165" y="128" font-size="18" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif" letter-spacing="1">DECODER</text>
+                    <text x="165" y="158" font-size="20" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="Consolas, monospace">2 : 4</text>
+                </svg>
+
+                <div class="codectl" data-codectl>
+                    <span class="cc-label">CODE</span>
+                    <span class="cc-val">EN=<b class="cc-en">1</b> &nbsp; A1A0=<b class="cc-a">00</b></span>
+                    <span class="cc-hint">click / press C</span>
+                </div>
+
+                <div class="ocells">
+                    <div class="ocell"><div class="oname">Y3</div><div class="obox" data-y="3">0</div></div>
+                    <div class="ocell"><div class="oname">Y2</div><div class="obox" data-y="2">0</div></div>
+                    <div class="ocell"><div class="oname">Y1</div><div class="obox" data-y="1">0</div></div>
+                    <div class="ocell"><div class="oname">Y0</div><div class="obox" data-y="0">1</div></div>
+                </div>
+            </div>
+
+            <div class="fn-right">
+                <div class="fn-statement">A decoder turns a <span class="ic">binary code</span> into a
+                    <span class="io">one-hot line</span> &mdash; n inputs drive 2<sup>n</sup> outputs, and
+                    exactly one of them is asserted.</div>
+
+                <table class="btable">
+                    <tr><th class="amb">EN</th><th class="amb">A1</th><th class="amb">A0</th>
+                        <th>Y3</th><th>Y2</th><th>Y1</th><th>Y0</th></tr>
+                    <tr class="brow" data-row="off"><td>0</td><td>&times;</td><td>&times;</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+                    <tr class="brow" data-row="0"><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td></tr>
+                    <tr class="brow" data-row="1"><td>1</td><td>0</td><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+                    <tr class="brow" data-row="2"><td>1</td><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+                    <tr class="brow" data-row="3"><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+                </table>
+
+                <div class="keyidea">Output Y&#7522; is <b>minterm m&#7522;</b>. A decoder generates
+                    <b>every minterm of its inputs</b> &mdash; which is why you can build any function
+                    out of one.</div>
+
+                <div class="ladder">
+                    <div class="rung">2&rarr;4 &mdash; <b>2</b> in</div>
+                    <div class="rung">3&rarr;8 &mdash; <b>3</b> in</div>
+                    <div class="rung">4&rarr;16 &mdash; <b>4</b> in</div>
+                    <div class="rung" style="border-style:dashed;">n&rarr;2&#8319;</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 2 — HARDWARE ============ -->
+        <div class="page" id="p2">
+            <div class="p2-top">
+                <div class="hw-expr">
+                    <span class="hd">Y0</span>=EN<span class="op">&middot;</span><span class="ovb">A1</span><span class="op">&middot;</span><span class="ovb">A0</span>
+                    &nbsp; <span class="hd">Y1</span>=EN<span class="op">&middot;</span><span class="ovb">A1</span><span class="op">&middot;</span>A0
+                    &nbsp; <span class="hd">Y2</span>=EN<span class="op">&middot;</span>A1<span class="op">&middot;</span><span class="ovb">A0</span>
+                    &nbsp; <span class="hd">Y3</span>=EN<span class="op">&middot;</span>A1<span class="op">&middot;</span>A0
+                </div>
+                <div class="codectl" data-codectl>
+                    <span class="cc-label">CODE</span>
+                    <span class="cc-val">EN=<b class="cc-en">1</b> &nbsp; A1A0=<b class="cc-a">00</b></span>
+                    <span class="cc-hint">click / press C</span>
+                </div>
+            </div>
+
+            <div class="sch-wrap">
+                <svg class="schem" id="schem2" viewBox="0 0 1120 920" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+
+                    <!-- section labels -->
+                    <g font-family="'Segoe UI',sans-serif" font-size="20" fill="#5c7189" stroke="none">
+                        <text x="60" y="60">true / complement rails</text>
+                        <text x="545" y="268">one AND gate per minterm</text>
+                    </g>
+                    <rect x="545" y="285" width="120" height="480" rx="12"
+                          fill="none" stroke="#33465e" stroke-width="2" stroke-dasharray="7 6"/>
+
+                    <!-- ===== input runs, inverters, and the five vertical rails =====
+                         Rail order left→right is A0 · A0' · A1 · A1' · EN, and each inverter sits directly
+                         on top of the complement rail it drives (pointing down), fed by its own input run
+                         continuing past its true rail's junction. Laid out this way no run passes through a
+                         gate body and no two nets cross before the AND taps. -->
+                    <line class="rail r-a1" x1="74" y1="130" x2="450" y2="130" stroke="#8fa8bd"/>
+                    <line class="rail r-a0" x1="74" y1="190" x2="330" y2="190" stroke="#8fa8bd"/>
+                    <line class="rail r-en" x1="74" y1="870" x2="510" y2="870" stroke="#8fa8bd"/>
+                    <g font-family="Consolas, monospace" font-size="22" fill="#ffb74d" stroke="none" text-anchor="end">
+                        <text x="66" y="137">A1</text>
+                        <text x="66" y="197">A0</text>
+                        <text x="66" y="877">EN</text>
+                    </g>
+
+                    <!-- junctions where each true rail turns down, and the runs that carry on to the inverters -->
+                    <circle cx="390" cy="130" r="6" fill="#8fa8bd" stroke="none"/>
+                    <circle cx="270" cy="190" r="6" fill="#8fa8bd" stroke="none"/>
+                    <line class="rail r-a1" x1="450" y1="130" x2="450" y2="170" stroke="#8fa8bd"/>
+                    <line class="rail r-a0" x1="330" y1="190" x2="330" y2="230" stroke="#8fa8bd"/>
+
+                    <!-- inverters, drawn pointing down onto their own rails -->
+                    <polygon points="425,170 475,170 450,215" stroke="#cfd8dc"/>
+                    <circle cx="450" cy="224" r="8" stroke="#cfd8dc"/>
+                    <polygon points="305,230 355,230 330,275" stroke="#cfd8dc"/>
+                    <circle cx="330" cy="284" r="8" stroke="#cfd8dc"/>
+
+                    <!-- ===== the five vertical rails ===== -->
+                    <line class="rail r-a0"  x1="270" y1="190" x2="270" y2="785" stroke="#8fa8bd"/>
+                    <line class="rail r-a0n" x1="330" y1="292" x2="330" y2="785" stroke="#8fa8bd"/>
+                    <line class="rail r-a1"  x1="390" y1="130" x2="390" y2="785" stroke="#8fa8bd"/>
+                    <line class="rail r-a1n" x1="450" y1="232" x2="450" y2="785" stroke="#8fa8bd"/>
+                    <line class="rail r-en"  x1="510" y1="870" x2="510" y2="320" stroke="#8fa8bd"/>
+
+                    <!-- rail value pills (staggered so they don't collide) -->
+                    <g class="rpill rp-a0"><rect x="234" y="792" width="72" height="30" rx="8"/>
+                        <text x="270" y="813" font-family="Consolas, monospace" font-size="18" text-anchor="middle" stroke="none"><tspan>A0</tspan><tspan class="rv">=0</tspan></text></g>
+                    <g class="rpill rp-a1"><rect x="354" y="792" width="72" height="30" rx="8"/>
+                        <text x="390" y="813" font-family="Consolas, monospace" font-size="18" text-anchor="middle" stroke="none"><tspan>A1</tspan><tspan class="rv">=0</tspan></text></g>
+                    <g class="rpill rp-a0n"><rect x="294" y="828" width="72" height="30" rx="8"/>
+                        <text x="330" y="849" font-family="Consolas, monospace" font-size="18" text-anchor="middle" stroke="none"><tspan class="ovl">A0</tspan><tspan class="rv">=1</tspan></text></g>
+                    <g class="rpill rp-a1n"><rect x="414" y="828" width="72" height="30" rx="8"/>
+                        <text x="450" y="849" font-family="Consolas, monospace" font-size="18" text-anchor="middle" stroke="none"><tspan class="ovl">A1</tspan><tspan class="rv">=1</tspan></text></g>
+                    <g class="rpill rp-en"><rect x="546" y="855" width="72" height="30" rx="8"/>
+                        <text x="582" y="876" font-family="Consolas, monospace" font-size="18" text-anchor="middle" stroke="none"><tspan>EN</tspan><tspan class="rv">=1</tspan></text></g>
+
+                    <!-- ===== one AND per minterm ===== -->
+                    <!-- Y0 = EN . A1' . A0'  (Cy 350) -->
+                    <g class="gate g-0">
+                        <line class="st" x1="510" y1="320" x2="560" y2="320" stroke="#8fa8bd"/>
+                        <line class="st" x1="450" y1="350" x2="560" y2="350" stroke="#8fa8bd"/>
+                        <line class="st" x1="330" y1="380" x2="560" y2="380" stroke="#8fa8bd"/>
+                        <circle cx="510" cy="320" r="6" fill="#8fa8bd" stroke="none"/>
+                        <circle cx="450" cy="350" r="6" fill="#8fa8bd" stroke="none"/>
+                        <circle cx="330" cy="380" r="6" fill="#8fa8bd" stroke="none"/>
+                        <path d="M560,300 L600,300 A50,50 0 0 1 600,400 L560,400 Z" stroke="#cfd8dc"/>
+                        <line class="yw" x1="650" y1="350" x2="770" y2="350" stroke="#8fa8bd"/>
+                    </g>
+                    <!-- Y1 = EN . A1' . A0  (Cy 470) -->
+                    <g class="gate g-1">
+                        <line class="st" x1="510" y1="440" x2="560" y2="440" stroke="#8fa8bd"/>
+                        <line class="st" x1="450" y1="470" x2="560" y2="470" stroke="#8fa8bd"/>
+                        <line class="st" x1="270" y1="500" x2="560" y2="500" stroke="#8fa8bd"/>
+                        <circle cx="510" cy="440" r="6" fill="#8fa8bd" stroke="none"/>
+                        <circle cx="450" cy="470" r="6" fill="#8fa8bd" stroke="none"/>
+                        <circle cx="270" cy="500" r="6" fill="#8fa8bd" stroke="none"/>
+                        <path d="M560,420 L600,420 A50,50 0 0 1 600,520 L560,520 Z" stroke="#cfd8dc"/>
+                        <line class="yw" x1="650" y1="470" x2="770" y2="470" stroke="#8fa8bd"/>
+                    </g>
+                    <!-- Y2 = EN . A1 . A0'  (Cy 590) -->
+                    <g class="gate g-2">
+                        <line class="st" x1="510" y1="560" x2="560" y2="560" stroke="#8fa8bd"/>
+                        <line class="st" x1="390" y1="590" x2="560" y2="590" stroke="#8fa8bd"/>
+                        <line class="st" x1="330" y1="620" x2="560" y2="620" stroke="#8fa8bd"/>
+                        <circle cx="510" cy="560" r="6" fill="#8fa8bd" stroke="none"/>
+                        <circle cx="390" cy="590" r="6" fill="#8fa8bd" stroke="none"/>
+                        <circle cx="330" cy="620" r="6" fill="#8fa8bd" stroke="none"/>
+                        <path d="M560,540 L600,540 A50,50 0 0 1 600,640 L560,640 Z" stroke="#cfd8dc"/>
+                        <line class="yw" x1="650" y1="590" x2="770" y2="590" stroke="#8fa8bd"/>
+                    </g>
+                    <!-- Y3 = EN . A1 . A0  (Cy 710) -->
+                    <g class="gate g-3">
+                        <line class="st" x1="510" y1="680" x2="560" y2="680" stroke="#8fa8bd"/>
+                        <line class="st" x1="390" y1="710" x2="560" y2="710" stroke="#8fa8bd"/>
+                        <line class="st" x1="270" y1="740" x2="560" y2="740" stroke="#8fa8bd"/>
+                        <circle cx="510" cy="680" r="6" fill="#8fa8bd" stroke="none"/>
+                        <circle cx="390" cy="710" r="6" fill="#8fa8bd" stroke="none"/>
+                        <circle cx="270" cy="740" r="6" fill="#8fa8bd" stroke="none"/>
+                        <path d="M560,660 L600,660 A50,50 0 0 1 600,760 L560,760 Z" stroke="#cfd8dc"/>
+                        <line class="yw" x1="650" y1="710" x2="770" y2="710" stroke="#8fa8bd"/>
+                    </g>
+
+                    <!-- output labels + minterm annotations -->
+                    <g font-family="Consolas, monospace" font-size="24" stroke="none">
+                        <text id="dY0" x="782" y="358" fill="#55697c">Y0 = 0</text>
+                        <text id="dY1" x="782" y="478" fill="#55697c">Y1 = 0</text>
+                        <text id="dY2" x="782" y="598" fill="#55697c">Y2 = 0</text>
+                        <text id="dY3" x="782" y="718" fill="#55697c">Y3 = 0</text>
+                    </g>
+                    <g class="mint" font-family="Consolas, monospace" font-size="18" fill="#5c7189" stroke="none">
+                        <text x="782" y="386">m0 = <tspan class="ovl">A1</tspan>&#183;<tspan class="ovl">A0</tspan></text>
+                        <text x="782" y="506">m1 = <tspan class="ovl">A1</tspan>&#183;A0</text>
+                        <text x="782" y="626">m2 = A1&#183;<tspan class="ovl">A0</tspan></text>
+                        <text x="782" y="746">m3 = A1&#183;A0</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="hw-note" id="hwNote">Each inverter sits on the complement rail it drives. Each AND taps a
+                <b>different combination</b> of true / complement &mdash; so exactly one gate can ever see
+                all-ones.</div>
+        </div>
+
+        <!-- ============ PAGE 3 — APPLICATIONS ============ -->
+        <div class="page" id="p3">
+            <div class="apps">
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="10" y="16" width="34" height="64" rx="4"/>
+                        <line x1="10" y1="34" x2="44" y2="34"/><line x1="10" y1="52" x2="44" y2="52"/>
+                        <line x1="44" y1="30" x2="62" y2="30"/>
+                        <rect x="62" y="16" width="24" height="24" rx="3"/>
+                        <rect x="62" y="52" width="24" height="24" rx="3" stroke-dasharray="5 4"/>
+                    </svg>
+                    <div class="app-title">Memory / device chip select</div>
+                    <div class="app-desc">Feed the high address bits in, get one chip-enable out. The
+                        canonical decoder job in every memory map.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="12" y="18" width="72" height="26" rx="4"/>
+                        <line x1="36" y1="18" x2="36" y2="44"/><line x1="60" y1="18" x2="60" y2="44"/>
+                        <line x1="24" y1="44" x2="24" y2="62"/>
+                        <line x1="12" y1="62" x2="84" y2="62"/>
+                        <line x1="30" y1="62" x2="30" y2="80"/><line x1="52" y1="62" x2="52" y2="80"/>
+                        <line x1="74" y1="62" x2="74" y2="80"/>
+                    </svg>
+                    <div class="app-title">Instruction decode</div>
+                    <div class="app-desc">Opcode in, one-hot control lines out to the datapath &mdash; the
+                        front end of a CPU control unit.</div>
+                </div>
+                <div class="app-card link">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="30,20 30,44 58,58 58,6"/>
+                        <line x1="10" y1="32" x2="30" y2="32"/>
+                        <line x1="58" y1="14" x2="86" y2="14"/><line x1="58" y1="34" x2="86" y2="34"/>
+                        <line x1="58" y1="50" x2="86" y2="50"/>
+                        <line x1="44" y1="52" x2="44" y2="76"/>
+                        <line x1="20" y1="86" x2="76" y2="86" stroke-dasharray="5 4"/>
+                    </svg>
+                    <div class="tie">callback to block 1</div>
+                    <div class="app-title">Decoder + EN = demultiplexer</div>
+                    <div class="app-desc">Drive data into the enable pin and the decoder routes it to the
+                        selected output. The dual of the mux, same silicon.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="10" y="16" width="30" height="64" rx="4"/>
+                        <line x1="40" y1="28" x2="58" y2="28"/><line x1="40" y1="48" x2="58" y2="48"/>
+                        <line x1="40" y1="68" x2="58" y2="68"/>
+                        <path d="M58,20 C76,20 86,34 88,48 C86,62 76,76 58,76 Q68,48 58,20 Z"/>
+                        <line x1="88" y1="48" x2="94" y2="48"/>
+                    </svg>
+                    <div class="app-title">Any function, from minterms</div>
+                    <div class="app-desc">OR together the outputs your truth table marks as 1. The decoder
+                        already generated every minterm &mdash; you just pick.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 4 — VERILOG ============ -->
+        <div class="page" id="p4">
+            <div class="code-card">
+                <div class="code-label"><b>2-to-4 decoder</b> &mdash; <span class="v">case</span></div>
+                <div class="code"><span class="kw">module</span> dec2to4 (<span class="kw">input</span> [<span class="lit">1:0</span>] a, <span class="kw">input</span> en, <span class="kw">output reg</span> [<span class="lit">3:0</span>] y);
+  <span class="kw">always</span> @* <span class="kw">begin</span>
+    y = <span class="lit">4'b0000</span>;                <span class="cm">// default first — see the warning below</span>
+    <span class="kw">if</span> (en) <span class="kw">case</span> (a)
+      <span class="lit">2'b00</span>: y = <span class="lit">4'b0001</span>;   <span class="lit">2'b01</span>: y = <span class="lit">4'b0010</span>;
+      <span class="lit">2'b10</span>: y = <span class="lit">4'b0100</span>;   <span class="lit">2'b11</span>: y = <span class="lit">4'b1000</span>;
+    <span class="kw">endcase</span>
+  <span class="kw">end</span>
+<span class="kw">endmodule</span></div>
+            </div>
+
+            <div class="gotcha">
+                <div class="g-bang">&#9888;</div>
+                <div class="g-txt">Drop that <code>y = 4'b0000;</code> default and the <code>en = 0</code>
+                    path assigns nothing &mdash; so <code>y</code> must <em>hold its old value</em>, and the
+                    synthesiser infers a <b>latch</b>. Combinational logic that accidentally remembers is
+                    the classic Verilog bug; assign a default before every conditional.</div>
+            </div>
+
+            <div class="idiom-tag">decoder &rarr; <span class="mono">case</span></div>
+        </div>
+
+    </div>
+
+    <!-- ===== footer ===== -->
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k">Backspace</span> prev
+            &middot; <span class="k amber">C</span> code
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+
+    // ============ PAGE STATE ============
+    const FIRST = 1, LAST = 4;
+    let page = 1;
+
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    const schem = document.getElementById('schem2');
+    const sym1  = document.getElementById('sym1');
+    const hwNote = document.getElementById('hwNote');
+
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+
+    // ============ CODE STATE ============
+    // Four enabled codes, then the disabled state — so EN=0 is always demonstrated.
+    const STATES = [
+        { en: 1, a: 0 }, { en: 1, a: 1 }, { en: 1, a: 2 }, { en: 1, a: 3 },
+        { en: 0, a: 2 }
+    ];
+    let si = 0;
+
+    const boxes = Array.from(document.querySelectorAll('.obox'));
+    const brows = Array.from(document.querySelectorAll('.brow'));
+    const dY = [0,1,2,3].map(i => document.getElementById('dY' + i));
+    const ON = '#4fc3f7', OFF = '#55697c';
+
+    // Animate the path that is actually carrying a 1: the two live data rails and EN,
+    // through the one gate that fires, out to its asserted output. With EN=0 nothing
+    // fires, so nothing flows — which is the point of that state.
+    function applyFlow(en, a, fired) {
+        document.querySelectorAll('.flow').forEach(el => el.classList.remove('flow'));
+        if (!en) return;
+        const add = (root, sel) => root.querySelectorAll(sel).forEach(el => el.classList.add('flow'));
+        add(schem, '.g-' + fired + ' .st');
+        add(schem, '.g-' + fired + ' .yw');
+        add(sym1, '.sw-a1'); add(sym1, '.sw-a0'); add(sym1, '.sw-en');
+        add(sym1, '.sy-' + fired);
+    }
+
+    function renderState() {
+        const { en, a } = STATES[si];
+        const a1 = (a >> 1) & 1, a0 = a & 1;
+        const fired = en ? a : -1;           // index of the asserted output, -1 if disabled
+
+        // ---- CODE readouts ----
+        document.querySelectorAll('.cc-en').forEach(n => {
+            n.textContent = en;
+            n.classList.toggle('dis', !en);
+        });
+        document.querySelectorAll('.cc-a').forEach(n => n.textContent = '' + a1 + a0);
+
+        // ---- page 1: output cells, symbol, truth-table row ----
+        boxes.forEach(b => b.classList.toggle('on', +b.dataset.y === fired));
+        boxes.forEach(b => b.textContent = (+b.dataset.y === fired) ? '1' : '0');
+        for (let i = 0; i < 4; i++) {
+            const live = (i === fired);
+            sym1.querySelector('.sy-' + i).setAttribute('stroke', live ? ON : '#3d5266');
+            sym1.querySelector('.sl-' + i).setAttribute('fill',   live ? ON : OFF);
+        }
+        brows.forEach(r => r.classList.toggle('horow',
+            r.dataset.row === (en ? String(a) : 'off')));
+
+        // ---- page 2: rails carry real values, so colour them by value ----
+        const railVal = { 'a1': a1, 'a1n': 1 - a1, 'a0': a0, 'a0n': 1 - a0, 'en': en };
+        Object.keys(railVal).forEach(k => {
+            const hot = !!railVal[k];
+            schem.querySelectorAll('.r-' + k).forEach(el => {
+                el.classList.toggle('on', hot);
+                el.classList.toggle('off', !hot);
+            });
+            const pill = schem.querySelector('.rp-' + k);
+            pill.classList.toggle('on', hot);
+            pill.querySelector('.rv').textContent = '=' + (hot ? 1 : 0);   // label + its overbar stay put
+        });
+
+        // ---- page 2: the gate that fires ----
+        schem.classList.remove('k0','k1','k2','k3','koff');
+        schem.classList.add(en ? ('k' + a) : 'koff');
+        for (let i = 0; i < 4; i++) {
+            const live = (i === fired);
+            dY[i].textContent = 'Y' + i + ' = ' + (live ? 1 : 0);
+            dY[i].setAttribute('fill', live ? ON : OFF);
+        }
+
+        // ---- caption for this specific state ----
+        if (!en) {
+            hwNote.innerHTML = '<b>EN = 0</b> &mdash; the enable input of every AND is low, so no gate can '
+                + 'fire whatever the code says. All four outputs sit at 0.';
+        } else {
+            const B = s => '<span class="ovb">' + s + '</span>';
+            const t = [B('A1')+'&#183;'+B('A0'), B('A1')+'&#183;A0', 'A1&#183;'+B('A0'), 'A1&#183;A0'][a];
+            hwNote.innerHTML = 'Code <b>' + a1 + a0 + '</b> makes rails ' + t.replace(/&#183;/g, ' and ')
+                + ' high. Only the <b>Y' + a + '</b> gate taps both of those, so only Y' + a
+                + ' fires &mdash; minterm m' + a + '.';
+        }
+
+        applyFlow(en, a, fired);
+    }
+
+    function nextState() { si = (si + 1) % STATES.length; renderState(); }
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '4') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 'c': case 'C': nextState(); e.preventDefault(); break;
+            case 'r': case 'R': setPage(1); si = 0; renderState(); e.preventDefault(); break;
+        }
+    });
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-codectl]').forEach(el => el.addEventListener('click', nextState));
+
+    // ---- overbars for the SVG complements ----------------------------------
+    // SVG has no text-decoration, so each .ovl tspan gets a real <line> drawn over it.
+    // getExtentOfChar() returns zeros inside a display:none page, so measure with page 2
+    // showing; the switch is synchronous, so nothing paints in between.
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    function drawOverbars() {
+        const prev = page;
+        setPage(2);
+        let drawn = 0;
+        schem.querySelectorAll('tspan.ovl').forEach(ts => {
+            const n = ts.getNumberOfChars();
+            let x0 = Infinity, x1 = -Infinity;
+            for (let i = 0; i < n; i++) {
+                const e = ts.getExtentOfChar(i);      // horizontal advance: exactly what the bar spans
+                x0 = Math.min(x0, e.x); x1 = Math.max(x1, e.x + e.width);
+            }
+            if (!isFinite(x0) || !(x1 > x0)) return;   // unmeasurable: leave it bare, don't fake a bar
+            // Sit the bar off the BASELINE, not off the extent box: getExtentOfChar reports the em
+            // box (ascender to descender), which is well above the capitals and would put the bar
+            // on the pill's own border. 0.82em clears the caps of Consolas/Menlo/Courier alike.
+            const em = parseFloat(getComputedStyle(ts).fontSize);
+            const y = ts.getStartPositionOfChar(0).y - 0.82 * em;
+            const ln = document.createElementNS(SVGNS, 'line');
+            ln.setAttribute('class', 'obar');
+            ln.setAttribute('x1', x0.toFixed(2));  ln.setAttribute('x2', x1.toFixed(2));
+            ln.setAttribute('y1', y.toFixed(2));   ln.setAttribute('y2', y.toFixed(2));
+            ts.closest('g').appendChild(ln);
+            drawn++;
+        });
+        setPage(prev);
+        return drawn;
+    }
+
+    render();
+    renderState();
+    drawOverbars();
+</script>
+</body>
+</html>

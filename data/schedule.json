@@ -503,7 +503,7 @@
           "title": "Decoders",
           "slug": "decoders",
           "type": "full",
-          "published": false
+          "published": true
         },
         {
           "num": "3.5.4",

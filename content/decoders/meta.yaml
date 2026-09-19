@@ -1,0 +1,11 @@
+title: "Decoders"
+description: ""
+chapter: combinational-logic
+section: building-block-circuits
+order: 30503
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the decoder as a minterm generator — address lines in, one-hot line out, the enable that dominates, one AND gate per minterm off the true/complement rails, and the case-with-default Verilog that avoids an inferred latch"
+  02-interactive.html:
+    caption: "Interactive: the four-beat cadence for a 2-to-4 decoder with enable — step a code through the truth table and watch exactly one output assert, trace the live rails through the one AND gate that fires, see where decoders show up in real designs, and read the case-statement Verilog with its latch trap"
