@@ -104,6 +104,18 @@ Read one of those aloud and the rule is obvious: $y_1$ is "$I_1$ is asserted **a
 nor $I_2$ outranks it." $I_3$ needs no gate at all, because nothing outranks it. At the bottom,
 $y_0$ has to be masked by all three higher lines, which is why the gates grow as you go down.
 
+![A priority encoder drawn as two stages. On the left, a masking stage: I3 passes straight through
+because nothing outranks it, while I2, I1 and I0 each feed an AND gate whose other inputs are the
+higher inputs, bubbled to mean NOT. The gates grow downward, from two inputs to four. Their outputs
+y3 through y0 form a bus marked one-hot, guaranteed, which feeds the second stage, a plain encoder of
+three OR gates producing A1 = y3 + y2, A0 = y3 + y1, and V = y3 + y2 + y1 +
+y0.](./images/priority-encoder-two-stage.svg)
+
+The bubbles carry the "not" — a bubbled $I_3$ on the $y_2$ gate reads "and $I_3$ is not on." Notice
+what the picture makes obvious that the equations only imply: **the gates grow downward.** The
+lowest-priority line has the most outranking it, so it needs the most masking, and $I_3$ needs no
+gate at all.
+
 The two-stage structure is the point worth remembering:
 
 **Stage 1 masks, stage 2 encodes.** The plain encoder was never wrong about one-hot inputs — it was
