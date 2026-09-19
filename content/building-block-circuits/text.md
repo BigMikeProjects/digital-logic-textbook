@@ -18,7 +18,6 @@ you can count on.
 This section introduces a related set of combinational building blocks:
 
 - **Multiplexer (mux)** — selects one of several inputs to pass through to a single output.
-- **Demultiplexer (demux)** — the reverse: routes one input to one of several outputs.
 - **Decoder** — activates one specific output line based on a binary code at its inputs.
 - **Encoder** — the reverse: produces a binary code identifying which input line is active.
 - **Comparator** — compares two numbers and reports greater-than, less-than, or equal.
@@ -29,9 +28,18 @@ This section introduces a related set of combinational building blocks:
   effectively *disconnect* itself from a wire (a high-impedance state).
 
 Notice that several of these come in **dual pairs** — one operation undoes the other, so it makes
-sense to study them together. A **demultiplexer undoes a multiplexer**, and an **encoder undoes a
-decoder**. Recognizing those pairings makes each one easier to understand: once you have a feel for
-the mux, the demux is largely "the same idea, run backwards."
+sense to study them together. An **encoder undoes a decoder**, and a **demultiplexer undoes a
+multiplexer**. Recognizing those pairings makes each one easier to understand: once you have a feel
+for the mux, the demux is largely "the same idea, run backwards."
+
+The demultiplexer deserves a word here, because it is an operation rather than a separate part. A
+multiplexer takes several inputs and passes one of them to a single output; a **demultiplexer** does
+the reverse, taking one input and routing it to one of several outputs. You do not need a new
+component to get that behavior, though — **a decoder with an enable input already is a
+demultiplexer**. Instead of holding the enable at `1`, drive your data onto it: the code on the
+address inputs then decides which output that data appears on, and every other output stays at `0`.
+That is why you will not find a demultiplexer topic of its own in this section. You will meet the
+operation inside **Decoders**, where the enable pin is what turns the decoder into one.
 
 This is deliberately **not an exhaustive list** of every useful component in digital logic. In fact,
 one of the *most* important building blocks is missing here on purpose — the **adder**. An adder is
@@ -73,12 +81,14 @@ With that map in hand, we are ready to jump in and work through the blocks one a
 
 ## Key Takeaways
 
-**Building block circuits** are mid-level combinational components — multiplexers, demultiplexers,
-decoders, encoders, comparators, parity circuits, BCD-to-seven-segment decoders, and tri-state
-devices — assembled from the gate-level basics and then reused as parts in larger designs. The
-central skill is **abstraction**: know a block's input/output behavior and you can treat it as a
-**black box**. Several blocks are **duals** — the **demux undoes the mux**, the **encoder undoes the
-decoder** — so they are best learned in pairs. The list is not exhaustive, and the **adder** is
+**Building block circuits** are mid-level combinational components — multiplexers, decoders,
+encoders, comparators, parity circuits, BCD-to-seven-segment decoders, and tri-state devices —
+assembled from the gate-level basics and then reused as parts in larger designs. The central skill
+is **abstraction**: know a block's input/output behavior and you can treat it as a **black box**.
+Several blocks are **duals** — the **encoder undoes the decoder**, and the **demux undoes the mux**
+— so they are best learned in pairs. The demultiplexer gets no part of its own here because it does
+not need one: **a decoder with an enable input is a demultiplexer**, with the data driven onto the
+enable. The list is not exhaustive, and the **adder** is
 deliberately handled in its own section rather than here. Because these are circuits, each gets a
 **schematic symbol** (the mux's trapezoid and the tri-state symbol are the distinctive ones); think
 in schematics to organize a design. Finally, every block in this section is covered with the same
