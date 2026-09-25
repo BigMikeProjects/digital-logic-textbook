@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parity Circuits — The Four-Beat Cadence</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 logic 1 / live XOR · amber #ffb74d data + parity bit
+       · violet #b388ff idiom tag + the corrupted bit · #ff8a65 the raised error flag */
+
+    @keyframes dash { to { stroke-dashoffset: -48; } }
+    .flow { stroke-dasharray: 14 10; animation: dash 1s linear infinite; }
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- controls ---------- */
+    .ctlrow { display: flex; gap: 12px; align-items: center; }
+    .bitpill { display: flex; align-items: center; gap: 9px; cursor: pointer; user-select: none;
+        border: 2px solid #6a5324; border-radius: 999px; padding: 7px 18px;
+        background: rgba(255,183,77,0.05); transition: all .16s ease; }
+    .bitpill .bn { color: #ffb74d; font-size: 18px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .bitpill .bv { color: #7d9bb5; font-size: 22px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .bitpill.on { border-color: #4fc3f7; background: rgba(79,195,247,0.12); }
+    .bitpill.on .bv { color: #4fc3f7; }
+    .modectl { display: inline-flex; align-items: center; gap: 12px; cursor: pointer;
+        border: 2px solid #6a4fa0; border-radius: 999px; padding: 8px 22px;
+        background: rgba(179,136,255,0.08); user-select: none; }
+    .modectl .mc-label { color: #b388ff; font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+    .modectl .mc-val { color: #cfd8dc; font-size: 20px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .ctlhint { color: #6a8398; font-size: 15px; margin-left: 4px; }
+    .ctlhint b { color: #ffb74d; font-family: 'Consolas','Courier New',monospace; }
+
+    /* ---------- page 1 ---------- */
+    #p1 { gap: 40px; align-items: center; }
+    .fn-left { flex: 0 0 46%; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .fn-right { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    .wordrow { display: flex; align-items: flex-end; gap: 10px; }
+    .wcell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .wcell .wn { font-size: 15px; color: #5c7189; font-family: 'Consolas','Courier New',monospace; }
+    .wcell .wv { width: 78px; height: 78px; border: 2px solid #37506a; border-radius: 12px;
+        background: #0d1b2a; display: flex; align-items: center; justify-content: center;
+        font-family: 'Consolas','Courier New',monospace; font-size: 34px; color: #55697c;
+        transition: all .2s ease; }
+    .wcell .wv.on { color: #0d1b2a; background: #ffb74d; border-color: #ffb74d; }
+    .wcell.par .wv { border-style: dashed; }
+    .wcell.par .wv.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .wsep { width: 2px; height: 78px; background: #37506a; margin: 0 8px; align-self: flex-end; }
+    .counter { display: flex; align-items: center; gap: 16px; font-size: 25px; color: #cfd8dc; }
+    .counter .cnum { font-family: 'Consolas','Courier New',monospace; font-size: 30px; color: #4fc3f7; }
+    .counter .verdict { font-weight: 700; padding: 4px 16px; border-radius: 999px;
+        border: 2px solid #4fc3f7; color: #4fc3f7; font-size: 20px; }
+    .fn-statement { font-size: 28px; color: #cfd8dc; line-height: 1.42; }
+    .fn-statement .ic { color: #ffb74d; font-weight: 600; }
+    .fn-statement .io { color: #4fc3f7; font-weight: 600; }
+    .btable { border-collapse: collapse; font-size: 17px; align-self: flex-start; }
+    .btable th, .btable td { border: 1px solid #37506a; padding: 3px 15px; text-align: center;
+        font-family: 'Consolas','Courier New',monospace; color: #e0e0e0; transition: background .2s; }
+    .btable th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; }
+    .btable th.amb { background: rgba(255,183,77,0.12); color: #ffb74d; }
+    .btable tr.horow td { background: rgba(79,195,247,0.22); color: #fff; }
+    .honest { border-left: 4px solid #ff8a65; padding: 6px 0 6px 20px; font-size: 21px;
+        color: #90a4ae; line-height: 1.45; }
+    .honest b { color: #ff8a65; }
+
+    /* ---------- page 2 ---------- */
+    #p2 { gap: 34px; align-items: center; }
+    .tree-wrap { flex: 0 0 56%; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .tree-wrap svg { width: 100%; max-width: 900px; }
+    .hw-note { font-size: 19px; color: #90a4ae; text-align: center; }
+    .hw-note b { color: #4fc3f7; }
+    .depth { flex: 1; display: flex; flex-direction: column; gap: 18px; }
+    .dcard { border: 2px solid #37506a; border-radius: 16px; background: #0d1b2a; padding: 18px 22px; }
+    .dcard.win { border-color: #4fc3f7; }
+    .dcard .dt { font-size: 21px; font-weight: 700; color: #e0e0e0; margin-bottom: 6px; }
+    .dcard .dd { font-size: 18px; color: #90a4ae; line-height: 1.45; }
+    .dcard .dd b { color: #4fc3f7; }
+    .dcard svg { width: 100%; height: 108px; margin: 8px 0 4px; }
+    .same { border-left: 4px solid #4fc3f7; padding: 6px 0 6px 20px; font-size: 20px;
+        color: #90a4ae; line-height: 1.45; }
+    .same b { color: #4fc3f7; }
+
+    /* ---------- page 3 ---------- */
+    #p3 { flex-direction: column; align-items: center; gap: 14px; }
+    .apps { display: flex; gap: 18px; width: 100%; }
+    .app-card { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 20px 22px; display: flex; flex-direction: column; gap: 11px; min-height: 352px; }
+    .app-card svg { width: 60px; height: 60px; color: #4fc3f7; }
+    .app-title { font-size: 21px; font-weight: 700; color: #e0e0e0; }
+    .app-desc { font-size: 17px; color: #90a4ae; line-height: 1.42; }
+    .app-card.link { border-color: #6a4fa0; }
+    .app-card.link svg { color: #b388ff; }
+    .app-card .tie { font-size: 13px; color: #b388ff; letter-spacing: 1px;
+        text-transform: uppercase; font-weight: 700; }
+    .demo { width: 100%; border: 2px solid #4fc3f7; border-radius: 16px;
+        background: rgba(79,195,247,0.04); padding: 14px 26px 10px;
+        display: flex; flex-direction: column; gap: 8px; }
+    .demo-head { display: flex; align-items: center; gap: 20px; }
+    .demo-head .dh-title { color: #4fc3f7; font-size: 18px; font-weight: 700;
+        letter-spacing: 1px; text-transform: uppercase; }
+    .demo-head .dh-hint { color: #90a4ae; font-size: 17px; }
+    .demo-head .dh-hint b { color: #b388ff; }
+    .clrbtn { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px;
+        padding: 5px 16px; color: #90a4ae; font-size: 15px; background: #0d1b2a; margin-left: auto; }
+    .demo svg { width: 100%; height: 296px; }
+    .verdictline { font-size: 21px; color: #cfd8dc; text-align: center; line-height: 1.4; }
+    .verdictline .ok { color: #4fc3f7; font-weight: 700; }
+    .verdictline .miss { color: #ff8a65; font-weight: 700; }
+    .verdictline .cnt { color: #b388ff; font-weight: 700; }
+
+    /* ---------- page 4 ---------- */
+    #p4 { flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+    /* beat 5 stacks like beat 3; without this the sections lay out as a row and the
+       cards get squeezed into narrow columns */
+    #p5 { flex-direction: column; align-items: center; gap: 12px; }
+    #p5 .apps { align-items: stretch; }
+    #p5 .app-desc { text-align: left; }
+    .codes { display: flex; gap: 26px; align-items: flex-start; }
+    .code-card { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+    .code-label { font-size: 20px; color: #90a4ae; font-weight: 600; }
+    .code-label b { color: #4fc3f7; } .code-label .v { color: #b388ff; }
+    .code { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        padding: 14px 24px; font-family: 'Consolas','Courier New',monospace;
+        font-size: 19px; line-height: 1.42; color: #cfd8dc; white-space: pre; }
+    .code .kw { color: #4fc3f7; } .code .op { color: #ffb74d; }
+    .code .cm { color: #607d8b; } .code .lit { color: #b388ff; }
+    .gotchas { display: flex; flex-direction: column; gap: 9px; width: 1560px; }
+    .readacross { display: flex; flex-direction: column; gap: 12px; border: 2px solid #37506a;
+        border-radius: 14px; background: #0d1b2a; padding: 18px 24px; }
+    .ra-row { display: flex; align-items: center; gap: 14px; font-size: 17px; color: #90a4ae; }
+    .ra-row code { font-family: 'Consolas','Courier New',monospace; color: #4fc3f7;
+        background: #0b1622; border: 1px solid #24384c; border-radius: 7px;
+        padding: 4px 10px; min-width: 118px; text-align: center; }
+    .ra-row b { color: #4fc3f7; }
+    .ra-row span:first-of-type { color: #607d8b; }
+    .gotcha { display: flex; align-items: center; gap: 16px;
+        border: 2px solid #6a5324; border-radius: 12px; background: rgba(255,183,77,0.07);
+        padding: 9px 22px; }
+    .gotcha .g-bang { color: #ffb74d; font-size: 26px; font-weight: 700; flex-shrink: 0; }
+    .gotcha .g-txt { font-size: 17px; color: #cfd8dc; line-height: 1.4; }
+    .gotcha .g-txt code { font-family: 'Consolas','Courier New',monospace; color: #ffb74d; }
+    .idiom-tag { color: #b388ff; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 7px 24px; font-size: 21px; font-weight: 600; background: rgba(179,136,255,0.08); }
+    .idiom-tag .mono { font-family: 'Consolas','Courier New',monospace; color: #cbb4ff; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 8px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.violet { color: #b388ff; border-color: #6a4fa0; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M96,20 Q112,38 96,56 Q132,56 144,38 Q132,20 96,20 Z" stroke="#cfd8dc"/>
+                <path d="M89,20 Q105,38 89,56" stroke="#cfd8dc"/>
+                <line x1="62" y1="27" x2="92" y2="27"/>
+                <line x1="62" y1="49" x2="92" y2="49"/>
+                <line x1="144" y1="38" x2="184" y2="38" stroke="#ffb74d"/>
+                <path d="M96,66 Q112,84 96,102 Q132,102 144,84 Q132,66 96,66 Z" stroke="#3d5266"/>
+                <path d="M89,66 Q105,84 89,102" stroke="#3d5266"/>
+                <line x1="62" y1="73" x2="92" y2="73" stroke="#3d5266"/>
+                <line x1="62" y1="95" x2="92" y2="95" stroke="#3d5266"/>
+                <g font-family="'Consolas',monospace" stroke="none">
+                    <text x="190" y="43" font-size="14" fill="#ffb74d">P</text>
+                </g>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Parity Circuits <span class="sub">&mdash; one extra bit, and what it can and cannot catch</span></h1>
+            <div class="subtitle">The four-beat cadence, plus a fifth on where parity stops &middot; a 4-bit even-parity generator and checker as our running example</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 5</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Functionality</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Hardware</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Applications</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Verilog</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">Going Further</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- ============ PAGE 1 ============ -->
+        <div class="page" id="p1">
+            <div class="fn-left">
+                <div class="ctlrow" id="ctl1"></div>
+                <div class="wordrow" id="word1"></div>
+                <div class="counter">
+                    <span>ones in the word:</span>
+                    <span class="cnum" id="oneCount">0</span>
+                    <span class="verdict" id="oneVerdict">even</span>
+                </div>
+                <div class="hw-note" style="font-size:20px;max-width:640px">
+                    The parity bit is chosen so the whole 5-bit word comes out with an
+                    <b id="modeWord">even</b> number of 1s. Toggle the data and watch
+                    <b>P</b> follow.</div>
+            </div>
+
+            <div class="fn-right">
+                <div class="fn-statement">Parity is the cheapest error detection there is:
+                    <span class="ic">add one bit</span> so the number of 1s in the word comes out
+                    <span class="io">even</span> &mdash; or odd, as long as both ends agree.</div>
+
+                <table class="btable" id="ptable"></table>
+
+                <div class="honest">Parity <b>detects, it does not correct</b> &mdash; and it only
+                    detects an <b>odd</b> number of flipped bits. One flipped bit is always caught.
+                    <b>Two flipped bits are always missed:</b> the count returns to even and the word
+                    looks perfect. Beat 3 lets you do it yourself.</div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 2 ============ -->
+        <div class="page" id="p2">
+            <div class="tree-wrap">
+                <div class="ctlrow" id="ctl2"></div>
+                <svg id="tree" viewBox="0 0 900 400" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <line class="rail r-d3" x1="78" y1="50"  x2="240" y2="50"/>
+                    <line class="rail r-d2" x1="78" y1="120" x2="240" y2="120"/>
+                    <line class="rail r-d1" x1="78" y1="270" x2="240" y2="270"/>
+                    <line class="rail r-d0" x1="78" y1="340" x2="240" y2="340"/>
+                    <g font-family="Consolas, monospace" font-size="20" stroke="none" text-anchor="end">
+                        <text class="tlab tl-d3" x="70" y="57"  fill="#7d9bb5">D3</text>
+                        <text class="tlab tl-d2" x="70" y="127" fill="#7d9bb5">D2</text>
+                        <text class="tlab tl-d1" x="70" y="277" fill="#7d9bb5">D1</text>
+                        <text class="tlab tl-d0" x="70" y="347" fill="#7d9bb5">D0</text>
+                    </g>
+
+                    <!-- XOR A : D3 ^ D2 -->
+                    <path d="M240,40 Q268,85 240,130 Q300,130 330,85 Q300,40 240,40 Z" stroke="#cfd8dc"/>
+                    <path d="M229,40 Q257,85 229,130" stroke="#cfd8dc"/>
+                    <text x="272" y="93" font-size="16" fill="#8fa8bd" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">XOR</text>
+                    <polyline class="rail r-xa" points="330,85 400,85 400,170 470,170"/>
+
+                    <!-- XOR B : D1 ^ D0 -->
+                    <path d="M240,260 Q268,305 240,350 Q300,350 330,305 Q300,260 240,260 Z" stroke="#cfd8dc"/>
+                    <path d="M229,260 Q257,305 229,350" stroke="#cfd8dc"/>
+                    <text x="272" y="313" font-size="16" fill="#8fa8bd" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">XOR</text>
+                    <polyline class="rail r-xb" points="330,305 400,305 400,220 470,220"/>
+
+                    <!-- XOR C : A ^ B -->
+                    <path d="M470,150 Q498,195 470,240 Q530,240 560,195 Q530,150 470,150 Z" stroke="#cfd8dc"/>
+                    <path d="M459,150 Q487,195 459,240" stroke="#cfd8dc"/>
+                    <text x="502" y="203" font-size="16" fill="#8fa8bd" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">XOR</text>
+                    <line class="rail r-xc" x1="560" y1="195" x2="640" y2="195"/>
+                    <circle class="jn j-xc" cx="640" cy="195" r="6" stroke="none"/>
+
+                    <!-- even parity taps straight off the tree -->
+                    <polyline class="rail r-xc" points="640,195 640,110 736,110"/>
+                    <text id="pEvenLab" x="748" y="118" font-size="21" fill="#55697c" stroke="none" font-family="Consolas, monospace">P(even) = 0</text>
+
+                    <!-- odd parity is the same tree through one inverter -->
+                    <g id="oddPath">
+                        <line class="rail r-xc" x1="640" y1="195" x2="676" y2="195"/>
+                        <polygon points="676,173 676,217 724,195" stroke="#cfd8dc"/>
+                        <circle cx="732" cy="195" r="8" stroke="#cfd8dc"/>
+                        <line class="rail r-podd" x1="740" y1="195" x2="756" y2="195"/>
+                        <text id="pOddLab" x="768" y="203" font-size="21" fill="#55697c" stroke="none" font-family="Consolas, monospace">P(odd) = 1</text>
+                    </g>
+
+                    <text x="470" y="380" font-size="17" fill="#5c7189" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">
+                        an XOR of many bits is 1 exactly when the number of 1s is odd</text>
+                </svg>
+                <div class="hw-note" id="hwNote"></div>
+            </div>
+
+            <div class="depth">
+                <div class="same"><b>The generator and the checker are the same circuit.</b> The
+                    checker is this tree one input wider, taking all five received bits:
+                    E = R4 &oplus; R3 &oplus; R2 &oplus; R1 &oplus; R0.</div>
+
+                <div class="dcard">
+                    <div class="dt">Chain &mdash; 3 gates deep</div>
+                    <svg viewBox="0 0 460 108" fill="none" stroke="#7d9bb5" stroke-width="2.4" stroke-linecap="round">
+                        <rect x="30" y="34" width="52" height="40" rx="8" stroke="#4a6274"/>
+                        <rect x="130" y="34" width="52" height="40" rx="8" stroke="#4a6274"/>
+                        <rect x="230" y="34" width="52" height="40" rx="8" stroke="#4a6274"/>
+                        <line x1="82" y1="54" x2="130" y2="54"/><line x1="182" y1="54" x2="230" y2="54"/>
+                        <line x1="282" y1="54" x2="330" y2="54"/>
+                        <line x1="6" y1="44" x2="30" y2="44"/><line x1="6" y1="64" x2="30" y2="64"/>
+                        <line x1="106" y1="20" x2="106" y2="34"/><line x1="206" y1="20" x2="206" y2="34"/>
+                        <g font-family="Consolas, monospace" font-size="14" fill="#5c7189" stroke="none" text-anchor="middle">
+                            <text x="56" y="59">^</text><text x="156" y="59">^</text><text x="256" y="59">^</text>
+                            <text x="345" y="59" font-size="16" fill="#7d9bb5">P</text>
+                        </g>
+                    </svg>
+                    <div class="dd">Depth grows <b>linearly</b>: n&minus;1 gates from input to output.
+                        A 32-bit chain is <b>31</b> gate delays deep.</div>
+                </div>
+
+                <div class="dcard win">
+                    <div class="dt">Balanced tree &mdash; 2 gates deep</div>
+                    <svg viewBox="0 0 460 108" fill="none" stroke="#4fc3f7" stroke-width="2.4" stroke-linecap="round">
+                        <rect x="60" y="12" width="52" height="36" rx="8" stroke="#4fc3f7"/>
+                        <rect x="60" y="62" width="52" height="36" rx="8" stroke="#4fc3f7"/>
+                        <rect x="190" y="37" width="52" height="36" rx="8" stroke="#4fc3f7"/>
+                        <line x1="112" y1="30" x2="152" y2="30"/><line x1="152" y1="30" x2="152" y2="47"/>
+                        <line x1="152" y1="47" x2="190" y2="47"/>
+                        <line x1="112" y1="80" x2="152" y2="80"/><line x1="152" y1="80" x2="152" y2="63"/>
+                        <line x1="152" y1="63" x2="190" y2="63"/>
+                        <line x1="30" y1="22" x2="60" y2="22"/><line x1="30" y1="38" x2="60" y2="38"/>
+                        <line x1="30" y1="72" x2="60" y2="72"/><line x1="30" y1="88" x2="60" y2="88"/>
+                        <line x1="242" y1="55" x2="290" y2="55"/>
+                        <g font-family="Consolas, monospace" font-size="14" fill="#4fc3f7" stroke="none" text-anchor="middle">
+                            <text x="86" y="35">^</text><text x="86" y="85">^</text><text x="216" y="60">^</text>
+                            <text x="305" y="60" font-size="16">P</text>
+                        </g>
+                    </svg>
+                    <div class="dd"><b>Same gates, same function</b>, shorter critical path: depth
+                        &lceil;log&#8322;n&rceil;. A 32-bit tree is <b>5</b> deep, not 31.
+                        Logic and timing are separate concerns.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 3 ============ -->
+        <div class="page" id="p3">
+            <div class="apps">
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="14" y="20" width="68" height="56" rx="5"/>
+                        <path d="M14,36 L82,36 M14,52 L82,52 M14,68 L82,68"/>
+                        <path d="M30,20 L30,76 M62,20 L62,76"/>
+                    </svg>
+                    <div class="app-title">Memory parity</div>
+                    <div class="app-desc">One extra bit per byte. A parity error raises an exception
+                        instead of letting corrupt data through unnoticed.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8,60 L20,60 L20,36 L32,36 L32,60 L44,60 L44,30 L56,30 L56,60 L68,60 L68,42 L80,42 L80,60 L88,60"/>
+                    </svg>
+                    <div class="app-title">Serial links</div>
+                    <div class="app-desc">The parity bit in <b>8N1</b> / <b>8E1</b> framing. If you
+                        have ever configured a serial port you have chosen one already.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10,30 L86,30 M10,48 L86,48 M10,66 L86,66"/>
+                        <circle cx="34" cy="30" r="5" fill="currentColor" stroke="none"/>
+                        <circle cx="58" cy="48" r="5" fill="currentColor" stroke="none"/>
+                        <circle cx="46" cy="66" r="5" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <div class="app-title">Bus checking</div>
+                    <div class="app-desc">A parity bit carried alongside an address or data bus,
+                        checked at the far end of the interconnect.</div>
+                </div>
+                <div class="app-card link">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12,74 L34,74 L34,52 L56,52 L56,30 L84,30"/>
+                        <circle cx="34" cy="74" r="4" fill="currentColor" stroke="none"/>
+                        <circle cx="56" cy="52" r="4" fill="currentColor" stroke="none"/>
+                        <circle cx="84" cy="30" r="4" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <div class="tie">the next rungs</div>
+                    <div class="app-title">Where it runs out</div>
+                    <div class="app-desc">One bit can detect but never <b>locate</b> an error.
+                        Correcting one needs several check bits (Hamming); catching bursts reliably
+                        needs a CRC.</div>
+                </div>
+            </div>
+
+            <div class="demo">
+                <div class="demo-head">
+                    <span class="dh-title">send it, corrupt it, check it</span>
+                    <span class="dh-hint">click any bit <b>in transit</b> to flip it</span>
+                    <div class="clrbtn" id="clrBtn">clear the flips</div>
+                </div>
+                <svg id="demoSvg" viewBox="0 0 1720 296" fill="none" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="20" y="60" width="150" height="130" rx="10" stroke="#37506a" fill="#0d1b2a"/>
+                    <text x="95" y="115" font-size="17" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">GENERATOR</text>
+                    <text x="95" y="142" font-size="15" fill="#5c7189" stroke="none" text-anchor="middle" font-family="Consolas, monospace">P = ^D</text>
+                    <text x="330" y="42" font-size="16" fill="#5c7189" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">word sent</text>
+                    <g id="sentWord"></g>
+                    <line id="chanA" x1="600" y1="125" x2="700" y2="125" stroke="#7d9bb5"/>
+                    <text x="820" y="42" font-size="16" fill="#5c7189" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">in transit &mdash; click a bit to flip it</text>
+                    <g id="transitWord"></g>
+                    <line id="chanB" x1="1090" y1="125" x2="1190" y2="125" stroke="#7d9bb5"/>
+                    <text x="1310" y="42" font-size="16" fill="#5c7189" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">word received</text>
+                    <g id="recvWord"></g>
+                    <rect x="1530" y="60" width="170" height="130" rx="10" stroke="#37506a" fill="#0d1b2a"/>
+                    <text x="1615" y="102" font-size="17" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">CHECKER</text>
+                    <text x="1615" y="126" font-size="15" fill="#5c7189" stroke="none" text-anchor="middle" font-family="Consolas, monospace">E = ^R</text>
+                    <text id="errFlag" x="1615" y="168" font-size="26" fill="#55697c" stroke="none" text-anchor="middle" font-family="Consolas, monospace">E = 0</text>
+                    <line id="chanC" x1="1480" y1="125" x2="1530" y2="125" stroke="#7d9bb5"/>
+                </svg>
+                <div class="verdictline" id="verdict"></div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 4 ============ -->
+        <div class="page" id="p4">
+            <div class="idiom-tag">This block's Verilog idiom: <span class="mono">^</span> as a
+                <span class="mono">reduction</span> &mdash; one operator, any width</div>
+            <div class="codes">
+                <div class="code-card">
+                    <div class="code-label">The <b>generator</b> and the <b>checker</b></div>
+<div class="code"><span class="kw">module</span> par_gen (<span class="kw">input</span> [3:0] d, <span class="kw">output</span> p);
+  <span class="kw">assign</span> p <span class="op">=</span> <span class="op">^</span>d;   <span class="cm">// even parity: 1 when d holds an odd count</span>
+<span class="kw">endmodule</span>
+
+<span class="kw">module</span> par_chk (<span class="kw">input</span> [4:0] w, <span class="kw">output</span> e);
+  <span class="kw">assign</span> e <span class="op">=</span> <span class="op">^</span>w;   <span class="cm">// 1 =&gt; odd count =&gt; corrupt</span>
+<span class="kw">endmodule</span></div>
+                    <div class="code-label" style="margin-top:14px"><span class="mono">^d</span> XORs
+                        every bit of <b>d</b> together &mdash; the whole tree from beat 2, in one
+                        operator. Widen the bus and the operator does not change, and the synthesiser
+                        picks the log-depth shape for you.</div>
+                </div>
+            </div>
+            <div class="gotchas">
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    <b>Even parity's generator is <code>^d</code>, not <code>~^d</code>.</b> Read
+                    <code>^d</code> as "is the count odd?" &mdash; that is exactly the bit you must
+                    append to <i>make</i> it even. The naming feels inverted and is a reliable source
+                    of sign errors.</div></div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 5 — GOING FURTHER ============ -->
+        <div class="page" id="p5">
+            <div class="idiom-tag">Parity is the first rung on a ladder &mdash;
+                <span class="mono">detect 1</span>, and no more</div>
+            <div class="app-desc" style="font-size:19px; margin:2px 0 4px 0; max-width:1560px">
+                One check bit buys one fact: the count is wrong. It cannot say <b>which</b> bit, and
+                two flipped bits cancel and slip past. Spend more check bits and you buy more &mdash;
+                first the location of the error, then the ability to repair it.
+            </div>
+            <div class="apps">
+                <div class="app-card link">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="30" cy="34" r="16"/><circle cx="58" cy="34" r="16"/><circle cx="44" cy="60" r="16"/>
+                    </svg>
+                    <div class="tie">CORRECTS ONE BIT</div>
+                    <div class="app-title">Hamming code</div>
+                    <div class="app-desc">Several parity checks over <b>overlapping</b> subsets of
+                        the bits. The pattern of which checks fail spells out the <b>binary index</b>
+                        of the broken bit, so you can flip it back.
+                        <b>Hamming(7,4)</b> protects 4 data bits with 3 check bits.</div>
+                </div>
+                <div class="app-card link">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="12" y="26" width="72" height="44" rx="5"/>
+                        <path d="M24,26 L24,70 M40,26 L40,70 M56,26 L56,70 M72,26 L72,70"/>
+                    </svg>
+                    <div class="tie">IN THE MACHINE YOU USE</div>
+                    <div class="app-title">ECC memory</div>
+                    <div class="app-desc">Server DRAM carries <b>8 check bits per 64 data bits</b>.
+                        That is extended Hamming &mdash; <b>SECDED</b>: single error corrected,
+                        double error detected. The same idea as beat 3's memory parity, one rung up.</div>
+                </div>
+                <div class="app-card link">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10,66 C26,26 38,26 50,50 C62,74 72,74 86,38"/>
+                        <path d="M10,80 L86,80"/>
+                    </svg>
+                    <div class="tie">BURSTS, NOT SINGLE BITS</div>
+                    <div class="app-title">CRC</div>
+                    <div class="app-desc">Treats the message as the coefficients of a polynomial and
+                        divides by a fixed generator; the remainder travels along. Very strong on
+                        <b>bursts</b> of adjacent errors. Every Ethernet frame ends in a
+                        <b>CRC-32</b>.</div>
+                </div>
+                <div class="app-card link">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="48" cy="48" r="34"/><circle cx="48" cy="48" r="8"/>
+                        <path d="M48,14 L48,26 M48,70 L48,82 M14,48 L26,48 M70,48 L82,48"/>
+                    </svg>
+                    <div class="tie">SYMBOLS, NOT BITS</div>
+                    <div class="app-title">Reed&ndash;Solomon</div>
+                    <div class="app-desc">Works on whole <b>symbols</b>, so one correction repairs a
+                        run of damaged bits. It is why a scratched CD still plays, why a torn
+                        <b>QR code</b> still scans, and how deep-space probes get data home.</div>
+                </div>
+            </div>
+            <div class="gotchas" style="margin-top:6px">
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    The unifying idea is <b>distance</b>: how many bits must flip to turn one legal
+                    codeword into another. Parity has distance 2 &mdash; enough to <i>notice</i> one
+                    flip. Hamming has distance 3, which is enough to <i>identify</i> it. Buying
+                    correction always means buying distance, and distance is paid for in check
+                    bits.</div></div>
+            </div>
+            <div class="app-desc" style="font-size:16px; margin-top:4px">
+                Beyond these: <b>LDPC</b> and <b>turbo</b> codes carry 5G, Wi-Fi and SSDs, and get
+                close to the theoretical limit Claude Shannon proved in 1948. None of it changes what
+                parity is &mdash; it changes how much you are willing to spend.
+            </div>
+        </div>
+
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+            <div class="dot" data-dot="5"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k amber">A</span><span class="k amber">S</span><span class="k amber">D</span><span class="k amber">F</span> toggle D3&ndash;D0
+            &middot; <span class="k violet">O</span> even/odd
+            &middot; <span class="k">X</span> clear flips
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    const FIRST = 1, LAST = 5;
+    let page = 1;
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+
+    // ============ STATE ============
+    // d[3..0] is the data; even parity is the XOR of the data bits, odd is its complement.
+    // flips[] marks which of the five transmitted bits the student has corrupted in transit.
+    const st = { d: [0,0,1,1], even: true, flips: [0,0,0,0,0] };
+    const ON='#4fc3f7', OFF='#7d9bb5', AMB='#ffb74d', DIMTXT='#55697c', VIO='#b388ff', BAD='#ff8a65';
+
+    const xorAll = a => a.reduce((x,y) => x ^ y, 0);
+    const parityBit = () => st.even ? xorAll(st.d) : (1 - xorAll(st.d));
+    // the 5-bit word, MSB first: D3 D2 D1 D0 P
+    const sentWord = () => [st.d[3], st.d[2], st.d[1], st.d[0], parityBit()];
+    const recvWord = () => sentWord().map((b,i) => b ^ st.flips[i]);
+    const flipCount = () => st.flips.reduce((a,b) => a+b, 0);
+    // the checker: an odd count means the word is inconsistent with the agreed convention
+    const errFlag = () => st.even ? xorAll(recvWord()) : (1 - xorAll(recvWord()));
+
+    // ---- data-bit pills, on beats 1 and 2 ----
+    ['ctl1','ctl2'].forEach(id => {
+        const row = document.getElementById(id);
+        [3,2,1,0].forEach(k => {
+            const el = document.createElement('div');
+            el.className = 'bitpill'; el.dataset.bit = k;
+            el.innerHTML = '<span class="bn">D' + k + '</span><span class="bv">0</span>';
+            el.addEventListener('click', () => { st.d[k] ^= 1; renderAll(); });
+            row.appendChild(el);
+        });
+        const m = document.createElement('div');
+        m.className = 'modectl'; m.dataset.mode = '1';
+        m.innerHTML = '<span class="mc-label">PARITY</span><span class="mc-val">EVEN</span>';
+        m.addEventListener('click', () => { st.even = !st.even; renderAll(); });
+        row.appendChild(m);
+        const h = document.createElement('div');
+        h.className = 'ctlhint';
+        h.innerHTML = 'click a bit &middot; <b>O</b> switches convention';
+        row.appendChild(h);
+    });
+
+    document.getElementById('clrBtn').addEventListener('click', () => {
+        st.flips = [0,0,0,0,0]; renderAll();
+    });
+
+    function renderAll() {
+        const p = parityBit(), sent = sentWord(), recv = recvWord();
+
+        // ---- controls ----
+        document.querySelectorAll('.bitpill').forEach(el => {
+            const k = +el.dataset.bit, v = st.d[k];
+            el.classList.toggle('on', !!v);
+            el.querySelector('.bv').textContent = v;
+        });
+        document.querySelectorAll('[data-mode]').forEach(el =>
+            el.querySelector('.mc-val').textContent = st.even ? 'EVEN' : 'ODD');
+        document.getElementById('modeWord').textContent = st.even ? 'even' : 'odd';
+
+        // ---- beat 1: the word row ----
+        const row = document.getElementById('word1');
+        let h = '';
+        [3,2,1,0].forEach(k => {
+            h += '<div class="wcell"><div class="wn">D' + k + '</div><div class="wv'
+               + (st.d[k] ? ' on' : '') + '">' + st.d[k] + '</div></div>';
+        });
+        h += '<div class="wsep"></div>';
+        h += '<div class="wcell par"><div class="wn">P</div><div class="wv'
+           + (p ? ' on' : '') + '">' + p + '</div></div>';
+        row.innerHTML = h;
+
+        const ones = sent.reduce((a,b) => a+b, 0);
+        document.getElementById('oneCount').textContent = ones;
+        const v = document.getElementById('oneVerdict');
+        const parityOK = st.even ? (ones % 2 === 0) : (ones % 2 === 1);
+        v.textContent = (ones % 2 === 0) ? 'even' : 'odd';
+        v.style.borderColor = parityOK ? ON : BAD;
+        v.style.color = parityOK ? ON : BAD;
+
+        const dataVal = st.d[3]*8 + st.d[2]*4 + st.d[1]*2 + st.d[0];
+        buildTable(dataVal);
+
+        // ---- beat 2: the tree ----
+        const xa = st.d[3] ^ st.d[2], xb = st.d[1] ^ st.d[0], xc = xa ^ xb;
+        const railVal = { d3: st.d[3], d2: st.d[2], d1: st.d[1], d0: st.d[0],
+                          xa: xa, xb: xb, xc: xc, podd: 1 - xc };
+        const tree = document.getElementById('tree');
+        Object.keys(railVal).forEach(k => {
+            const hot = !!railVal[k];
+            tree.querySelectorAll('.r-' + k).forEach(el => {
+                el.setAttribute('stroke', hot ? ON : OFF);
+                el.classList.toggle('flow', hot);
+            });
+        });
+        tree.querySelector('.j-xc').setAttribute('fill', xc ? ON : OFF);
+        [3,2,1,0].forEach(k =>
+            tree.querySelector('.tl-d' + k).setAttribute('fill', st.d[k] ? ON : OFF));
+        const pe = document.getElementById('pEvenLab'), po = document.getElementById('pOddLab');
+        pe.textContent = 'P(even) = ' + xc;
+        po.textContent = 'P(odd) = ' + (1 - xc);
+        pe.setAttribute('fill', st.even ? (xc ? ON : AMB) : DIMTXT);
+        po.setAttribute('fill', !st.even ? ((1-xc) ? ON : AMB) : DIMTXT);
+        document.getElementById('oddPath').style.opacity = st.even ? '0.28' : '1';
+
+        document.getElementById('hwNote').innerHTML =
+            'D3&oplus;D2 = <b>' + xa + '</b>, &nbsp; D1&oplus;D0 = <b>' + xb + '</b>, &nbsp; so the '
+          + 'tree gives <b>' + xc + '</b> &mdash; ' + (xc ? 'an odd' : 'an even')
+          + ' number of 1s in the data. '
+          + (st.even ? 'Even parity appends that bit directly.'
+                     : 'Odd parity appends its complement, through the one inverter.');
+
+        renderDemo(sent, recv);
+    }
+
+    // All 16 data values -- small enough to show in full, so the live row highlight
+    // always has somewhere to land.
+    function buildTable(hi) {
+        let h = '<tr><th class="amb">D3 D2 D1 D0</th><th class="amb"># of 1s</th>'
+              + '<th>P (even)</th><th>P (odd)</th><th>word sent</th></tr>';
+        for (let v = 0; v < 16; v++) {
+            const b = [(v>>3)&1, (v>>2)&1, (v>>1)&1, v&1];
+            const ones = b.reduce((a,x) => a+x, 0);
+            const pe = ones % 2, po = 1 - pe;
+            const p = st.even ? pe : po;
+            h += '<tr' + (v === hi ? ' class="horow"' : '') + '>'
+               + '<td>' + b.join(' ') + '</td><td>' + ones + '</td>'
+               + '<td>' + pe + '</td><td>' + po + '</td>'
+               + '<td>' + b.join(' ') + ' ' + p + '</td></tr>';
+        }
+        document.getElementById('ptable').innerHTML = h;
+    }
+
+    // ---- beat 3: send / corrupt / check ----
+    const BITNAME = ['D3','D2','D1','D0','P'];
+    function bitBoxes(gid, vals, x0, opts) {
+        opts = opts || {};
+        let s = '';
+        vals.forEach((v, i) => {
+            const x = x0 + i * 58;
+            const flipped = opts.showFlips && st.flips[i];
+            const stroke = flipped ? VIO : (v ? ON : '#37506a');
+            const fill = flipped ? 'rgba(179,136,255,0.20)' : '#0d1b2a';
+            s += '<rect x="' + x + '" y="88" width="50" height="74" rx="8" fill="' + fill
+               + '" stroke="' + stroke + '" stroke-width="' + (flipped ? 3.4 : 2.4) + '"'
+               + (opts.click ? ' style="cursor:pointer" data-flip="' + i + '"' : '') + '/>';
+            s += '<text x="' + (x+25) + '" y="138" font-size="30" fill="'
+               + (flipped ? VIO : (v ? ON : DIMTXT)) + '" stroke="none" text-anchor="middle"'
+               + ' font-family="Consolas, monospace"'
+               + (opts.click ? ' style="cursor:pointer" data-flip="' + i + '"' : '') + '>' + v + '</text>';
+            s += '<text x="' + (x+25) + '" y="76" font-size="14" fill="#5c7189" stroke="none"'
+               + ' text-anchor="middle" font-family="Consolas, monospace">' + BITNAME[i] + '</text>';
+            if (flipped) s += '<text x="' + (x+25) + '" y="182" font-size="14" fill="' + VIO
+               + '" stroke="none" text-anchor="middle" font-family="\'Segoe UI\',sans-serif">flipped</text>';
+        });
+        document.getElementById(gid).innerHTML = s;
+    }
+
+    function renderDemo(sent, recv) {
+        bitBoxes('sentWord', sent, 190, {});
+        bitBoxes('transitWord', recv, 680, { click: true, showFlips: true });
+        bitBoxes('recvWord', recv, 1170, {});
+
+        const n = flipCount(), e = errFlag();
+        const ef = document.getElementById('errFlag');
+        ef.textContent = 'E = ' + e;
+        ef.setAttribute('fill', e ? BAD : ON);
+        ['chanA','chanB','chanC'].forEach(id => {
+            const el = document.getElementById(id);
+            el.setAttribute('stroke', ON); el.classList.add('flow');
+        });
+
+        const vl = document.getElementById('verdict');
+        if (n === 0) {
+            vl.innerHTML = 'Nothing corrupted. The checker counts the 1s, finds them '
+                + (st.even ? 'even' : 'odd') + ' as agreed, and reports <span class="ok">E = 0</span>. '
+                + 'Now flip a bit.';
+        } else if (e) {
+            vl.innerHTML = '<span class="cnt">' + n + ' bit' + (n>1?'s':'') + ' flipped</span> '
+                + '&mdash; an odd number of them, so the count no longer matches and the checker '
+                + 'raises <span class="ok">E = 1</span>. <span class="ok">Caught.</span>';
+        } else {
+            vl.innerHTML = '<span class="cnt">' + n + ' bits flipped</span> &mdash; an even number, '
+                + 'so the count is back where it started. The checker reports '
+                + '<span class="miss">E = 0: this word is fine</span>, and it is '
+                + '<span class="miss">wrong</span>. Compare the word sent with the word received.';
+        }
+    }
+
+    document.getElementById('demoSvg').addEventListener('click', (ev) => {
+        const t = ev.target.getAttribute && ev.target.getAttribute('data-flip');
+        if (t === null || t === undefined) return;
+        st.flips[+t] ^= 1; renderAll();
+    });
+
+    const KEYBIT = { a: 3, s: 2, d: 1, f: 0 };
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '5') { setPage(+k); e.preventDefault(); return; }
+        const low = k.toLowerCase();
+        if (low in KEYBIT) { st.d[KEYBIT[low]] ^= 1; renderAll(); e.preventDefault(); return; }
+        switch (low) {
+            case ' ': case 'arrowright': case 'arrowdown': setPage(page+1); e.preventDefault(); break;
+            case 'arrowleft': case 'arrowup': case 'backspace': setPage(page-1); e.preventDefault(); break;
+            case 'o': st.even = !st.even; renderAll(); e.preventDefault(); break;
+            case 'x': st.flips = [0,0,0,0,0]; renderAll(); e.preventDefault(); break;
+            case 'r': st.d = [0,0,1,1]; st.even = true; st.flips = [0,0,0,0,0];
+                      setPage(1); renderAll(); e.preventDefault(); break;
+        }
+    });
+
+    render();
+    renderAll();
+</script>
+</body>
+</html>

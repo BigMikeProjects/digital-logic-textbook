@@ -1,0 +1,11 @@
+title: "Parity Circuits"
+description: ""
+chapter: combinational-logic
+section: building-block-circuits
+order: 30505
+
+graphics:
+  01-video.youtube:
+    caption: "Video: even and odd parity as the simplest error detection there is — choosing the parity bit so the word's 1-count comes out even, catching a single flipped bit at the receiver, watching a second flip cancel the first and slip past undetected, why XOR is the whole circuit, and where the more capable codes begin"
+  02-interactive.html:
+    caption: "Interactive: the four-beat cadence for a 4-bit even-parity generator and checker, plus a fifth beat on where parity stops — toggle the data and watch P follow, compare the XOR chain against the balanced tree, then click bits in transit to flip them and see one flip caught and two flips silently missed while the received data is visibly wrong"

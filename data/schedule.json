@@ -531,7 +531,7 @@
           "title": "Parity Circuits",
           "slug": "parity-circuits",
           "type": "full",
-          "published": false
+          "published": true
         },
         {
           "num": "3.5.6",
