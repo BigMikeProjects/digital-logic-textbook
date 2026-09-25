@@ -75,7 +75,7 @@
 <text class="idx" x="504" y="533" text-anchor="start" paint-order="stroke" stroke="#fff" stroke-width="3.5" stroke-linejoin="round">m10</text>
 <text x="610" y="414" text-anchor="start" font-size="26" font-weight="700" fill="#e0890b">BC</text>
 <text x="610" y="438" text-anchor="start" font-size="17" fill="#e0890b">group of 4</text>
-<g fill="#7c3aed" color="#7c3aed"><text class="x" x="36" y="370.0" text-anchor="start" font-size="26" font-weight="700">AB</text><line x1="37.6" y1="349.2" x2="54.2" y2="349.2" stroke="currentColor" stroke-width="2.0" stroke-linecap="round"/><text x="36" y="394.0" text-anchor="start" font-size="17">group of 4</text></g>
+<g fill="#7c3aed" color="#7c3aed"><text class="x" x="36" y="370.0" text-anchor="start" font-size="26" font-weight="700">AB</text><line x1="37.6" y1="347.1" x2="54.2" y2="347.1" stroke="currentColor" stroke-width="2.0" stroke-linecap="round"/><text x="36" y="394.0" text-anchor="start" font-size="17">group of 4</text></g>
 <circle cx="44" cy="652" r="6" fill="#0aa5c4"/>
 <text class="note" x="62" y="658">D is the two middle columns, all eight cells where D = 1. Every other</text>
 <text class="note" x="62" y="686">variable cancels.</text>
