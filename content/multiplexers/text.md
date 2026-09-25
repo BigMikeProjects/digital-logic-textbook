@@ -65,6 +65,15 @@ select line guarantees that **exactly one AND path is ever on at a time**. That 
 lesson — you can merge several routed paths through a single OR gate as long as at most one of them
 is active.
 
+![A gate-level one-bit 2:1 multiplexer. D0 and D1 enter from the left. The select line S runs
+along the bottom and branches into an inverter that produces S-bar, so two select rails climb into
+the circuit; where D1 crosses the S-bar rail the wire hops over it. The top AND gate takes D0 and
+S-bar and produces S-bar times D0; the bottom AND gate takes D1 and S and produces S times D1.
+Both AND outputs feed one OR gate, whose output Y equals S-bar times D0 plus S times D1. An inset
+at the lower right shows the same circuit drawn as the trapezoidal mux symbol, with D0 on the 0
+input, D1 on the 1 input, S entering from below, and Y leaving the narrow
+end.](./images/mux-2to1-1bit.svg)
+
 ### Widening the mux to multi-bit data
 
 Real data lines are rarely one bit. To handle a **vectorized** mux, you do not need a new idea: you
@@ -78,6 +87,13 @@ and a least significant bit (bit 0). That circuit is two copies of the one-bit m
 $Y_0$ from $D0_0$ and $D1_0$, the other producing $Y_1$ from $D0_1$ and $D1_1$, with one shared
 select line driving both. Set $S = 1$ and the $D1$ AND gate in *each* copy is enabled, so
 $Y_1 Y_0 = D1_1 D1_0$ — the whole 2-bit word is routed at once.
+
+![A 2-bit wide 2:1 multiplexer drawn as two copies of the one-bit circuit, stacked. The upper copy
+is labeled bit 1, the MSB copy: its two AND gates take D0 bit 1 with S-bar and D1 bit 1 with S, and
+their OR gate produces Y bit 1. The lower copy is labeled bit 0, the LSB copy, and is identical
+with bit 0 signals producing Y bit 0. At the left, a single inverter drives two named rails, S and
+S-bar; every select input on the four AND gates names one of those two rails — same name, same
+wire.](./images/mux-2to1-2bit.svg)
 
 This 2-bit, 2:1 multiplexer is a **minimal representation** in the sense that it is the smallest
 circuit that still shows every feature you need to understand: the select line, the enabling AND
