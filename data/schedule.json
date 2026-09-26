@@ -546,6 +546,13 @@
           "slug": "tri-state-buffers",
           "type": "full",
           "published": false
+        },
+        {
+          "num": "3.6.4",
+          "title": "Carry-Lookahead Adder",
+          "slug": "carry-lookahead-adder",
+          "type": "full",
+          "published": false
         }
       ]
     },
