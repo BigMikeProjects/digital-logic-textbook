@@ -141,36 +141,42 @@ Plain text files are stored as ASCII codes, and the older Internet protocols —
 ## Review Questions
 
 **1. What is the ASCII code for the character '5'?**
+
 A. 5\
 B. 48\
 C. 53\
 D. 0x05
 
 **2. A program reads the character 'C' (code 67) and wants the lowercase 'c'. What is the cheapest operation?**
+
 A. Add 32, or equivalently toggle bit 5\
 B. Subtract 32\
 C. Reverse the bit order\
 D. Add 1
 
 **3. Why does a naive sort of ASCII strings place `Zebra` before `apple`?**
+
 A. Because Z comes after a in the alphabet\
 B. Because every uppercase code (65–90) is numerically smaller than every lowercase code (97–122)\
 C. Because sorting compares string lengths first\
 D. Because ASCII does not define an order for letters
 
 **4. What is the even-parity bit for the 7-bit code $1010010$ ('R'), and why?**
+
 A. 0, because the code contains three 1s\
 B. 1, because the code contains three 1s and the total must be even\
 C. 0, because the code is odd-valued\
 D. 1, because every letter uses parity 1
 
 **5. Two bits are corrupted in a byte protected by even parity. What happens?**
+
 A. The receiver detects and corrects both errors\
 B. The receiver detects the error but cannot correct it\
 C. The error passes undetected, because two flips leave the count even\
 D. The receiver detects one error and misses the other
 
 **6. Why is every ASCII text file already a valid UTF-8 file?**
+
 A. Because UTF-8 ignores the eighth bit entirely\
 B. Because UTF-8's first 128 codes are identical to ASCII, and multi-byte characters always set the top bit\
 C. Because UTF-8 converts ASCII automatically when the file is opened\

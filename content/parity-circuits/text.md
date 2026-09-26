@@ -301,36 +301,42 @@ capability with **distance**, and paying for distance in check bits.
 ## Review Questions
 
 **1. Even parity is in use. The data bits are $1011$. What is the parity bit $P$?**
+
 A. 0, because the data already holds an even number of 1s\
 B. 1, because the data holds three 1s and the total must be made even\
 C. 1, because the leftmost data bit is 1\
 D. 0, because even parity always appends a 0
 
 **2. A 5-bit word arrives at an even-parity checker and exactly two of its bits were flipped in transit. What does the checker report?**
+
 A. An error, because the data no longer matches what was sent\
 B. An error, and it identifies which two bits are wrong\
 C. No error, because the 1-count is even again even though the word is wrong\
 D. No error, because two flips cancel and the received data is correct
 
 **3. Why is an XOR gate the natural building block for a parity circuit?**
+
 A. XOR is the cheapest gate to build in CMOS\
 B. An XOR over many bits outputs 1 exactly when the number of 1s among them is odd\
 C. XOR is the only gate that can be chained without an inverter\
 D. An XOR over many bits outputs 1 exactly when all of its inputs agree
 
 **4. A 4-bit even-parity generator is built as a chain of XOR gates and rebuilt as a balanced tree. What changes?**
+
 A. The logic function changes, and the tree gives the correct parity\
 B. Nothing changes; the two circuits are identical in every respect\
 C. The logic function is the same, but the tree has a shorter critical path\
 D. The tree uses fewer gates and is therefore cheaper
 
 **5. In Verilog, what does `^d` compute when `d` is declared `input [3:0] d`?**
+
 A. The XOR of `d` with the next signal in the expression\
 B. A 4-bit vector in which each bit has been inverted\
 C. A single bit that is 1 when `d` holds an odd number of 1s\
 D. A single bit that is 1 when `d` holds an even number of 1s
 
 **6. What does a Hamming code provide that a single parity bit does not?**
+
 A. It detects errors without adding any extra bits to the word\
 B. It detects bursts of adjacent errors but cannot handle single-bit errors\
 C. It locates the bit in error and can therefore correct it\

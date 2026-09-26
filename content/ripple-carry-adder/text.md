@@ -155,42 +155,49 @@ A ripple carry adder chains one full adder per bit, each stage's carry-out feedi
 ## Review Questions
 
 **1. Why can a stage with $A_i = B_i = 0$ produce its carry-out without waiting?**
+
 A. Because the sum bit is always 0 in that case\
 B. Because the carry-out is 0 regardless of the carry-in\
 C. Because zeros propagate faster than ones through a gate\
 D. Because the stage is skipped entirely during addition
 
 **2. Which input combination on a stage forces it to wait for its carry-in?**
+
 A. $A_i = B_i = 0$\
 B. $A_i = B_i = 1$\
 C. $A_i \ne B_i$\
 D. Every combination waits equally
 
 **3. For a four-bit ripple carry adder, which addition takes the longest to settle?**
+
 A. One where a carry is generated at bit 0 and propagates to the top\
 B. One where every stage propagates\
 C. One where every stage generates a carry\
 D. The one producing the largest sum
 
 **4. What is the worst-case settle time of a 32-bit ripple carry adder, in delay units?**
+
 A. 5Δ, because $\log_2 32 = 5$\
 B. 32Δ\
 C. 64Δ\
 D. 1Δ, because all the stages work at the same time
 
 **5. In the Verilog above, what is the role of the wires `c1`, `c2` and `c3`?**
+
 A. They carry the sum bits to the module output\
 B. They carry each stage's carry-out to the next stage's carry-in\
 C. They synchronize the stages to a clock\
 D. They are test signals and can be deleted
 
 **6. Why does an exhaustive testbench for this module need only 512 cases?**
+
 A. Because 512 is the largest number four bits can represent\
 B. Because there are nine input bits in total, and $2^9 = 512$\
 C. Because each of the four stages has 128 possible states\
 D. Because the carry-in doubles the 256 cases of a two-bit adder
 
 **7. What does the ripple carry adder trade away compared with a carry-look-ahead adder?**
+
 A. Hardware size, in exchange for speed\
 B. Speed, in exchange for a small and simple design\
 C. Correctness for some input combinations\

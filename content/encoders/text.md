@@ -227,36 +227,42 @@ whose `?` don't-cares and **branch order** express the priority rule directly.
 ## Review Questions
 
 **1. What does an encoder output?**
+
 A. A one-hot line selected by a binary code\
 B. The binary code identifying which input line is asserted\
 C. The number of inputs that are asserted\
 D. The complement of its input
 
 **2. Why does an encoder need a valid ($V$) output?**
+
 A. To indicate that the power supply is stable\
 B. Because the code 00 cannot otherwise be distinguished from no input being asserted\
 C. To report that two inputs were asserted at once\
 D. Because the output code is undefined for input 0
 
 **3. On a plain 4-to-2 encoder, inputs $I_2$ and $I_1$ are asserted at the same time. What appears on the outputs?**
+
 A. 10, the higher of the two\
 B. 01, the lower of the two\
 C. 11, a code for a line that is not asserted\
 D. 00, with $V$ forced low
 
 **4. What rule defines a priority encoder?**
+
 A. It reports the lowest-numbered asserted input\
 B. It reports the highest-numbered asserted input\
 C. It refuses to output a code when more than one input is asserted\
 D. It outputs the count of asserted inputs
 
 **5. What is the job of the masking stage in a priority encoder?**
+
 A. It inverts the inputs before they reach the encoder\
 B. It kills every asserted line below the highest, so the plain encoder behind it sees a one-hot input\
 C. It stores the previous input for comparison\
 D. It generates the valid output
 
 **6. Why must the priority encoder's Verilog use `casez` rather than `case`?**
+
 A. `case` cannot be used inside an `always` block\
 B. `casez` is faster in simulation\
 C. Under `case` the `?` characters are matched literally, so no branch ever fires\

@@ -134,42 +134,49 @@ Checking the example, $B_1 = 1 \oplus 0 \oplus 1 = 0$ ✓. The two directions ar
 ## Review Questions
 
 **1. What property defines a Gray code?**
+
 A. Every value uses the same number of 1 bits\
 B. Consecutive values differ in exactly one bit\
 C. Values can be added without carries\
 D. The most significant bit always indicates the sign
 
 **2. Why is the binary transition from 7 (`0111`) to 8 (`1000`) dangerous in a position sensor?**
+
 A. Because 7 and 8 are not adjacent positions\
 B. Because binary cannot represent the value 8 in four bits\
 C. Because all four bits change, and they do not change simultaneously, so intermediate patterns can be read\
 D. Because the sensor must convert to decimal first
 
 **3. Convert $1010_2$ to Gray code.**
+
 A. `1111`\
 B. `1101`\
 C. `0101`\
 D. `1011`
 
 **4. Convert $1110_G$ to binary.**
+
 A. `1011`\
 B. `1001`\
 C. `1111`\
 D. `1100`
 
 **5. Why is binary-to-Gray conversion faster than Gray-to-binary?**
+
 A. Binary-to-Gray uses fewer bits\
 B. Each Gray bit depends only on two adjacent binary bits, so all the XORs run in parallel, while each binary bit depends on the one above it\
 C. Gray-to-binary requires a subtraction\
 D. Gray-to-binary can only be done in software
 
 **6. Karnaugh maps label their axes `00, 01, 11, 10` rather than `00, 01, 10, 11`. Why?**
+
 A. To place the largest values in the middle of the map\
 B. To make the map square\
 C. So that physically adjacent cells differ in exactly one variable, which is what makes visual grouping valid\
 D. Because K-maps cannot represent the pattern `10`
 
 **7. A Gray-coded encoder is misaligned so that one track switches slightly early. What is the worst error this can produce?**
+
 A. The reading can be off by one position\
 B. The reading can be any value at all\
 C. The reading can be off by half a revolution\

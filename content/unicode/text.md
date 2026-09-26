@@ -102,42 +102,49 @@ Because the first 128 code points are ASCII and a 1-byte UTF-8 character is `0xx
 ## Review Questions
 
 **1. What is the difference between a Unicode code point and an encoding such as UTF-8?**
+
 A. They are two names for the same thing\
 B. The code point is the number assigned to a character; the encoding decides how that number is stored as bytes\
 C. The code point is for emoji only; the encoding handles letters\
 D. The encoding assigns the number and the code point stores it
 
 **2. Why are the first 128 Unicode code points identical to the ASCII codes?**
+
 A. Coincidence — the numbers happened to line up\
 B. So that existing ASCII text is already valid UTF-8 and keeps working unchanged\
 C. Because Unicode can only represent 128 characters at a time\
 D. Because ASCII was rewritten to match Unicode
 
 **3. A UTF-8 byte begins with the bits `10`. What does that tell the decoder?**
+
 A. It is a 2-byte character\
 B. It is an ASCII character\
 C. It is a continuation byte — part of a multi-byte character, not the start of one\
 D. The file is corrupted
 
 **4. How many bytes does the character é (U+00E9) occupy in UTF-8?**
+
 A. 1\
 B. 2\
 C. 3\
 D. 4
 
 **5. Why does UTF-8 use a variable number of bytes rather than a fixed four?**
+
 A. Fixed-width encoding cannot represent emoji\
 B. Variable width makes decoding faster\
 C. Because most text is in the ASCII range, and fixed four-byte characters would quadruple the size of ordinary documents\
 D. Because bytes cannot be grouped in fours
 
 **6. The string "café" contains four characters. How many bytes does it occupy in UTF-8, and why?**
+
 A. 4 bytes — one per character\
 B. 5 bytes — three ASCII characters at 1 byte each plus é at 2 bytes\
 C. 8 bytes — two bytes per character\
 D. 16 bytes — four bytes per character
 
 **7. What practical advantage does the `10xxxxxx` continuation pattern give UTF-8?**
+
 A. It compresses the text\
 B. It allows more than 150,000 characters\
 C. It makes the encoding self-synchronizing — a decoder landing mid-stream can find the next character boundary\

@@ -189,36 +189,42 @@ conditional** so that synthesis does not infer a latch.
 ## Review Questions
 
 **1. What does a decoder produce at its outputs?**
+
 A. A binary code identifying which input is active\
 B. A one-hot output, with exactly one line asserted\
 C. The sum of its inputs\
 D. The same number of outputs as inputs
 
 **2. A decoder has five address lines. How many outputs does it have?**
+
 A. 10\
 B. 16\
 C. 25\
 D. 32
 
 **3. In the truth table for a decoder with an enable, why do the address columns show × on the row where $EN = 0$?**
+
 A. The address lines are disconnected in that state\
 B. The enable dominates — with $EN = 0$ the outputs are 0 regardless of the address\
 C. That row is an error condition\
 D. The address value is unknown until the circuit settles
 
 **4. Why is output $Y_i$ of a decoder described as a minterm?**
+
 A. Because it is the smallest output of the group\
 B. Because it uses the fewest gates\
 C. Because it is 1 on exactly one row of the truth table and 0 on all the others\
 D. Because it is always the complement of $Y_0$
 
 **5. How do you use a decoder as a demultiplexer?**
+
 A. Reverse the direction of the address lines\
 B. Drive the data onto the enable pin and let the address select which output it reaches\
 C. Tie all the outputs together\
 D. Remove the enable input entirely
 
 **6. What goes wrong if the `y = 4'b0000;` default is deleted from the Verilog module?**
+
 A. The module will not compile\
 B. The outputs become one-hot in the wrong order\
 C. Some path assigns nothing, so synthesis infers a latch and the logic is no longer purely combinational\
