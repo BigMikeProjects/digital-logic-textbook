@@ -1,0 +1,11 @@
+title: "BCD-to-Seven-Segment Decoder"
+description: ""
+chapter: combinational-logic
+section: building-block-circuits
+order: 30506
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the BCD-to-seven-segment decoder — segment names a through g, binary-coded decimal inputs, why codes 10–15 become don't-cares, common anode versus common cathode on the Basys 3, one minimized equation per segment, and the case-statement Verilog"
+  02-interactive.html:
+    caption: "Interactive: the four-beat cadence for a BCD-to-seven-segment decoder — step a digit from 0 through 15 and watch the display, flip between common-cathode and common-anode drive, open any segment's K-map with its don't-cares, force the don't-cares to 0 to see what they save, and read the case-statement Verilog"

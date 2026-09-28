@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BCD-to-Seven-Segment Decoder — The Four-Beat Cadence</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 lit segment / logic 1 · amber #ffb74d the BCD input bits
+       · violet #b388ff idiom tag + the don't-care cells */
+
+    @keyframes dash { to { stroke-dashoffset: -48; } }
+    .flow { stroke-dasharray: 14 10; animation: dash 1s linear infinite; }
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- controls ---------- */
+    .ctlrow { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .bitpill { display: flex; align-items: center; gap: 9px; cursor: pointer; user-select: none;
+        border: 2px solid #6a5324; border-radius: 999px; padding: 7px 16px;
+        background: rgba(255,183,77,0.05); transition: all .16s ease; }
+    .bitpill .bn { color: #ffb74d; font-size: 17px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .bitpill .bv { color: #7d9bb5; font-size: 21px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .bitpill.on { border-color: #4fc3f7; background: rgba(79,195,247,0.12); }
+    .bitpill.on .bv { color: #4fc3f7; }
+    .stepbtn { cursor: pointer; user-select: none; border: 2px solid #ffb74d;
+        border-radius: 999px; padding: 8px 22px; color: #ffb74d; font-size: 17px;
+        background: rgba(255,183,77,0.08); font-weight: 700; letter-spacing: 1px; }
+    .ctlhint { color: #6a8398; font-size: 15px; }
+    .ctlhint b { color: #ffb74d; font-family: 'Consolas','Courier New',monospace; }
+    .invalid { color: #ff8a65; font-weight: 700; font-size: 17px;
+        border: 2px solid #8a4a35; border-radius: 999px; padding: 6px 16px;
+        background: rgba(255,138,101,0.10); }
+    .polseg { display: inline-flex; align-items: center; border: 2px solid #6a4fa0;
+        border-radius: 999px; padding: 3px; background: rgba(179,136,255,0.06); user-select: none; }
+    .polseg .pseg { cursor: pointer; border-radius: 999px; padding: 6px 16px; font-size: 14px;
+        font-weight: 700; letter-spacing: 1px; color: #7a6a99;
+        font-family: 'Consolas','Courier New',monospace; transition: all .15s ease; }
+    .polseg .pseg:hover { color: #cbb4ff; }
+    .polseg .pseg.on { background: #b388ff; color: #17111f; }
+    .driverow { font-family: 'Consolas','Courier New',monospace; font-size: 18px;
+        color: #55697c; letter-spacing: 1px; }
+    .driverow b { color: #4fc3f7; font-weight: 700; }
+    .polnote { font-size: 15px; color: #6a8398; text-align: center; max-width: 560px;
+        line-height: 1.35; }
+    .polnote b { color: #b388ff; }
+
+    /* ---------- page 1 ---------- */
+    #p1 { gap: 36px; align-items: center; }
+    .disp-col { flex: 0 0 40%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .disp-col > svg { width: 330px; height: 470px; }
+    .fn-right { flex: 1; display: flex; flex-direction: column; gap: 18px; }
+    .fn-statement { font-size: 27px; color: #cfd8dc; line-height: 1.4; }
+    .fn-statement .ic { color: #ffb74d; font-weight: 600; }
+    .fn-statement .io { color: #4fc3f7; font-weight: 600; }
+    .segtable { border-collapse: collapse; font-size: 17px; align-self: flex-start; }
+    .segtable th, .segtable td { border: 1px solid #37506a; padding: 3px 13px; text-align: center;
+        font-family: 'Consolas','Courier New',monospace; color: #cfd8dc; }
+    .segtable th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; }
+    .segtable th.amb { background: rgba(255,183,77,0.12); color: #ffb74d; }
+    .segtable td.one { color: #4fc3f7; font-weight: 700; }
+    .segtable td.zero { color: #4a6274; }
+    .segtable tr.horow td { background: rgba(79,195,247,0.20); }
+    .segtable tr.unused td { color: #8a6a5a; }
+    .segtable tr.unused td.dcmark { color: #b388ff; font-weight: 700; }
+    .keyidea { border-left: 4px solid #b388ff; padding: 5px 0 5px 20px; font-size: 20px;
+        color: #90a4ae; line-height: 1.45; }
+    .keyidea b { color: #b388ff; }
+
+    /* ---------- page 2 ---------- */
+    #p2 { gap: 30px; align-items: center; }
+    .eq-col { flex: 0 0 38%; display: flex; flex-direction: column; gap: 12px; }
+    .eqbox { border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a;
+        padding: 14px 20px; display: flex; flex-direction: column; gap: 7px; }
+    .eqrow { display: flex; align-items: center; gap: 12px; font-family: 'Consolas','Courier New',monospace;
+        font-size: 19px; color: #cfd8dc; cursor: pointer; border-radius: 8px; padding: 3px 8px; }
+    .eqrow:hover { background: rgba(79,195,247,0.07); }
+    .eqrow.sel { background: rgba(79,195,247,0.16); }
+    .eqrow .en { color: #4fc3f7; font-weight: 700; width: 26px; }
+    .eqrow .ev { color: #7d9bb5; }
+    .eqrow.lit .ev { color: #cfd8dc; }
+    .eqrow .eb { margin-left: auto; font-size: 17px; color: #55697c; }
+    .eqrow.lit .eb { color: #4fc3f7; font-weight: 700; }
+    .kmap-col { flex: 1; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+    .kmap-head { display: flex; align-items: center; gap: 20px; }
+    .kmap-head .kh-title { font-size: 23px; font-weight: 700; color: #e0e0e0; }
+    .kmap-head .kh-title b { color: #4fc3f7; }
+    .dcbtn { cursor: pointer; user-select: none; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 7px 20px; color: #b388ff; font-size: 16px; background: rgba(179,136,255,0.08);
+        font-weight: 600; }
+    .dcbtn.off { border-color: #8a4a35; color: #ff8a65; background: rgba(255,138,101,0.08); }
+    .kmap-col svg { width: 100%; max-width: 720px; }
+    .kmap-note { font-size: 19px; color: #90a4ae; text-align: center; max-width: 780px; line-height: 1.45; }
+    .kmap-note b { color: #4fc3f7; } .kmap-note .vi { color: #b388ff; font-weight: 700; }
+    .kmap-note .bad { color: #ff8a65; font-weight: 700; }
+    .physnote { display: flex; gap: 14px; }
+    .pn { flex: 1; border: 2px solid #37506a; border-radius: 12px; background: #0d1b2a;
+        padding: 10px 16px; font-size: 16px; color: #90a4ae; line-height: 1.4; }
+    .pn b { color: #4fc3f7; }
+
+    /* ---------- page 3 ---------- */
+    #p3 { flex-direction: column; align-items: center; gap: 16px; }
+    .apps { display: flex; gap: 20px; width: 100%; }
+    .app-card { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 22px 22px; display: flex; flex-direction: column; gap: 13px; min-height: 400px; }
+    .app-card svg { width: 72px; height: 72px; color: #4fc3f7; }
+    .app-title { font-size: 22px; font-weight: 700; color: #e0e0e0; }
+    .app-desc { font-size: 18px; color: #90a4ae; line-height: 1.45; }
+    .app-card.link { border-color: #6a4fa0; }
+    .app-card.link svg { color: #b388ff; }
+    .app-card .tie { font-size: 13px; color: #b388ff; letter-spacing: 1px;
+        text-transform: uppercase; font-weight: 700; }
+    .honest2 { width: 100%; border-left: 4px solid #ffb74d; padding: 10px 0 10px 22px;
+        font-size: 20px; color: #90a4ae; line-height: 1.5; }
+    .honest2 b { color: #ffb74d; }
+
+    /* ---------- page 4 ---------- */
+    #p4 { flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+    .codes { display: flex; gap: 26px; align-items: flex-start; }
+    .code-card { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+    .code-label { font-size: 19px; color: #90a4ae; font-weight: 600; }
+    .code-label b { color: #4fc3f7; } .code-label .v { color: #b388ff; }
+    .code { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        padding: 13px 22px; font-family: 'Consolas','Courier New',monospace;
+        font-size: 18px; line-height: 1.36; color: #cfd8dc; white-space: pre; }
+    .code .kw { color: #4fc3f7; } .code .op { color: #ffb74d; }
+    .code .cm { color: #607d8b; } .code .lit { color: #b388ff; }
+    .gotchas { display: flex; flex-direction: column; gap: 9px; width: 1620px; }
+    .gotcha { display: flex; align-items: center; gap: 16px;
+        border: 2px solid #6a5324; border-radius: 12px; background: rgba(255,183,77,0.07);
+        padding: 9px 22px; }
+    .gotcha.key { border-color: #6a4fa0; background: rgba(179,136,255,0.09); }
+    .gotcha .g-bang { color: #ffb74d; font-size: 26px; font-weight: 700; flex-shrink: 0; }
+    .gotcha.key .g-bang { color: #b388ff; }
+    .gotcha .g-txt { font-size: 17px; color: #cfd8dc; line-height: 1.4; }
+    .gotcha .g-txt code { font-family: 'Consolas','Courier New',monospace; color: #ffb74d; }
+    .gotcha.key .g-txt code { color: #b388ff; }
+    .idiom-tag { color: #b388ff; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 7px 24px; font-size: 20px; font-weight: 600; background: rgba(179,136,255,0.08); }
+    .idiom-tag .mono { font-family: 'Consolas','Courier New',monospace; color: #cbb4ff; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 8px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.violet { color: #b388ff; border-color: #6a4fa0; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="74" y="14" width="56" height="76" rx="6" stroke="#cfd8dc" stroke-width="2.6"/>
+                <g stroke="#4fc3f7" stroke-width="2.4">
+                    <line x1="36" y1="26" x2="74" y2="26"/><line x1="36" y1="42" x2="74" y2="42"/>
+                    <line x1="36" y1="58" x2="74" y2="58"/><line x1="36" y1="74" x2="74" y2="74"/>
+                </g>
+                <text x="102" y="56" font-size="13" fill="#90a4ae" text-anchor="middle" font-family="'Segoe UI',sans-serif">BCD</text>
+                <g stroke="#ffb74d" stroke-width="2.4">
+                    <line x1="130" y1="52" x2="160" y2="52"/>
+                </g>
+                <g stroke="#4fc3f7" stroke-width="5" stroke-linecap="round">
+                    <line x1="176" y1="22" x2="206" y2="22"/>
+                    <line x1="210" y1="26" x2="210" y2="48"/>
+                    <line x1="210" y1="56" x2="210" y2="78"/>
+                    <line x1="176" y1="82" x2="206" y2="82"/>
+                    <line x1="172" y1="56" x2="172" y2="78"/>
+                    <line x1="172" y1="26" x2="172" y2="48"/>
+                    <line x1="176" y1="52" x2="206" y2="52"/>
+                </g>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>BCD-to-Seven-Segment <span class="sub">&mdash; four bits in, a drawn digit out</span></h1>
+            <div class="subtitle">The four-beat cadence &middot; common-cathode or common-anode drive &middot; the block where don't-cares pay for themselves</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Functionality</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Hardware</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Applications</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Verilog</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- ============ PAGE 1 ============ -->
+        <div class="page" id="p1">
+            <div class="disp-col">
+                <svg id="disp1" viewBox="0 0 300 430"></svg>
+                <div class="ctlrow" id="ctl1"></div>
+                <div class="ctlrow"><div class="stepbtn" id="stepBtn1">STEP 0 &rarr; 15</div>
+                    <div class="invalid" id="inv1" style="display:none">not a BCD digit</div></div>
+                <div class="polseg" id="polSeg">
+                    <div class="pseg on" data-m="cc">COMMON CATHODE</div>
+                    <div class="pseg" data-m="ca">COMMON ANODE</div>
+                </div>
+                <div class="driverow" id="driveRow"></div>
+                <div class="polnote" id="polNote"></div>
+            </div>
+
+            <div class="fn-right">
+                <div class="fn-statement">Four input bits, seven output bits. The block turns a
+                    <span class="ic">binary-coded digit</span> into the pattern of
+                    <span class="io">lit segments that draws it</span> &mdash; the first block whose
+                    output is a picture rather than a number.</div>
+
+                <table class="segtable" id="segtable"></table>
+
+                <div class="convnote" style="font-size:16px;color:#6a8398;line-height:1.4">
+                    Glyph convention: <b style="color:#4fc3f7">6 keeps segment a, 9 keeps segment d</b>
+                    &mdash; the set that extends cleanly to hex A&ndash;F later (drop 6&rsquo;s
+                    segment a and it becomes identical to a lowercase b).</div>
+
+                <div class="keyidea">BCD uses only 0&ndash;9, so inputs <b>1010 through 1111 never
+                    occur</b> and every output is a <b>don't-care</b> on those six rows. That is not a
+                    footnote &mdash; it is the whole reason beat 2's equations are as small as they
+                    are.</div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 2 ============ -->
+        <div class="page" id="p2">
+            <div class="eq-col">
+                <div class="ctlrow" id="ctl2"></div>
+                <div class="eqbox" id="eqbox"></div>
+                <div class="physnote">
+                    <div class="pn"><b>Common cathode</b> shares ground and wants active-high
+                        drivers. <b>Common anode</b> shares V+ and wants every output complemented
+                        &mdash; the 7447 is that part. Beat 1&rsquo;s toggle shows the drive levels
+                        flip while the glyph stays put.</div>
+                    <div class="pn">Each segment is an <b>LED</b> and needs a current-limiting
+                        resistor. This is where the logic meets a real load.</div>
+                </div>
+            </div>
+
+            <div class="kmap-col">
+                <div class="kmap-head">
+                    <div class="kh-title">K-map for segment <b id="kmSeg">e</b></div>
+                    <div class="dcbtn" id="dcBtn">don't-cares: USED</div>
+                </div>
+                <svg id="kmap" viewBox="0 0 720 400"></svg>
+                <div class="kmap-note" id="kmapNote"></div>
+            </div>
+        </div>
+
+        <!-- ============ PAGE 3 ============ -->
+        <div class="page" id="p3">
+            <div class="apps">
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="10" y="20" width="76" height="56" rx="6"/>
+                        <g stroke-width="5"><line x1="30" y1="34" x2="46" y2="34"/>
+                        <line x1="50" y1="38" x2="50" y2="48"/><line x1="26" y1="38" x2="26" y2="48"/>
+                        <line x1="30" y1="52" x2="46" y2="52"/></g>
+                        <circle cx="64" cy="34" r="3" fill="currentColor" stroke="none"/>
+                        <circle cx="64" cy="52" r="3" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <div class="app-title">Numeric displays</div>
+                    <div class="app-desc">Clocks, meters, instrument panels, appliance front panels
+                        &mdash; anywhere a digit has to be readable across a room.</div>
+                </div>
+                <div class="app-card link">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="8" y="30" width="20" height="36" rx="3"/>
+                        <rect x="38" y="30" width="20" height="36" rx="3"/>
+                        <rect x="68" y="30" width="20" height="36" rx="3"/>
+                        <path d="M18,30 L18,16 M48,30 L48,16 M78,30 L78,16 M18,16 L78,16 M48,16 L48,8"/>
+                    </svg>
+                    <div class="tie">ties back to the demux</div>
+                    <div class="app-title">Multiplexed digits</div>
+                    <div class="app-desc">One shared set of segment drivers, with a demux enabling
+                        one digit at a time &mdash; fast enough that persistence of vision shows them
+                        all lit at once.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="22" y="14" width="52" height="68" rx="5"/>
+                        <path d="M22,28 L10,28 M22,42 L10,42 M22,56 L10,56 M22,70 L10,70"/>
+                        <path d="M74,28 L86,28 M74,42 L86,42 M74,56 L86,56 M74,70 L86,70"/>
+                        <text x="48" y="53" font-size="15" fill="currentColor" stroke="none" text-anchor="middle" font-family="Consolas, monospace">7447</text>
+                    </svg>
+                    <div class="app-title">Catalogue parts</div>
+                    <div class="app-desc">The <b>7447</b> (active-low, common anode) and <b>7448</b>
+                        (active-high, common cathode). You will meet them in a lab and on a
+                        datasheet.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="14" y="18" width="68" height="60" rx="5"/>
+                        <path d="M14,34 L82,34"/>
+                        <path d="M28,50 L42,50 M28,62 L52,62 M56,50 L68,50"/>
+                        <circle cx="24" cy="26" r="3" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <div class="app-title">What is actually done</div>
+                    <div class="app-desc">Nobody hand-minimises seven K-maps in industry &mdash; the
+                        pattern is a lookup table and the synthesiser does the reduction.</div>
+                </div>
+            </div>
+
+            <div class="honest2">So why learn the minimisation? Because this is the clearest
+                <b>multi-output design exercise</b> available: one shared set of inputs, seven
+                independent functions, and six don't-care rows that visibly shrink the result. The
+                technique is the lesson; the seven equations are not load-bearing in a modern flow,
+                and it is worth being straight about that.</div>
+        </div>
+
+        <!-- ============ PAGE 4 ============ -->
+        <div class="page" id="p4">
+            <div class="idiom-tag">This block's Verilog idiom: <span class="mono">case</span> with a
+                7-bit literal per digit &mdash; the truth table, transcribed</div>
+            <div class="codes">
+                <div class="code-card">
+                    <div class="code-label">How this block is <b>actually written</b></div>
+<div class="code"><span class="kw">module</span> bcd7seg (<span class="kw">input</span> [3:0] n,
+                 <span class="kw">output reg</span> [6:0] seg);   <span class="cm">// {a,b,c,d,e,f,g}</span>
+  <span class="kw">always</span> @(<span class="op">*</span>) <span class="kw">begin</span>
+    <span class="kw">case</span> (n)
+      <span class="lit">4'd0</span>: seg <span class="op">=</span> <span class="lit">7'b1111110</span>;  <span class="cm">// 0x7E</span>
+      <span class="lit">4'd1</span>: seg <span class="op">=</span> <span class="lit">7'b0110000</span>;  <span class="cm">// 0x30</span>
+      <span class="lit">4'd2</span>: seg <span class="op">=</span> <span class="lit">7'b1101101</span>;  <span class="cm">// 0x6D</span>
+      <span class="lit">4'd3</span>: seg <span class="op">=</span> <span class="lit">7'b1111001</span>;  <span class="cm">// 0x79</span>
+      <span class="lit">4'd4</span>: seg <span class="op">=</span> <span class="lit">7'b0110011</span>;  <span class="cm">// 0x33</span>
+      <span class="lit">4'd5</span>: seg <span class="op">=</span> <span class="lit">7'b1011011</span>;  <span class="cm">// 0x5B</span>
+      <span class="lit">4'd6</span>: seg <span class="op">=</span> <span class="lit">7'b1011111</span>;  <span class="cm">// 0x5F</span>
+      <span class="lit">4'd7</span>: seg <span class="op">=</span> <span class="lit">7'b1110000</span>;  <span class="cm">// 0x70</span>
+      <span class="lit">4'd8</span>: seg <span class="op">=</span> <span class="lit">7'b1111111</span>;  <span class="cm">// 0x7F</span>
+      <span class="lit">4'd9</span>: seg <span class="op">=</span> <span class="lit">7'b1111011</span>;  <span class="cm">// 0x7B</span>
+      <span class="kw">default</span>: seg <span class="op">=</span> <span class="lit">7'b0000000</span>;  <span class="cm">// 0x00 — blank</span>
+    <span class="kw">endcase</span>
+  <span class="kw">end</span>
+<span class="kw">endmodule</span></div>
+                </div>
+                <div class="code-card">
+                    <div class="code-label">The same circuit, <b>one segment at a time</b></div>
+<div class="code"><span class="cm">// segment e, minimised with 10-15 as don't-cares</span>
+<span class="kw">assign</span> e <span class="op">=</span> (C <span class="op">&amp;</span> <span class="op">~</span>D) <span class="op">|</span> (<span class="op">~</span>B <span class="op">&amp;</span> <span class="op">~</span>D);
+
+<span class="cm">// ...and the other six, from beat 2</span>
+<span class="kw">assign</span> c <span class="op">=</span> D <span class="op">|</span> <span class="op">~</span>C <span class="op">|</span> B;
+<span class="kw">assign</span> b <span class="op">=</span> (<span class="op">~</span>C <span class="op">&amp;</span> <span class="op">~</span>D) <span class="op">|</span> (C <span class="op">&amp;</span> D) <span class="op">|</span> <span class="op">~</span>B;</div>
+                    <div class="code-label" style="margin-top:12px">Two altitudes, one circuit. The
+                        <b>case</b> is what you write; the equations are what the tool builds.</div>
+                </div>
+            </div>
+            <div class="gotchas">
+                <div class="gotcha key"><div class="g-bang">&#9733;</div><div class="g-txt">
+                    <b>&ldquo;Don't care&rdquo; and <code>default:</code> are not the same
+                    commitment.</b> The K-map don't-cares let codes 10&ndash;15 emit whatever is
+                    cheapest &mdash; garbage glyphs. <code>default: seg = 7'b0000000;</code> is a
+                    <b>decision</b> to blank the display instead. Same six rows, different
+                    circuits.</div></div>
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    The <code>default</code> is also what covers 10&ndash;15 and prevents an inferred
+                    <b>latch</b> &mdash; a <code>case</code> on a 4-bit input with only ten arms is
+                    incompletely specified without it.</div></div>
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    The bit order in <code>{a,b,c,d,e,f,g}</code> is a convention that must be stated
+                    in a comment, or the literals are unreadable. Getting it backwards is a silent
+                    and maddening bug.</div></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k amber">C</span> step the digit
+            &middot; <span class="k amber">A</span><span class="k amber">S</span><span class="k amber">D</span><span class="k amber">F</span> toggle A&ndash;D
+            &middot; <span class="k violet">K</span> don't-cares on/off
+            &middot; <span class="k violet">P</span> cathode/anode
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    const FIRST = 1, LAST = 4;
+    let page = 1;
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+
+    // ============ THE DATA ============
+    // Segment patterns for 0-9, active high, order a b c d e f g.
+    // Convention: 6 includes segment a; 9 includes segment d — the set that extends cleanly
+    // to hex A-F (drop 6's segment a and the glyph is identical to a lowercase b).
+    const SEG = 'abcdefg';
+    const DIGIT = ['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
+    const PAT = DIGIT.map(d => SEG.split('').map(s => d.includes(s) ? 1 : 0));
+
+    // The seven minimal expressions, computed by an exact two-level minimiser with
+    // 10-15 as don't-cares and verified against the ten digit patterns.
+    // Each term is a list of [varIndex, wantValue]; vars are A(msb) B C D(lsb).
+    const VN = ['A','B','C','D'];
+    const EQ = {
+        a: [[[2,1]], [[1,0],[3,0]], [[1,1],[3,1]], [[0,1]]],
+        b: [[[2,0],[3,0]], [[2,1],[3,1]], [[1,0]]],
+        c: [[[3,1]], [[2,0]], [[1,1]]],
+        d: [[[2,1],[3,0]], [[1,0],[3,0]], [[1,0],[2,1]], [[1,1],[2,0],[3,1]], [[0,1]]],
+        e: [[[2,1],[3,0]], [[1,0],[3,0]]],
+        f: [[[2,0],[3,0]], [[1,1],[3,0]], [[1,1],[2,0]], [[0,1]]],
+        g: [[[2,1],[3,0]], [[1,0],[2,1]], [[1,1],[2,0]], [[0,1]]]
+    };
+    const termStr = t => t.map(([i,v]) => VN[i] + (v ? '' : "'")).join('·');
+    const eqStr = terms => terms.map(termStr).join(' + ');
+    const bitsOf = n => [(n>>3)&1, (n>>2)&1, (n>>1)&1, n&1];
+    function evalTerms(terms, n) {
+        const b = bitsOf(n);
+        return terms.some(t => t.every(([i,v]) => b[i] === v)) ? 1 : 0;
+    }
+    // segment value for ANY code 0-15, from the published equations
+    const segVal = (s, n) => evalTerms(EQ[s], n);
+
+    const st = { n: 0, seg: 'e', useDC: true, ca: false };   // ca: common-anode drive
+    const ON='#4fc3f7', OFF='#7d9bb5', AMB='#ffb74d', DIM='#243a4e', VIO='#b388ff', BAD='#ff8a65';
+
+    // ---- input pills on beats 1 and 2 ----
+    ['ctl1','ctl2'].forEach(id => {
+        const row = document.getElementById(id);
+        [0,1,2,3].forEach(i => {
+            const el = document.createElement('div');
+            el.className = 'bitpill'; el.dataset.vi = i;
+            el.innerHTML = '<span class="bn">' + VN[i] + '</span><span class="bv">0</span>';
+            el.addEventListener('click', () => { st.n ^= (1 << (3 - i)); renderAll(); });
+            row.appendChild(el);
+        });
+        if (id === 'ctl2') {
+            const b = document.createElement('div');
+            b.className = 'stepbtn'; b.textContent = 'STEP 0 → 15';
+            b.addEventListener('click', () => { st.n = (st.n + 1) & 15; renderAll(); });
+            row.appendChild(b);
+        }
+        const h = document.createElement('div');
+        h.className = 'ctlhint';
+        h.innerHTML = 'click a bit &middot; <b>C</b> steps';
+        row.appendChild(h);
+    });
+    document.getElementById('stepBtn1').addEventListener('click', () => {
+        st.n = (st.n + 1) & 15; renderAll();
+    });
+    document.getElementById('dcBtn').addEventListener('click', () => { st.useDC = !st.useDC; renderAll(); });
+    document.querySelectorAll('#polSeg .pseg').forEach(el =>
+        el.addEventListener('click', () => { st.ca = el.dataset.m === 'ca'; renderAll(); }));
+
+    // ---- the seven-segment display ----
+    // geometry: horizontal bars a,d,g and vertical bars b,c,e,f
+    const BARS = {
+        a: 'M 70,30  L 190,30  L 205,45  L 190,60  L 70,60  L 55,45  Z',
+        b: 'M 196,66 L 211,51  L 226,66  L 226,176 L 211,191 L 196,176 Z',
+        c: 'M 196,206 L 211,191 L 226,206 L 226,316 L 211,331 L 196,316 Z',
+        d: 'M 70,322 L 190,322 L 205,337 L 190,352 L 70,352 L 55,337 Z',
+        e: 'M 34,206 L 49,191  L 64,206  L 64,316  L 49,331  L 34,316 Z',
+        f: 'M 34,66  L 49,51   L 64,66   L 64,176  L 49,191  L 34,176 Z',
+        g: 'M 70,176 L 190,176 L 205,191 L 190,206 L 70,206 L 55,191 Z'
+    };
+    function drawDisplay(id, vals, opts) {
+        opts = opts || {};
+        let s = '<rect x="6" y="6" width="288" height="376" rx="14" fill="#0b1622" stroke="#24384c" stroke-width="2"/>';
+        SEG.split('').forEach((k, i) => {
+            const lit = vals[i];
+            const hi = opts.highlight === k;
+            s += '<path d="' + BARS[k] + '" fill="' + (lit ? ON : DIM) + '" stroke="'
+               + (hi ? VIO : (lit ? ON : '#31485c')) + '" stroke-width="' + (hi ? 4 : 1.5) + '"'
+               + ' style="cursor:pointer" data-seg="' + k + '"/>';
+        });
+        // segment name labels, outside the glyph
+        const LP = { a:[130,22], b:[248,120], c:[248,262], d:[130,374], e:[16,262], f:[16,120], g:[228,191] };
+        SEG.split('').forEach((k, i) => {
+            const [x,y] = LP[k];
+            s += '<text x="' + x + '" y="' + y + '" font-size="17" fill="'
+               + (opts.highlight === k ? VIO : (vals[i] ? ON : '#55697c'))
+               + '" text-anchor="middle" font-family="Consolas, monospace"'
+               + ' style="cursor:pointer" data-seg="' + k + '">' + k + '</text>';
+        });
+        document.getElementById(id).innerHTML = s;
+    }
+
+    // ---- the K-map ----
+    // rows = AB (00,01,11,10), cols = CD (00,01,11,10) -- standard Gray order
+    const GRAY = [0,1,3,2];
+    function drawKmap() {
+        const s = st.seg, terms = EQ[s];
+        const X0 = 150, Y0 = 90, W = 128, H = 68;
+        let h = '';
+        h += '<text x="' + (X0 + 2*W) + '" y="46" font-size="20" fill="#ffb74d" text-anchor="middle"'
+           + ' font-family="Consolas, monospace">C D</text>';
+        h += '<text x="86" y="' + (Y0 + 2*H) + '" font-size="20" fill="#ffb74d" text-anchor="middle"'
+           + ' font-family="Consolas, monospace">A B</text>';
+        GRAY.forEach((cd, ci) => {
+            h += '<text x="' + (X0 + ci*W + W/2) + '" y="' + (Y0 - 12) + '" font-size="18"'
+               + ' fill="#8fa8bd" text-anchor="middle" font-family="Consolas, monospace">'
+               + ((cd>>1)&1) + (cd&1) + '</text>';
+        });
+        GRAY.forEach((ab, ri) => {
+            h += '<text x="' + (X0 - 16) + '" y="' + (Y0 + ri*H + H/2 + 7) + '" font-size="18"'
+               + ' fill="#8fa8bd" text-anchor="end" font-family="Consolas, monospace">'
+               + ((ab>>1)&1) + (ab&1) + '</text>';
+        });
+        GRAY.forEach((ab, ri) => GRAY.forEach((cd, ci) => {
+            const n = (ab << 2) | cd;
+            const unused = n > 9;
+            const x = X0 + ci*W, y = Y0 + ri*H;
+            const here = (n === st.n);
+            let txt, col;
+            if (unused) {
+                if (st.useDC) { txt = '×'; col = VIO; }
+                else { txt = '0'; col = BAD; }
+            } else {
+                const v = PAT[n][SEG.indexOf(s)];
+                txt = String(v); col = v ? ON : '#4a6274';
+            }
+            h += '<rect x="' + x + '" y="' + y + '" width="' + W + '" height="' + H + '" fill="'
+               + (here ? 'rgba(79,195,247,0.13)' : '#0d1b2a') + '" stroke="'
+               + (here ? ON : '#37506a') + '" stroke-width="' + (here ? 3 : 1.6) + '"/>';
+            h += '<text x="' + (x + W/2) + '" y="' + (y + H/2 + 9) + '" font-size="27" fill="' + col
+               + '" text-anchor="middle" font-family="Consolas, monospace">' + txt + '</text>';
+            h += '<text x="' + (x + 8) + '" y="' + (y + 17) + '" font-size="13" fill="#4a6274"'
+               + ' font-family="Consolas, monospace">' + n + '</text>';
+        }));
+        // Ring every product term. A term's cells are not always one contiguous block --
+        // B'D' on segment e is the classic FOUR CORNERS group -- so split each term into
+        // connected components and ring each one in the term's colour. Ringing only
+        // contiguous blocks would silently drop exactly the group worth teaching.
+        if (st.useDC) {
+            const COLS = ['#4fc3f7','#ffb74d','#b388ff','#66bb6a','#ff8a65'];
+            terms.forEach((t, ti) => {
+                const inTerm = {};
+                GRAY.forEach((ab, ri) => GRAY.forEach((cd, ci) => {
+                    const n = (ab << 2) | cd, b = bitsOf(n);
+                    if (t.every(([i,v]) => b[i] === v)) inTerm[ri + ',' + ci] = true;
+                }));
+                const seen = {}, comps = [];
+                Object.keys(inTerm).forEach(key => {
+                    if (seen[key]) return;
+                    const stack = [key], comp = [];
+                    seen[key] = true;
+                    while (stack.length) {
+                        const cur = stack.pop();
+                        const [r, c] = cur.split(',').map(Number);
+                        comp.push([r, c]);
+                        [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].forEach(([nr,nc]) => {
+                            const nk = nr + ',' + nc;
+                            if (inTerm[nk] && !seen[nk]) { seen[nk] = true; stack.push(nk); }
+                        });
+                    }
+                    comps.push(comp);
+                });
+                const col = COLS[ti % COLS.length];
+                comps.forEach((comp, cix) => {
+                    const rs = comp.map(c => c[0]), cs = comp.map(c => c[1]);
+                    const r0 = Math.min(...rs), r1 = Math.max(...rs);
+                    const c0 = Math.min(...cs), c1 = Math.max(...cs);
+                    const pad = 5 + ti * 3;
+                    h += '<rect x="' + (X0 + c0*W + pad) + '" y="' + (Y0 + r0*H + pad) + '" width="'
+                       + ((c1-c0+1)*W - 2*pad) + '" height="' + ((r1-r0+1)*H - 2*pad)
+                       + '" rx="13" fill="none" stroke="' + col
+                       + '" stroke-width="2.6" stroke-dasharray="9 6"/>';
+                    if (cix === 0) {
+                        h += '<text x="' + (X0 + c0*W + pad + 6) + '" y="'
+                           + (Y0 + r0*H + pad + 16) + '" font-size="13" fill="' + col
+                           + '" font-family="Consolas, monospace">' + termStr(t) + '</text>';
+                    }
+                });
+            });
+        }
+        document.getElementById('kmap').innerHTML = h;
+    }
+
+    function renderAll() {
+        const n = st.n, b = bitsOf(n), valid = n <= 9;
+        // page 1 display uses the true digit pattern for 0-9 and the equations' output otherwise,
+        // which is exactly what the published circuit does on an unused code.
+        const vals = valid ? PAT[n] : SEG.split('').map(s => segVal(s, n));
+
+        document.querySelectorAll('.bitpill').forEach(el => {
+            const i = +el.dataset.vi;
+            el.classList.toggle('on', !!b[i]);
+            el.querySelector('.bv').textContent = b[i];
+        });
+        document.getElementById('inv1').style.display = valid ? 'none' : '';
+
+        drawDisplay('disp1', vals, {});
+
+        // ---- drive levels under the display: the glyph never changes with polarity,
+        //      only the level each output must drive to light its segment ----
+        document.querySelectorAll('#polSeg .pseg').forEach(el =>
+            el.classList.toggle('on', (el.dataset.m === 'ca') === st.ca));
+        document.getElementById('driveRow').innerHTML = SEG.split('').map((s, i) => {
+            const drive = st.ca ? 1 - vals[i] : vals[i];
+            return (vals[i] ? '<b>' : '') + s + '=' + drive + (vals[i] ? '</b>' : '');
+        }).join('&nbsp; ');
+        document.getElementById('polNote').innerHTML = st.ca
+            ? '<b>Common anode</b>: segments share V+, so a segment lights when its output drives '
+              + '<b>0</b> &mdash; every level above is the complement of the equations (the 7447 way).'
+            : '<b>Common cathode</b>: segments share ground, so a segment lights when its output '
+              + 'drives <b>1</b> &mdash; the levels above are the equations’ outputs as-is.';
+
+        // ---- beat 1 table ----
+        let t = '<tr><th class="amb">digit</th><th class="amb">A B C D</th>'
+              + SEG.split('').map(s => '<th>' + s + '</th>').join('') + '</tr>';
+        for (let v = 0; v < 16; v++) {
+            const bb = bitsOf(v), unused = v > 9;
+            const row = unused ? SEG.split('').map(s => segVal(s, v)) : PAT[v];
+            t += '<tr class="' + (v === n ? 'horow ' : '') + (unused ? 'unused' : '') + '">'
+               + '<td' + (unused ? ' class="dcmark"' : '') + '>' + (unused ? '—' : v) + '</td>'
+               + '<td>' + bb.join(' ') + '</td>'
+               + row.map(x => '<td class="' + (x ? 'one' : 'zero') + '">' + x + '</td>').join('')
+               + '</tr>';
+        }
+        document.getElementById('segtable').innerHTML = t;
+
+        // ---- beat 2 equation list ----
+        let e = '';
+        SEG.split('').forEach(s => {
+            const lit = segVal(s, n);
+            e += '<div class="eqrow' + (s === st.seg ? ' sel' : '') + (lit ? ' lit' : '')
+               + '" data-seg="' + s + '"><span class="en">' + s + '</span>'
+               + '<span class="ev">= ' + eqStr(EQ[s]) + '</span>'
+               + '<span class="eb">' + lit + '</span></div>';
+        });
+        document.getElementById('eqbox').innerHTML = e;
+        document.getElementById('kmSeg').textContent = st.seg;
+        const db = document.getElementById('dcBtn');
+        db.textContent = st.useDC ? "don't-cares: USED" : "don't-cares: FORCED TO 0";
+        db.classList.toggle('off', !st.useDC);
+        drawKmap();
+
+        const nTerms = EQ[st.seg].length;
+        const nLits = EQ[st.seg].reduce((a,t) => a + t.length, 0);
+        document.getElementById('kmapNote').innerHTML = st.useDC
+            ? 'Segment <b>' + st.seg + '</b> minimises to <b>' + nTerms + ' term'
+              + (nTerms>1?'s':'') + '</b> and ' + nLits + ' literals, because the six '
+              + '<span class="vi">&times;</span> cells can be grouped in wherever they help. '
+              + 'Click another segment on the left to compare &mdash; <b>c</b> needs three single '
+              + 'literals, <b>d</b> needs five terms.'
+            : 'With the six unused codes <span class="bad">forced to 0</span> instead of left free, '
+              + 'those cells can no longer join a group. The groups shrink, the expression grows, '
+              + 'and you are paying gates for input combinations that <b>can never occur</b>. '
+              + 'That is what a don\'t-care buys you.';
+    }
+
+    // clicking a segment on the display or a row in the equation list selects it
+    document.addEventListener('click', (ev) => {
+        const el = ev.target.closest ? ev.target.closest('[data-seg]') : null;
+        if (!el) return;
+        const s = el.getAttribute('data-seg');
+        if (s && SEG.includes(s)) { st.seg = s; renderAll(); }
+    });
+
+    const KEYBIT = { a: 0, s: 1, d: 2, f: 3 };
+    document.addEventListener('keydown', (ev) => {
+        const k = ev.key, low = k.toLowerCase();
+        if (k >= '1' && k <= '4') { setPage(+k); ev.preventDefault(); return; }
+        if (low in KEYBIT) { st.n ^= (1 << (3 - KEYBIT[low])); renderAll(); ev.preventDefault(); return; }
+        switch (low) {
+            case ' ': case 'arrowright': case 'arrowdown': setPage(page+1); ev.preventDefault(); break;
+            case 'arrowleft': case 'arrowup': case 'backspace': setPage(page-1); ev.preventDefault(); break;
+            case 'c': st.n = (st.n + 1) & 15; renderAll(); ev.preventDefault(); break;
+            case 'k': st.useDC = !st.useDC; renderAll(); ev.preventDefault(); break;
+            case 'p': st.ca = !st.ca; renderAll(); ev.preventDefault(); break;
+            case 'r': st.n = 0; st.seg = 'e'; st.useDC = true; st.ca = false; setPage(1); renderAll(); ev.preventDefault(); break;
+        }
+    });
+
+    render();
+    renderAll();
+</script>
+</body>
+</html>
