@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carry-Lookahead Adder — Stop Waiting for the Carry</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 a live 1 / carry · amber #ffb74d generate · violet #b388ff idiom +
+       the lookahead logic · #ff8a65 the thing that costs you (fan-in, waiting) */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 22px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 12px; margin-top: 14px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px; cursor: pointer;
+        border: 2px solid #37506a; border-radius: 12px; padding: 10px 16px; color: #607d8b;
+        transition: all .18s; }
+    .tab .tnum { width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px;
+        border: 2px solid #37506a; display: flex; align-items: center; justify-content: center;
+        font-size: 18px; font-weight: 700; }
+    .tab .tlabel { font-size: 19px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 14px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+    #p1 { flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+    #p2 { flex-direction: column; align-items: center; gap: 12px; }
+    #p3 { flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+    #p4 { flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
+    #p5 { flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+
+    .lead { font-size: 21px; color: #cfd8dc; line-height: 1.42; max-width: 1640px;
+        text-align: center; }
+    .lead b { color: #4fc3f7; }
+    .idiom-tag { color: #b388ff; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 7px 24px; font-size: 20px; font-weight: 600;
+        background: rgba(179,136,255,0.08); }
+    .idiom-tag .mono { font-family: 'Consolas','Courier New',monospace; color: #cbb4ff; }
+
+    /* ---------- the shared bit control ---------- */
+    .ctl { display: flex; align-items: center; gap: 26px; border: 2px solid #6a5324;
+        border-radius: 14px; background: rgba(255,183,77,0.07); padding: 10px 24px; }
+    .ctl .grp { display: flex; align-items: center; gap: 10px; }
+    .ctl .nm { font-size: 20px; font-weight: 700; color: #ffb74d;
+        font-family: 'Consolas','Courier New',monospace; }
+    .bit { width: 42px; height: 42px; border-radius: 9px; border: 2px solid #37506a;
+        background: #0d1b2a; color: #55697c; font-size: 24px; font-weight: 700; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Consolas','Courier New',monospace; transition: all .16s; }
+    .bit.on { background: #ffb74d; border-color: #ffb74d; color: #17111f; }
+    .ctl .hint { font-size: 15px; color: #8a7a52; }
+    .dec { font-size: 20px; color: #90a4ae; font-family: 'Consolas','Courier New',monospace; }
+    .dec b { color: #4fc3f7; }
+
+    /* ---------- column strip: one card per bit position ---------- */
+    .cols { display: flex; gap: 14px; }
+    .col { width: 178px; border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a;
+        padding: 12px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .col .ci { font-size: 15px; color: #607d8b; font-family: 'Consolas','Courier New',monospace; }
+    .col .ab { font-size: 22px; font-weight: 700; color: #cfd8dc;
+        font-family: 'Consolas','Courier New',monospace; }
+    .col .gp { font-size: 17px; color: #90a4ae; font-family: 'Consolas','Courier New',monospace; }
+    .col .badge { margin-top: 2px; font-size: 15px; font-weight: 700; letter-spacing: 1px;
+        border-radius: 999px; padding: 3px 14px; border: 2px solid #37506a; color: #55697c; }
+    .col.gen  { border-color: #ffb74d; } .col.gen  .badge { border-color: #ffb74d; color: #ffb74d; }
+    .col.prop { border-color: #4fc3f7; } .col.prop .badge { border-color: #4fc3f7; color: #4fc3f7; }
+    .col.kill { border-color: #37506a; }
+
+    /* ---------- equations ---------- */
+    .eqs { display: flex; flex-direction: column; gap: 9px; }
+    .eq { font-family: 'Consolas','Courier New',monospace; font-size: 21px; color: #7d9bb5;
+        border: 2px solid #37506a; border-radius: 12px; padding: 9px 18px; background: #0d1b2a;
+        display: flex; align-items: center; gap: 12px; transition: all .18s; }
+    .eq .lhs { color: #90a4ae; min-width: 62px; }
+    .eq.hot { border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .eq.hot .lhs { color: #4fc3f7; }
+    .eq .t { padding: 2px 6px; border-radius: 6px; }
+    .eq .t.fire { background: rgba(255,183,77,0.22); color: #ffb74d; font-weight: 700; }
+    .eq .val { margin-left: auto; font-weight: 700; color: #55697c; font-size: 23px; }
+    .eq.hot .val { color: #4fc3f7; }
+    /* a row still written in terms of the carry below it isn't finished — dashed says so */
+    .eq.rec { border-style: dashed; }
+    .eq .pend { color: #ffb74d; border-bottom: 2px dotted #ffb74d; padding-bottom: 1px; }
+    .eq.sub { border-color: #b388ff; background: rgba(179,136,255,0.10); }
+    .eq .fac { color: #b388ff; font-weight: 700; }
+
+    /* ---------- beat 3: C4 split into the two halves that name the block ---------- */
+    .reveal { display: flex; align-items: flex-start; gap: 14px;
+        font-family: 'Consolas','Courier New',monospace; font-size: 25px; color: #cfd8dc; }
+    .rconn { padding-top: 12px; color: #90a4ae; }
+    .half { display: flex; flex-direction: column; align-items: center; gap: 7px;
+        border-radius: 14px; padding: 9px 18px; }
+    .half.g { background: rgba(179,136,255,0.12); border: 2px solid #6a4fa0; }
+    .half.p { background: rgba(255,183,77,0.12); border: 2px solid #6a5324; }
+    .half.g .re { color: #cbb4ff; } .half.p .re { color: #ffd28a; }
+    .rl { font-family: 'Segoe UI',sans-serif; font-size: 16px; color: #90a4ae;
+        max-width: 620px; text-align: center; }
+    .rl b { color: #cfd8dc; }
+    .rn { font-family: 'Segoe UI',sans-serif; font-size: 18px; font-weight: 700; }
+    .half.g .rn { color: #b388ff; } .half.p .rn { color: #ffb74d; }
+
+    /* ---------- the unroll control ---------- */
+    .unroll { display: flex; align-items: center; gap: 18px; }
+    .ubtn { font-family: 'Segoe UI',sans-serif; font-size: 18px; font-weight: 700;
+        color: #0d1b2a; background: #b388ff; border: none; border-radius: 999px;
+        padding: 9px 26px; cursor: pointer; transition: all .16s; }
+    .ubtn:hover { background: #cbb4ff; }
+    .ubtn.done { background: #16263a; color: #7d9bb5; border: 2px solid #37506a; padding: 7px 24px; }
+    .udots { display: flex; gap: 8px; }
+    .udot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #37506a; }
+    .udot.on { background: #b388ff; border-color: #b388ff; }
+    .ucap { font-size: 18px; color: #cfd8dc; min-width: 940px; }
+    .ucap b { color: #4fc3f7; }
+
+    table.hx { border-collapse: collapse; font-size: 18px;
+        font-family: 'Consolas','Courier New',monospace; }
+    table.hx th, table.hx td { border-bottom: 1px solid #2a3b52; padding: 6px 18px;
+        text-align: center; }
+    table.hx th { color: #90a4ae; border-bottom: 2px solid #4a6274; font-weight: 700; }
+    table.hx td.l { text-align: left; font-family: 'Segoe UI',sans-serif; color: #90a4ae; }
+    table.hx tr.hot td { background: rgba(79,195,247,0.10); color: #4fc3f7; }
+    table.hx td b { color: #ffb74d; }
+
+    .cards { display: flex; gap: 16px; }
+    .card { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 16px 18px; display: flex; flex-direction: column; gap: 7px; }
+    .card.v { border-color: #6a4fa0; }
+    .card .tie { font-size: 13px; color: #b388ff; letter-spacing: 1px; font-weight: 700; }
+    .card .ct { font-size: 20px; font-weight: 700; color: #e0e0e0; }
+    .card .cd { font-size: 16px; color: #90a4ae; line-height: 1.42; }
+    .card .cd b { color: #cfd8dc; }
+
+    .note { display: flex; align-items: center; gap: 16px; border: 2px solid #6a5324;
+        border-radius: 14px; background: rgba(255,183,77,0.07); padding: 11px 22px;
+        max-width: 1640px; }
+    .note .bang { color: #ffb74d; font-size: 28px; font-weight: 700; flex-shrink: 0; }
+    .note .txt { font-size: 17px; color: #cfd8dc; line-height: 1.42; }
+    .note .txt code { font-family: 'Consolas','Courier New',monospace; color: #ffb74d; }
+
+    .code { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        padding: 14px 24px; font-family: 'Consolas','Courier New',monospace; font-size: 17px;
+        line-height: 1.45; color: #cfd8dc; white-space: pre; }
+    .code .kw { color: #4fc3f7; } .code .op { color: #ffb74d; } .code .cm { color: #607d8b; }
+    .code-label { font-size: 18px; color: #90a4ae; font-weight: 600; }
+    .code-label b { color: #4fc3f7; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 10px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 15px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 13px;
+        font-family: 'Consolas','Courier New',monospace; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="70" y="14" width="118" height="76" rx="8"/>
+                <line x1="30" y1="36" x2="70" y2="36"/><line x1="30" y1="60" x2="70" y2="60"/>
+                <line x1="188" y1="48" x2="226" y2="48"/>
+                <line x1="129" y1="90" x2="129" y2="100" stroke="#ffb74d"/>
+                <g font-family="'Consolas',monospace" stroke="none">
+                    <text x="24" y="42" font-size="15" fill="#ffb74d" text-anchor="end">A</text>
+                    <text x="24" y="66" font-size="15" fill="#ffb74d" text-anchor="end">B</text>
+                    <text x="232" y="54" font-size="15" fill="#4fc3f7">S</text>
+                </g>
+                <text x="129" y="45" font-size="14" fill="#90a4ae" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">CLA</text>
+                <text x="129" y="66" font-size="13" fill="#b388ff" stroke="none" text-anchor="middle" font-family="'Consolas',monospace">G,P</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Carry-Lookahead Adder <span class="sub">&mdash; stop waiting for the carry</span></h1>
+            <div class="subtitle">Five beats &middot; a 4-bit adder as the running example, and the same Δ delay unit as the ripple-carry topic</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 5</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Functionality</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Hardware</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Blocks</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Applications</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">Verilog</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- ============ BEAT 1 — FUNCTIONALITY ============ -->
+        <div class="page" id="p1">
+            <div class="lead">The ripple adder is slow for exactly one reason: stage <i>k</i> cannot
+                start until stage <i>k</i>&minus;1 hands it a carry. So ask a different question
+                &mdash; <b>what can a column know about its carry before that carry arrives?</b></div>
+
+            <div class="cards" style="max-width:1400px">
+                <div class="card">
+                    <div class="tie">QUESTION ONE</div>
+                    <div class="ct">Generate &mdash; <span style="font-family:Consolas,monospace;color:#ffb74d">G<sub>i</sub> = A<sub>i</sub> &middot; B<sub>i</sub></span></div>
+                    <div class="cd">Does this column make a carry <b>all by itself</b>? Only if both
+                        bits are 1. Nothing else can produce a carry out of nothing.</div>
+                </div>
+                <div class="card">
+                    <div class="tie">QUESTION TWO</div>
+                    <div class="ct">Propagate &mdash; <span style="font-family:Consolas,monospace;color:#4fc3f7">P<sub>i</sub> = A<sub>i</sub> &oplus; B<sub>i</sub></span></div>
+                    <div class="cd">If a carry <b>arrives</b>, will this column pass it along? Only if
+                        exactly one bit is 1 &mdash; then the column's own sum is already 1, and an
+                        incoming carry has nowhere to go but out.</div>
+                </div>
+            </div>
+
+            <div class="lead" style="font-size:24px; color:#e0e0e0">Both are computable
+                <b>immediately from the inputs</b>. Neither waits for anything.</div>
+
+            <div class="eqs">
+                <div class="eq hot" style="font-size:26px">
+                    <span class="lhs">C<sub>i+1</sub></span>
+                    <span>= G<sub>i</sub> + P<sub>i</sub> &middot; C<sub>i</sub></span>
+                    <span style="margin-left:22px;font-family:'Segoe UI',sans-serif;font-size:19px;color:#90a4ae">
+                        &ldquo;a carry leaves if this column generated one, or if one came in and the column passes it&rdquo;</span>
+                </div>
+            </div>
+
+            <table class="hx" id="behTbl">
+                <tr><th>A<sub>i</sub></th><th>B<sub>i</sub></th><th>G<sub>i</sub></th><th>P<sub>i</sub></th><th style="text-align:left">this column&hellip;</th></tr>
+                <tr data-beh="00"><td>0</td><td>0</td><td>0</td><td>0</td><td class="l"><b>kills</b> &mdash; no carry out, whatever comes in</td></tr>
+                <tr data-beh="01"><td>0</td><td>1</td><td>0</td><td>1</td><td class="l"><b>propagates</b> &mdash; carry out equals carry in</td></tr>
+                <tr data-beh="10"><td>1</td><td>0</td><td>0</td><td>1</td><td class="l"><b>propagates</b> &mdash; carry out equals carry in</td></tr>
+                <tr data-beh="11"><td>1</td><td>1</td><td>1</td><td>0</td><td class="l"><b>generates</b> &mdash; carry out regardless of carry in</td></tr>
+            </table>
+
+            <div class="lead" style="font-size:18px">The sum bit reuses P, which is why propagate is
+                defined with XOR rather than OR:
+                <span style="font-family:Consolas,monospace;color:#4fc3f7">S<sub>i</sub> = P<sub>i</sub> &oplus; C<sub>i</sub></span></div>
+        </div>
+
+        <!-- ============ BEAT 2 — HARDWARE ============ -->
+        <div class="page" id="p2">
+            <div class="lead" style="font-size:22px">Same four full adders as the ripple adder.
+                <b>Only the carry wires changed.</b></div>
+
+            <div class="ctl" data-ctl>
+                <div class="grp"><span class="nm">A</span><div class="bit" data-bit="a3"></div><div class="bit" data-bit="a2"></div><div class="bit" data-bit="a1"></div><div class="bit" data-bit="a0"></div></div>
+                <div class="grp"><span class="nm">B</span><div class="bit" data-bit="b3"></div><div class="bit" data-bit="b2"></div><div class="bit" data-bit="b1"></div><div class="bit" data-bit="b0"></div></div>
+                <div class="grp"><span class="nm">C<sub>0</sub></span><div class="bit" data-bit="cin"></div></div>
+                <span class="dec" id="decSum"></span>
+                <span class="hint">click a bit &middot; <b>R</b> random</span>
+            </div>
+
+            <svg id="schem" viewBox="0 0 1720 392" style="width:1620px;height:369px"></svg>
+
+            <div class="unroll">
+                <button class="ubtn" id="ubtn">&#9656; substitute</button>
+                <div class="udots" id="udots"></div>
+                <span class="ucap" id="ucap"></span>
+            </div>
+
+            <div class="eqs" id="carryEqs" style="width:1500px"></div>
+        </div>
+
+        <!-- ============ BEAT 3 — BLOCKS ============ -->
+        <div class="page" id="p3">
+            <div class="lead">Four bits already needs a 5-input gate. Thirty-two bits would need a
+                33-input gate, so <b>nobody builds a flat lookahead that wide</b>. Stop at four &mdash;
+                and treat the whole block as if it were a single column.</div>
+
+            <div class="lead" style="font-size:18px;color:#90a4ae">Nothing new to derive: the two
+                answers are already sitting in the C<sub>4</sub> you just unrolled.</div>
+
+            <div class="reveal">
+                <div class="rconn">C<sub>4</sub> =</div>
+                <div class="half g">
+                    <div class="re">G<sub>3</sub> + P<sub>3</sub>G<sub>2</sub> + P<sub>3</sub>P<sub>2</sub>G<sub>1</sub> + P<sub>3</sub>P<sub>2</sub>P<sub>1</sub>G<sub>0</sub></div>
+                    <div class="rl">C<sub>0</sub> appears nowhere in it &mdash; this is the block
+                        <b>making a carry by itself</b></div>
+                    <div class="rn">call this G<sub>G</sub></div>
+                </div>
+                <div class="rconn">+</div>
+                <div class="half p">
+                    <div class="re">P<sub>3</sub>P<sub>2</sub>P<sub>1</sub>P<sub>0</sub></div>
+                    <div class="rl">what C<sub>0</sub> is multiplied by &mdash; this is the block
+                        <b>passing a carry straight through</b></div>
+                    <div class="rn">call this P<sub>G</sub></div>
+                </div>
+                <div class="rconn">&middot; C<sub>0</sub></div>
+            </div>
+
+            <table class="hx" style="font-size:19px">
+                <tr><th></th><th>one column</th><th>one 4-bit block</th></tr>
+                <tr><td class="l">makes a carry by itself</td><td>G</td><td>G<sub>G</sub></td></tr>
+                <tr><td class="l">passes one through</td><td>P</td><td>P<sub>G</sub></td></tr>
+                <tr class="hot"><td class="l">carry out</td><td>G + P&middot;C<sub>in</sub></td>
+                    <td>G<sub>G</sub> + P<sub>G</sub>&middot;C<sub>in</sub></td></tr>
+            </table>
+
+            <div class="lead" style="font-size:19px">Same two questions, same recurrence &mdash;
+                <b>a block is just a wider column</b>. So wire four of them exactly the way you wired
+                four columns.</div>
+
+            <svg id="hier" viewBox="0 62 1720 350" style="width:1620px;height:330px"></svg>
+        </div>
+
+        <!-- ============ BEAT 4 — APPLICATIONS ============ -->
+        <div class="page" id="p4">
+            <div class="lead">Addition sits on the critical path of almost every processor, so the
+                adder is where architects spend area to buy time.</div>
+            <div class="cards" style="max-width:1700px">
+                <div class="card">
+                    <div class="tie">WHERE IT LIVES</div>
+                    <div class="ct">Inside the ALU</div>
+                    <div class="cd">Every add, every compare, and every address calculation runs
+                        through an adder. Shaving its delay shortens the clock period for the whole
+                        machine, which is why nobody ships a ripple adder in a datapath.</div>
+                </div>
+                <div class="card">
+                    <div class="tie">THE TRADE</div>
+                    <div class="ct">Speed bought with area</div>
+                    <div class="cd">The lookahead logic computes <b>nothing</b> the ripple adder did
+                        not also compute. It just refuses to wait for it. You are paying gates for
+                        time &mdash; the recurring bargain of digital design.</div>
+                </div>
+                <div class="card v">
+                    <div class="tie">THE DESCENDANTS</div>
+                    <div class="ct">Prefix adders</div>
+                    <div class="cd">Push the same idea further and the carry computation becomes a
+                        tree. <b>Kogge&ndash;Stone</b> and <b>Brent&ndash;Kung</b> adders are
+                        lookahead taken to its logical end, and are what you will meet in a
+                        VLSI course.</div>
+                </div>
+                <div class="card">
+                    <div class="tie">TIES BACK TO THE RIPPLE ADDER</div>
+                    <div class="ct">Same answer, different wait</div>
+                    <div class="cd">A <b data-topic="ripple-carry-adder">Ripple Carry Adder</b> and this one produce <b>identical</b>
+                        sums for every input &mdash; verified here over all 512 cases. The only
+                        difference is when the answer is ready.</div>
+                </div>
+            </div>
+            <div class="note"><div class="bang">!</div><div class="txt">
+                Worth saying plainly: the ripple adder is not <i>wrong</i>, and for a few bits it is
+                the sensible choice &mdash; less logic, less area, simpler to read. Lookahead earns
+                its cost only when the width gets large enough that the wait starts to hurt.</div></div>
+        </div>
+
+        <!-- ============ BEAT 5 — VERILOG ============ -->
+        <div class="page" id="p5">
+            <div class="idiom-tag">This block's Verilog idiom:
+                <span class="mono">concatenation</span> to build the carry vector</div>
+            <div class="code-label">The 4-bit lookahead unit &mdash; written <b>structurally</b>, because the structure is the point</div>
+<div class="code"><span class="kw">module</span> cla4 (<span class="kw">input</span> [3:0] a, b, <span class="kw">input</span> cin,
+             <span class="kw">output</span> [3:0] s, <span class="kw">output</span> cout);
+
+  <span class="kw">wire</span> [3:0] g <span class="op">=</span> a <span class="op">&amp;</span> b;   <span class="cm">// generate</span>
+  <span class="kw">wire</span> [3:0] p <span class="op">=</span> a <span class="op">^</span> b;   <span class="cm">// propagate</span>
+  <span class="kw">wire</span> c1 <span class="op">=</span> g[0] <span class="op">|</span> (p[0] <span class="op">&amp;</span> cin);
+  <span class="kw">wire</span> c2 <span class="op">=</span> g[1] <span class="op">|</span> (p[1] <span class="op">&amp;</span> g[0]) <span class="op">|</span> (p[1] <span class="op">&amp;</span> p[0] <span class="op">&amp;</span> cin);
+  <span class="kw">wire</span> c3 <span class="op">=</span> g[2] <span class="op">|</span> (p[2] <span class="op">&amp;</span> g[1]) <span class="op">|</span> (p[2] <span class="op">&amp;</span> p[1] <span class="op">&amp;</span> g[0])
+                    <span class="op">|</span> (p[2] <span class="op">&amp;</span> p[1] <span class="op">&amp;</span> p[0] <span class="op">&amp;</span> cin);
+
+  <span class="kw">assign</span> cout <span class="op">=</span> g[3] <span class="op">|</span> (p[3] <span class="op">&amp;</span> g[2]) <span class="op">|</span> (p[3] <span class="op">&amp;</span> p[2] <span class="op">&amp;</span> g[1])
+              <span class="op">|</span> (p[3] <span class="op">&amp;</span> p[2] <span class="op">&amp;</span> p[1] <span class="op">&amp;</span> g[0])
+              <span class="op">|</span> (p[3] <span class="op">&amp;</span> p[2] <span class="op">&amp;</span> p[1] <span class="op">&amp;</span> p[0] <span class="op">&amp;</span> cin);
+  <span class="kw">assign</span> s <span class="op">=</span> p <span class="op">^</span> {c3, c2, c1, cin};   <span class="cm">// all four sum bits at once</span>
+
+<span class="kw">endmodule</span></div>
+            <div class="code-label"><span style="font-family:Consolas,monospace;color:#ffb74d">{c3, c2, c1, cin}</span>
+                builds the carry vector, and one XOR produces every sum bit.</div>
+            <div class="note"><div class="bang">!</div><div class="txt">
+                In practice you would write <code>assign {cout, s} = a + b + cin;</code> and let the
+                synthesiser choose the structure &mdash; and it would probably choose something
+                better than this. The explicit version is here because <b>this topic is about the
+                choice</b>. Knowing what the <code>+</code> costs is the point.</div></div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+            <div class="dot" data-dot="5"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">5</span> beat &middot;
+            <span class="k">Space</span>/<span class="k">&rarr;</span> next &middot;
+            <span class="k">Backspace</span> prev &middot;
+            <span class="k">U</span> unroll &middot;
+            <span class="k">R</span> random inputs &middot;
+            <span class="k">C</span> clear
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    const FIRST = 1, LAST = 5;
+    let page = 1;
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+
+    /* ============ STATE ============
+       a[i] and b[i] are bit i (index 0 = least significant), cin is C0. Everything on
+       beats 1-3 is derived from these three values and nothing else. */
+    const st = { a: [1,0,1,0], b: [1,1,0,1], cin: 0 };   // 5 + 11 wait — see decOf()
+
+    // G, P and the four carries, straight from the equations in the brief.
+    function solve(s) {
+        const g = [0,1,2,3].map(i => s.a[i] & s.b[i]);
+        const p = [0,1,2,3].map(i => s.a[i] ^ s.b[i]);
+        const c = [s.cin];
+        for (let i = 0; i < 4; i++) {
+            // C(i+1) = G_i + P_i G_(i-1) + ... + P_i..P_0 C0   — flat, no ripple
+            let acc = 0;
+            for (let j = i; j >= 0; j--) {
+                let term = g[j];
+                for (let k = j + 1; k <= i; k++) term &= p[k];
+                acc |= term;
+            }
+            let allp = 1;
+            for (let k = 0; k <= i; k++) allp &= p[k];
+            c.push(acc | (allp & s.cin));
+        }
+        const sum = [0,1,2,3].map(i => p[i] ^ c[i]);
+        return { g, p, c, sum };
+    }
+    const valOf = bits => bits.reduce((n, b, i) => n + (b << i), 0);
+
+    // ---- beat 2: the four carry equations, rebuilt at each step of the unroll ----
+    //
+    // The whole point of the beat is that C(i+1) = G_i + P_i*C_i is a RECURRENCE — each carry
+    // waits on the one below it — and that you can substitute the lower equation in, over and
+    // over, until nothing waits on anything. So the rows are not built once: at unroll step u,
+    //   rows above u   still show the recurrence   (dashed border, the pending carry in amber)
+    //   row  u         shows the substitution just made, G_i + P_i( ...the whole of C_i... )
+    //   rows below u   show the multiplied-out flat form
+    // u runs 0..5: 0 = pure recurrence (this is the ripple adder), 5 = every row flat.
+    const carryEqs = document.getElementById('carryEqs');
+
+    // a term is { ps: [propagate indices], src: G_j | C_0 | C_j }
+    const G = j => ({ kind: 'g', i: j }), C0 = { kind: 'c0' }, CY = j => ({ kind: 'c', i: j });
+
+    // FLAT[i] — the fully unrolled term list for C(i+1)
+    const FLAT = [];
+    for (let i = 0; i < 4; i++) {
+        const list = [];
+        for (let j = i; j >= 0; j--) {
+            const ps = []; for (let k = j + 1; k <= i; k++) ps.push(k);
+            list.push({ ps, src: G(j) });
+        }
+        const ps = []; for (let k = 0; k <= i; k++) ps.push(k);
+        list.push({ ps, src: C0 });          // the all-propagate term, ending in C0
+        FLAT.push(list);
+    }
+
+    let unroll = 0;                 // 0..5
+    const UMAX = 5;
+    const SPEC = [[], [], [], []];  // term list currently displayed per row, for paint()
+
+    const srcTxt = src => src.kind === 'g' ? `G${src.i}`
+                        : src.kind === 'c0' ? 'C<sub>0</sub>' : `C<sub>${src.i}</sub>`;
+    const termTxt = (t, hide) =>
+        t.ps.filter(k => k !== hide).sort((x, y) => y - x).map(k => `P${k}`).join('') + srcTxt(t.src);
+
+    function renderEqs() {
+        carryEqs.innerHTML = '';
+        for (let i = 0; i < 4; i++) {
+            const row = document.createElement('div');
+            row.className = 'eq'; row.dataset.carry = i + 1;
+            let terms, body;
+
+            if (i + 1 > unroll) {
+                // still a recurrence: G_i + P_i*C_i, with C_i flagged as not yet an input
+                terms = [{ ps: [], src: G(i) }, { ps: [i], src: i === 0 ? C0 : CY(i) }];
+                const tail = i === 0 ? `P0C<sub>0</sub>`
+                                     : `P${i}<span class="pend">C<sub>${i}</sub></span>`;
+                body = `<span class="t" data-k="0">G${i}</span> + <span class="t" data-k="1">${tail}</span>`;
+                // C1 is the one row that never waits on anything — it is flat from the start,
+                // so it must not wear the dashed "not finished yet" border
+                if (i > 0) row.classList.add('rec');
+            } else if (i + 1 === unroll && i > 0) {
+                // the substitution itself — C_i's whole expansion dropped in behind P_i
+                const inner = FLAT[i - 1].map(t => ({ ps: t.ps.concat([i]), src: t.src }));
+                terms = [{ ps: [], src: G(i) }].concat(inner);
+                body = `<span class="t" data-k="0">G${i}</span> + <span class="fac">P${i}(</span>`
+                     + inner.map((t, n) => `<span class="t" data-k="${n + 1}">${termTxt(t, i)}</span>`)
+                            .join(' + ')
+                     + `<span class="fac">)</span>`;
+                row.classList.add('sub');
+            } else {
+                // flat: multiplied out, every term standing on A, B and C0
+                terms = FLAT[i];
+                body = terms.map((t, n) =>
+                    `<span class="t" data-k="${n}">${termTxt(t, -1)}</span>`).join(' + ');
+                if (i + 1 === unroll) row.classList.add('sub');
+            }
+
+            SPEC[i] = terms;
+            row.innerHTML = `<span class="lhs">C<sub>${i + 1}</sub></span><span>= ${body}</span>`
+                          + `<span class="val">0</span>`;
+            carryEqs.appendChild(row);
+        }
+    }
+
+    const UCAP = [
+        'Start from the recurrence. Every carry but C₁ waits on the one below it — <b>this is the ripple adder</b>.',
+        'C₁ already stands on A, B and C₀. Nothing to substitute — it is the seed of the unroll.',
+        'Substitute the whole of C₁ into C₂. Multiply P₁ through and C₂ stops waiting.',
+        'Substitute the whole of C₂ into C₃. Same move, one term longer.',
+        'Substitute the whole of C₃ into C₄ — the last one.',
+        'Every carry now stands on A, B and C₀ alone. <b>The values never changed — only the waiting did.</b>',
+    ];
+
+    const udots = document.getElementById('udots');
+    for (let i = 0; i <= UMAX; i++) {
+        const d = document.createElement('div'); d.className = 'udot'; udots.appendChild(d);
+    }
+    const ubtn = document.getElementById('ubtn'), ucap = document.getElementById('ucap');
+
+    function setUnroll(u) {
+        unroll = ((u % (UMAX + 1)) + UMAX + 1) % (UMAX + 1);
+        renderEqs();
+        udots.querySelectorAll('.udot').forEach((d, i) => d.classList.toggle('on', i <= unroll));
+        ucap.innerHTML = UCAP[unroll];
+        ubtn.innerHTML = unroll === UMAX ? '↺ start over' : '▸ substitute';
+        ubtn.classList.toggle('done', unroll === UMAX);
+        wireSchem();
+        paint();
+    }
+    ubtn.addEventListener('click', () => setUnroll(unroll + 1));
+
+    // ---- beat 2: four full adders, wired two ways ----
+    //
+    // Deliberately the SAME picture as the ripple adder, so the one difference stands out.
+    // Every carry is drawn TWICE — once as the ripple chain link it is at unroll step 0, once
+    // as the drop from the lookahead block it becomes once its equation is flat — and the
+    // unroll step decides which of the two is visible. Nothing else on the page moves, which
+    // is the claim the lead line makes: only the carry wires changed.
+    const SNS = 'http://www.w3.org/2000/svg';
+    // SVG has no <sub>, and Unicode subscripts have no G — so build them from a tspan, which
+    // keeps every drawing using the same notation as the prose and the equations.
+    function sub(t, base, s) {
+        t.textContent = base;
+        const ts = document.createElementNS(SNS, 'tspan');
+        ts.setAttribute('font-size', '0.68em'); ts.setAttribute('dy', '0.26em');
+        ts.textContent = s; t.appendChild(ts);
+        return t;
+    }
+    const FA_X = [190, 570, 950, 1330];     // index 0 = bit 3, leftmost
+    const RAIL = 148, BLKT = 268;
+    // carry k feeds bit k (entering that adder's right edge) and, in ripple form, walks out of
+    // the left edge of bit k-1.  tap = where it leaves the lookahead block / the label's home.
+    const CARRY = { 1: { into: 1120, from: 1330, tap: 1225 },
+                    2: { into:  740, from:  950, tap:  845 },
+                    3: { into:  360, from:  570, tap:  465 } };
+
+    (function drawSchem() {
+        const svg = document.getElementById('schem');
+        const el = (t, a, parent) => { const e = document.createElementNS(SNS, t);
+            for (const k in a) e.setAttribute(k, a[k]); (parent || svg).appendChild(e); return e; };
+        const tx = (x, y, s, fill, size, anchor, fam) => { const e = el('text',
+            {x, y, fill, 'font-size': size || 17, 'text-anchor': anchor || 'middle',
+             'font-family': fam || "'Segoe UI',sans-serif"}); e.textContent = s; return e; };
+        const wire = (d, g) => el('path', {d, fill: 'none', stroke: '#7d9bb5', 'stroke-width': 3}, g);
+
+        // the lookahead block — ghosted at step 0, when it has nothing wired to it yet
+        const blk = el('g', {id: 'lkaBlock'});
+        el('rect', {x: 150, y: BLKT, width: 1400, height: 96, rx: 16,
+                    fill: 'rgba(179,136,255,0.10)', stroke: '#6a4fa0', 'stroke-width': 2.6}, blk);
+        tx(850, 302, 'CARRY LOOKAHEAD LOGIC', '#b388ff', 20).setAttribute('id', 'blkTitle');
+        tx(850, 334, 'takes all four A bits, all four B bits and C₀ — and unrolls every carry at once',
+           '#90a4ae', 17).setAttribute('id', 'blkSub');
+        [...blk.childNodes].forEach(n => blk.appendChild(n));
+
+        FA_X.forEach((x, k) => {
+            const bit = 3 - k;
+            // full adder body — same box the ripple-adder graphic uses
+            el('rect', {x, y: 96, width: 170, height: 104, rx: 12, fill: '#0d1b2a',
+                        stroke: '#cfd8dc', 'stroke-width': 2.6});
+            tx(x + 85, 138, 'FULL', '#90a4ae', 16);
+            tx(x + 85, 160, 'ADDER', '#90a4ae', 16);
+            tx(x + 85, 184, 'bit ' + bit, '#607d8b', 14);
+
+            // A and B in from the top
+            ['a', 'b'].forEach((nm, j) => {
+                const xx = x + 52 + j * 66;
+                el('line', {x1: xx, y1: 50, x2: xx, y2: 96, id: `w-${nm}${bit}`,
+                            stroke: '#7d9bb5', 'stroke-width': 3});
+                tx(xx, 40, (nm === 'a' ? 'A' : 'B') + bit, '#ffb74d', 17, 'middle',
+                   "'Consolas',monospace").setAttribute('id', `t-${nm}${bit}`);
+            });
+            // S out of the bottom, clear of the block below
+            el('line', {x1: x + 85, y1: 200, x2: x + 85, y2: 232, id: `w-s${bit}`,
+                        stroke: '#7d9bb5', 'stroke-width': 3});
+            tx(x + 85, 252, 'S' + bit, '#4fc3f7', 19, 'middle', "'Consolas',monospace")
+                .setAttribute('id', `t-s${bit}`);
+        });
+
+        // C0 is a primary input in BOTH wirings — it is never something the block produces
+        wire(`M1620,${RAIL} H1500`).setAttribute('data-carry', '0');
+        sub(tx(1636, RAIL - 6, '', '#7d9bb5', 19, 'start', "'Consolas',monospace"), 'C', '0')
+            .setAttribute('data-carry', '0');
+        tx(1636, RAIL + 18, 'carry in', '#607d8b', 13, 'start');
+
+        // C1..C3, drawn both ways
+        for (const k of [1, 2, 3]) {
+            const c = CARRY[k];
+            const rip = el('g', {id: `rip-c${k}`});
+            wire(`M${c.from},${RAIL} H${c.into}`, rip).setAttribute('data-carry', k);
+
+            const lka = el('g', {id: `lka-c${k}`});
+            wire(`M${c.tap},${BLKT} V${RAIL} H${c.into}`, lka).setAttribute('data-carry', k);
+            el('circle', {cx: c.tap, cy: BLKT, r: 5, fill: '#7d9bb5'}, lka)
+                .setAttribute('data-carry', k);
+
+            // the label never moves — only the wire under it does
+            sub(tx(c.tap, RAIL - 14, '', '#7d9bb5', 17, 'middle', "'Consolas',monospace"), 'C', k)
+                .setAttribute('data-carry', k);
+        }
+
+        // C4 leaves at the LEFT, past bit 3 — carries run right to left
+        const rip4 = el('g', {id: 'rip-c4'});
+        wire(`M190,${RAIL} H70`, rip4).setAttribute('data-carry', '4');
+        const lka4 = el('g', {id: 'lka-c4'});
+        wire(`M150,300 H90 V${RAIL} H70`, lka4).setAttribute('data-carry', '4');
+        el('circle', {cx: 150, cy: 300, r: 5, fill: '#7d9bb5'}, lka4).setAttribute('data-carry', '4');
+        sub(tx(58, RAIL - 12, '', '#7d9bb5', 19, 'end', "'Consolas',monospace"), 'C', '4')
+            .setAttribute('data-carry', '4');
+        tx(58, RAIL + 12, 'carry out', '#607d8b', 13, 'end');
+    })();
+
+    // which of the two wirings is showing, per carry, at the current unroll step
+    function wireSchem() {
+        for (const k of [1, 2, 3, 4]) {
+            const flat = unroll >= k;        // C_k's equation stands on the inputs alone
+            const r = document.getElementById(`rip-c${k}`), l = document.getElementById(`lka-c${k}`);
+            if (r) r.setAttribute('display', flat ? 'none' : 'inline');
+            if (l) l.setAttribute('display', flat ? 'inline' : 'none');
+        }
+        const blk = document.getElementById('lkaBlock');
+        if (blk) blk.setAttribute('opacity', unroll === 0 ? '0.22' : '1');
+        const sub = document.getElementById('blkSub');
+        if (sub) sub.textContent = unroll === 0
+            ? 'nothing wired to it yet — every carry still comes from the stage to its right'
+            : 'takes all four A bits, all four B bits and C₀ — and unrolls every carry at once';
+    }
+
+    // ---- beat 3: the 16-bit picture — deliberately beat 2's picture, boxes swapped ----
+    //
+    // Same frame, same rail, same lookahead block in the same place, same carry taps: the only
+    // thing that changed is that each FULL ADDER became a 4-BIT CLA BLOCK. If a student can read
+    // the last beat they can read this one without being told anything new.
+    (function hier() {
+        const svg = document.getElementById('hier');
+        const el = (t, a, parent) => { const e = document.createElementNS(SNS, t);
+            for (const k in a) e.setAttribute(k, a[k]); (parent || svg).appendChild(e); return e; };
+        const tx = (x, y, s, fill, size, anchor, fam) => { const e = el('text',
+            {x, y, fill, 'font-size': size || 17, 'text-anchor': anchor || 'middle',
+             'font-family': fam || "'Segoe UI',sans-serif"}); e.textContent = s; return e; };
+        const wire = (d, stroke) => el('path', {d, fill: 'none', stroke: stroke || '#7d9bb5',
+                                                'stroke-width': 3});
+
+        // the second-level lookahead — same rectangle the first-level one occupies in beat 2
+        el('rect', {x: 150, y: BLKT, width: 1400, height: 96, rx: 16,
+                    fill: 'rgba(179,136,255,0.10)', stroke: '#6a4fa0', 'stroke-width': 2.6});
+        tx(850, 302, 'SECOND-LEVEL LOOKAHEAD', '#b388ff', 20);
+        tx(850, 334, 'the very same circuit, one level up — it reads each block\u2019s two answers '
+                    + 'instead of each column\u2019s', '#90a4ae', 17);
+
+        // four blocks, centered exactly where beat 2's four adders are, only wider
+        const BX = [125, 505, 885, 1265], BW = 300;
+        const BITS = ['bits 15..12', 'bits 11..8', 'bits 7..4', 'bits 3..0'];
+        BX.forEach((x, k) => {
+            el('rect', {x, y: 96, width: BW, height: 104, rx: 12, fill: '#0d1b2a',
+                        stroke: '#4fc3f7', 'stroke-width': 2.6});
+            tx(x + BW / 2, 140, '4-BIT CLA BLOCK', '#cfd8dc', 19);
+            tx(x + BW / 2, 168, BITS[k], '#607d8b', 15);
+            // its own P and G report downward, into the second level
+            wire(`M${x + BW / 2},200 V${BLKT}`, '#b388ff');
+            sub(tx(x + BW / 2 + 14, 240, '', '#b388ff', 17, 'start', "'Consolas',monospace"), 'P', 'G');
+            sub(tx(x + BW / 2 + 54, 240, '', '#b388ff', 17, 'start', "'Consolas',monospace"), 'G', 'G');
+        });
+
+        // carries, drawn exactly like beat 2's lookahead wiring — same taps, same rail
+        [[12, 465, 425], [8, 845, 805], [4, 1225, 1185]].forEach(([n, tap, into]) => {
+            wire(`M${tap},${BLKT} V${RAIL} H${into}`);
+            el('circle', {cx: tap, cy: BLKT, r: 5, fill: '#7d9bb5'});
+            sub(tx(tap, RAIL - 14, '', '#7d9bb5', 17, 'middle', "'Consolas',monospace"), 'C', n);
+        });
+        wire(`M1620,${RAIL} H1565`);
+        sub(tx(1636, RAIL - 6, '', '#7d9bb5', 19, 'start', "'Consolas',monospace"), 'C', '0');
+        tx(1636, RAIL + 18, 'carry in', '#607d8b', 13, 'start');
+        wire(`M150,300 H90 V${RAIL} H70`);
+        el('circle', {cx: 150, cy: 300, r: 5, fill: '#7d9bb5'});
+        sub(tx(58, RAIL - 12, '', '#7d9bb5', 19, 'end', "'Consolas',monospace"), 'C', '16');
+        tx(58, RAIL + 12, 'carry out', '#607d8b', 13, 'end');
+
+        tx(850, 390, 'Sixteen bits, two levels of lookahead — not sixteen stages of waiting. '
+                   + 'Four of these blocks and a third level gets you 64.', '#cfd8dc', 18);
+    })();
+
+    // ---- paint everything from state ----
+    const behTbl = document.getElementById('behTbl');
+    function paint() {
+        const r = solve(st);
+        // control pills
+        document.querySelectorAll('[data-bit]').forEach(el => {
+            const k = el.dataset.bit;
+            const v = k === 'cin' ? st.cin : st[k[0]][+k[1]];
+            el.textContent = v; el.classList.toggle('on', !!v);
+        });
+        const A = valOf(st.a), B = valOf(st.b), tot = A + B + st.cin;
+        document.getElementById('decSum').innerHTML =
+            `${A} + ${B} + ${st.cin} = <b>${tot}</b>`;
+        // schematic: a live 1 is cyan, a 0 is slate
+        const HOT = '#4fc3f7', COLD = '#7d9bb5';
+        for (let i = 0; i < 4; i++) {
+            const setw = (id, on) => { const e = document.getElementById(id);
+                if (e) e.setAttribute('stroke', on ? HOT : COLD); };
+            const sett = (id, on, base) => { const e = document.getElementById(id);
+                if (e) e.setAttribute('fill', on ? HOT : (base || COLD)); };
+            setw(`w-a${i}`, st.a[i]); sett(`t-a${i}`, st.a[i], '#ffb74d');
+            setw(`w-b${i}`, st.b[i]); sett(`t-b${i}`, st.b[i], '#ffb74d');
+            setw(`w-s${i}`, r.sum[i]); sett(`t-s${i}`, r.sum[i]);
+        }
+        // every carry element carries its index, and both wirings get lit — the ripple chain and
+        // the lookahead drop always hold the SAME value, which is the point of the whole beat
+        document.querySelectorAll('#schem [data-carry]').forEach(e => {
+            const on = !!r.c[+e.dataset.carry];
+            if (e.tagName === 'path') e.setAttribute('stroke', on ? HOT : COLD);
+            else e.setAttribute('fill', on ? HOT : COLD);
+        });
+
+        // carry equations: light the row when the carry is 1, and each term that fires.
+        // SPEC is whatever form the row is currently written in, so a term containing C_i is
+        // evaluated from the carry itself while an unrolled term is evaluated from G's and P's.
+        document.querySelectorAll('#carryEqs .eq').forEach(row => {
+            const i = +row.dataset.carry - 1;
+            row.classList.toggle('hot', !!r.c[i+1]);
+            row.querySelector('.val').textContent = r.c[i+1];
+            row.querySelectorAll('.t').forEach(t => {
+                const d = SPEC[i][+t.dataset.k];
+                let v = d.src.kind === 'g' ? r.g[d.src.i]
+                      : d.src.kind === 'c0' ? st.cin : r.c[d.src.i];
+                d.ps.forEach(k => { v &= r.p[k]; });
+                t.classList.toggle('fire', !!v);
+            });
+        });
+        // beat 1 table: highlight the row matching bit 0's behavior, as a worked link
+        behTbl.querySelectorAll('tr[data-beh]').forEach(tr =>
+            tr.classList.toggle('hot', tr.dataset.beh === `${st.a[0]}${st.b[0]}`));
+    }
+
+    document.querySelectorAll('[data-bit]').forEach(el => el.addEventListener('click', () => {
+        const k = el.dataset.bit;
+        if (k === 'cin') st.cin ^= 1; else st[k[0]][+k[1]] ^= 1;
+        paint();
+    }));
+
+    document.addEventListener('keydown', e => {
+        const k = e.key;
+        if (k >= '1' && k <= '5') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 'u': case 'U':
+                if (page === 2) { setUnroll(unroll + 1); e.preventDefault(); }
+                break;
+            case 'r': case 'R':
+                st.a = st.a.map(() => Math.random() < 0.5 ? 0 : 1);
+                st.b = st.b.map(() => Math.random() < 0.5 ? 0 : 1);
+                st.cin = Math.random() < 0.5 ? 0 : 1; paint(); e.preventDefault(); break;
+            case 'c': case 'C':
+                st.a = [0,0,0,0]; st.b = [0,0,0,0]; st.cin = 0; paint(); e.preventDefault(); break;
+        }
+    });
+
+    render();
+    setUnroll(0);
+</script>
+</body>
+</html>

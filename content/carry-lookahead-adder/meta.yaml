@@ -1,0 +1,11 @@
+title: "Carry-Lookahead Adder"
+description: "Computing every carry in parallel from generate and propagate signals, so the adder stops waiting for the carry to ripple"
+chapter: combinational-logic
+section: adders
+order: 30604
+
+graphics:
+  01-video.youtube:
+    caption: "Video: why the ripple adder waits, generate and propagate, unrolling the carry recurrence into two levels of logic, the fan-in cost that leads to 4-bit blocks, and the speed-for-area trade"
+  02-interactive.html:
+    caption: "Interactive: the carry-lookahead adder in five beats — generate and propagate per column, a key-driven unroll that turns the ripple chain into four flat carry equations with the firing term lit, group G and P read straight off C4 for the 16-bit picture, where lookahead is used, and the structural Verilog"

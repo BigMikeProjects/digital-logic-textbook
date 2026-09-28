@@ -552,7 +552,7 @@
           "title": "Carry-Lookahead Adder",
           "slug": "carry-lookahead-adder",
           "type": "full",
-          "published": false
+          "published": true
         }
       ]
     },
