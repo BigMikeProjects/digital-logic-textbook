@@ -1,0 +1,11 @@
+title: "Tri-State Buffers"
+description: "A buffer with a third output state, high impedance, that lets several outputs share one wire by taking turns"
+chapter: combinational-logic
+section: building-block-circuits
+order: 30507
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the tri-state buffer in four beats — the high-impedance state Z, the NMOS/PMOS transmission gate inside, shared buses, bidirectional pins and transceivers, and the 1'bz Verilog idiom to recognize"
+  02-interactive.html:
+    caption: "Interactive: the four-beat cadence for the tri-state buffer — the third output state Z and the active-low enable, inside one buffer as a driver plus an NMOS/PMOS transmission gate, three buffers taking turns on a shared bus with a decoder driving the enables and contention shown, where tri-states live (buses, bidirectional pins, transceivers), and the Verilog"

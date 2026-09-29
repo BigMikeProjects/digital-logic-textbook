@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tri-State Buffers — The Four-Beat Cadence</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 driven 1 · #7d9bb5 driven 0 · amber #ffb74d controls
+       · violet #b388ff idiom tag · grey dashed = Z (floating) · #ff5252 = X (contention) */
+
+    @keyframes dash { to { stroke-dashoffset: -48; } }
+    .flow { stroke-dasharray: 14 10; animation: dash 1s linear infinite; }
+    @keyframes pulseX { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+    .xwarn { animation: pulseX 1.1s ease-in-out infinite; }
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* ---------- controls ---------- */
+    .ctlrow { display: flex; gap: 12px; align-items: center; }
+    .pill { display: flex; align-items: center; gap: 9px; cursor: pointer; user-select: none;
+        border: 2px solid #6a5324; border-radius: 999px; padding: 7px 18px;
+        background: rgba(255,183,77,0.05); transition: all .16s ease; }
+    .pill .pn { color: #ffb74d; font-size: 18px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .pill .pv { color: #7d9bb5; font-size: 22px; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .pill.on { border-color: #4fc3f7; background: rgba(79,195,247,0.12); }
+    .pill.on .pv { color: #4fc3f7; }
+    .ctlhint { color: #6a8398; font-size: 15px; }
+    .ctlhint b { color: #ffb74d; font-family: 'Consolas','Courier New',monospace; }
+
+    /* ---------- page 1 ---------- */
+    #p1 { gap: 42px; align-items: center; }
+    .fn-left { flex: 0 0 44%; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+    .fn-left > svg { width: 520px; height: 300px; }
+    .fn-right { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    .fn-statement { font-size: 28px; color: #cfd8dc; line-height: 1.42; }
+    .fn-statement .ic { color: #ffb74d; font-weight: 600; }
+    .fn-statement .io { color: #4fc3f7; font-weight: 600; }
+    .btable { border-collapse: collapse; font-size: 23px; align-self: flex-start; }
+    .btable th, .btable td { border: 2px solid #37506a; padding: 7px 26px; text-align: center;
+        font-family: 'Consolas','Courier New',monospace; color: #e0e0e0; }
+    .btable th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; }
+    .btable th.amb { background: rgba(255,183,77,0.12); color: #ffb74d; }
+    .btable tr.horow td { background: rgba(79,195,247,0.22); color: #fff; }
+    .btable td.zcell { color: #90a4ae; font-weight: 700; }
+    .keyidea { border-left: 4px solid #4fc3f7; padding: 5px 0 5px 20px; font-size: 21px;
+        color: #90a4ae; line-height: 1.45; }
+    .keyidea b { color: #4fc3f7; }
+    .confuse { display: flex; flex-direction: column; gap: 10px; }
+    .cf { border-left: 4px solid #ffb74d; padding: 3px 0 3px 18px; font-size: 19px;
+        color: #90a4ae; line-height: 1.4; }
+    .cf b { color: #ffb74d; }
+
+    /* ---------- page 2 ---------- */
+    #p2 { flex-direction: column; align-items: center; gap: 12px; }
+    .p2-top { display: flex; align-items: center; gap: 26px; }
+    .busbadge { font-family: 'Consolas','Courier New',monospace; font-size: 26px; font-weight: 700;
+        border: 3px solid #37506a; border-radius: 12px; padding: 6px 26px; color: #55697c; }
+    .busbadge.v1 { border-color: #4fc3f7; color: #4fc3f7; background: rgba(79,195,247,0.10); }
+    .busbadge.v0 { border-color: #7d9bb5; color: #7d9bb5; background: rgba(125,155,181,0.08); }
+    .busbadge.vz { border-color: #6a8398; color: #90a4ae; border-style: dashed; }
+    .busbadge.vx { border-color: #ff5252; color: #ff5252; background: rgba(255,82,82,0.14); }
+    .decbtn { cursor: pointer; user-select: none; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 8px 22px; color: #b388ff; font-size: 17px; background: rgba(179,136,255,0.08);
+        font-weight: 600; }
+    .decbtn.on { background: rgba(179,136,255,0.26); color: #d6c2ff; }
+    .sch-wrap { width: 100%; flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+    .sch-wrap svg { width: 100%; max-width: 1310px; height: 100%; max-height: 560px; }
+    .hw-note { font-size: 20px; color: #90a4ae; text-align: center; max-width: 1560px; line-height: 1.45; }
+    .hw-note b { color: #4fc3f7; }
+    .hw-note .bad { color: #ff5252; font-weight: 700; }
+    .hw-note .zc { color: #90a4ae; font-weight: 700; }
+    .hw-note .vi { color: #b388ff; font-weight: 700; }
+
+    /* ---------- page 3 ---------- */
+    #p3 { flex-direction: column; align-items: center; gap: 16px; }
+    .apps { display: flex; gap: 20px; width: 100%; }
+    .app-card { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px;
+        padding: 22px 22px; display: flex; flex-direction: column; gap: 13px; min-height: 396px; }
+    .app-card svg { width: 72px; height: 72px; color: #4fc3f7; }
+    .app-title { font-size: 22px; font-weight: 700; color: #e0e0e0; }
+    .app-desc { font-size: 18px; color: #90a4ae; line-height: 1.45; }
+    .app-card.link { border-color: #6a4fa0; }
+    .app-card.link svg { color: #b388ff; }
+    .app-card .tie { font-size: 13px; color: #b388ff; letter-spacing: 1px;
+        text-transform: uppercase; font-weight: 700; }
+    .modern { width: 100%; border-left: 4px solid #b388ff; padding: 10px 0 10px 22px;
+        font-size: 20px; color: #90a4ae; line-height: 1.5; }
+    .modern b { color: #b388ff; }
+
+    /* ---------- page 4 ---------- */
+    #p4 { flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+    .codes { display: flex; gap: 26px; align-items: flex-start; }
+    .code-card { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+    .code-label { font-size: 19px; color: #90a4ae; font-weight: 600; }
+    .code-label b { color: #4fc3f7; } .code-label .v { color: #b388ff; }
+    .code { background: #0b1622; border: 2px solid #37506a; border-radius: 14px;
+        padding: 13px 22px; font-family: 'Consolas','Courier New',monospace;
+        font-size: 18px; line-height: 1.4; color: #cfd8dc; white-space: pre; }
+    .code .kw { color: #4fc3f7; } .code .op { color: #ffb74d; }
+    .code .cm { color: #607d8b; } .code .lit { color: #b388ff; }
+    .zxtable { border-collapse: collapse; font-size: 17px; }
+    .zxtable th, .zxtable td { border: 1px solid #37506a; padding: 7px 16px; text-align: left;
+        color: #cfd8dc; }
+    .zxtable th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700;
+        font-family: 'Consolas','Courier New',monospace; }
+    .zxtable td.sym { font-family: 'Consolas','Courier New',monospace; font-size: 20px;
+        font-weight: 700; text-align: center; }
+    .gotchas { display: flex; flex-direction: column; gap: 9px; width: 1600px; }
+    .gotcha { display: flex; align-items: center; gap: 16px;
+        border: 2px solid #6a5324; border-radius: 12px; background: rgba(255,183,77,0.07);
+        padding: 9px 22px; }
+    .gotcha .g-bang { color: #ffb74d; font-size: 26px; font-weight: 700; flex-shrink: 0; }
+    .gotcha .g-txt { font-size: 17px; color: #cfd8dc; line-height: 1.4; }
+    .gotcha .g-txt code { font-family: 'Consolas','Courier New',monospace; color: #ffb74d; }
+    .idiom-tag { color: #b388ff; border: 2px solid #6a4fa0; border-radius: 999px;
+        padding: 7px 24px; font-size: 21px; font-weight: 600; background: rgba(179,136,255,0.08); }
+    .idiom-tag .mono { font-family: 'Consolas','Courier New',monospace; color: #cbb4ff; }
+
+    /* ---------- 2026-09-27 rebuild: beat 1 polarity, beat 2 sub-steps, transmission gate ---------- */
+    .ob { display: inline-block; line-height: 1; border-top: 2px solid currentColor; padding-top: 1px; }
+    .pill.pol { border-color: #37506a; background: rgba(79,195,247,0.04); }
+    .pill.pol .pn { color: #90a4ae; }
+    .pill.pol.on { border-color: #ffb74d; background: rgba(255,183,77,0.10); }
+    .pill.pol.on .pn { color: #ffb74d; }
+    .pill.dat { border-color: #2f4d66; background: rgba(79,195,247,0.04); }
+    .pill.dat .pn { color: #8fb3cc; }
+    .pill.dat.on { border-color: #4fc3f7; }
+    .polnote { font-size: 17px; color: #ffcc80; min-height: 48px; text-align: center; max-width: 660px; line-height: 1.45; }
+    #bus { width: 100%; max-width: 1760px; height: 100%; max-height: 600px; }
+    #sub2b .hw-note { font-size: 19px; }
+
+    .substeps { display: flex; gap: 10px; align-self: center; }
+    .sstep { cursor: pointer; user-select: none; border: 2px solid #24384c; border-radius: 10px;
+        padding: 6px 18px; font-size: 17px; font-weight: 700; color: #6a8398; }
+    .sstep.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .sub { display: none; flex: 1; min-height: 0; width: 100%; }
+    .sub.on { display: flex; }
+    #sub2a { gap: 30px; align-items: center; }
+    .tg-left { flex: 0 0 1090px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .tg-left svg { width: 1080px; height: 560px; }
+    .tg-right { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+    .tg-head { font-size: 24px; color: #cfd8dc; line-height: 1.35; }
+    .tg-head b { color: #b388ff; }
+    .tgtable { border-collapse: collapse; font-size: 19px; align-self: flex-start; }
+    .tgtable th, .tgtable td { border: 2px solid #37506a; padding: 5px 16px; text-align: center;
+        font-family: 'Consolas','Courier New',monospace; color: #cfd8dc; }
+    .tgtable th { background: rgba(79,195,247,0.12); color: #4fc3f7; }
+    .tgtable th.amb { background: rgba(255,183,77,0.12); color: #ffb74d; }
+    .tgtable tr.horow td { background: rgba(79,195,247,0.22); color: #fff; }
+    .tgcard { border-left: 4px solid #37506a; padding: 3px 0 3px 18px; font-size: 18px;
+        color: #90a4ae; line-height: 1.42; }
+    .tgcard b { color: #e0e0e0; }
+    .tgcard.g { border-color: #69f0ae; } .tgcard.g b { color: #69f0ae; }
+    .tgcard.v { border-color: #b388ff; } .tgcard.v b { color: #b388ff; }
+    .tgcard.a { border-color: #ffb74d; } .tgcard.a b { color: #ffb74d; }
+    #sub2b { flex-direction: column; align-items: center; gap: 8px; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px;
+        margin-top: 8px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a;
+        border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.violet { color: #b388ff; border-color: #6a4fa0; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="96,22 96,82 156,52" stroke="#cfd8dc" stroke-width="2.6" fill="none"/>
+                <line x1="52" y1="52" x2="96" y2="52" stroke="#4fc3f7" stroke-width="2.6"/>
+                <line x1="156" y1="52" x2="204" y2="52" stroke="#4fc3f7" stroke-width="2.6"/>
+                <line x1="126" y1="14" x2="126" y2="37" stroke="#ffb74d" stroke-width="2.6"/>
+                <g font-family="'Consolas',monospace" stroke="none">
+                    <text x="46" y="57" font-size="15" fill="#4fc3f7" text-anchor="end">A</text>
+                    <text x="210" y="57" font-size="15" fill="#4fc3f7">Y</text>
+                    <text x="126" y="10" font-size="13" fill="#ffb74d" text-anchor="middle">EN</text>
+                </g>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Tri-State Buffers <span class="sub">&mdash; the third state is no state at all</span></h1>
+            <div class="subtitle">The four-beat cadence &middot; one buffer, then three sharing a bus &middot; the last of the eight blocks</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Functionality</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Hardware</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Applications</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Verilog</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- ============ PAGE 1 ============ -->
+        <div class="page" id="p1">
+            <div class="fn-left">
+                <svg id="sym1" viewBox="0 0 640 380" style="width:640px;height:380px" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg>
+                <div class="ctlrow" id="ctl1"></div>
+                <div class="polnote" id="polNote"></div>
+            </div>
+
+            <div class="fn-right">
+                <div class="fn-statement">Every gate so far had two output states. A tri-state buffer
+                    adds a third: <span class="io">high impedance</span>, written
+                    <span class="io">Z</span> &mdash; the output is <span class="ic">electrically
+                    disconnected</span> from the wire. Not a 0, not a weak 1: not driving at all.</div>
+
+                <table class="btable" id="b1table"></table>
+
+                <div class="keyidea"><b>Z is not a logic value, it is the absence of one.</b> Nothing
+                    downstream can read it as a bit. It exists so that several outputs can share one
+                    wire by taking turns.</div>
+
+                <div class="confuse">
+                    <div class="cf">An <b>unselected decoder output</b> (see Decoders) is driven to a hard
+                        <b>0</b>. That is not the same thing as disconnected.</div>
+                    <div class="cf">A <b>floating input</b> is a fault &mdash; an input reading noise.
+                        Z on an <b>output</b> is deliberate; Z arriving at an <b>input</b> means
+                        nobody is driving.</div>
+                </div>
+            </div>
+        </div>
+
+<!-- ============ PAGE 2 ============ -->
+        <div class="page" id="p2" style="flex-direction:column;gap:10px">
+            <div class="substeps">
+                <div class="sstep" data-sub="a">2a &middot; inside one buffer</div>
+                <div class="sstep" data-sub="b">2b &middot; three on one bus</div>
+            </div>
+
+            <!-- 2a: the buffer opened up -- a driver and a transmission gate -->
+            <div class="sub" id="sub2a">
+                <div class="tg-left">
+                    <svg id="tg" viewBox="0 0 1080 560" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg>
+                    <div class="ctlrow" id="ctl2a"></div>
+                </div>
+                <div class="tg-right">
+                    <div class="tg-head">Inside the buffer: an ordinary <b>driver</b>, then a
+                        <b>transmission gate</b> &mdash; a switch built from one NMOS and one PMOS.</div>
+                    <table class="tgtable" id="tgtable">
+                        <tr><th class="amb">EN</th><th>NMOS</th><th>PMOS</th><th>switch</th><th>Y</th></tr>
+                        <tr class="tgrow" data-en="1"><td>1</td><td>on</td><td>on</td><td>closed</td><td>A</td></tr>
+                        <tr class="tgrow" data-en="0"><td>0</td><td>off</td><td>off</td><td>open</td><td>Z</td></tr>
+                    </table>
+                    <div class="tgcard g"><b>The same transistors as the CMOS inverter.</b> An NMOS
+                        closes when its gate is 1; a PMOS, with its bubble, closes when its gate is 0.
+                        Feed them EN and <span class="ob">EN</span> and they open and close together.</div>
+                    <div class="tgcard v"><b>Why it takes two.</b> An NMOS on its own passes a strong 0
+                        but only a weak 1 &mdash; its output stops about one threshold voltage below
+                        V<sub>DD</sub>. A PMOS is the mirror image: a strong 1, a weak 0. Side by side,
+                        whichever value is passing, one of the pair passes it at full strength.</div>
+                    <div class="tgcard a"><b>The switch does not drive.</b> A transmission gate only
+                        connects or disconnects: it restores nothing, and it conducts in both
+                        directions. The driver in front supplies the 0 or 1; the transmission gate
+                        decides whether it reaches Y. Open the switch and Y is simply cut off &mdash;
+                        that is Z.</div>
+                </div>
+            </div>
+
+            <!-- 2b: three buffers sharing one wire -->
+            <div class="sub" id="sub2b">
+                <div class="p2-top">
+                    <div style="font-size:19px;color:#90a4ae">the shared bus reads</div>
+                    <div class="busbadge" id="busBadge">Z</div>
+                    <div class="ctlrow" id="ctl2"></div>
+                    <div class="ctlrow" id="ctl2d"></div>
+                    <div class="decbtn" id="decBtn">let a decoder drive the enables</div>
+                </div>
+                <div class="sch-wrap">
+                    <svg id="bus" viewBox="-130 20 1440 490" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg>
+                </div>
+                <div class="hw-note" id="hwNote"></div>
+            </div>
+        </div>
+
+<!-- ============ PAGE 3 ============ -->
+        <div class="page" id="p3">
+            <div class="apps">
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6,48 L90,48"/>
+                        <rect x="14" y="14" width="22" height="20" rx="3"/>
+                        <rect x="60" y="14" width="22" height="20" rx="3"/>
+                        <rect x="14" y="62" width="22" height="20" rx="3"/>
+                        <rect x="60" y="62" width="22" height="20" rx="3"/>
+                        <path d="M25,34 L25,48 M71,34 L71,48 M25,62 L25,48 M71,62 L71,48"/>
+                    </svg>
+                    <div class="app-title">Shared data buses</div>
+                    <div class="app-desc">Memory and peripherals all hang off one bus; a decoder
+                        enables exactly one to drive it during a read. Everything else sits in Z.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="10" y="20" width="44" height="56" rx="5"/>
+                        <circle cx="76" cy="48" r="7"/>
+                        <path d="M54,40 L69,44 M54,56 L69,52"/>
+                        <path d="M40,34 L46,40 L40,46 M24,50 L18,56 L24,62"/>
+                    </svg>
+                    <div class="app-title">Bidirectional I/O pins</div>
+                    <div class="app-desc">The classic <b>inout</b> pad: one physical pin drives out
+                        when enabled and reads in when not. Every microcontroller GPIO works this
+                        way &mdash; the use that is still everywhere.</div>
+                </div>
+                <div class="app-card">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="18" y="18" width="60" height="60" rx="5"/>
+                        <path d="M18,32 L6,32 M18,48 L6,48 M18,64 L6,64"/>
+                        <path d="M78,32 L90,32 M78,48 L90,48 M78,64 L90,64"/>
+                        <text x="48" y="54" font-size="14" fill="currentColor" stroke="none" text-anchor="middle" font-family="Consolas, monospace">245</text>
+                    </svg>
+                    <div class="app-title">Bus transceivers</div>
+                    <div class="app-desc">Parts like the <b>74HC245</b> &mdash; a whole byte of
+                        tri-state buffers with one shared direction control.</div>
+                </div>
+                <div class="app-card link">
+                    <svg viewBox="0 0 96 96" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="34,20 34,76 70,60 70,36"/>
+                        <path d="M6,30 L34,30 M6,48 L34,48 M6,66 L34,66 M70,48 L90,48"/>
+                        <path d="M52,76 L52,88"/>
+                    </svg>
+                    <div class="tie">what replaced it on-chip</div>
+                    <div class="app-title">Mostly a mux now</div>
+                    <div class="app-desc">Inside a chip a <b>multiplexer</b> selects among drivers
+                        with no shared wire, no contention risk and cleaner timing. Tri-state lives
+                        at the boundary.</div>
+                </div>
+            </div>
+
+            <div class="modern">So the honest position: tri-state is <b>still essential where wires
+                leave the die</b> &mdash; I/O pads, off-chip buses, anything bidirectional &mdash; and
+                <b>mostly retired inside it</b>. Learn it for the pin and the bus, not as the default
+                way to join two signals. Which is a neat closing of the section: the block that opened
+                it, the mux, is what replaced this one.</div>
+        </div>
+
+        <!-- ============ PAGE 4 ============ -->
+        <div class="page" id="p4">
+            <div class="idiom-tag">This block's Verilog idiom: assigning
+                <span class="mono">1'bz</span> &mdash; it appears nowhere else in the course</div>
+            <div class="codes">
+                <div class="code-card">
+                    <div class="code-label">The buffer, and <b>three of them on one net</b></div>
+<div class="code"><span class="kw">module</span> tri_buf (<span class="kw">input</span> a, <span class="kw">input</span> en, <span class="kw">output</span> y);
+  <span class="kw">assign</span> y <span class="op">=</span> en <span class="op">?</span> a <span class="op">:</span> <span class="lit">1'bz</span>;   <span class="cm">// disabled => release the wire</span>
+<span class="kw">endmodule</span>
+
+<span class="kw">wire</span> bus;                    <span class="cm">// one net, three drivers</span>
+tri_buf d0 (.a(a0), .en(e0), .y(bus));
+tri_buf d1 (.a(a1), .en(e1), .y(bus));
+tri_buf d2 (.a(a2), .en(e2), .y(bus));</div>
+                    <div class="code-label" style="margin-top:12px">A bidirectional pad</div>
+<div class="code"><span class="kw">module</span> io_pad (<span class="kw">inout</span> pin, <span class="kw">input</span> dout,
+               <span class="kw">input</span> oe, <span class="kw">output</span> din);
+  <span class="kw">assign</span> pin <span class="op">=</span> oe <span class="op">?</span> dout <span class="op">:</span> <span class="lit">1'bz</span>;
+  <span class="kw">assign</span> din <span class="op">=</span> pin;         <span class="cm">// always able to read</span>
+<span class="kw">endmodule</span></div>
+                </div>
+                <div class="code-card">
+                    <div class="code-label">Multiple drivers on one net is normally an error.
+                        Here it is <b>the point</b>, and Verilog resolves it the way hardware does:</div>
+                    <table class="zxtable">
+                        <tr><th>drivers enabled</th><th>bus</th><th>what it means</th></tr>
+                        <tr><td>exactly one</td><td class="sym" style="color:#4fc3f7">0 / 1</td><td>correct operation</td></tr>
+                        <tr><td>none</td><td class="sym" style="color:#90a4ae">z</td><td>floating &mdash; undefined, nothing may read it</td></tr>
+                        <tr><td>two or more, agreeing</td><td class="sym" style="color:#4fc3f7">0 / 1</td><td>works, but by luck &mdash; still a design error</td></tr>
+                        <tr><td>two or more, disagreeing</td><td class="sym" style="color:#ff5252">x</td><td><b style="color:#ff5252">contention</b></td></tr>
+                    </table>
+                    <div class="code-label" style="margin-top:14px"><b>z</b> means nobody is driving.
+                        <b style="color:#ff5252">x</b> means drivers disagree, or the value is
+                        unknown. Students merge these two constantly.</div>
+                </div>
+            </div>
+            <div class="gotchas">
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    <b>Synthesis reality:</b> <code>1'bz</code> is only implementable where real
+                    tri-state hardware exists &mdash; I/O pads and dedicated bus structures. Write it
+                    in ordinary internal logic and the tool will reject it or quietly build a
+                    mux.</div></div>
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    <code>inout</code> is the only port direction that may legitimately be driven and
+                    read. It still needs the <code>oe ? … : 1'bz</code> pattern &mdash; a plain
+                    <code>assign pin = dout;</code> makes the pin an output forever.</div></div>
+                <div class="gotcha"><div class="g-bang">!</div><div class="g-txt">
+                    Comparing against <code>z</code> or <code>x</code> needs
+                    <code>===</code>, not <code>==</code>. One line, and it saves a debugging
+                    session.</div></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls" id="ctlHints"></div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    const FIRST = 1, LAST = 4;
+    let page = 1;
+    const pages = Array.from(document.querySelectorAll('.page'));
+    const tabs  = Array.from(document.querySelectorAll('.tab'));
+    const dots  = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p'+page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+
+    // ============ STATE ============
+    // Beat 1: one buffer (with an active-low option). Beat 2a: that buffer opened up into a
+    // driver + transmission gate. Beat 2b: three drivers on one bus; contention reachable on purpose.
+    const st = { b1a: 1, b1en: 1, b1low: false,
+                 tgA: 1, tgEn: 1,
+                 a: [1,0,1], en: [1,0,0], sel: 0, decDriven: false };
+    const ON='#4fc3f7', ZERO='#7d9bb5', AMB='#ffb74d', DIM='#55697c', VIO='#b388ff', XRED='#ff5252';
+    const ZC='#78848f', GRN='#69f0ae', SYM='#cfd8dc', SYMOFF='#5a7186';
+    const NS = 'http://www.w3.org/2000/svg';
+    const vcol = v => v ? ON : ZERO;
+    const ZDASH = 'stroke-dasharray="5 9"';
+
+    // ---- tiny SVG string helpers ----
+    const L = (x1,y1,x2,y2,c,w=3.4,x='') =>
+        `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w}" ${x}/>`;
+    const P = (d,c,w=3.4,x='') => `<path d="${d}" stroke="${c}" stroke-width="${w}" fill="none" ${x}/>`;
+    const T = (x,y,s,c,size=20,anchor='start',extra='') =>
+        `<text x="${x}" y="${y}" font-size="${size}" fill="${c}" text-anchor="${anchor}" stroke="none" font-family="Consolas, 'Courier New', monospace" ${extra}>${s}</text>`;
+    const S = (x,y,s,c,size=16,anchor='start',extra='') =>
+        `<text x="${x}" y="${y}" font-size="${size}" fill="${c}" text-anchor="${anchor}" stroke="none" font-family="'Segoe UI', sans-serif" ${extra}>${s}</text>`;
+    const dot = (x,y,c,r=6) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}" stroke="none"/>`;
+    const OVL = s => `<tspan class="ovl">${s}</tspan>`;
+
+    // SVG has no text-decoration, so each .ovl tspan gets a measured <line> drawn over it.
+    // Measure only on a VISIBLE svg (getExtentOfChar returns zeros under display:none); bar sits
+    // 0.88em above the baseline (Mike, 2026-09-15: 0.80em was too close to the letters).
+    function barify(svg) {
+        if (!svg || !(svg.getBoundingClientRect().width > 0)) return 0;
+        let n = 0;
+        svg.querySelectorAll('tspan.ovl').forEach(ts => {
+            const k = ts.getNumberOfChars();
+            let x0 = Infinity, x1 = -Infinity;
+            for (let i = 0; i < k; i++) {
+                const e = ts.getExtentOfChar(i);
+                x0 = Math.min(x0, e.x); x1 = Math.max(x1, e.x + e.width);
+            }
+            if (!isFinite(x0) || !(x1 > x0)) return;
+            const em = parseFloat(getComputedStyle(ts).fontSize);
+            const y = ts.getStartPositionOfChar(0).y - 0.88 * em;
+            const t = ts.closest('text');
+            const ln = document.createElementNS(NS, 'line');
+            ln.setAttribute('class', 'obar');
+            ln.setAttribute('x1', x0.toFixed(2)); ln.setAttribute('x2', x1.toFixed(2));
+            ln.setAttribute('y1', y.toFixed(2));  ln.setAttribute('y2', y.toFixed(2));
+            ln.setAttribute('stroke', t.getAttribute('fill'));
+            ln.setAttribute('stroke-width', Math.max(1.8, em * 0.085).toFixed(2));
+            t.parentNode.appendChild(ln);
+            n++;
+        });
+        return n;
+    }
+
+    // ============ BEAT 1: one buffer ============
+    const b1enabled = () => st.b1low ? st.b1en === 0 : st.b1en === 1;
+    function drawB1() {
+        const en = b1enabled(), a = st.b1a;
+        const ac = vcol(a), yc = en ? ac : ZC, ctl = en ? AMB : ZERO;
+        let h = '';
+        h += `<polygon points="220,90 220,290 400,190" stroke="${en ? SYM : SYMOFF}" stroke-width="3.2" fill="none"/>`;
+        h += L(80,190,220,190,ac,3.6);
+        h += en ? L(400,190,560,190,yc,3.6) : L(400,190,560,190,ZC,2.8,ZDASH);
+        // enable lands exactly on the slanted edge: y = 90 + (280-220)*100/180 = 123.33
+        if (st.b1low) {
+            // bubble tangent to the edge: centre 9/cos(29.05deg) = 10.3 above the edge point
+            h += `<circle cx="280" cy="113.0" r="9" stroke="${ctl}" stroke-width="3" fill="none"/>`;
+            h += L(280,48,280,104,ctl,3.4);
+        } else {
+            h += L(280,48,280,123.33,ctl,3.4);
+        }
+        h += T(66,199,'A',ac,26,'end');
+        h += T(574,199,'Y',yc,26);
+        h += T(280,38,st.b1low ? OVL('EN') : 'EN',ctl,23,'middle');
+        h += S(480,172,en ? 'driving' : 'released',en ? '#8fa8bd' : ZC,17,'middle');
+        h += T(310,352,'Y = ' + (en ? a : 'Z'),yc,34,'middle');
+        document.getElementById('sym1').innerHTML = h;
+    }
+    function b1Table() {
+        const ENH = st.b1low ? '<span class="ob">EN</span>' : 'EN';
+        const on = st.b1low ? 0 : 1, off = 1 - on;
+        const cur = b1enabled() ? String(st.b1a) : 'z';
+        const rows = [['z', off, '&times;', '<td class="zcell">Z</td>', 'disconnected'],
+                      ['0', on, '0', '<td>0</td>', 'drives low'],
+                      ['1', on, '1', '<td>1</td>', 'drives high']];
+        document.getElementById('b1table').innerHTML =
+            `<tr><th class="amb">${ENH}</th><th class="amb">A</th><th>Y</th><th>meaning</th></tr>` +
+            rows.map(r => `<tr class="brow${r[0] === cur ? ' horow' : ''}"><td>${r[1]}</td><td>${r[2]}</td>${r[3]}<td>${r[4]}</td></tr>`).join('');
+    }
+
+    // ============ BEAT 2a: driver + transmission gate ============
+    function drawTG() {
+        const on = !!st.tgEn, a = st.tgA;
+        const nc = vcol(a), ec = on ? AMB : ZERO, ebc = on ? ZERO : AMB;   // EN-bar = NOT EN
+        const yc = on ? nc : ZC, yw = on ? 3.6 : 2.8, yd = on ? '' : ZDASH;
+        const ch = on ? GRN : '#55697c', chx = on ? 'filter="drop-shadow(0 0 4px rgba(105,240,174,.6))"' : 'stroke-dasharray="4 6"';
+        let h = '';
+        // A -> driver -> node N
+        h += L(84,280,200,280,nc,3.6);
+        h += `<polygon points="200,236 200,324 290,280" stroke="${SYM}" stroke-width="3" fill="none"/>`;
+        h += L(290,280,420,280,nc,3.6);
+        h += P('M585,160 L420,160 L420,400 L585,400',nc,3.6);
+        h += dot(420,280,nc);
+        // the transmission gate's far side -> Y
+        h += P('M655,160 L820,160 L820,400 L655,400',yc,yw,yd);
+        h += L(820,280,960,280,yc,yw,yd);
+        h += dot(820,280,yc);
+        // PMOS on top (gate above, bubble): conducts when its gate, EN-bar, is 0
+        h += L(585,160,585,140,SYM,2.6) + L(655,140,655,160,SYM,2.6);
+        h += L(580,140,660,140,ch,4.5,chx);
+        h += L(575,122,665,122,SYM,3);
+        h += `<circle cx="620" cy="113" r="8" stroke="${SYM}" stroke-width="2.6" fill="none"/>`;
+        // NMOS below (gate below): conducts when its gate, EN, is 1
+        h += L(585,400,585,420,SYM,2.6) + L(655,420,655,400,SYM,2.6);
+        h += L(580,420,660,420,ch,4.5,chx);
+        h += L(575,438,665,438,SYM,3);
+        // EN rail -> NMOS gate; EN branch hops over A, through an inverter, EN-bar rail -> PMOS gate
+        h += P('M84,500 L620,500 L620,438',ec,3.4);
+        h += P('M130,500 L130,290 A10,10 0 0,0 130,270 L130,60 L230,60',ec,3.4);
+        h += dot(130,500,ec);
+        h += `<polygon points="230,42 230,78 263,60" stroke="${SYM}" stroke-width="2.6" fill="none"/>`;
+        h += `<circle cx="270" cy="60" r="7" stroke="${SYM}" stroke-width="2.4" fill="none"/>`;
+        h += P('M277,60 L620,60 L620,105',ebc,3.4);
+        // labels
+        h += T(70,289,'A',nc,26,'end');
+        h += T(70,509,'EN',ec,24,'end');
+        h += T(450,48,OVL('EN'),ebc,21,'middle');
+        h += S(245,356,'driver','#8fa8bd',16,'middle');
+        h += T(355,268,'N',nc,19,'middle');
+        h += T(975,289,'Y',yc,26);
+        h += T(890,336,'Y = ' + (on ? a : 'Z'),yc,28,'middle');
+        h += T(712,118,'PMOS',SYM,18) + S(712,140,on ? 'ON' : 'OFF',on ? GRN : DIM,15,'start','font-weight="700"');
+        h += T(712,456,'NMOS',SYM,18) + S(712,478,on ? 'ON' : 'OFF',on ? GRN : DIM,15,'start','font-weight="700"');
+        h += S(620,272,'transmission gate',VIO,19,'middle','font-weight="700"');
+        h += S(620,298,on ? 'closed: N reaches Y' : 'open: Y is cut off',on ? GRN : '#90a4ae',16,'middle');
+        document.getElementById('tg').innerHTML = h;
+        document.querySelectorAll('.tgrow').forEach(r => r.classList.toggle('horow', +r.dataset.en === st.tgEn));
+    }
+
+    // ============ BEAT 2b: three drivers, one bus ============
+    const enables = () => st.decDriven ? [0,1,2].map(i => i === st.sel ? 1 : 0) : st.en.slice();
+    // The bus resolution, matching what a simulator does (iverilog-verified, see BRIEF):
+    //   no driver -> 'z';  one driver -> its value;  several agreeing -> that value;
+    //   several disagreeing -> 'x' (contention)
+    function busValue() {
+        const e = enables();
+        const vals = [0,1,2].filter(i => e[i]).map(i => st.a[i]);
+        if (vals.length === 0) return 'z';
+        return vals.every(v => v === vals[0]) ? String(vals[0]) : 'x';
+    }
+    const ROWY = [120, 280, 440], BUSX = 720, TAPY = 360;
+    function drawBus() {
+        const e = enables(), bv = busValue();
+        const busCol = bv === 'x' ? XRED : bv === 'z' ? ZC : vcol(+bv);
+        const busW = bv === 'x' ? 7 : bv === 'z' ? 3 : 5;
+        const busX = (bv === 'x' ? 'class="xwarn"' : '') + (bv === 'z' ? ' ' + ZDASH : '');
+        let h = '';
+
+        if (st.decDriven) {
+            h += `<rect x="-120" y="30" width="75" height="470" rx="8" fill="rgba(179,136,255,0.07)" stroke="${VIO}" stroke-width="2.6"/>`;
+            h += S(-82,118,'2-to-4',VIO,15,'middle','font-weight="700"');
+            h += S(-82,138,'decoder',VIO,15,'middle','font-weight="700"');
+            h += T(-82,275,'S',VIO,17,'middle');
+            h += T(-82,298,st.sel.toString(2).padStart(2,'0'),'#d6c2ff',19,'middle');
+            [0,1,2].forEach(i => { h += T(-50,ROWY[i] - 64,'y' + i,VIO,14,'end'); });
+            h += T(-50,476,'y3',VIO,14,'end');
+            h += L(-45,470,-12,470,'#6a4fa0',2.4);
+            h += S(-6,475,'n/c','#6a4fa0',14);
+        }
+
+        [0,1,2].forEach(i => {
+            const y = ROWY[i], on = !!e[i], v = st.a[i], vc = vcol(v);
+            const ctl = on ? AMB : ZERO;
+            // enable: in from the left (or from the decoder), down onto the slanted edge at y-23
+            const x0 = st.decDriven ? -45 : 0;
+            h += P(`M${x0},${y - 70} L290,${y - 70} L290,${y - 23}`,ctl,3.2);
+            if (!st.decDriven) h += T(-8,y - 64,'EN' + i + ' = ' + e[i],ctl,17,'end');
+            // data in
+            h += T(100,y + 8,'A' + i + ' = ' + v,on ? vc : '#6d8297',21,'end');
+            h += S(100,y + 32,on ? 'driving' : 'released',on ? '#8fa8bd' : DIM,15,'end');
+            h += L(112,y,240,y,vc,3.4);
+            h += `<polygon points="240,${y - 46} 240,${y + 46} 340,${y}" stroke="${on ? SYM : SYMOFF}" stroke-width="3" fill="none"/>`;
+            // out to the bus: still wired, but a released driver is not driving it
+            if (on) {
+                h += L(340,y,BUSX,y,bv === 'x' ? vc : busCol,3.6);
+            } else {
+                h += L(340,y,BUSX,y,ZC,2.6,ZDASH);
+                h += T(560,y - 12,'Z',ZC,19,'middle');
+            }
+        });
+
+        // the bus: corners at the top and bottom rows, tees at the middle row and the reader tap
+        h += L(BUSX,ROWY[0],BUSX,ROWY[2],busCol,busW,busX);
+        h += L(BUSX,TAPY,960,TAPY,busCol,busW,busX);
+        h += dot(BUSX,ROWY[1],busCol,7) + dot(BUSX,TAPY,busCol,7);
+        h += S(738,205,'the shared bus','#6d8297',18);
+
+        // the reader
+        h += `<rect x="960" y="312" width="150" height="96" rx="10" fill="#0d1b2a" stroke="${bv === 'x' ? XRED : '#37506a'}" stroke-width="2.6"/>`;
+        h += S(1035,346,'reader','#90a4ae',17,'middle');
+        h += T(1035,390,bv.toUpperCase(),busCol,30,'middle');
+        if (bv === 'x') {
+            h += S(1135,344,'CONTENTION',XRED,21,'start','font-weight="700" class="xwarn"');
+            h += S(1135,372,'two drivers fighting',XRED,16);
+        } else if (bv === 'z') {
+            h += S(1135,344,'FLOATING','#90a4ae',20,'start','font-weight="700"');
+            h += S(1135,372,'nobody driving',ZC,16);
+        }
+        document.getElementById('bus').innerHTML = h;
+    }
+
+    // ============ controls ============
+    function pill(parent, cls, html, onClick) {
+        const el = document.createElement('div');
+        el.className = 'pill ' + cls;
+        el.innerHTML = html + '<span class="pv">0</span>';
+        el.addEventListener('click', () => { onClick(); renderAll(); });
+        parent.appendChild(el);
+        return el;
+    }
+    const ctl1 = document.getElementById('ctl1');
+    const p1en  = pill(ctl1, '', '<span class="pn" id="p1enLbl">EN</span>', () => st.b1en ^= 1);
+    const p1a   = pill(ctl1, '', '<span class="pn">A</span>', () => st.b1a ^= 1);
+    const p1pol = pill(ctl1, 'pol', '<span class="pn">active-low</span>', () => st.b1low = !st.b1low);
+
+    const ctl2a = document.getElementById('ctl2a');
+    const p2en = pill(ctl2a, '', '<span class="pn">EN</span>', () => st.tgEn ^= 1);
+    const p2a  = pill(ctl2a, '', '<span class="pn">A</span>', () => st.tgA ^= 1);
+
+    const ctl2 = document.getElementById('ctl2'), ctl2d = document.getElementById('ctl2d');
+    const enP = [0,1,2].map(i => pill(ctl2, '', '<span class="pn">EN' + i + '</span>',
+        () => { if (st.decDriven) st.sel = i; else st.en[i] ^= 1; }));
+    const daP = [0,1,2].map(i => pill(ctl2d, 'dat', '<span class="pn">A' + i + '</span>',
+        () => { st.a[i] ^= 1; }));
+    document.getElementById('decBtn').addEventListener('click', () => {
+        st.decDriven = !st.decDriven; renderAll();
+    });
+
+    const HINTS = {
+        base: '<span class="k">1</span>&ndash;<span class="k">4</span> beat &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next &middot; <span class="k">Backspace</span> back',
+        1:  '<span class="k amber">E</span> enable &middot; <span class="k amber">A</span> data &middot; <span class="k amber">L</span> active-low',
+        '2a': '<span class="k amber">E</span> enable &middot; <span class="k amber">A</span> data',
+        '2b': '<span class="k amber">Q</span><span class="k amber">W</span><span class="k amber">E</span> enables &middot; <span class="k amber">A</span><span class="k amber">S</span><span class="k amber">D</span> data &middot; <span class="k violet">K</span> decoder-driven',
+    };
+
+    function setPill(el, v) { el.classList.toggle('on', !!v); el.querySelector('.pv').textContent = v; }
+
+    function renderAll() {
+        // ---- beat 1 ----
+        drawB1(); b1Table();
+        document.getElementById('p1enLbl').innerHTML = st.b1low ? '<span class="ob">EN</span>' : 'EN';
+        setPill(p1en, st.b1en); setPill(p1a, st.b1a);
+        p1pol.classList.toggle('on', st.b1low); p1pol.querySelector('.pv').textContent = st.b1low ? 'on' : 'off';
+        document.getElementById('polNote').innerHTML = st.b1low
+            ? 'The bubble makes the enable <b>active-low</b>: the buffer drives when <span class="ob">EN</span> = 0. '
+              + 'Tie that pin to ground and it is enabled forever &mdash; a classic bug.' : '';
+
+        // ---- beat 2a ----
+        drawTG(); setPill(p2en, st.tgEn); setPill(p2a, st.tgA);
+
+        // ---- beat 2b ----
+        const e = enables(), bv = busValue();
+        enP.forEach((el, i) => setPill(el, e[i]));
+        daP.forEach((el, i) => setPill(el, st.a[i]));
+        const badge = document.getElementById('busBadge');
+        badge.textContent = bv.toUpperCase();
+        badge.className = 'busbadge ' + (bv === 'x' ? 'vx' : bv === 'z' ? 'vz' : 'v' + bv);
+        const db = document.getElementById('decBtn');
+        db.classList.toggle('on', st.decDriven);
+        db.textContent = st.decDriven ? 'back to manual enables' : 'let a decoder drive the enables';
+        drawBus();
+
+        const nOn = e.reduce((p, q) => p + q, 0);
+        const note = document.getElementById('hwNote');
+        if (bv === 'x') {
+            note.innerHTML = '<span class="bad">Contention.</span> Two enabled drivers are pushing '
+                + 'opposite values onto one wire. Both transmission gates are closed, so one driver\'s pull-up '
+                + 'and the other\'s pull-down are joined through the bus: a direct path from V<sub>DD</sub> to '
+                + 'ground. Simulation shows <b>x</b>; hardware shows large current, a level in the forbidden '
+                + 'band, heat, possible damage &mdash; a logic error with a <span class="bad">physical</span> consequence.';
+        } else if (bv === 'z') {
+            note.innerHTML = 'No driver is enabled, so every transmission gate is open and the bus is '
+                + '<span class="zc">floating</span>. It is not 0 &mdash; it is undefined, and nothing may read it. '
+                + 'Real designs add a pull-up or pull-down so an idle bus sits at a defined level.';
+        } else if (nOn === 1) {
+            const who = e.indexOf(1);
+            note.innerHTML = 'Exactly one driver is enabled, so <b>driver ' + who + '</b> owns the '
+                + 'bus and everyone reads <b>' + bv + '</b>. The other two have released the wire: '
+                + 'their outputs are in Z, not driving 0. <b>This is the only correct case.</b>';
+        } else {
+            note.innerHTML = nOn + ' drivers are enabled and they happen to <b>agree</b>, so the bus '
+                + 'reads a valid <b>' + bv + '</b>. It works &mdash; and it is <span class="bad">still '
+                + 'a design error</span>. Change one of their data values and the fight starts.';
+        }
+        if (st.decDriven) {
+            note.innerHTML += ' <span class="vi">With a decoder driving the enables, exactly one is '
+                + 'asserted by construction, so contention cannot be reached at all.</span>';
+        }
+
+        // ---- step chrome + overbars on whatever is visible ----
+        document.querySelectorAll('.sstep').forEach(s => s.classList.toggle('on', s.dataset.sub === sub));
+        document.getElementById('sub2a').classList.toggle('on', sub === 'a');
+        document.getElementById('sub2b').classList.toggle('on', sub === 'b');
+        const key = page === 2 ? '2' + sub : page;
+        document.getElementById('ctlHints').innerHTML = HINTS.base + (HINTS[key] ? ' &middot; ' + HINTS[key] : '')
+            + ' &middot; <span class="k">R</span> restart';
+        ['sym1','tg','bus'].forEach(id => barify(document.getElementById(id)));
+    }
+
+    // ============ navigation: beat 2 has two steps (2a, 2b) ============
+    let sub = 'a';
+    const baseRender = render;
+    setPage = function (n, s) {
+        const target = Math.max(FIRST, Math.min(LAST, n));
+        if (target === 2) sub = s || 'a';
+        page = target; baseRender(); renderAll();
+    };
+    function next() {
+        if (page === 2 && sub === 'a') { sub = 'b'; renderAll(); }
+        else setPage(page + 1);
+    }
+    function prev() {
+        if (page === 2 && sub === 'b') { sub = 'a'; renderAll(); }
+        else if (page === 3) setPage(2, 'b');
+        else setPage(page - 1);
+    }
+    document.querySelectorAll('.sstep').forEach(s => s.addEventListener('click', () => { sub = s.dataset.sub; renderAll(); }));
+
+    const ENKEY = { q: 0, w: 1, e: 2 }, AKEY = { a: 0, s: 1, d: 2 };
+    document.addEventListener('keydown', (ev) => {
+        const k = ev.key, low = k.toLowerCase();
+        if (k >= '1' && k <= '4') { setPage(+k); ev.preventDefault(); return; }
+        const done = () => { renderAll(); ev.preventDefault(); };
+        if (page === 1) {
+            if (low === 'a') { st.b1a ^= 1; return done(); }
+            if (low === 'e') { st.b1en ^= 1; return done(); }
+            if (low === 'l') { st.b1low = !st.b1low; return done(); }
+        }
+        if (page === 2 && sub === 'a') {
+            if (low === 'a') { st.tgA ^= 1; return done(); }
+            if (low === 'e') { st.tgEn ^= 1; return done(); }
+        }
+        if (page === 2 && sub === 'b') {
+            if (low in ENKEY) { const i = ENKEY[low]; if (st.decDriven) st.sel = i; else st.en[i] ^= 1; return done(); }
+            if (low in AKEY) { st.a[AKEY[low]] ^= 1; return done(); }
+            if (low === 'k') { st.decDriven = !st.decDriven; return done(); }
+        }
+        switch (low) {
+            case ' ': case 'arrowright': case 'arrowdown': next(); ev.preventDefault(); break;
+            case 'arrowleft': case 'arrowup': case 'backspace': prev(); ev.preventDefault(); break;
+            case 'r': Object.assign(st, { b1a: 1, b1en: 1, b1low: false, tgA: 1, tgEn: 1,
+                          a: [1,0,1], en: [1,0,0], sel: 0, decDriven: false });
+                      setPage(1); ev.preventDefault(); break;
+        }
+    });
+
+    setPage(1);
+</script>
+</body>
+</html>
