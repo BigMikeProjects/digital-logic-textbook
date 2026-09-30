@@ -1,0 +1,11 @@
+title: "Binary State Assignment"
+description: ""
+chapter: sequential-logic
+section: fsm
+order: 40201
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the five-step method from state diagram to circuit, run on a Moore 1-0-1 detector — two flip-flops, 24 ways to hand out the codes, 8 literals in name order versus 17 in Gray order, and a search of all 24 that finds 6"
+  02-interactive.html:
+    caption: "Interactive: binary state assignment on a Moore 1-0-1 detector — the method, how many flip-flops n states need and how many ways there are to hand out the codes, two assignments worked through state table, K-maps and equations to very different gate counts, and a live picker ranking all 24"
