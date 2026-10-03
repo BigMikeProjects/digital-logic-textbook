@@ -629,7 +629,7 @@
           "title": "Level-to-Pulse FSM",
           "slug": "level-to-pulse-fsm",
           "type": "full",
-          "published": false
+          "published": true
         },
         {
           "num": "4.3.3",

@@ -1,0 +1,11 @@
+title: "Level-to-Pulse FSM"
+description: "A three-state Moore machine that turns a level into one clock-wide pulse per rising edge, worked from state diagram through K-maps to circuit, including why the minimal output equation is deliberately not used."
+chapter: sequential-logic
+section: fsm-applications
+order: 40302
+
+graphics:
+  01-video.youtube:
+    caption: "Video: why a coin sensor's level must become a single pulse, the three-state Moore machine that does it, the transition table and K-maps, and why the minimal output equation is left on the table so a power-up into the unused state cannot fire a stray pulse"
+  02-interactive.html:
+    caption: "Interactive: the full FSM design flow for a level-to-pulse converter — state diagram, transition table beside the diagram, equations, K-maps showing a don’t-care that helps, one that cannot, and one refused on purpose, then the two-flip-flop circuit with its timing diagram; step the clock to watch one pulse form per rising edge of L"

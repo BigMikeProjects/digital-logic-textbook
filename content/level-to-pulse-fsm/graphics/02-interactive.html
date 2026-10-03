@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Level-to-Pulse Generator — FSM Design</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 active state / P=1 · amber #ffb74d input L & CLK · violet #b388ff don't-care/unused · navy #0d1b2a panel */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 176px; height: 82px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px; border: 2px solid #24384c;
+        border-radius: 12px; padding: 11px 18px; color: #6a8398; transition: all .12s ease; }
+    .tab .tnum { width: 36px; height: 36px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 19px; font-weight: 700; }
+    .tab .tlabel { font-size: 19px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* control bar */
+    .ctlbar { display: inline-flex; align-items: center; gap: 16px; flex-wrap: wrap; row-gap: 10px; }
+    .ctl, .readout { white-space: nowrap; }
+    .ctl { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+        border-radius: 999px; padding: 9px 20px; border: 2px solid #4fc3f7; background: rgba(79,195,247,0.08); }
+    .c-lbl { font-size: 18px; font-weight: 700; letter-spacing: 1px; color: #4fc3f7; }
+    .c-val { font-size: 20px; color: #e0e0e0; font-family: 'Consolas','Courier New',monospace; }
+    .c-hint { font-size: 14px; color: #7a8a99; }
+    .ctl.reset { border-color: #4a6274; background: rgba(74,98,116,0.12); padding: 9px 16px; }
+    .ctl.reset .c-lbl { color: #90a4ae; } .ctl.reset .c-val { color: #b0bec5; }
+    .ctl.reset:hover { border-color: #ffb74d; } .ctl.reset:hover .c-lbl, .ctl.reset:hover .c-val { color: #ffb74d; }
+    .readout { font-size: 20px; color: #cfd8dc; font-family: 'Consolas','Courier New',monospace; }
+    .readout .lab { color: #90a4ae; }
+    .readout b { color: #4fc3f7; } .readout .amb { color: #ffb74d; }
+    .readout .pz { color: #5c7189; }
+
+    /* PAGE 1 — state diagram + input strip */
+    #p1 { flex-direction: column; gap: 14px; align-items: stretch; }
+    .p1-top { display: flex; gap: 30px; align-items: center; flex: 1; min-height: 0; }
+    .sd-wrap { flex: 0 0 50%; display: flex; align-items: center; justify-content: center; }
+    .sd-wrap svg { width: 100%; max-width: 700px; height: auto; }
+    .p1-right { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+    .strip { border: 2px solid #24384c; border-radius: 14px; padding: 8px 18px 4px; background: rgba(13,27,42,0.55); }
+    .strip-h { font-size: 17px; color: #90a4ae; display: flex; gap: 18px; align-items: baseline; }
+    .strip-h b { color: #ffb74d; } .strip-h .cy { color: #4fc3f7; font-weight: 600; }
+    .strip svg { width: 100%; height: auto; display: block; }
+    .prob { font-size: 25px; color: #cfd8dc; line-height: 1.5; }
+    .prob .am { color: #ffb74d; font-weight: 600; } .prob .cy { color: #4fc3f7; font-weight: 600; }
+    .insight { font-size: 20px; color: #90a4ae; line-height: 1.5; border-left: 3px solid #37506a; padding-left: 16px; }
+    .insight b { color: #4fc3f7; }
+    .moore-badge { display: inline-block; align-self: flex-start; color: #4fc3f7; border: 2px solid #245066;
+        background: rgba(79,195,247,0.08); border-radius: 999px; padding: 5px 18px; font-size: 17px; font-weight: 600; }
+
+    .sd-node .sdc { fill: #0d1b2a; stroke: #4a6274; stroke-width: 3; transition: stroke .18s, fill .18s; }
+    .sd-node.on .sdc { stroke: #4fc3f7; stroke-width: 4; fill: rgba(79,195,247,0.16); }
+    .sd-node .sdname { fill: #cfd8dc; font-family: 'Segoe UI',sans-serif; font-weight: 700; text-anchor: middle; }
+    .sd-node.on .sdname { fill: #4fc3f7; }
+    .sd-node .sdenc { fill: #7a8ea0; font-family: 'Consolas',monospace; text-anchor: middle; }
+    .sd-node .sdp { fill: #607d8b; font-family: 'Consolas',monospace; text-anchor: middle; font-size: 16px; }
+    .sd-node.pulse .sdp { fill: #4fc3f7; }
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 2.6; transition: stroke .18s; }
+    .arc.on { stroke: #4fc3f7; stroke-width: 4.5; }
+    .arc-l { fill: #ffb74d; font-family: 'Consolas',monospace; font-size: 20px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #16213e; stroke-width: 7px; stroke-linejoin: round; }
+    .arc-l.on { fill: #4fc3f7; }
+    .sd-hint { fill: #607d8b; font-family: 'Segoe UI',sans-serif; font-size: 15px; text-anchor: middle; }
+
+    /* PAGE 2 — state table */
+    #p2 { flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+    .stt { border-collapse: collapse; font-size: 26px; font-family: 'Consolas','Courier New',monospace; }
+    .stt th, .stt td { border: 2px solid #37506a; padding: 8px 26px; text-align: center; color: #e0e0e0; }
+    .stt th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; font-size: 22px; }
+    .stt th.sep { border-left-width: 4px; } .stt td.sep { border-left-width: 4px; }
+    .stt td.one { color: #4fc3f7; } .stt td.zero { color: #5c7189; }
+    .stt td.pp { color: #4fc3f7; font-weight: 700; }
+    .stt td.state { color: #90a4ae; font-family: 'Segoe UI',sans-serif; font-size: 22px; }
+    .stt tr.dc td { color: #b388ff; background: rgba(179,136,255,0.10); }
+    .stt tr.rowon td { background: rgba(79,195,247,0.20); color: #fff; }
+    .stt-cap { font-size: 20px; color: #90a4ae; max-width: 1300px; text-align: center; line-height: 1.45; }
+    .stt-cap .vl { color: #b388ff; }
+
+    /* PAGE 3 — equations */
+    #p3 { align-items: center; justify-content: center; gap: 26px; padding: 0 30px; }
+    .sd3-wrap { flex: 0 0 640px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .sd3-wrap svg { width: 100%; height: auto; }
+    .sd3-cap { font-size: 17px; color: #90a4ae; text-align: center; line-height: 1.45; }
+    .sd3-cap b { color: #4fc3f7; font-family: 'Consolas','Courier New',monospace; } .sd3-cap .vl { color: #b388ff; }
+    .eq-right { flex: 0 1 780px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .sd3-wrap { flex: 0 0 500px; }
+    .eq-mid { flex: 0 0 400px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .eqm-h { font-size: 19px; color: #4fc3f7; font-weight: 700; letter-spacing: .3px; }
+    .stt-c { font-size: 19px; }
+    .stt-c th, .stt-c td { padding: 5px 14px; }
+    .stt-c th { font-size: 17px; }
+    .eqm-cap { font-size: 16px; color: #90a4ae; line-height: 1.45; text-align: center; }
+    .eqm-cap .vl { color: #b388ff; }
+
+    /* ---- page 4: K-maps ---- */
+    #p4 { flex-direction: column; align-items: center; justify-content: center; gap: 26px; }
+    .km-head { font-size: 20px; color: #90a4ae; max-width: 1500px; text-align: center; line-height: 1.5; }
+    .km-head .vl { color: #b388ff; }
+    .km-row { display: flex; gap: 40px; align-items: flex-start; justify-content: center; }
+    .kmbox { flex: 0 0 500px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .km-t { font-size: 24px; font-weight: 700; color: #4fc3f7; font-family: 'Consolas','Courier New',monospace; }
+    table.km { border-collapse: collapse; font-family: 'Consolas','Courier New',monospace; }
+    table.km th, table.km td { border: 2px solid #37506a; padding: 10px 22px; text-align: center; font-size: 24px; color: #5c7189; }
+    table.km th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-size: 18px; font-weight: 700; }
+    table.km th.cnr { background: transparent; color: #90a4ae; font-size: 15px; padding: 6px 12px; }
+    table.km td.on { color: #4fc3f7; font-weight: 700; }
+    table.km td.dc { color: #b388ff; background: rgba(179,136,255,0.10); }
+    table.km td.gA, table.km td.gAB { box-shadow: inset 0 0 0 3px #4fc3f7; }
+    table.km td.gB { box-shadow: inset 0 0 0 3px #ffb74d; }
+    table.km td.gAB { box-shadow: inset 0 0 0 3px #4fc3f7, inset 0 0 0 6px rgba(255,183,77,0.85); }
+    table.km td.gC { box-shadow: inset 0 0 0 3px #4fc3f7; }
+    table.km td.gD { box-shadow: inset 0 0 0 3px #4fc3f7; }
+    .km-groups { display: flex; gap: 14px; }
+    .gl { font-family: 'Consolas','Courier New',monospace; font-size: 17px; padding: 3px 12px; border-radius: 4px; }
+    .gA-l, .gC-l, .gD-l { color: #4fc3f7; border: 2px solid #4fc3f7; }
+    .gl .ov { border-top: 2px solid currentColor; padding-top: 1px; }
+    .gB-l { color: #ffb74d; border: 2px solid #ffb74d; }
+    .km-eq { font-family: 'Consolas','Courier New',monospace; font-size: 22px; color: #e0e0e0; }
+    .km-eq b { color: #4fc3f7; }
+    .km-eq .op { color: #90a4ae; }
+    .km-eq .ov { border-top: 2px solid #4fc3f7; padding-top: 1px; }
+    .km-note { font-size: 16px; color: #90a4ae; line-height: 1.5; text-align: center; max-width: 470px; }
+    .km-note .vl { color: #b388ff; }
+    .km-note.warn { color: #ffb74d; }
+    .km-note.warn b { color: #ffd28a; }
+    .eqs { display: flex; gap: 22px; }
+    #p3 .eqs { flex-direction: column; gap: 14px; }
+    #p3 .eq-notes { flex-direction: column; gap: 14px; }
+    #p3 .eqbox { padding: 14px 22px; }
+    #p3 .eqbox .eqn { font-size: 25px; }
+    #p3 .eqbox .eql { font-size: 16px; }
+    #p3 .eq-note { font-size: 16px; line-height: 1.45; }
+    .sd-node.codes .sdenc { fill: #4fc3f7; font-weight: 700; }
+    .eqbox { background: #0d1b2a; border: 2px solid #37506a; border-radius: 16px; padding: 24px 34px;
+        display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 300px; flex: 1; }
+    .eqbox .eqn { font-size: 30px; font-family: 'Consolas','Courier New',monospace; color: #cfd8dc; white-space: nowrap; }
+    .eqbox .eqn .op { color: #ffb74d; } .eqbox .eqn .cy { color: #4fc3f7; }
+    .ov { text-decoration: overline; text-decoration-thickness: 2px; text-underline-offset: 2px; }
+    .eqbox .eql { font-size: 18px; color: #90a4ae; }
+    .eqbox.pbox { border-color: #245066; }
+    .eq-notes { display: flex; gap: 22px; }
+    .eq-note { flex: 1; font-size: 19px; color: #90a4ae; line-height: 1.5; border: 2px solid #24384c;
+        border-radius: 14px; padding: 16px 22px; }
+    .eq-note b { color: #4fc3f7; } .eq-note .vl { color: #b388ff; }
+    .eq-note .h { font-size: 20px; font-weight: 700; color: #cfd8dc; display: block; margin-bottom: 6px; }
+
+    /* PAGE 4 — circuit + timing */
+    #p4 { gap: 26px; align-items: stretch; }
+    .p4-left { flex: 0 0 44%; display: flex; flex-direction: column; }
+    .p4-right { flex: 1; display: flex; flex-direction: column; }
+    .panel-h { font-size: 21px; font-weight: 700; color: #4fc3f7; margin-bottom: 8px; }
+    .panel-h .sub { color: #90a4ae; font-size: 16px; font-weight: 500; }
+    .circ2 { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .circ2 svg { width: 100%; max-width: 760px; height: auto; }
+    .tim { flex: 1; display: flex; align-items: center; }
+    .tim svg { width: 100%; height: auto; }
+    .p4-ctl { margin-top: 8px; display: flex; align-items: center; gap: 16px; }
+
+    /* footer */
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 10px; height: 34px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a; border-radius: 6px;
+        padding: 1px 8px; margin: 0 2px; font-size: 14px; font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.cyan { color: #4fc3f7; border-color: #245066; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- topbar -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 176 82" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="54" y="14" width="70" height="54" rx="6"/>
+                <line x1="26" y1="30" x2="54" y2="30"/>
+                <polyline points="54,50 66,58 54,66"/>
+                <line x1="26" y1="58" x2="54" y2="58"/>
+                <line x1="124" y1="41" x2="152" y2="41"/>
+                <text x="22" y="35" font-size="14" fill="#ffb74d" stroke="none" text-anchor="end" font-family="Consolas,monospace">L</text>
+                <text x="20" y="63" font-size="12" fill="#ffb74d" stroke="none" text-anchor="end" font-family="Consolas,monospace">CLK</text>
+                <text x="89" y="46" font-size="14" fill="currentColor" stroke="none" text-anchor="middle" font-family="Consolas,monospace">FSM</text>
+                <text x="158" y="46" font-size="15" fill="#4fc3f7" stroke="none" font-family="Consolas,monospace">P</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Level-to-Pulse Generator <span class="sub">&mdash; rising-edge detector</span></h1>
+            <div class="subtitle">Full synchronous FSM design flow &middot; one 1-clock pulse per rising edge of L</div>
+        </div>
+        <div class="page-count">Stage <b id="pcNum">1</b> / 5</div>
+    </div>
+
+    <!-- tabs -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">State Diagram</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">State Table</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Equations</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">K-maps</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">Circuit + Timing</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- PAGE 1 -->
+        <div class="page" id="p1">
+            <div class="p1-top">
+                <div class="sd-wrap">
+                    <!-- state diagram is generated from NODES/EDGES in the script so every arc meets the rims cleanly -->
+                    <svg id="sd" viewBox="0 0 760 560" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <defs>
+                            <marker id="ah" markerWidth="20" markerHeight="16" refX="14" refY="6.5" orient="auto" markerUnits="userSpaceOnUse">
+                                <path d="M0,0 L16,6.5 L0,13 Z" fill="#8fa8bd"/>
+                            </marker>
+                            <marker id="ahon" markerWidth="20" markerHeight="16" refX="14" refY="6.5" orient="auto" markerUnits="userSpaceOnUse">
+                                <path d="M0,0 L16,6.5 L0,13 Z" fill="#4fc3f7"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="p1-right">
+                    <div class="prob">Input <span class="am">L</span> is a <b>level</b> &mdash; it goes high and stays high. We want <span class="cy">P</span> to fire <b>exactly one clock wide</b> on each rising edge of L, no matter how long L stays high.</div>
+                    <div class="insight"><b>PULSE is a pass-through state:</b> you can only sit in it for one clock (L=1 sends you on to HIGH), so P is high for exactly one clock. Getting another pulse requires returning to LOW first &mdash; a new edge.</div>
+                    <div class="moore-badge">Moore machine &mdash; output depends on state only &rarr; glitch-free, exactly one clock wide</div>
+                    <div class="ctlbar">
+                        <div class="ctl" data-stepctl><span class="c-lbl">CLK</span><span class="c-val">&#9654; step</span><span class="c-hint">press Space</span></div>
+                    <div class="ctl reset" data-resetctl title="back to clock 0"><span class="c-lbl">&#8635;</span><span class="c-val">reset</span><span class="c-hint">R</span></div>
+                        <div class="readout"><span class="lab">clock</span> <b class="ro-t">0</b> &middot; <span class="lab">L=</span><span class="amb ro-l">0</span> &middot; <span class="lab">state</span> <b class="ro-s">LOW</b> &middot; <span class="lab">P=</span><span class="ro-p pz">0</span> &middot; <span class="lab">on CLK &rarr;</span> <b class="ro-n">PULSE</b></div>
+                    </div>
+                </div>
+            </div>
+            <div class="strip">
+                <div class="strip-h"><span>The input <b>L</b> over 12 clocks &mdash; the highlighted column is <i>now</i>. On each CLK the machine follows the arc labeled with the current L; <span class="cy">P</span> is what comes out.</span></div>
+                <svg id="strip" viewBox="0 0 1700 214"></svg>
+            </div>
+        </div>
+
+        <!-- PAGE 2 -->
+        <div class="page" id="p2">
+            <table class="stt">
+                <tr><th>Q1</th><th>Q0</th><th class="sep">L</th><th class="sep">Q1&#8314;</th><th>Q0&#8314;</th><th class="sep">P</th><th>state</th></tr>
+                <tr data-key="000"><td class="zero">0</td><td class="zero">0</td><td class="sep zero">0</td><td class="sep zero">0</td><td class="zero">0</td><td class="sep zero">0</td><td class="state">LOW &rarr; LOW</td></tr>
+                <tr data-key="001"><td class="zero">0</td><td class="zero">0</td><td class="sep one">1</td><td class="sep zero">0</td><td class="one">1</td><td class="sep zero">0</td><td class="state">LOW &rarr; PULSE</td></tr>
+                <tr data-key="010"><td class="zero">0</td><td class="one">1</td><td class="sep zero">0</td><td class="sep zero">0</td><td class="zero">0</td><td class="sep pp">1</td><td class="state">PULSE &rarr; LOW</td></tr>
+                <tr data-key="011"><td class="zero">0</td><td class="one">1</td><td class="sep one">1</td><td class="sep one">1</td><td class="zero">0</td><td class="sep pp">1</td><td class="state">PULSE &rarr; HIGH</td></tr>
+                <tr data-key="100"><td class="one">1</td><td class="zero">0</td><td class="sep zero">0</td><td class="sep zero">0</td><td class="zero">0</td><td class="sep zero">0</td><td class="state">HIGH &rarr; LOW</td></tr>
+                <tr data-key="101"><td class="one">1</td><td class="zero">0</td><td class="sep one">1</td><td class="sep one">1</td><td class="zero">0</td><td class="sep zero">0</td><td class="state">HIGH &rarr; HIGH</td></tr>
+                <tr class="dc"><td>1</td><td>1</td><td class="sep">&times;</td><td class="sep">d</td><td>d</td><td class="sep">d</td><td class="state">11 unused</td></tr>
+            </table>
+            <div class="stt-cap">Encoding <b style="color:#4fc3f7">LOW=00, PULSE=01, HIGH=10</b>; the two D flip-flops drive <b style="color:#4fc3f7">Q1&#8314; Q0&#8314;</b>. State <span class="vl">11</span> is unused &rarr; its next-state / output are <span class="vl">don't-cares</span>, which simplify the K-maps (and the machine self-recovers from 11 within a couple of clocks).</div>
+            <div class="ctlbar">
+                <div class="ctl" data-stepctl><span class="c-lbl">CLK</span><span class="c-val">&#9654; step</span><span class="c-hint">press Space</span></div>
+                    <div class="ctl reset" data-resetctl title="back to clock 0"><span class="c-lbl">&#8635;</span><span class="c-val">reset</span><span class="c-hint">R</span></div>
+                <div class="readout"><span class="lab">clock</span> <b class="ro-t">0</b> &middot; <span class="lab">L=</span><span class="amb ro-l">0</span> &middot; <span class="lab">state</span> <b class="ro-s">LOW</b> &middot; <span class="lab">P=</span><span class="ro-p pz">0</span> &middot; <span class="lab">on CLK &rarr;</span> <b class="ro-n">PULSE</b></div>
+            </div>
+        </div>
+
+        <!-- PAGE 3 -->
+        <div class="page" id="p3">
+            <div class="sd3-wrap">
+                <svg id="sd3" viewBox="0 0 760 560" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg>
+                <div class="sd3-cap">State assignment (Q1 Q0): <b>LOW = 00</b> &middot; <b>PULSE = 01</b> &middot; <b>HIGH = 10</b> &middot; <span class="vl">11 unused &rarr; don't-care</span><br>Read each equation against the arcs: D1/D0 are the next code, P is 1 only in PULSE.</div>
+            </div>
+            <div class="eq-mid">
+                <div class="eqm-h">Transition table &mdash; read straight off the arcs</div>
+                <table class="stt stt-c">
+                    <tr><th>Q1</th><th>Q0</th><th class="sep">L</th><th class="sep">Q1&#8314;</th><th>Q0&#8314;</th><th class="sep">P</th></tr>
+                    <tr data-key="000"><td class="zero">0</td><td class="zero">0</td><td class="sep zero">0</td><td class="sep zero">0</td><td class="zero">0</td><td class="sep zero">0</td></tr>
+                    <tr data-key="001"><td class="zero">0</td><td class="zero">0</td><td class="sep one">1</td><td class="sep zero">0</td><td class="one">1</td><td class="sep zero">0</td></tr>
+                    <tr data-key="010"><td class="zero">0</td><td class="one">1</td><td class="sep zero">0</td><td class="sep zero">0</td><td class="zero">0</td><td class="sep pp">1</td></tr>
+                    <tr data-key="011"><td class="zero">0</td><td class="one">1</td><td class="sep one">1</td><td class="sep one">1</td><td class="zero">0</td><td class="sep pp">1</td></tr>
+                    <tr data-key="100"><td class="one">1</td><td class="zero">0</td><td class="sep zero">0</td><td class="sep zero">0</td><td class="zero">0</td><td class="sep zero">0</td></tr>
+                    <tr data-key="101"><td class="one">1</td><td class="zero">0</td><td class="sep one">1</td><td class="sep one">1</td><td class="zero">0</td><td class="sep zero">0</td></tr>
+                    <tr class="dc"><td>1</td><td>1</td><td class="sep">&times;</td><td class="sep">d</td><td>d</td><td class="sep">d</td></tr>
+                </table>
+                <div class="eqm-cap">One row per <b>arc</b>: the present code <b>Q1&nbsp;Q0</b> plus the arc's <b>L</b> label give the destination code <b>Q1&#8314;&nbsp;Q0&#8314;</b>; <b>P</b> comes from the present state alone (Moore). The <span class="vl">11</span> row is unreachable &rarr; <span class="vl">don't-cares</span>.</div>
+            </div>
+            <div class="eq-right">
+            <div class="eqs">
+                <div class="eqbox">
+                    <div class="eqn">D1 = L <span class="op">&middot;</span> (Q1 <span class="op">+</span> Q0)</div>
+                    <div class="eql">next high bit &mdash; from the Q1&#8314; K-map</div>
+                </div>
+                <div class="eqbox">
+                    <div class="eqn">D0 = L <span class="op">&middot;</span> <span class="ov">Q1</span> <span class="op">&middot;</span> <span class="ov">Q0</span></div>
+                    <div class="eql">enter PULSE only from LOW on L=1</div>
+                </div>
+                <div class="eqbox pbox">
+                    <div class="eqn">P = <span class="ov">Q1</span> <span class="op">&middot;</span> Q0</div>
+                    <div class="eql">Moore output &mdash; asserted only in PULSE (01)</div>
+                </div>
+            </div>
+            <div class="eq-notes">
+                <div class="eq-note"><span class="h">From the K-maps</span>The three expressions come straight from the state table's K-maps, using the <span class="vl">11 don't-cares</span> to simplify. Verified: they reproduce the table exactly, and the unused state 11 recovers to a legal state within a couple of clocks (<b>self-starting</b>).</div>
+                <div class="eq-note"><span class="h">Moore vs. Mealy</span>This registered <b>Moore</b> design emits the pulse the clock <i>after</i> the edge, guaranteeing a clean full-clock-wide P. A <b>Mealy</b> version needs one fewer state and can fire the same cycle &mdash; but risks a <b>glitch pulse</b> &mdash; a sliver narrower than a full clock &mdash; if L is noisy. We use Moore for the clean pulse.</div>
+            </div>
+            </div>
+        </div>
+
+        <!-- PAGE 4 -->
+        <div class="page" id="p4">
+            <div class="km-head">Each output gets its own K-map over <b>Q1&nbsp;Q0&nbsp;L</b>. Columns are in <b>Gray order</b> (00&nbsp;01&nbsp;11&nbsp;10) so neighboring cells differ in one variable &mdash; that is what makes a rectangle a valid group. <span class="vl">d</span> = don't-care from the unused state 11.</div>
+            <div class="km-row">
+
+                <div class="kmbox">
+                    <div class="km-t">Q1&#8314; map</div>
+                    <table class="km">
+                        <tr><th class="cnr">Q1 \ Q0L</th><th>00</th><th>01</th><th>11</th><th>10</th></tr>
+                        <tr><th>0</th><td>0</td><td>0</td><td class="on gA">1</td><td>0</td></tr>
+                        <tr><th>1</th><td>0</td><td class="on gB">1</td><td class="dc gAB">d</td><td class="dc">d</td></tr>
+                    </table>
+                    <div class="km-groups"><span class="gl gA-l">Q0&middot;L</span><span class="gl gB-l">Q1&middot;L</span></div>
+                    <div class="km-eq">D1 = Q0&middot;L <span class="op">+</span> Q1&middot;L = <b>L&middot;(Q1 <span class="op">+</span> Q0)</b></div>
+                    <div class="km-note">Both groups reach into the <span class="vl">d</span> at Q1Q0L&nbsp;=&nbsp;111. Without the don't-care the two 1s are not adjacent and the answer would stay at two full three-variable terms &mdash; this is where the unused state pays off.</div>
+                </div>
+
+                <div class="kmbox">
+                    <div class="km-t">Q0&#8314; map</div>
+                    <table class="km">
+                        <tr><th class="cnr">Q1 \ Q0L</th><th>00</th><th>01</th><th>11</th><th>10</th></tr>
+                        <tr><th>0</th><td>0</td><td class="on gC">1</td><td>0</td><td>0</td></tr>
+                        <tr><th>1</th><td>0</td><td>0</td><td class="dc">d</td><td class="dc">d</td></tr>
+                    </table>
+                    <div class="km-groups"><span class="gl gC-l"><span class="ov">Q1</span>&middot;<span class="ov">Q0</span>&middot;L</span></div>
+                    <div class="km-eq">D0 = <b>L&middot;<span class="ov">Q1</span>&middot;<span class="ov">Q0</span></b></div>
+                    <div class="km-note">A lone 1 with no adjacent 1 or <span class="vl">d</span> to pair with, so it stays a single three-variable term. Here the don't-cares buy nothing &mdash; worth seeing that they do not always help.</div>
+                </div>
+
+                <div class="kmbox">
+                    <div class="km-t">P map</div>
+                    <table class="km">
+                        <tr><th class="cnr">Q1 \ Q0L</th><th>00</th><th>01</th><th>11</th><th>10</th></tr>
+                        <tr><th>0</th><td>0</td><td>0</td><td class="on gD">1</td><td class="on gD">1</td></tr>
+                        <tr><th>1</th><td>0</td><td>0</td><td class="dc">d</td><td class="dc">d</td></tr>
+                    </table>
+                    <div class="km-groups"><span class="gl gD-l"><span class="ov">Q1</span>&middot;Q0</span></div>
+                    <div class="km-eq">P = <b><span class="ov">Q1</span>&middot;Q0</b></div>
+                    <div class="km-note warn">Taking the two <span class="vl">d</span>s below would give the smaller <b>P&nbsp;=&nbsp;Q0</b> &mdash; but that asserts P in the unused state 11. We <b>decline the don't-care here</b> so a power-up into 11 cannot emit a stray pulse. Minimal is not always what you ship.</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- PAGE 5 -->
+        <div class="page" id="p5">
+            <div class="p4-left">
+                <div class="panel-h">Circuit <span class="sub">&mdash; two D flip-flops + next-state logic</span></div>
+                <div class="circ2">
+                    <svg viewBox="0 0 700 520" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <!-- ===== flip-flops (D · CLK on the left; Q and Q-bar on the right) ===== -->
+                        <g stroke="#cfd8dc">
+                            <rect x="430" y="70" width="80" height="80" rx="5"/>
+                            <rect x="430" y="240" width="80" height="80" rx="5"/>
+                            <polyline points="430,127 444,135 430,143"/>
+                            <polyline points="430,297 444,305 430,313"/>
+                        </g>
+                        <g font-family="Consolas,monospace" font-size="15" fill="#90a4ae" stroke="none">
+                            <text x="438" y="105">D</text><text x="438" y="275">D</text>
+                            <text x="502" y="105" text-anchor="end" fill="#4fc3f7">Q</text>
+                            <text x="502" y="275" text-anchor="end" fill="#4fc3f7">Q</text>
+                            <text x="502" y="137" text-anchor="end" fill="#4fc3f7">Q</text>
+                            <text x="502" y="307" text-anchor="end" fill="#4fc3f7">Q</text>
+                        </g>
+                        <g stroke="#4fc3f7" stroke-width="2"><line x1="493" y1="123" x2="502" y2="123"/><line x1="493" y1="293" x2="502" y2="293"/></g>
+                        <!-- outputs leave to the right, named -->
+                        <g stroke="#4fc3f7">
+                            <line x1="510" y1="100" x2="560" y2="100"/><line x1="510" y1="132" x2="560" y2="132"/>
+                            <line x1="510" y1="270" x2="560" y2="270"/><line x1="510" y1="302" x2="560" y2="302"/>
+                        </g>
+                        <g font-family="Consolas,monospace" font-size="16" fill="#4fc3f7" stroke="none">
+                            <text x="568" y="105">Q1</text><text x="568" y="137">Q1</text>
+                            <text x="568" y="275">Q0</text><text x="568" y="307">Q0</text>
+                        </g>
+                        <g stroke="#4fc3f7" stroke-width="2"><line x1="568" y1="123" x2="587" y2="123"/><line x1="568" y1="293" x2="587" y2="293"/></g>
+                        <text x="612" y="120" font-size="13" fill="#5c7189" stroke="none" font-family="'Segoe UI',sans-serif">state</text>
+                        <text x="612" y="136" font-size="13" fill="#5c7189" stroke="none" font-family="'Segoe UI',sans-serif">bits</text>
+
+                        <!-- ===== CLK: bottom rail, one vertical, taps to both clock pins ===== -->
+                        <text x="48" y="485" font-size="15" fill="#ffb74d" stroke="none" text-anchor="end" font-family="Consolas,monospace">CLK</text>
+                        <g stroke="#ffb74d">
+                            <line x1="55" y1="480" x2="410" y2="480"/>
+                            <line x1="410" y1="480" x2="410" y2="135"/>
+                            <line x1="410" y1="135" x2="430" y2="135"/>
+                            <line x1="410" y1="305" x2="430" y2="305"/>
+                        </g>
+                        <circle cx="410" cy="305" r="4" fill="#ffb74d" stroke="none"/>
+
+                        <!-- ===== L: enters at left, feeds both next-state ANDs ===== -->
+                        <text x="48" y="63" font-size="15" fill="#ffb74d" stroke="none" text-anchor="end" font-family="Consolas,monospace">L</text>
+                        <g stroke="#ffb74d">
+                            <!-- upper branch runs above the OR gate (top y=87) and drops into the AND's upper input -->
+                            <line x1="55" y1="58" x2="280" y2="58"/>
+                            <line x1="280" y1="58" x2="280" y2="88"/>
+                            <line x1="280" y1="88" x2="300" y2="88"/>
+                            <line x1="120" y1="58" x2="120" y2="255"/>
+                            <line x1="120" y1="255" x2="300" y2="255"/>
+                        </g>
+                        <circle cx="120" cy="58" r="4" fill="#ffb74d" stroke="none"/>
+
+                        <!-- ===== D1 = L · (Q1 + Q0) ===== -->
+                        <g stroke="#8fa8bd"><line x1="150" y1="102" x2="198" y2="102"/><line x1="150" y1="122" x2="198" y2="122"/></g>
+                        <path d="M190,87 C212,87 244,94 262,112 C244,130 212,137 190,137 Q206,112 190,87 Z" stroke="#cfd8dc" fill="#16213e"/>
+                        <line x1="262" y1="112" x2="300" y2="112" stroke="#8fa8bd"/>
+                        <path d="M300,75 L330,75 A25,25 0 0 1 330,125 L300,125 Z" stroke="#cfd8dc" fill="#16213e"/>
+                        <path d="M355,100 L404,100 A6,6 0 0 1 416,100 L430,100" stroke="#8fa8bd"/>
+                        <text x="366" y="90" font-size="13" fill="#7a8ea0" stroke="none" font-family="Consolas,monospace">D1</text>
+
+                        <!-- ===== D0 = L · Q1-bar · Q0-bar ===== -->
+                        <g stroke="#8fa8bd"><line x1="150" y1="270" x2="300" y2="270"/><line x1="150" y1="285" x2="300" y2="285"/></g>
+                        <path d="M300,245 L330,245 A25,25 0 0 1 330,295 L300,295 Z" stroke="#cfd8dc" fill="#16213e"/>
+                        <path d="M355,270 L404,270 A6,6 0 0 1 416,270 L430,270" stroke="#8fa8bd"/>
+                        <text x="366" y="260" font-size="13" fill="#7a8ea0" stroke="none" font-family="Consolas,monospace">D0</text>
+
+                        <!-- ===== P = Q1-bar · Q0 (Moore output) ===== -->
+                        <g stroke="#8fa8bd"><line x1="150" y1="400" x2="300" y2="400"/><line x1="150" y1="420" x2="300" y2="420"/></g>
+                        <path d="M300,385 L330,385 A25,25 0 0 1 330,435 L300,435 Z" stroke="#cfd8dc" fill="#16213e"/>
+                        <path d="M355,410 L404,410 A6,6 0 0 1 416,410 L600,410" stroke="#4fc3f7"/>
+                        <text x="608" y="415" font-size="17" fill="#4fc3f7" stroke="none" font-family="Consolas,monospace">P</text>
+
+                        <!-- ===== feedback inputs: named wires from the flip-flop outputs ===== -->
+                        <g font-family="Consolas,monospace" font-size="15" fill="#4fc3f7" stroke="none" text-anchor="end">
+                            <text x="144" y="107">Q1</text><text x="144" y="127">Q0</text>
+                            <text x="144" y="275">Q1</text><text x="144" y="290">Q0</text>
+                            <text x="144" y="405">Q1</text><text x="144" y="425">Q0</text>
+                        </g>
+                        <g stroke="#4fc3f7" stroke-width="2"><line x1="126" y1="262" x2="144" y2="262"/><line x1="126" y1="277" x2="144" y2="277"/><line x1="126" y1="392" x2="144" y2="392"/></g>
+                        <text x="350" y="505" font-size="13" fill="#5c7189" stroke="none" text-anchor="middle" font-family="'Segoe UI',sans-serif">Q1, Q0 and their complements are the flip-flop outputs fed back — same name, same wire</text>
+                    </svg>
+                </div>
+            </div>
+            <div class="p4-right">
+                <div class="panel-h">Timing <span class="sub">&mdash; L held high 4 clocks &rarr; one 1-clock pulse; a second edge &rarr; a second pulse</span></div>
+                <div class="tim">
+                    <svg id="timing" viewBox="0 0 900 420"></svg>
+                </div>
+                <div class="p4-ctl">
+                    <div class="ctlbar">
+                        <div class="ctl" data-stepctl><span class="c-lbl">CLK</span><span class="c-val">&#9654; step</span><span class="c-hint">press Space</span></div>
+                    <div class="ctl reset" data-resetctl title="back to clock 0"><span class="c-lbl">&#8635;</span><span class="c-val">reset</span><span class="c-hint">R</span></div>
+                        <div class="readout"><span class="lab">clock</span> <b class="ro-t">0</b> &middot; <span class="lab">L=</span><span class="amb ro-l">0</span> &middot; <span class="lab">state</span> <b class="ro-s">LOW</b> &middot; <span class="lab">P=</span><span class="ro-p pz">0</span> &middot; <span class="lab">on CLK &rarr;</span> <b class="ro-n">PULSE</b></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- footer -->
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+            <div class="dot" data-dot="5"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">5</span> stage
+            &middot; <span class="k">Space</span>/<span class="k cyan">CLK</span> step clock
+            &middot; <span class="k">&rarr;</span>/<span class="k">Backspace</span> nav
+            &middot; <span class="k">R</span>/<span class="k">&#8635;</span> reset clock
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+
+    const SVGNS = 'http://www.w3.org/2000/svg';
+
+    /* ---------- FSM (source of truth) ---------- */
+    const LOW=0, PULSE=1, HIGH=2;
+    const ENC = {0:'00', 1:'01', 2:'10'};      // Q1Q0
+    const NAME = {0:'LOW', 1:'PULSE', 2:'HIGH'};
+    function next(s,l){ if(l===0) return LOW; if(s===LOW) return PULSE; if(s===PULSE) return HIGH; return HIGH; }
+    function out(s){ return s===PULSE ? 1 : 0; }
+
+    // input level sequence: rises and holds 4 clocks, then a shorter high
+    const Lseq = [0,0,1,1,1,1,0,0,1,1,0,0];
+    const N = Lseq.length;
+    const Sseq = []; const Pseq = [];
+    let s = LOW;
+    for(let t=0;t<N;t++){ Sseq.push(s); Pseq.push(out(s)); s = next(s, Lseq[t]); }
+
+    /* ---------- build timing diagram ---------- */
+    const timing = document.getElementById('timing');
+    const X0 = 96, CW = 64, Y = { CLK:34, L:118, ST:212, P:326 }, HI = 44;
+    function line(x1,y1,x2,y2,stroke,w,cls){ const e=document.createElementNS(SVGNS,'line');
+        e.setAttribute('x1',x1);e.setAttribute('y1',y1);e.setAttribute('x2',x2);e.setAttribute('y2',y2);
+        e.setAttribute('stroke',stroke);e.setAttribute('stroke-width',w||2.2); if(cls)e.setAttribute('class',cls);
+        e.setAttribute('stroke-linecap','round'); timing.appendChild(e); return e; }
+    function txt(x,y,str,fill,size,anchor,mono){ const e=document.createElementNS(SVGNS,'text');
+        e.setAttribute('x',x);e.setAttribute('y',y);e.setAttribute('fill',fill);e.setAttribute('font-size',size||15);
+        e.setAttribute('text-anchor',anchor||'start'); if(mono)e.setAttribute('font-family','Consolas,monospace');
+        else e.setAttribute('font-family',"'Segoe UI',sans-serif"); e.textContent=str; timing.appendChild(e); return e; }
+    // row labels
+    txt(X0-14, Y.CLK-6, 'CLK', '#ffb74d', 17, 'end', true);
+    txt(X0-14, Y.L-6, 'L', '#ffb74d', 17, 'end', true);
+    txt(X0-14, Y.ST-6, 'state', '#90a4ae', 16, 'end', false);
+    txt(X0-14, Y.P-6, 'P', '#4fc3f7', 17, 'end', true);
+    // baselines / clock ticks
+    for(let t=0;t<N;t++){
+        const x=X0+t*CW;
+        // CLK: high first half, low second half
+        line(x, Y.CLK+HI, x, Y.CLK, '#c58f3a', 2.2);
+        line(x, Y.CLK, x+CW/2, Y.CLK, '#c58f3a', 2.2);
+        line(x+CW/2, Y.CLK, x+CW/2, Y.CLK+HI, '#c58f3a', 2.2);
+        line(x+CW/2, Y.CLK+HI, x+CW, Y.CLK+HI, '#c58f3a', 2.2);
+        // faint vertical clock gridline through all rows
+        line(x, Y.CLK-6, x, Y.P+HI+6, '#22303f', 1);
+    }
+    line(X0+N*CW, Y.CLK-6, X0+N*CW, Y.P+HI+6, '#22303f', 1);
+    // L waveform (level per clock)
+    function levelWave(seq, yTop, color){
+        let prev=null;
+        for(let t=0;t<N;t++){
+            const x=X0+t*CW, v=seq[t], yv = yTop + (v? 0 : HI);
+            if(prev!==null && prev!==yv) line(x, prev, x, yv, color, 2.6);   // transition edge
+            line(x, yv, x+CW, yv, color, 2.6);
+            prev=yv;
+        }
+    }
+    levelWave(Lseq, Y.L, '#ffb74d');
+    levelWave(Pseq, Y.P, '#4fc3f7');
+    // state labels per clock
+    const stateLabels=[];
+    for(let t=0;t<N;t++){
+        const x=X0+t*CW+CW/2;
+        const e=txt(x, Y.ST+26, NAME[Sseq[t]], Sseq[t]===PULSE?'#4fc3f7':'#8fa8bd', 15, 'middle', false);
+        line(X0+t*CW, Y.ST+HI, X0+(t+1)*CW, Y.ST+HI, '#37506a', 1.4);
+        stateLabels.push(e);
+    }
+    // pulse markers (little arrows over the P pulses)
+    for(let t=0;t<N;t++) if(Pseq[t]) txt(X0+t*CW+CW/2, Y.P-8, '&#9650;', '#4fc3f7', 13, 'middle', false).textContent='▲';
+    // future mask + cursor (added last so they sit on top)
+    const mask=document.createElementNS(SVGNS,'rect');
+    mask.setAttribute('y', Y.CLK-8); mask.setAttribute('height', Y.P+HI+14-(Y.CLK-8));
+    mask.setAttribute('fill','#16213e'); mask.setAttribute('opacity','0.72'); timing.appendChild(mask);
+    const cursor=document.createElementNS(SVGNS,'line');
+    cursor.setAttribute('y1',Y.CLK-8); cursor.setAttribute('y2',Y.P+HI+8);
+    cursor.setAttribute('stroke','#4fc3f7'); cursor.setAttribute('stroke-width','2'); cursor.setAttribute('opacity','0.9');
+    timing.appendChild(cursor);
+
+    /* ---------- state diagram (generated from geometry) ---------- */
+    const sd = document.getElementById('sd');
+    const R = 62;
+    const NODES = { '00':{x:200,y:400,name:'LOW',cls:''}, '01':{x:380,y:130,name:'PULSE',cls:' pulse'}, '10':{x:560,y:400,name:'HIGH',cls:''} };
+    // bend = perpendicular offset of the control point from the chord midpoint (+ = to the right of travel)
+    const EDGES = [
+        {from:'00', to:'01', l:1, bend:-60},   // LOW → PULSE   bows outward (up-left)
+        {from:'01', to:'00', l:0, bend:-60},   // PULSE → LOW   bows inward — opposite side of the chord
+        {from:'01', to:'10', l:1, bend:-60},   // PULSE → HIGH  bows outward (up-right)
+        {from:'10', to:'00', l:0, bend:-70},   // HIGH → LOW    bows downward
+        {from:'00', to:'00', l:0, loop:Math.PI},   // LOW self-loop, pointing left
+        {from:'10', to:'10', l:1, loop:0},         // HIGH self-loop, pointing right
+    ];
+    function el(tag, attrs, parent){ const e=document.createElementNS(SVGNS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); (parent||sd).appendChild(e); return e; }
+    // Builds the diagram into `target`. Markers (#ah/#ahon) live in the page-1 svg's <defs>; url() ids resolve
+    // document-wide, so a second copy (page 3, `codes` = emphasize the state assignment) needs no duplicate defs.
+    // Chrome does not render markers whose <defs> sit in a display:none subtree (page 1 is hidden
+    // while page 3 shows), so each diagram svg gets its own defs; ids suffixed by the svg id.
+    function injectMarkers(target){
+        const defs=document.createElementNS(SVGNS,'defs');
+        for(const [id,fill] of [['ah','#8fa8bd'],['ahon','#4fc3f7']]){
+            const m=document.createElementNS(SVGNS,'marker');
+            for(const [k,v] of Object.entries({id:id+'-'+target.id,markerWidth:20,markerHeight:16,refX:14,refY:6.5,orient:'auto',markerUnits:'userSpaceOnUse'})) m.setAttribute(k,v);
+            const p=document.createElementNS(SVGNS,'path'); p.setAttribute('d','M0,0 L16,6.5 L0,13 Z'); p.setAttribute('fill',fill);
+            m.appendChild(p); defs.appendChild(m);
+        }
+        target.appendChild(defs);
+    }
+    function buildDiagram(target, opts){
+    injectMarkers(target);
+    const arcEls = [];
+    for(const ed of EDGES){
+        const A=NODES[ed.from], B=NODES[ed.to];
+        let d, lx, ly;
+        if(ed.loop!==undefined){
+            const th=ed.loop, a1=th+0.45, a2=th-0.45, ro=R+95;
+            const p1={x:A.x+R*Math.cos(a1), y:A.y+R*Math.sin(a1)}, p2={x:A.x+(R-1)*Math.cos(a2), y:A.y+(R-1)*Math.sin(a2)};
+            const c1={x:A.x+ro*Math.cos(th+0.55), y:A.y+ro*Math.sin(th+0.55)}, c2={x:A.x+ro*Math.cos(th-0.55), y:A.y+ro*Math.sin(th-0.55)};
+            d=`M${p1.x.toFixed(1)},${p1.y.toFixed(1)} C${c1.x.toFixed(1)},${c1.y.toFixed(1)} ${c2.x.toFixed(1)},${c2.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+            lx=A.x+(R+80)*Math.cos(th); ly=A.y+(R+80)*Math.sin(th)+7;
+        } else {
+            const dx=B.x-A.x, dy=B.y-A.y, len=Math.hypot(dx,dy), ux=dx/len, uy=dy/len, nx=-uy, ny=ux;
+            const C={x:(A.x+B.x)/2+nx*ed.bend, y:(A.y+B.y)/2+ny*ed.bend};
+            const sa=Math.atan2(C.y-A.y,C.x-A.x), ea=Math.atan2(C.y-B.y,C.x-B.x);
+            const P0={x:A.x+R*Math.cos(sa), y:A.y+R*Math.sin(sa)}, P2={x:B.x+(R+1)*Math.cos(ea), y:B.y+(R+1)*Math.sin(ea)};
+            d=`M${P0.x.toFixed(1)},${P0.y.toFixed(1)} Q${C.x.toFixed(1)},${C.y.toFixed(1)} ${P2.x.toFixed(1)},${P2.y.toFixed(1)}`;
+            // label just outside the curve's midpoint, on the bend side
+            const mx=0.25*P0.x+0.5*C.x+0.25*P2.x, my=0.25*P0.y+0.5*C.y+0.25*P2.y, sg=Math.sign(ed.bend)||1;
+            lx=mx+nx*sg*18; ly=my+ny*sg*18+7;
+        }
+        const path=el('path',{class:'arc','data-from':ed.from,'data-l':ed.l,d,'marker-end':`url(#ah-${target.id})`},target);
+        const lab=el('text',{class:'arc-l',x:lx.toFixed(1),y:ly.toFixed(1)},target); lab.textContent='L='+ed.l;
+        arcEls.push({path,lab});
+    }
+    for(const k in NODES){
+        const n=NODES[k];
+        const g=el('g',{class:'sd-node'+n.cls+(opts.codes?' codes':''),'data-state':k},target);
+        el('circle',{class:'sdc',cx:n.x,cy:n.y,r:R},g);
+        if(opts.codes){
+            const t1=el('text',{class:'sdname',x:n.x,y:n.y-10,'font-size':k==='01'?20:22},g); t1.textContent=n.name;
+            const t2=el('text',{class:'sdenc',x:n.x,y:n.y+16,'font-size':22},g); t2.textContent='Q1Q0='+k;
+            const t3=el('text',{class:'sdp',x:n.x,y:n.y+38},g); t3.textContent='P='+(k==='01'?1:0);
+        } else {
+            const t1=el('text',{class:'sdname',x:n.x,y:n.y-6,'font-size':k==='01'?22:24},g); t1.textContent=n.name;
+            const t2=el('text',{class:'sdenc',x:n.x,y:n.y+18,'font-size':16},g); t2.textContent=k;
+            const t3=el('text',{class:'sdp',x:n.x,y:n.y+38},g); t3.textContent='P='+(k==='01'?1:0);
+        }
+    }
+    const hint=el('text',{class:'sd-hint',x:380,y:548},target); hint.textContent=opts.hint;
+    return arcEls;
+    }
+    const arcEls = buildDiagram(sd, {codes:false, hint:'arcs are labeled with the value of L at the clock edge'});
+    buildDiagram(document.getElementById('sd3'), {codes:true, hint:'the same machine with its state assignment — the codes the equations compute'});
+
+    /* ---------- input strip (page 1): L and P over the whole sequence ---------- */
+    const strip=document.getElementById('strip');
+    const SX0=120, SCW=112, SY={T:26, L:54, P:134}, SHI=34;
+    function sline(x1,y1,x2,y2,stroke,w,op){ const e=el('line',{x1,y1,x2,y2,stroke,'stroke-width':w||2.6,'stroke-linecap':'round'},strip); if(op!==undefined)e.setAttribute('opacity',op); return e; }
+    function stxt(x,y,str,fill,size,anchor,mono){ const e=el('text',{x,y,fill,'font-size':size,'text-anchor':anchor,'font-family':mono?'Consolas,monospace':"'Segoe UI',sans-serif"},strip); e.textContent=str; return e; }
+    stxt(SX0-16, SY.T, 'clock', '#607d8b', 15, 'end', false);
+    stxt(SX0-16, SY.L+SHI/2+6, 'L', '#ffb74d', 20, 'end', true);
+    stxt(SX0-16, SY.P+SHI/2+6, 'P', '#4fc3f7', 20, 'end', true);
+    const colHi=el('rect',{x:SX0,y:SY.T-16,width:SCW,height:SY.P+SHI+14-(SY.T-16),rx:8,fill:'rgba(79,195,247,0.14)',stroke:'#4fc3f7','stroke-width':2},strip);
+    for(let t=0;t<N;t++){
+        const x=SX0+t*SCW;
+        sline(x, SY.T-10, x, SY.P+SHI+8, '#22303f', 1);
+        stxt(x+SCW/2, SY.T, t, '#7a8ea0', 15, 'middle', true);
+    }
+    sline(SX0+N*SCW, SY.T-10, SX0+N*SCW, SY.P+SHI+8, '#22303f', 1);
+    function stripWave(seq, yTop, color){
+        let prev=null;
+        for(let t=0;t<N;t++){
+            const x=SX0+t*SCW, v=seq[t], yv=yTop+(v?0:SHI);
+            if(prev!==null && prev!==yv) sline(x, prev, x, yv, color, 3);
+            sline(x, yv, x+SCW, yv, color, 3);
+            stxt(x+SCW/2, yv+(v?-8:22), v, v?color:'#5c7189', 14, 'middle', true);
+            prev=yv;
+        }
+    }
+    stripWave(Lseq, SY.L, '#ffb74d');
+    stripWave(Pseq, SY.P, '#4fc3f7');
+    const smask=el('rect',{y:SY.T-16,height:SY.P+SHI+14-(SY.T-16),fill:'#16213e',opacity:'0.7'},strip);
+    const nowLab=stxt(0, SY.P+SHI+40, '▲ now', '#4fc3f7', 15, 'middle', false);
+
+    /* ---------- paging + interactive ---------- */
+    const FIRST=1, LAST=5;
+    let page=1, tclk=0;
+    const pages=Array.from(document.querySelectorAll('.page'));
+    const tabs=Array.from(document.querySelectorAll('.tab'));
+    const dots=Array.from(document.querySelectorAll('.dot'));
+    const pcNum=document.getElementById('pcNum');
+    const sdNodes=Array.from(sd.querySelectorAll('.sd-node'));
+    const sttRows=Array.from(document.querySelectorAll('.stt tr[data-key]'));
+
+    function renderState(){
+        const st=Sseq[tclk], l=Lseq[tclk], p=Pseq[tclk];
+        // readouts
+        document.querySelectorAll('.ro-t').forEach(e=>e.textContent=tclk);
+        document.querySelectorAll('.ro-l').forEach(e=>e.textContent=l);
+        document.querySelectorAll('.ro-s').forEach(e=>e.textContent=NAME[st]);
+        document.querySelectorAll('.ro-p').forEach(e=>{ e.textContent=p; e.classList.toggle('pz', p===0); });
+        // state diagram: light current node + active outgoing arc
+        sdNodes.forEach(n=>n.classList.toggle('on', n.dataset.state===ENC[st]));
+        arcEls.forEach(({path,lab})=>{ const on = path.dataset.from===ENC[st] && +path.dataset.l===l;
+            path.classList.toggle('on', on); lab.classList.toggle('on', on); path.setAttribute('marker-end', on?'url(#ahon-sd)':'url(#ah-sd)'); });
+        document.querySelectorAll('.ro-n').forEach(e=>e.textContent=NAME[next(st,l)]);
+        // input strip: highlight the current clock column, dim the future
+        const sx=SX0+tclk*SCW;
+        colHi.setAttribute('x', sx);
+        smask.setAttribute('x', sx+SCW); smask.setAttribute('width', Math.max(0, SX0+N*SCW-sx-SCW+4));
+        nowLab.setAttribute('x', sx+SCW/2);
+        // state table: active row = current Q1 Q0 L
+        const key=`${ENC[st]}${l}`;
+        sttRows.forEach(r=>r.classList.toggle('rowon', r.dataset.key===key));
+        // timing: reveal up to current clock
+        const xEnd=X0+(tclk+1)*CW;
+        mask.setAttribute('x', xEnd); mask.setAttribute('width', Math.max(0, (X0+N*CW)-xEnd+6));
+        cursor.setAttribute('x1', xEnd); cursor.setAttribute('x2', xEnd);
+    }
+    function render(){
+        pages.forEach(p=>p.classList.toggle('active', p.id==='p'+page));
+        tabs.forEach(t=>t.classList.toggle('on', +t.dataset.page===page));
+        dots.forEach(d=>d.classList.toggle('on', +d.dataset.dot===page));
+        pcNum.textContent=page;
+    }
+    function setPage(n){ page=Math.max(FIRST,Math.min(LAST,n)); render(); }
+    function step(){ tclk=Math.min(N-1, tclk+1); renderState(); }
+    function resetClock(){ tclk=0; renderState(); }   // back to clock 0, stay on the current page
+
+    document.addEventListener('keydown',(e)=>{
+        const k=e.key;
+        if(k>='1'&&k<='5'){ setPage(+k); e.preventDefault(); return; }
+        switch(k){
+            case ' ': step(); e.preventDefault(); break;
+            case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 'r': case 'R': resetClock(); e.preventDefault(); break;
+        }
+    });
+    tabs.forEach(t=>t.addEventListener('click',()=>setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-stepctl]').forEach(el=>el.addEventListener('click',step));
+    document.querySelectorAll('[data-resetctl]').forEach(el=>el.addEventListener('click',resetClock));
+
+    render(); renderState();
+</script>
+</body>
+</html>
