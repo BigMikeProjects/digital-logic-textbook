@@ -636,7 +636,7 @@
           "title": "Counters",
           "slug": "counters",
           "type": "full",
-          "published": false
+          "published": true
         }
       ]
     },

@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3-Bit Counter with Enable — FSM Design</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 active/count/1 · amber #ffb74d UP/CLK control · violet #b388ff K-map group · navy #0d1b2a panel */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 204px; height: 82px; display: block; color: #4fc3f7; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px; border: 2px solid #24384c;
+        border-radius: 12px; padding: 11px 18px; color: #6a8398; transition: all .12s ease; }
+    .tab .tnum { width: 36px; height: 36px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 19px; font-weight: 700; }
+    .tab .tlabel { font-size: 19px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; }
+    .page.active { display: flex; }
+
+    /* control bar (STEP + UP toggle + readout) — pages 1 & 2 only */
+    .ctlbar { display: inline-flex; align-items: center; gap: 16px; }
+    .ctl { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+        border-radius: 999px; padding: 9px 20px; }
+    .upctl { border: 2px solid #ffb74d; background: rgba(255,183,77,0.08); }
+    .stepctl { border: 2px solid #4fc3f7; background: rgba(79,195,247,0.08); }
+    .c-lbl { font-size: 18px; font-weight: 700; letter-spacing: 1px; }
+    .upctl .c-lbl { color: #ffb74d; } .stepctl .c-lbl { color: #4fc3f7; }
+    .c-val { font-size: 21px; color: #e0e0e0; font-family: 'Consolas','Courier New',monospace; }
+    .c-val b { color: #ffb74d; font-size: 24px; }
+    .c-hint { font-size: 14px; color: #7a8a99; }
+    .readout { font-size: 22px; color: #cfd8dc; font-family: 'Consolas','Courier New',monospace; }
+    .readout b { color: #4fc3f7; font-size: 26px; }
+    .readout .dec { color: #90a4ae; font-size: 19px; }
+
+    /* PAGE 1 — state diagram */
+    #p1 { gap: 30px; align-items: center; }
+    .ring-wrap { flex: 0 0 46%; display: flex; align-items: center; justify-content: center; }
+    .ring-wrap svg { width: 100%; max-width: 660px; height: auto; }
+    .p1-right { flex: 1; display: flex; flex-direction: column; gap: 22px; }
+    .lead { font-size: 27px; color: #cfd8dc; line-height: 1.5; }
+    .lead .cy { color: #4fc3f7; font-weight: 600; } .lead .am { color: #ffb74d; font-weight: 600; }
+    .note { font-size: 20px; color: #90a4ae; line-height: 1.5; border-left: 3px solid #37506a; padding-left: 16px; }
+    .ring-node { transition: opacity .18s; }
+    .rn-circle { fill: #0d1b2a; stroke: #4a6274; stroke-width: 2.5; transition: stroke .18s, fill .18s; }
+    .ring-node.on .rn-circle { stroke: #4fc3f7; fill: rgba(79,195,247,0.16); stroke-width: 3.5; }
+    .rn-text { fill: #90a4ae; font-family: 'Consolas',monospace; font-size: 21px; text-anchor: middle; }
+    .ring-node.on .rn-text { fill: #4fc3f7; font-weight: 700; }
+    .ring-arrow { stroke: #37506a; stroke-width: 2.5; fill: none; transition: stroke .18s, opacity .18s; }
+    .ring.up1 .ring-arrow { stroke: #4fc3f7; }
+    .ring.up0 .ring-arrow { opacity: .28; }
+    .ring-lbl { fill: #ffb74d; font-family: 'Consolas',monospace; font-size: 17px; font-weight: 700; text-anchor: middle; transition: opacity .18s; }
+    .ring.up0 .ring-lbl { opacity: .35; }
+    /* the hold loop IS the transition being taken when UP=0: full strength, amber. Its color lives here, not in a
+       stroke attribute — the .ring-arrow rule above silently beat the attribute and drew it grey */
+    .ring.up0 .ring-loop { opacity: 1; stroke: #ffb74d; stroke-width: 3; }
+
+    /* PAGE 2 — state table */
+    #p2 { flex-direction: column; align-items: center; gap: 16px; }
+    .st-tables { display: flex; gap: 30px; }
+    .st { border-collapse: collapse; font-size: 21px; font-family: 'Consolas','Courier New',monospace; }
+    .st th, .st td { border: 2px solid #37506a; padding: 5px 16px; text-align: center; color: #e0e0e0; }
+    .st th { background: rgba(79,195,247,0.12); color: #4fc3f7; font-weight: 700; font-size: 18px; }
+    .st .grp { background: rgba(255,183,77,0.10); color: #ffb74d; }
+    .st td.nx { color: #4fc3f7; }
+    .st td.hold { color: #90a4ae; }
+    .st td.one { color: #4fc3f7; } .st td.zero { color: #5c7189; }
+    .st tr.rowon td { background: rgba(79,195,247,0.22); color: #fff; }
+    .st tr.rowon td.zero { color: #bcd; }
+    .st-cap { font-size: 17px; color: #90a4ae; }
+
+    /* PAGE 3 — K-maps (static: groups + equations) */
+    #p3 { flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+    .kmaps { display: flex; gap: 46px; align-items: flex-start; }
+    .kmap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .kmap h3 { color: #4fc3f7; font-size: 26px; font-weight: 700; }
+    .kmap svg { width: 320px; height: auto; display: block; }
+    .kterm { font-size: 22px; font-family: 'Consolas','Courier New',monospace; color: #90a4ae;
+        text-align: center; line-height: 1.5; }
+    .kterm .eq { color: #cfd8dc; } .kterm b { color: #cfd8dc; font-size: 24px; }
+    .kshrink { font-size: 15px; color: #7a8a99; }
+    .kmap-note { font-size: 20px; color: #90a4ae; text-align: center; max-width: 1400px; line-height: 1.45; }
+    .ov { text-decoration: overline; text-decoration-thickness: 2px; }
+    .kmap-note b { color: #4fc3f7; } .kmap-note .vl { color: #b388ff; }
+
+    /* PAGE 4 — circuit (equations as a slim strip; the circuit gets the room) */
+    #p4 { flex-direction: column; align-items: center; gap: 14px; }
+    .p4-eqstrip { font-size: 25px; font-family: 'Consolas','Courier New',monospace; color: #cfd8dc; }
+    .p4-eqstrip .op { color: #ffb74d; } .p4-eqstrip .xor { color: #4fc3f7; }
+    .p4-eqstrip .sep { color: #37506a; margin: 0 20px; }
+    .circ2 { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 12px; min-height: 0; }
+    .circ-cap { font-size: 19px; color: #90a4ae; text-align: center; max-width: 1500px; line-height: 1.4; }
+    .circ-cap b { color: #4fc3f7; }
+    .circ2 svg { width: 100%; max-width: 1660px; height: auto; max-height: 700px; }
+
+    /* PAGE 5 — the pattern */
+    #p5 { gap: 56px; align-items: center; justify-content: center; }
+    .p5-left { flex: 0 0 900px; display: flex; flex-direction: column; gap: 24px; }
+    .p5-left .lead .am, .p5-why .am { color: #ffb74d; }
+    .ladder { border-collapse: collapse; font-family: 'Consolas','Courier New',monospace; font-size: 25px; }
+    .ladder th { font-family: 'Segoe UI',sans-serif; font-size: 16px; color: #607d8b; font-weight: 600; text-align: left;
+        padding: 0 22px 8px 0; border-bottom: 2px solid #24384c; }
+    .ladder { table-layout: fixed; width: 900px; }   /* fixed columns: the reveal must not reflow the table */
+    .ladder th:nth-child(1) { width: 72px; } .ladder th:nth-child(2) { width: 300px; }
+    .ladder td { line-height: 28px; padding: 12px 22px 12px 0; color: #cfd8dc; border-bottom: 1px solid #1c2e40; white-space: nowrap; }
+    .ladder td.b { color: #4fc3f7; font-weight: 700; } .ladder td.en { color: #ffb74d; }
+    .ladder .xr { color: #4fc3f7; }
+    .q3row td { background: rgba(255,183,77,0.06); }
+    .revealctl { align-self: flex-start; border: 2px solid #4fc3f7; background: rgba(79,195,247,0.08); }
+    .revealctl .c-lbl { color: #4fc3f7; }
+    .p5-why { font-size: 20px; color: #90a4ae; line-height: 1.5; border-left: 3px solid #37506a; padding-left: 16px; min-height: 120px; }
+    .p5-why b { color: #cfd8dc; }
+    #p5 .show { display: none; } #p5.revealed .show { display: inline; } #p5.revealed .hide { display: none; }
+    .p5-right { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .p5-cap { font-size: 17px; color: #90a4ae; } .p5-cap .am { color: #ffb74d; font-weight: 600; }
+    .cnt4 { font-size: 19px; }
+    .cnt4 th, .cnt4 td { padding: 3px 18px; }
+    .cnt4 td.n { color: #607d8b; }
+    .cnt4 td.flip { background: rgba(255,183,77,0.20); color: #ffb74d; font-weight: 700; }
+    /* before the reveal, Q3's two flip cells must look like every other Q3 cell, or they give the answer away */
+    #p5:not(.revealed) .cnt4 td.flip.b3 { background: none; font-weight: normal; }
+    #p5:not(.revealed) .cnt4 td.flip.b3.one { color: #4fc3f7; } #p5:not(.revealed) .cnt4 td.flip.b3.zero { color: #5c7189; }
+
+    /* footer */
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 10px; height: 34px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a; border-radius: 6px;
+        padding: 1px 8px; margin: 0 2px; font-size: 14px; font-family: 'Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.cyan { color: #4fc3f7; border-color: #245066; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <!-- topbar -->
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="-26 0 204 82" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="46" y="12" width="66" height="58" rx="6"/>
+                <line x1="20" y1="26" x2="46" y2="26"/>
+                <polyline points="46,54 58,62 46,70"/>
+                <line x1="20" y1="62" x2="46" y2="62"/>
+                <line x1="112" y1="24" x2="150" y2="24"/><line x1="112" y1="41" x2="150" y2="41"/><line x1="112" y1="58" x2="150" y2="58"/>
+                <text x="16" y="31" font-size="13" fill="#ffb74d" stroke="none" text-anchor="end" font-family="Consolas,monospace">UP</text>
+                <text x="14" y="67" font-size="12" fill="#ffb74d" stroke="none" text-anchor="end" font-family="Consolas,monospace">CLK</text>
+                <text x="79" y="46" font-size="15" fill="currentColor" stroke="none" text-anchor="middle" font-family="Consolas,monospace">CTR</text>
+                <text x="156" y="29" font-size="12" fill="#4fc3f7" stroke="none" font-family="Consolas,monospace">Q2</text>
+                <text x="156" y="46" font-size="12" fill="#4fc3f7" stroke="none" font-family="Consolas,monospace">Q1</text>
+                <text x="156" y="63" font-size="12" fill="#4fc3f7" stroke="none" font-family="Consolas,monospace">Q0</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>3-Bit Counter <span class="sub">with count-enable (UP=1 count, UP=0 hold)</span></h1>
+            <div class="subtitle">FSM design walk-through &middot; the state assignment <i>is</i> the count</div>
+        </div>
+        <div class="page-count">Stage <b id="pcNum">1</b> / 5</div>
+    </div>
+
+    <!-- tabs -->
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">State Diagram</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">State Table</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">K-maps</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Equations + Circuit</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">Guess the 4-Bit Counter</div></div>
+    </div>
+
+    <div class="stage">
+
+        <!-- PAGE 1 -->
+        <div class="page" id="p1">
+            <div class="ring-wrap">
+                <svg id="ring" class="ring up1" viewBox="0 0 720 620"></svg>
+            </div>
+            <div class="p1-right">
+                <div class="lead">Eight states in a ring &mdash; state = the binary count <span class="cy">Q2 Q1 Q0</span>. Each clock, <span class="am">UP=1</span> steps to the next count (7 &rarr; 0 closes the ring); <span class="am">UP=0</span> holds (self-loop).</div>
+                <div class="note">Because the state assignment is just the count, there's <b>no encoding puzzle</b> &mdash; all the design work is in the next-state logic (Stages 2&ndash;4).</div>
+                <div class="ctlbar">
+                    <div class="ctl upctl" data-upctl><span class="c-lbl">UP</span><span class="c-val">=<b class="ro-up">1</b></span><span class="c-hint">press U</span></div>
+                    <div class="ctl stepctl" data-stepctl><span class="c-lbl">CLK</span><span class="c-val">&#9654; step</span><span class="c-hint">press Space</span></div>
+                </div>
+                <div class="readout">count = <b class="ro-cnt">000</b> <span class="dec">(<span class="ro-dec">0</span>)</span></div>
+            </div>
+        </div>
+
+        <!-- PAGE 2 -->
+        <div class="page" id="p2">
+            <div class="ctlbar">
+                <div class="ctl upctl" data-upctl><span class="c-lbl">UP</span><span class="c-val">=<b class="ro-up">1</b></span><span class="c-hint">press U</span></div>
+                <div class="ctl stepctl" data-stepctl><span class="c-lbl">CLK</span><span class="c-val">&#9654; step</span><span class="c-hint">press Space</span></div>
+                <div class="readout">count = <b class="ro-cnt">000</b> <span class="dec">(<span class="ro-dec">0</span>)</span></div>
+            </div>
+            <div class="st-tables">
+                <table class="st" id="stA">
+                    <tr><th class="grp">UP</th><th>Q2</th><th>Q1</th><th>Q0</th><th>Q2&#8314;</th><th>Q1&#8314;</th><th>Q0&#8314;</th><th>note</th></tr>
+                </table>
+                <table class="st" id="stB">
+                    <tr><th class="grp">UP</th><th>Q2</th><th>Q1</th><th>Q0</th><th>Q2&#8314;</th><th>Q1&#8314;</th><th>Q0&#8314;</th><th>note</th></tr>
+                </table>
+            </div>
+            <div class="st-cap">D flip-flops: next state <b style="color:#4fc3f7">Q&#8314;</b> is what we drive onto <b style="color:#4fc3f7">D2 D1 D0</b>. UP=0 rows all hold (Q&#8314; = Q); UP=1 rows add one and wrap.</div>
+        </div>
+
+        <!-- PAGE 3 — K-maps: groups + equations (static) -->
+        <div class="page" id="p3">
+            <div class="kmaps" id="kmaps"></div>
+            <div class="kmap-note">Rows = <b>UP,Q2</b> (Gray) &middot; columns = <b>Q1,Q0</b> (Gray). Each <span class="vl">colored loop</span> is a prime-implicant group; the matching-colored product term sits below the map, and they sum to the flip-flop equation. Notice the maps <b>shrink</b> down the bits &mdash; <b>D0</b> ignores Q1 and Q2, <b>D1</b> ignores Q2 &mdash; each higher bit toggles only once all the lower bits are 1.</div>
+        </div>
+
+        <!-- PAGE 4 — circuit (slim equation strip + full-width circuit) -->
+        <div class="page" id="p4">
+            <div class="p4-eqstrip">D0 = UP <span class="xor">&#8853;</span> Q0<span class="sep">|</span>D1 = Q1 <span class="xor">&#8853;</span> (UP<span class="op">&middot;</span>Q0)<span class="sep">|</span>D2 = Q2 <span class="xor">&#8853;</span> (UP<span class="op">&middot;</span>Q1<span class="op">&middot;</span>Q0)</div>
+            <div class="circ2">
+                <div class="circ-cap">Three <b>D flip-flops</b> on a common clock; each bit's D is an <b>XOR toggle</b> enabled by the AND carry-chain <span style="color:#ffb74d">UP</span> &middot; <span style="color:#ffb74d">UP&middot;Q0</span> &middot; <span style="color:#ffb74d">UP&middot;Q1&middot;Q0</span>. The fed-back outputs Q0,Q1,Q2 are shown as labeled taps.</div>
+                <svg id="ckt" viewBox="-20 0 1520 470" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></svg>
+            </div>
+        </div>
+
+        <!-- PAGE 5 — the pattern: guess D3 before it is shown -->
+        <div class="page" id="p5">
+            <div class="p5-left">
+                <div class="lead">Look down the three equations: each bit's toggle condition is the one above it <b class="am">with one more factor</b>. Guess the fourth bit before you reveal it.</div>
+                <table class="ladder">
+                    <tr><th>bit</th><th>toggles when</th><th>D input</th></tr>
+                    <tr><td class="b">Q0</td><td class="en">UP</td><td>D0 = Q0 <span class="xr">&#8853;</span> UP</td></tr>
+                    <tr><td class="b">Q1</td><td class="en">UP&middot;Q0</td><td>D1 = Q1 <span class="xr">&#8853;</span> (UP&middot;Q0)</td></tr>
+                    <tr><td class="b">Q2</td><td class="en">UP&middot;Q1&middot;Q0</td><td>D2 = Q2 <span class="xr">&#8853;</span> (UP&middot;Q1&middot;Q0)</td></tr>
+                    <tr class="q3row"><td class="b">Q3</td>
+                        <td class="en"><span class="hide">?</span><span class="show">UP&middot;Q2&middot;Q1&middot;Q0</span></td>
+                        <td><span class="hide">D3 = ?</span><span class="show">D3 = Q3 <span class="xr">&#8853;</span> (UP&middot;Q2&middot;Q1&middot;Q0)</span></td></tr>
+                </table>
+                <div class="ctl revealctl" data-revealctl><span class="c-lbl">D3</span><span class="c-val" data-revlbl>reveal</span><span class="c-hint">press G</span></div>
+                <div class="p5-why">
+                    <span class="hide">Hint: on the right, find the rows where <b>Q2</b> flips. What are all the bits below it doing?</span>
+                    <span class="show">A bit flips on the next count <b>only when every bit below it is 1</b> &mdash; exactly when adding 1 carries into it. So bit <i>n</i> toggles on <b class="am">UP</b> AND every lower bit, and each enable is the previous one times one more Q: the AND chain grows by one input per bit, the same carry idea as an adder. An <i>n</i>-bit counter needs no new K-maps.</span>
+                </div>
+            </div>
+            <div class="p5-right">
+                <div class="p5-cap">Counting up 0&ndash;15 &middot; <span class="am">amber</span> = the bit flips at the next clock</div>
+                <table class="st cnt4" id="cnt4"><tr><th>n</th><th>Q3</th><th>Q2</th><th>Q1</th><th>Q0</th></tr></table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- footer -->
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div><div class="dot" data-dot="5"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">5</span> stage
+            &middot; <span class="k">Space</span>/<span class="k cyan">CLK</span> step
+            &middot; <span class="k amber">U</span> toggle UP
+            &middot; <span class="k cyan">G</span> reveal D3 (stage 5)
+            &middot; <span class="k">&rarr;</span>/<span class="k">Backspace</span> nav
+            &middot; <span class="k">R</span> restart
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const bits = n => [ (n>>2)&1, (n>>1)&1, n&1 ];
+    const nextCount = (up,n) => up ? (n+1)&7 : n;
+
+    /* ---------- build the 8-state ring ---------- */
+    const ring = document.getElementById('ring');
+    const CX = 360, CY = 300, R = 210, NR = 34;
+    const nodePos = [];
+    for (let i=0;i<8;i++){ const a = (-90 + i*45) * Math.PI/180; nodePos.push([CX+R*Math.cos(a), CY+R*Math.sin(a)]); }
+    for (let i=0;i<8;i++){
+        const [x1,y1] = nodePos[i], [x2,y2] = nodePos[(i+1)%8];
+        const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy), ux=dx/len, uy=dy/len;
+        const sx=x1+ux*(NR+4), sy=y1+uy*(NR+4), ex=x2-ux*(NR+10), ey=y2-uy*(NR+10);
+        const line = document.createElementNS(SVGNS,'line');
+        line.setAttribute('x1',sx.toFixed(1)); line.setAttribute('y1',sy.toFixed(1));
+        line.setAttribute('x2',ex.toFixed(1)); line.setAttribute('y2',ey.toFixed(1));
+        line.setAttribute('class','ring-arrow'); ring.appendChild(line);
+        const ah = document.createElementNS(SVGNS,'polyline');
+        const px=-uy, py=ux, s=8;
+        ah.setAttribute('points',`${(ex-ux*14+px*s).toFixed(1)},${(ey-uy*14+py*s).toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)} ${(ex-ux*14-px*s).toFixed(1)},${(ey-uy*14-py*s).toFixed(1)}`);
+        ah.setAttribute('class','ring-arrow'); ring.appendChild(ah);
+        // the arc's condition, just outside the ring at the arc's midpoint (radially outward, clear of the arrow)
+        const ma=Math.atan2((y1+y2)/2-CY,(x1+x2)/2-CX), mr=Math.hypot((x1+x2)/2-CX,(y1+y2)/2-CY)+26;
+        const lab=document.createElementNS(SVGNS,'text');
+        lab.setAttribute('x',(CX+mr*Math.cos(ma)).toFixed(1)); lab.setAttribute('y',(CY+mr*Math.sin(ma)+6).toFixed(1));
+        lab.setAttribute('class','ring-lbl'); lab.textContent='UP'; ring.appendChild(lab);
+    }
+    const nodeEls = [];
+    for (let i=0;i<8;i++){
+        const [x,y] = nodePos[i];
+        const g = document.createElementNS(SVGNS,'g'); g.setAttribute('class','ring-node'); g.dataset.node=i;
+        const c = document.createElementNS(SVGNS,'circle');
+        c.setAttribute('cx',x); c.setAttribute('cy',y); c.setAttribute('r',NR); c.setAttribute('class','rn-circle');
+        const t = document.createElementNS(SVGNS,'text');
+        t.setAttribute('x',x); t.setAttribute('y',y+7); t.setAttribute('class','rn-text');
+        t.textContent = bits(i).join('');
+        g.appendChild(c); g.appendChild(t); ring.appendChild(g); nodeEls.push(g);
+    }
+    const loop = document.createElementNS(SVGNS,'path');
+    loop.setAttribute('class','ring-arrow ring-loop'); loop.style.display='none';
+    ring.appendChild(loop);
+    // its arrowhead: same open chevron as the ring arrows, drawn as a separate polyline so it shows/hides with the loop
+    const loopHead = document.createElementNS(SVGNS,'polyline');
+    loopHead.setAttribute('class','ring-arrow ring-loop'); loopHead.style.display='none';
+    ring.appendChild(loopHead);
+    function placeLoop(i){
+        const [x,y]=nodePos[i]; const a=Math.atan2(y-CY,x-CX);
+        const ox=x+Math.cos(a)*(NR+84), oy=y+Math.sin(a)*(NR+84);   // deep enough to read as a loop
+        const pa=a+0.6, pb=a-0.6;
+        const s1x=x+Math.cos(pa)*NR, s1y=y+Math.sin(pa)*NR;
+        const s2x=x+Math.cos(pb)*NR, s2y=y+Math.sin(pb)*NR;
+        loop.setAttribute('d',`M${s1x.toFixed(1)},${s1y.toFixed(1)} Q${ox.toFixed(1)},${oy.toFixed(1)} ${s2x.toFixed(1)},${s2y.toFixed(1)}`);
+        // the curve arrives at s2 heading along (s2 − control): the tip sits on the node's rim, the barbs trail back
+        const len=Math.hypot(s2x-ox,s2y-oy), ux=(s2x-ox)/len, uy=(s2y-oy)/len, px=-uy, py=ux, sz=8;
+        loopHead.setAttribute('points',`${(s2x-ux*14+px*sz).toFixed(1)},${(s2y-uy*14+py*sz).toFixed(1)} ${s2x.toFixed(1)},${s2y.toFixed(1)} ${(s2x-ux*14-px*sz).toFixed(1)},${(s2y-uy*14-py*sz).toFixed(1)}`);
+    }
+
+    /* ---------- state tables ---------- */
+    function mkRow(up,n){
+        const [q2,q1,q0]=bits(n); const nn=nextCount(up,n); const [n2,n1,n0]=bits(nn);
+        const cz=b=>b?'one':'zero';
+        const tr=document.createElement('tr');
+        tr.dataset.key = `${up}${q2}${q1}${q0}`;
+        tr.innerHTML = `<td class="grp">${up}</td><td class="${cz(q2)}">${q2}</td><td class="${cz(q1)}">${q1}</td><td class="${cz(q0)}">${q0}</td>`+
+            `<td class="nx ${cz(n2)}">${n2}</td><td class="nx ${cz(n1)}">${n1}</td><td class="nx ${cz(n0)}">${n0}</td>`+
+            `<td class="${up?'':'hold'}">${up? (nn===0?'+1 wrap':'+1') : 'hold'}</td>`;
+        return tr;
+    }
+    const stA=document.getElementById('stA'), stB=document.getElementById('stB');
+    for(let n=0;n<8;n++) stA.appendChild(mkRow(0,n));
+    for(let n=0;n<8;n++) stB.appendChild(mkRow(1,n));
+
+    /* ---------- K-maps: groups (loops) + equations ---------- */
+    const grayRow = ['00','01','11','10']; // UP,Q2
+    const grayCol = ['00','01','11','10']; // Q1,Q0
+    function Dbits(up,n){ const nn=nextCount(up,n); return [ (nn>>2)&1,(nn>>1)&1,nn&1 ]; } // [D2,D1,D0]
+    function kval(idx,r,c){ const up=+grayRow[r][0],q2=+grayRow[r][1],q1=+grayCol[c][0],q0=+grayCol[c][1];
+        return Dbits(up,(q2<<2)|(q1<<1)|q0)[idx]; }
+
+    const kmaps = [
+        { name:'D0', idx:2, simp:'UP &#8853; Q0',
+          groups:[ {lab:"<span class=ov>UP</span>&middot;Q0", col:'#b388ff', rects:[[0,1,1,2]]},
+                   {lab:"UP&middot;<span class=ov>Q0</span>", col:'#4fc3f7', rects:[[2,0,3,0],[2,3,3,3]]} ],
+          shrink:'independent of Q1, Q2' },
+        { name:'D1', idx:1, simp:'Q1 &#8853; (UP&middot;Q0)',
+          groups:[ {lab:"<span class=ov>UP</span>&middot;Q1", col:'#b388ff', rects:[[0,2,1,3]]},
+                   {lab:"UP&middot;Q1&middot;<span class=ov>Q0</span>", col:'#4fc3f7', rects:[[2,3,3,3]]},
+                   {lab:"UP&middot;<span class=ov>Q1</span>&middot;Q0", col:'#ffb74d', rects:[[2,1,3,1]]} ],
+          shrink:'independent of Q2' },
+        { name:'D2', idx:0, simp:'Q2 &#8853; (UP&middot;Q1&middot;Q0)',
+          groups:[ {lab:"<span class=ov>UP</span>&middot;Q2", col:'#b388ff', rects:[[1,0,1,3]]},
+                   {lab:"Q2&middot;<span class=ov>Q1</span>", col:'#4fc3f7', rects:[[1,0,2,1]]},
+                   {lab:"Q2&middot;<span class=ov>Q0</span>", col:'#ffb74d', rects:[[1,0,2,0],[1,3,2,3]]},
+                   {lab:"UP&middot;<span class=ov>Q2</span>&middot;Q1&middot;Q0", col:'#66bb6a', rects:[[3,2,3,2]]} ],
+          shrink:'' },
+    ];
+    const CELL=56, GX=64, GY=52;
+    function buildKmap(m){
+        let s = `<svg viewBox="0 0 320 300" font-family="Consolas,monospace">`;
+        // axis captions
+        s += `<text x="${GX+2*CELL}" y="22" fill="#7a8a99" font-size="15" text-anchor="middle">Q1,Q0</text>`;
+        s += `<text x="20" y="${GY+2*CELL}" fill="#7a8a99" font-size="15" text-anchor="middle" transform="rotate(-90 20 ${GY+2*CELL})">UP,Q2</text>`;
+        // grid + values
+        for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+            const x=GX+c*CELL, y=GY+r*CELL, v=kval(m.idx,r,c);
+            s += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="none" stroke="#37506a" stroke-width="2"/>`;
+            s += `<text x="${x+CELL/2}" y="${y+CELL/2+9}" fill="${v?'#4fc3f7':'#5c7189'}" font-size="26" text-anchor="middle">${v}</text>`;
+        }
+        // gray labels
+        for(let c=0;c<4;c++) s += `<text x="${GX+c*CELL+CELL/2}" y="${GY-10}" fill="#90a4ae" font-size="16" text-anchor="middle">${grayCol[c]}</text>`;
+        for(let r=0;r<4;r++) s += `<text x="${GX-10}" y="${GY+r*CELL+CELL/2+6}" fill="#90a4ae" font-size="16" text-anchor="end">${grayRow[r]}</text>`;
+        // group loops
+        m.groups.forEach((g,gi)=>{
+            g.rects.forEach(([r0,c0,r1,c1])=>{
+                // nested groups step inward so each loop stays visible — but a single cell can't step in far, or the
+                // loop collapses to a dot over the "1" (D2's lone UP·Q̄2·Q1·Q0 cell read as a circled I)
+                const single = r0===r1 && c0===c1, pad = single ? 7 : 6 + gi*4;
+                const x=GX+c0*CELL+pad, y=GY+r0*CELL+pad;
+                const w=(c1-c0+1)*CELL-2*pad, h=(r1-r0+1)*CELL-2*pad, rx=Math.min(14, Math.min(w,h)/2-4);
+                s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="none" stroke="${g.col}" stroke-width="3.2"/>`;
+            });
+        });
+        s += `</svg>`;
+        // term line (color-coded to loops) below
+        const terms = m.groups.map(g=>`<span style="color:${g.col}">${g.lab}</span>`).join(' <span class="eq">+</span> ');
+        let out = `<div class="kmap"><h3>${m.name}</h3>${s}`;
+        out += `<div class="kterm">${terms}<br><span class="eq">=</span> <b>${m.simp}</b></div>`;
+        if(m.shrink) out += `<div class="kshrink">(${m.shrink})</div>`;
+        out += `</div>`;
+        return out;
+    }
+    document.getElementById('kmaps').innerHTML = kmaps.map(buildKmap).join('');
+
+    /* ---------- D-flip-flop + XOR circuit (full width, spaced to avoid overlap) ---------- */
+    (function buildCircuit(){
+        const ckt=document.getElementById('ckt');
+        const el=(tag,a)=>{ const e=document.createElementNS(SVGNS,tag); for(const k in a) e.setAttribute(k,a[k]); ckt.appendChild(e); return e; };
+        const wire=(pts,stroke,w)=> el('polyline',{points:pts,fill:'none',stroke:stroke||'#8fa8bd','stroke-width':w||2.4,'stroke-linecap':'round','stroke-linejoin':'round'});
+        const lbl=(x,y,s,fill,size,anchor)=>{ const t=el('text',{x,y,fill,'font-size':size||16,'font-family':'Consolas,monospace','text-anchor':anchor||'start'}); t.textContent=s; };
+        const dot=(x,y,c)=> el('circle',{cx:x,cy:y,r:4.5,fill:c||'#ffb74d',stroke:'none'});
+        // XOR gate centered at (cx,cy); inputs at the flat back (x=cx-34), output at cx+34
+        function xorGate(cx,cy){ const L=cx-34, R=cx+34;
+            el('path',{d:`M${L-10},${cy-26} Q${L+10},${cy} ${L-10},${cy+26}`,fill:'none',stroke:'#cfd8dc','stroke-width':2.4});
+            el('path',{d:`M${L},${cy-26} Q${L+20},${cy} ${L},${cy+26} Q${cx+18},${cy+9} ${R},${cy} Q${cx+18},${cy-9} ${L},${cy-26} Z`,fill:'none',stroke:'#cfd8dc','stroke-width':2.4});
+            return {inT:[L,cy-12], inB:[L,cy+12], out:[R,cy]}; }
+        // AND gate (flat back at cx-30, round front); input y's supplied by caller
+        function andGate(cx,cy,h){ const L=cx-30, r=h/2;
+            el('path',{d:`M${L},${cy-r} L${cx-2},${cy-r} A${r},${r} 0 0 1 ${cx-2},${cy+r} L${L},${cy+r} Z`,fill:'none',stroke:'#cfd8dc','stroke-width':2.4});
+            return {left:L, out:[cx-2+r, cy]}; }
+        // D flip-flop box; D/Q at vertical center, CLK lower-left
+        function ffBox(x,cy){ const w=124,h=150,y=cy-h/2;
+            el('rect',{x,y,width:w,height:h,rx:6,fill:'none',stroke:'#cfd8dc','stroke-width':2.6});
+            el('polyline',{points:`${x},${cy+40} ${x+18},${cy+50} ${x},${cy+60}`,fill:'none',stroke:'#cfd8dc','stroke-width':2.4});
+            return {D:[x,cy], Q:[x+w,cy], CLK:[x,cy+50], x,y,w,h}; }
+
+        // Geometry (viewBox -20 0 1520 470 — the left margin holds the CLK label). Compact vertically so no drop is longer than it has to be:
+        // UP rail, carry ANDs, then the XOR → D-FF row, then the CLK rail. Every rail ends at its last tap, and a
+        // junction dot marks a tee only (never a corner or an open end). The carry enters each XOR's TOP input and the
+        // Q feedback its BOTTOM input, so a carry drop never runs past a feedback label.
+        const railY=50, cyA=150, cy=300, clkY=440;
+        const slices=[ {xc:150, q:'Q0', clbl:''}, {xc:650, q:'Q1', clbl:'UP·Q0'}, {xc:1150, q:'Q2', clbl:'UP·Q1·Q0'} ];
+        slices.forEach(sl=>{ sl.ffx=sl.xc+100; sl.DX=sl.xc-96; sl.lead=sl.xc-36; });   // lead = XOR's outer back arc at ±12
+
+        // carry-chain ANDs. A1 = UP·Q0 (2 inputs), A2 = UP·Q1·Q0 (3 inputs, 24 apart so the stacked labels breathe)
+        const A1=andGate(470,cyA,54), A2=andGate(970,cyA,84);
+        const andIn=(A,ys,names)=>{        // UP comes down from the rail into the top pin; Q's are named stubs below it
+            const tx=A.left-22;
+            wire(`${tx},${railY} ${tx},${ys[0]} ${A.left},${ys[0]}`,'#ffb74d');
+            names.forEach((n,k)=>{ const y=ys[k+1]; wire(`${A.left-40},${y} ${A.left},${y}`,'#4fc3f7'); lbl(A.left-46,y+5,n,'#4fc3f7',15,'end'); });
+            return tx; };
+        const t1=andIn(A1,[cyA-12,cyA+12],['Q0']), t2=andIn(A2,[cyA-24,cyA,cyA+24],['Q1','Q0']);
+        const carryOut=[null, A1.out, A2.out];
+
+        // rails: start at the input label, stop at the last tap
+        el('line',{x1:40,y1:railY,x2:t2,y2:railY,stroke:'#ffb74d','stroke-width':2.6}); lbl(32,railY+6,'UP','#ffb74d',19,'end');
+        const lastClk=slices[2].ffx-26;
+        el('line',{x1:40,y1:clkY,x2:lastClk,y2:clkY,stroke:'#ffb74d','stroke-width':2.6}); lbl(32,clkY+6,'CLK','#ffb74d',19,'end');
+        dot(slices[0].DX,railY); dot(t1,railY);                          // tees on the UP rail (t2 is its end)
+
+        slices.forEach((sl,k)=>{
+            const xr=xorGate(sl.xc, cy), ff=ffBox(sl.ffx, cy);
+            // top input: the carry (bit 0's is UP itself)
+            if(k===0) wire(`${sl.DX},${railY} ${sl.DX},${cy-12} ${sl.lead},${cy-12}`,'#ffb74d');
+            else {
+                wire(`${carryOut[k][0]},${carryOut[k][1]} ${sl.DX},${carryOut[k][1]} ${sl.DX},${cy-12} ${sl.lead},${cy-12}`,'#ffb74d');
+                lbl(sl.DX-10, (cyA+cy)/2+6, sl.clbl, '#ffb74d', 17, 'end');   // name on the drop, left of it
+            }
+            // bottom input: Q feedback as a named stub, label at its open end
+            wire(`${sl.xc-76},${cy+12} ${sl.lead},${cy+12}`,'#4fc3f7'); lbl(sl.xc-82,cy+17,sl.q,'#4fc3f7',15,'end');
+            // XOR → D, flip-flop pins labeled where the wires actually meet them, Q out
+            wire(`${xr.out[0]},${cy} ${ff.D[0]},${cy}`,'#4fc3f7',2.6);
+            lbl(ff.x+12, cy+6, 'D', '#90a4ae', 17); lbl(ff.x+ff.w-12, cy+6, 'Q', '#90a4ae', 17, 'end');
+            wire(`${ff.Q[0]},${cy} ${ff.Q[0]+44},${cy}`,'#4fc3f7',2.6); lbl(ff.Q[0]+52, cy+7, sl.q, '#4fc3f7', 21);
+            // clock: short stub left, then down to the rail
+            wire(`${ff.CLK[0]},${ff.CLK[1]} ${ff.CLK[0]-26},${ff.CLK[1]} ${ff.CLK[0]-26},${clkY}`,'#ffb74d',2.2);
+            if(k<2) dot(ff.CLK[0]-26,clkY);
+        });
+    })();
+
+    /* ---------- page 5: 4-bit count table — which bits flip on the next +1 ---------- */
+    const cnt4=document.getElementById('cnt4');
+    for(let n=0;n<16;n++){
+        const flips=n^((n+1)&15), tr=document.createElement('tr');
+        tr.innerHTML=`<td class="n">${n}</td>`+[3,2,1,0].map(b=>{ const v=(n>>b)&1;
+            return `<td class="b${b} ${v?'one':'zero'}${(flips>>b)&1?' flip':''}">${v}</td>`; }).join('');
+        cnt4.appendChild(tr);
+    }
+    let revealed=false;
+    const p5=document.getElementById('p5');
+    function setReveal(v){ revealed=v; p5.classList.toggle('revealed',v);
+        document.querySelectorAll('[data-revlbl]').forEach(e=>e.textContent=v?'hide':'reveal'); }
+    document.querySelectorAll('[data-revealctl]').forEach(e=>e.addEventListener('click',()=>setReveal(!revealed)));
+
+    /* ---------- paging + interactive (ring + table only) ---------- */
+    const FIRST=1, LAST=5;
+    let page=1, up=1, count=0;
+    const pages=Array.from(document.querySelectorAll('.page'));
+    const tabs=Array.from(document.querySelectorAll('.tab'));
+    const dots=Array.from(document.querySelectorAll('.dot'));
+    const pcNum=document.getElementById('pcNum');
+    const allRows=Array.from(document.querySelectorAll('.st tr[data-key]'));
+
+    function renderState(){
+        const [q2,q1,q0]=bits(count);
+        document.querySelectorAll('.ro-up').forEach(e=>e.textContent=up);
+        document.querySelectorAll('.ro-cnt').forEach(e=>e.textContent=`${q2}${q1}${q0}`);
+        document.querySelectorAll('.ro-dec').forEach(e=>e.textContent=count);
+        ring.classList.toggle('up1', up===1); ring.classList.toggle('up0', up===0);
+        nodeEls.forEach((g,i)=>g.classList.toggle('on', i===count));
+        if(up===0){ placeLoop(count); loop.style.display=''; loopHead.style.display=''; } else { loop.style.display='none'; loopHead.style.display='none'; }
+        const key=`${up}${q2}${q1}${q0}`;
+        allRows.forEach(r=>r.classList.toggle('rowon', r.dataset.key===key));
+    }
+    function render(){
+        pages.forEach(p=>p.classList.toggle('active', p.id==='p'+page));
+        tabs.forEach(t=>t.classList.toggle('on', +t.dataset.page===page));
+        dots.forEach(d=>d.classList.toggle('on', +d.dataset.dot===page));
+        pcNum.textContent=page;
+    }
+    function setPage(n){ page=Math.max(FIRST,Math.min(LAST,n)); render(); }
+    function step(){ count=nextCount(up,count); renderState(); }
+    function toggleUp(){ up=up?0:1; renderState(); }
+
+    document.addEventListener('keydown',(e)=>{
+        const k=e.key;
+        if(k>='1'&&k<='5'){ setPage(+k); e.preventDefault(); return; }
+        switch(k){
+            case ' ': step(); e.preventDefault(); break;
+            case 'ArrowRight': case 'ArrowDown': setPage(page+1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page-1); e.preventDefault(); break;
+            case 'u': case 'U': toggleUp(); e.preventDefault(); break;
+            case 'g': case 'G': setReveal(!revealed); e.preventDefault(); break;
+            case 'r': case 'R': count=0; up=1; setReveal(false); setPage(1); renderState(); e.preventDefault(); break;
+        }
+    });
+    tabs.forEach(t=>t.addEventListener('click',()=>setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-stepctl]').forEach(el=>el.addEventListener('click',step));
+    document.querySelectorAll('[data-upctl]').forEach(el=>el.addEventListener('click',toggleUp));
+
+    render(); renderState();
+</script>
+</body>
+</html>

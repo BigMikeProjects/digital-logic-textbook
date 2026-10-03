@@ -1,0 +1,11 @@
+title: "Counters"
+description: "A 3-bit counter with count-enable designed as a state machine, from the eight-state ring and next-state table through three K-maps to equations that reduce to an XOR pattern you can extend to any number of bits."
+chapter: sequential-logic
+section: fsm-applications
+order: 40303
+
+graphics:
+  01-video.youtube:
+    caption: "Video: a 3-bit counter with an UP enable, from the state diagram with its hold loops left implicit, through the next-state table and three K-maps of growing difficulty, to the exclusive-OR pattern that lets you guess the 4-bit counter"
+  02-interactive.html:
+    caption: "Interactive: a 3-bit counter with count-enable designed as a state machine — the eight-state ring with UP on every arc and a hold loop when UP is 0, the state table, the K-maps for D2 D1 D0, and the D flip-flop + XOR circuit; then spot the pattern and guess the fourth bit of a 4-bit counter before revealing it"

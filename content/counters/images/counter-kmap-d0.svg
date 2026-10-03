@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 560" role="img" aria-label="Four-variable K-map for D0, rows UP Q2 and columns Q1 Q0 in Gray order. A cyan block of four covers the top two rows in the middle columns (UP-bar Q0); an amber block of four wraps around the outer columns of the bottom two rows (UP Q0-bar). D0 = UP-bar Q0 + UP Q0-bar, which is Q0 XOR UP.">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+    .cap    { font-size: 20px; font-weight: 700; fill: #41556b; }
+    .capsub { font-size: 17px; fill: #8198af; }
+  </style>
+<text class="title" x="36" y="52">D0: two groups of four</text>
+<text class="sub" x="36" y="86">Q0 keeps its value when UP = 0 and flips when UP = 1.</text>
+<line class="grid" x1="258" y1="150" x2="258" y2="478"/>
+<line class="gridh" x1="340" y1="150" x2="340" y2="478"/>
+<line class="grid" x1="422" y1="150" x2="422" y2="478"/>
+<line class="grid" x1="176" y1="232" x2="504" y2="232"/>
+<line class="gridh" x1="176" y1="314" x2="504" y2="314"/>
+<line class="grid" x1="176" y1="396" x2="504" y2="396"/>
+<rect class="frame" x="176" y="150" width="328" height="328"/>
+<rect x="266.0" y="158.0" width="148.0" height="148.0" rx="16" fill="#0aa5c4" fill-opacity="0.14" stroke="#0aa5c4" stroke-width="4.5"/>
+<rect x="184.0" y="322.0" width="66.0" height="148.0" rx="16" fill="#e0890b" fill-opacity="0.14" stroke="#e0890b" stroke-width="4.5"/>
+<rect x="430.0" y="322.0" width="66.0" height="148.0" rx="16" fill="#e0890b" fill-opacity="0.14" stroke="#e0890b" stroke-width="4.5"/>
+<text class="hdr" x="217" y="136" text-anchor="middle" font-size="20">00</text>
+<text class="hdr" x="299" y="136" text-anchor="middle" font-size="20">01</text>
+<text class="hdr" x="381" y="136" text-anchor="middle" font-size="20">11</text>
+<text class="hdr" x="463" y="136" text-anchor="middle" font-size="20">10</text>
+<text class="hdr" x="160" y="198" text-anchor="end" font-size="20">00</text>
+<text class="hdr" x="160" y="280" text-anchor="end" font-size="20">01</text>
+<text class="hdr" x="160" y="362" text-anchor="end" font-size="20">11</text>
+<text class="hdr" x="160" y="444" text-anchor="end" font-size="20">10</text>
+<text class="corner" x="160" y="136" text-anchor="end">UP Q2 \ Q1 Q0</text>
+<text class="val0" x="217" y="203" text-anchor="middle" font-size="34">0</text>
+<text class="val" x="299" y="203" text-anchor="middle" font-size="34">1</text>
+<text class="val" x="381" y="203" text-anchor="middle" font-size="34">1</text>
+<text class="val0" x="463" y="203" text-anchor="middle" font-size="34">0</text>
+<text class="val0" x="217" y="285" text-anchor="middle" font-size="34">0</text>
+<text class="val" x="299" y="285" text-anchor="middle" font-size="34">1</text>
+<text class="val" x="381" y="285" text-anchor="middle" font-size="34">1</text>
+<text class="val0" x="463" y="285" text-anchor="middle" font-size="34">0</text>
+<text class="val" x="217" y="367" text-anchor="middle" font-size="34">1</text>
+<text class="val0" x="299" y="367" text-anchor="middle" font-size="34">0</text>
+<text class="val0" x="381" y="367" text-anchor="middle" font-size="34">0</text>
+<text class="val" x="463" y="367" text-anchor="middle" font-size="34">1</text>
+<text class="val" x="217" y="449" text-anchor="middle" font-size="34">1</text>
+<text class="val0" x="299" y="449" text-anchor="middle" font-size="34">0</text>
+<text class="val0" x="381" y="449" text-anchor="middle" font-size="34">0</text>
+<text class="val" x="463" y="449" text-anchor="middle" font-size="34">1</text>
+<text class="capsub" x="340" y="520" text-anchor="middle">rows: UP Q2 &#183; columns: Q1 Q0 &#183; both in Gray order</text>
+<line x1="566" y1="130" x2="566" y2="524" stroke="#aab9c9" stroke-width="2"/>
+<circle cx="604" cy="160" r="7" fill="#0aa5c4"/>
+<text x="624.0" y="168.0" font-size="24" font-weight="700" fill="#0aa5c4">UP</text><line x1="625.4" y1="146.9" x2="655.2" y2="146.9" stroke="#0aa5c4" stroke-width="2.0" stroke-linecap="round"/><text x="657.8" y="168.0" font-size="24" font-weight="700" fill="#0aa5c4">·</text><text x="666.2" y="168.0" font-size="24" font-weight="700" fill="#0aa5c4">Q0</text>
+<circle cx="604" cy="204" r="7" fill="#e0890b"/>
+<text x="624.0" y="212.0" font-size="24" font-weight="700" fill="#e0890b">UP</text><text x="657.8" y="212.0" font-size="24" font-weight="700" fill="#e0890b">·</text><text x="666.2" y="212.0" font-size="24" font-weight="700" fill="#e0890b">Q0</text><line x1="667.7" y1="190.9" x2="697.4" y2="190.9" stroke="#e0890b" stroke-width="2.0" stroke-linecap="round"/>
+<text class="capsub" x="596" y="274">read off the groups</text>
+<text x="596.0" y="312.0" font-size="23" font-weight="700" fill="#102a43">D0</text><text x="634.2" y="312.0" font-size="23" font-weight="700" fill="#102a43">=</text><text x="655.3" y="312.0" font-size="23" font-weight="700" fill="#102a43">UP</text><line x1="656.7" y1="291.8" x2="685.2" y2="291.8" stroke="#102a43" stroke-width="2.0" stroke-linecap="round"/><text x="687.8" y="312.0" font-size="23" font-weight="700" fill="#102a43">·</text><text x="695.8" y="312.0" font-size="23" font-weight="700" fill="#102a43">Q0</text><text x="734.0" y="312.0" font-size="23" font-weight="700" fill="#102a43">+</text><text x="755.2" y="312.0" font-size="23" font-weight="700" fill="#102a43">UP</text><text x="787.6" y="312.0" font-size="23" font-weight="700" fill="#102a43">·</text><text x="795.6" y="312.0" font-size="23" font-weight="700" fill="#102a43">Q0</text><line x1="797.0" y1="291.8" x2="825.5" y2="291.8" stroke="#102a43" stroke-width="2.0" stroke-linecap="round"/>
+<text class="capsub" x="596" y="362">which is the same as</text>
+<text x="596.0" y="404.0" font-size="30" font-weight="700" fill="#102a43">D0</text><text x="645.8" y="404.0" font-size="30" font-weight="700" fill="#102a43">=</text><text x="673.4" y="404.0" font-size="30" font-weight="700" fill="#102a43">Q0</text><text x="723.2" y="404.0" font-size="30" font-weight="700" fill="#102a43">⊕</text><text x="752.6" y="404.0" font-size="30" font-weight="700" fill="#102a43">UP</text>
+<text class="note" x="596" y="452">Two groups of four. The amber one wraps</text>
+<text class="note" x="596" y="480">around the left and right edges.</text>
+</svg>
