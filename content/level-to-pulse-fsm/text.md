@@ -73,10 +73,7 @@ Each output gets a three-variable K-map with $Q_1$ on the rows and $Q_0 L$ on th
 
 **$D_1$: the don't-care helps.**
 
-| $Q_1$ \ $Q_0 L$ | 00 | 01 | 11 | 10 |
-|:-:|:-:|:-:|:-:|:-:|
-| 0 | 0 | 0 | 1 | 0 |
-| 1 | 0 | 1 | d | d |
+![The D1 K-map: two pairs, Q0·L and Q1·L, each reaching into the don't-care at 111](./images/kmap-d1.svg)
 
 The two 1s are not adjacent to each other, but each is adjacent to the d at $Q_1 Q_0 L = 111$. Treating that d as a 1 gives two pairs, $Q_0 L$ and $Q_1 L$:
 
@@ -86,10 +83,7 @@ Without the don't-care, $D_1$ would need two three-literal product terms.
 
 **$D_0$: the don't-care cannot help.**
 
-| $Q_1$ \ $Q_0 L$ | 00 | 01 | 11 | 10 |
-|:-:|:-:|:-:|:-:|:-:|
-| 0 | 0 | 1 | 0 | 0 |
-| 1 | 0 | 0 | d | d |
+![The D0 K-map: a single 1 at 001 with no neighboring 1 or don't-care, circled alone](./images/kmap-d0.svg)
 
 The single 1 has no neighboring 1 or d to pair with, so it stays a three-literal term:
 
@@ -99,10 +93,7 @@ In words, the machine enters PULSE only from LOW, and only when L is 1.
 
 **$P$: the don't-care is refused on purpose.**
 
-| $Q_1$ \ $Q_0 L$ | 00 | 01 | 11 | 10 |
-|:-:|:-:|:-:|:-:|:-:|
-| 0 | 0 | 0 | 1 | 1 |
-| 1 | 0 | 0 | d | d |
+![The P K-map: the pair in the top row is used; the block of four that takes both don't-cares is refused](./images/kmap-p.svg)
 
 Here the two 1s and the two d's form a block of four, and taking it would give the smallest possible answer, $P = Q_0$. This design does not take it:
 

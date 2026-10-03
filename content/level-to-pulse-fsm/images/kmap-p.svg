@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 470" role="img" aria-label="Three-variable K-map for the output P, rows Q1, columns Q0 L in Gray order. Ones at Q1 Q0 L = 011 and 010, don't-cares at 111 and 110 directly below them. A cyan pair covers the two 1s (P = Q1-bar Q0). A dashed red block of four covering the 1s and both don't-cares (P = Q0) is marked refused, because it would assert P in the unused state 11.">
+  <style>
+    svg { background: #fff; }
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .title  { font-size: 30px; font-weight: 700; fill: #102a43; }
+    .sub    { font-size: 19px; fill: #8198af; }
+    .hdr    { font-size: 22px; font-weight: 700; fill: #41556b; }
+    .corner { font-size: 18px; font-weight: 700; fill: #8198af; }
+    .val    { font-size: 34px; font-weight: 700; fill: #102a43; }
+    .val0   { font-size: 34px; font-weight: 700; fill: #b9c6d4; }
+    .valx   { font-size: 34px; font-weight: 700; fill: #7e93a8; }
+    .idx    { font-size: 15px; fill: #a3b2c2; }
+    .note   { font-size: 19px; fill: #41556b; }
+    .grid   { fill: none; stroke: #aab9c9; stroke-width: 2; }
+    .gridh  { fill: none; stroke: #52677e; stroke-width: 3; }
+    .frame  { fill: none; stroke: #52677e; stroke-width: 3.5; }
+    .cap    { font-size: 20px; font-weight: 700; fill: #41556b; }
+    .capsub { font-size: 17px; fill: #8198af; }
+    .tag    { font-size: 16px; font-weight: 700; letter-spacing: 0.04em; }
+  </style>
+<text class="title" x="36" y="52">P: the don&#8217;t-cares are refused on purpose</text>
+<text class="sub" x="36" y="86">Minimal is not always what you build. Here the smaller answer would misbehave at power-up.</text>
+<rect x="342" y="246" width="96" height="96" fill="#eef3f8"/>
+<rect x="438" y="246" width="96" height="96" fill="#eef3f8"/>
+<line class="grid" x1="246" y1="150" x2="246" y2="342"/>
+<line class="gridh" x1="342" y1="150" x2="342" y2="342"/>
+<line class="grid" x1="438" y1="150" x2="438" y2="342"/>
+<line class="gridh" x1="150" y1="246" x2="534" y2="246"/>
+<rect class="frame" x="150" y="150" width="384" height="192"/>
+<rect x="349.0" y="157.0" width="178.0" height="178.0" rx="16" fill="none" stroke="#d23b54" stroke-width="3.5" stroke-dasharray="10 8"/>
+<rect x="359.0" y="167.0" width="158.0" height="62.0" rx="16" fill="#0aa5c4" fill-opacity="0.14" stroke="#0aa5c4" stroke-width="4.5"/>
+<text class="hdr" x="198" y="136" text-anchor="middle" font-size="24">00</text>
+<text class="hdr" x="294" y="136" text-anchor="middle" font-size="24">01</text>
+<text class="hdr" x="390" y="136" text-anchor="middle" font-size="24">11</text>
+<text class="hdr" x="486" y="136" text-anchor="middle" font-size="24">10</text>
+<text class="hdr" x="134" y="206" text-anchor="end" font-size="24">0</text>
+<text class="hdr" x="134" y="302" text-anchor="end" font-size="24">1</text>
+<text class="corner" x="134" y="136" text-anchor="end">Q1 \ Q0L</text>
+<text class="val0" x="198" y="212" text-anchor="middle" font-size="40">0</text>
+<text class="val0" x="294" y="212" text-anchor="middle" font-size="40">0</text>
+<text class="val" x="390" y="212" text-anchor="middle" font-size="40">1</text>
+<text class="val" x="486" y="212" text-anchor="middle" font-size="40">1</text>
+<text class="val0" x="198" y="308" text-anchor="middle" font-size="40">0</text>
+<text class="val0" x="294" y="308" text-anchor="middle" font-size="40">0</text>
+<text class="valx" x="390" y="308" text-anchor="middle" font-size="40">d</text>
+<text class="valx" x="486" y="308" text-anchor="middle" font-size="40">d</text>
+<text class="capsub" x="342" y="388" text-anchor="middle">rows: Q1 &#183; columns: Q0 L in Gray order &#183; d = state 11, unused</text>
+<line x1="582" y1="130" x2="582" y2="430" stroke="#aab9c9" stroke-width="2"/>
+<circle cx="620" cy="166" r="6" fill="#0aa5c4"/>
+<text class="note" x="638" y="172">used: the pair in the top row</text>
+<text x="612.0" y="236.0" font-size="30" font-weight="700" fill="#102a43">P</text><text x="641.4" y="236.0" font-size="30" font-weight="700" fill="#102a43">=</text><text x="669.0" y="236.0" font-size="30" font-weight="700" fill="#102a43">Q1</text><line x1="670.8" y1="209.6" x2="708.0" y2="209.6" stroke="#102a43" stroke-width="2.2" stroke-linecap="round"/><text x="711.3" y="236.0" font-size="30" font-weight="700" fill="#102a43">·</text><text x="721.8" y="236.0" font-size="30" font-weight="700" fill="#102a43">Q0</text>
+<circle cx="620" cy="284" r="6" fill="#d23b54"/>
+<text class="note" x="638" y="290">refused: the block of four, P = Q0</text>
+<text class="note" x="612" y="330">It is smaller, but it makes P = 1</text>
+<text class="note" x="612" y="358">in state 11. A machine that powers up</text>
+<text class="note" x="612" y="386">there would fire a pulse for a coin</text>
+<text class="note" x="612" y="414">nobody inserted.</text>
+</svg>
