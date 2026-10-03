@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSM Introduction — State Register, Next-State Logic, Output Logic</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 = the state / the register · amber #ffb74d = inputs and CLK
+       · violet #b388ff = the output side · navy #0d1b2a panels · logic-0 wires #7d9bb5 */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 196px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 12px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .ov { text-decoration: overline; text-decoration-thickness: 2px; text-underline-offset: 2px; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: baseline; gap: 12px; padding: 9px 18px;
+        border-bottom: 2px solid #24384c; flex-shrink: 0; }
+    .panel-head .ph { font-size: 19px; font-weight: 700; color: #4fc3f7; }
+    .panel-head .ph.amber { color: #ffb74d; }
+    .panel-head .ph.violet { color: #b388ff; }
+    .panel-head .role { font-size: 15px; color: #607d8b; }
+    .main { display: flex; gap: 16px; flex: 1; min-height: 0; }
+    .col { display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 0; min-height: 0; }
+    .svgbody { flex: 1; min-height: 0; padding: 6px 10px; display: flex; align-items: center; justify-content: center; }
+    .svgbody svg { width: 100%; height: 100%; display: block; }
+
+    /* ---- beat 1: the three boxes ---- */
+    .idea { border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a; padding: 13px 18px;
+        font-size: 17px; line-height: 1.5; color: #b0bec5; flex-shrink: 0; }
+    .idea.big { font-size: 19px; }
+    .idea b { color: #cfd8dc; } .idea .cy { color: #4fc3f7; font-weight: 700; }
+    .boxcards { display: flex; flex-direction: column; gap: 16px; padding: 16px 14px; flex: 1; min-height: 0; justify-content: space-evenly; }
+    .bcard { border: 2px solid #24384c; border-radius: 12px; background: #0b1622; padding: 14px 18px;
+        cursor: pointer; transition: border-color .12s, background .12s; }
+    .bcard .bt { font-size: 20px; font-weight: 700; color: #cfd8dc; display: flex; align-items: baseline; gap: 10px; }
+    .bcard .bt .kk { font-size: 12px; border: 1px solid #37506a; border-radius: 6px; padding: 1px 7px; color: #78909c; }
+    .bcard .bd { font-size: 17px; color: #90a4ae; line-height: 1.45; margin-top: 6px; }
+    .bcard .bd .mono { color: #4fc3f7; }
+    .bcard.on { border-color: #4fc3f7; background: rgba(79,195,247,0.09); }
+    .bcard.on .bt { color: #4fc3f7; }
+    .bcard.reg.on { border-color: #4fc3f7; }
+    .bcard.out.on { border-color: #b388ff; background: rgba(179,136,255,0.09); }
+    .bcard.out.on .bt { color: #b388ff; }
+    .bcard.nxt.on { border-color: #ffb74d; background: rgba(255,183,77,0.09); }
+    .bcard.nxt.on .bt { color: #ffb74d; }
+
+    .fsmbox { fill: #0b1622; stroke: #4a6274; stroke-width: 3; transition: stroke .15s, fill .15s; }
+    .fsmbox.lit-n { stroke: #ffb74d; stroke-width: 5; fill: rgba(255,183,77,0.10); }
+    .fsmbox.lit-s { stroke: #4fc3f7; stroke-width: 5; fill: rgba(79,195,247,0.10); }
+    .fsmbox.lit-o { stroke: #b388ff; stroke-width: 5; fill: rgba(179,136,255,0.10); }
+    .bt1 { fill: #cfd8dc; font-weight: 700; text-anchor: middle; }   /* size set per-element — a font-size here would override the attribute */
+    .bt2 { fill: #78909c; font-size: 17px; text-anchor: middle; }
+    .wlab { font-family: 'Menlo','Consolas',monospace; font-size: 19px; text-anchor: middle; }
+
+    /* ---- state diagram ---- */
+    .sd-node .sdc { fill: #0d1b2a; stroke: #4a6274; stroke-width: 3; transition: stroke .18s, fill .18s; }
+    .sd-node.on .sdc { stroke: #4fc3f7; stroke-width: 4.5; fill: rgba(79,195,247,0.16); }
+    .sd-node .sdname { fill: #cfd8dc; font-family: 'Segoe UI',sans-serif; font-weight: 700; text-anchor: middle; }
+    .sd-node.on .sdname { fill: #4fc3f7; }
+    .sd-node .sdenc { fill: #7a8ea0; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; }
+    .sd-node.on .sdenc { fill: #4fc3f7; }
+    .sd-node .sdz { fill: #607d8b; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; }
+    .sd-node.zone .sdz { fill: #b388ff; }
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 2.6; transition: stroke .18s; }
+    .arc.on { stroke: #4fc3f7; stroke-width: 4.5; }
+    .arc-l { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #16213e; stroke-width: 5; }
+    .arc-l.on { fill: #4fc3f7; }
+    .sd-hint { fill: #607d8b; font-family: 'Segoe UI',sans-serif; font-size: 15px; text-anchor: middle; }
+    .rst { stroke: #90a4ae; stroke-width: 2.6; fill: none; }
+    .rstl { fill: #90a4ae; font-family: 'Segoe UI',sans-serif; font-size: 15px; text-anchor: middle; }
+
+    /* ---- state table ---- */
+    .sttab { border-collapse: collapse; font-family: 'Menlo','Consolas',monospace; }
+    .sttab th { font-family: 'Segoe UI',sans-serif; font-weight: 600; color: #607d8b;
+        border-bottom: 2px solid #24384c; padding: 5px 10px; white-space: nowrap; }
+    .sttab td { text-align: center; color: #b0bec5; border-bottom: 1px solid #16283a; padding: 3px 8px; }
+    #p3 [data-sttab] { font-size: 23px; }
+    #p3 [data-sttab] th { font-size: 18px; padding: 8px 12px; }
+    #p3 [data-sttab] td { padding: 18px 12px; }
+    #p3 .col .svgbody { align-items: flex-start; }
+    #p3 [data-sttab] td.note { font-size: 18px; }
+    #p4 .col { flex-direction: row; }
+    #p4 .col > .panel:first-child { flex: 1; min-width: 0; }
+    #p4 .col > .panel:last-child { flex: 0 0 392px; }
+    #p4 [data-sttab] { font-size: 15px; }
+    #p4 [data-sttab] th { padding: 3px 6px; font-size: 12.5px; }
+    #p4 [data-sttab] td { padding: 11px 6px; }
+    #p4 .col .svgbody { align-items: flex-start; }
+    .sttab td.u { color: #ffb74d; }
+    .sttab td.nx { color: #cfd8dc; }
+    .sttab td.mx { color: #7a8ea0; }
+    .sttab td.mx.one { color: #b388ff; font-weight: 700; }
+    .sttab td.note { font-family: 'Segoe UI',sans-serif; color: #607d8b; text-align: left; }
+    .sttab tr.st0 td.mx { background: rgba(179,136,255,0.05); }
+    .sttab tr.st3 td.mx { background: rgba(179,136,255,0.14); }
+    .sttab tr.horow td { background: rgba(79,195,247,0.13); color: #4fc3f7; }
+    .sttab tr.horow td.u { color: #ffb74d; }
+    .sttab tr.horow td.note { color: #7ea9c4; }
+    .sttab .sep td { border-top: 2px solid #24384c; }
+
+    /* ---- input strip ---- */
+    .strip { display: flex; flex-direction: column; gap: 4px; padding: 8px 14px 10px; }
+    .strip .row { display: flex; align-items: center; gap: 4px; }
+    .strip .rl { width: 92px; flex-shrink: 0; font-size: 13.5px; color: #607d8b; text-align: right; padding-right: 8px; }
+    .strip .rl.amber { color: #ffb74d; } .strip .rl.violet { color: #b388ff; }
+    .strip .cell { flex: 1; min-width: 0; text-align: center; font-family: 'Menlo','Consolas',monospace;
+        font-size: 15px; padding: 2px 0; border: 2px solid transparent; border-radius: 6px; color: #8fa8bd; }
+    .strip .row.hdr .cell { font-size: 12px; color: #55697c; }
+    .strip .cell.one { color: #4fc3f7; font-weight: 700; }
+    .strip .cell.zero { color: #7d9bb5; }
+    .strip .cell.amb { color: #ffb74d; font-weight: 700; }
+    .strip .cell.vio { color: #b388ff; font-weight: 700; }
+    .strip .cell.now { border-color: #ffb74d; }
+    .strip .cell.future { opacity: .38; }
+    .ctrl { display: flex; align-items: center; gap: 10px; padding: 4px 14px 10px; flex-wrap: wrap; }
+    .btn { border: 2px solid #37506a; border-radius: 999px; padding: 4px 14px; font-size: 14.5px;
+        color: #90a4ae; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+    .btn:hover { border-color: #4fc3f7; color: #4fc3f7; }
+    .btn.go { border-color: #ffb74d; color: #ffb74d; }
+    .btn .k { font-size: 11.5px; border: 1px solid currentColor; border-radius: 5px; padding: 0 5px; opacity: .8; }
+    .readout { font-family: 'Menlo','Consolas',monospace; font-size: 14.5px; color: #78909c; margin-left: 4px; }
+    .readout b { color: #4fc3f7; } .readout .a { color: #ffb74d; } .readout .v { color: #b388ff; }
+
+
+    /* ---- beat 2 legend (replaces the old "How to read it" cards) ---- */
+    .legend { border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a; padding: 10px 18px;
+        display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
+    .legend .lg { font-size: 17px; color: #90a4ae; }
+    .legend .lk { display: inline-block; width: 78px; font-weight: 700; color: #cfd8dc; font-size: 16px; }
+
+    /* ---- the strip, promoted: fills the column on beats 2-3 ---- */
+    .panel.stripbig .panel-head .ph { font-size: 22px; }
+    .panel.stripbig .panel-head .role { font-size: 16px; }
+    .panel.stripbig .strip { flex: 1; justify-content: space-evenly; padding: 10px 16px; }
+    .panel.stripbig .strip .rl { width: 104px; font-size: 18px; }
+    .panel.stripbig .strip .cell { font-size: 23px; padding: 6px 0; border-width: 3px; border-radius: 8px; }
+    .panel.stripbig .strip .row.hdr .cell { font-size: 16px; }
+    .panel.stripbig .ctrl { padding: 8px 16px 14px; gap: 14px; }
+    .panel.stripbig .btn { font-size: 17px; padding: 6px 16px; }
+    .panel.stripbig .readout { font-size: 19px; }
+    .panel.stripmid .strip .rl { font-size: 16px; }
+    .panel.stripmid .strip .cell { font-size: 19px; padding: 3px 0; border-width: 3px; }
+    .panel.stripmid .strip .row.hdr .cell { font-size: 14px; }
+    .panel.stripmid .readout { font-size: 17px; }
+    .panel.stripmid .btn { font-size: 16px; }
+
+    /* ---- vocabulary ---- */
+    .vocab { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+    .vitem { border: 2px solid #24384c; border-radius: 10px; background: #0b1622; padding: 6px 11px;
+        font-size: 14px; color: #90a4ae; line-height: 1.35; flex: 1 1 300px; }
+    .vitem b { color: #cfd8dc; display: block; font-size: 15px; }
+    .vitem.off { border-style: dashed; opacity: .72; }
+    .vitem.off b { color: #78909c; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #37506a; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { font-size: 15px; color: #607d8b; }
+    .controls .k { border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        font-family: 'Menlo','Consolas',monospace; color: #90a4ae; }
+    .controls .k.amber { border-color: #6a5324; color: #ffb74d; }
+    .controls .k.violet { border-color: #4a3a6a; color: #b388ff; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 260 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="26" y="34" width="56" height="34" rx="6" fill="#0d1b2a" stroke="#8fa8bd" stroke-width="2.4"/>
+                <rect x="102" y="34" width="56" height="34" rx="6" fill="rgba(79,195,247,0.16)" stroke="#4fc3f7" stroke-width="2.6"/>
+                <rect x="178" y="34" width="56" height="34" rx="6" fill="#0d1b2a" stroke="#b388ff" stroke-width="2.4"/>
+                <g stroke="#8fa8bd" stroke-width="2.2">
+                    <path d="M6 51 L26 51"/><path d="M82 51 L102 51"/><path d="M158 51 L178 51"/><path d="M234 51 L254 51"/>
+                </g>
+                <path d="M196 51 L196 18 L54 18 L54 34" stroke="#4fc3f7" stroke-width="2.2" stroke-dasharray="5 4"/>
+                <circle cx="196" cy="51" r="3.2" fill="#4fc3f7"/>
+                <path d="M130 84 L130 68" stroke="#ffb74d" stroke-width="2.2"/>
+                <path d="M40 84 L220 84" stroke="#ffb74d" stroke-width="2.2"/>
+                <text x="130" y="97" font-family="'Menlo',monospace" font-size="11" fill="#ffb74d" text-anchor="middle">CLK</text>
+                <text x="54" y="55" font-family="'Segoe UI',sans-serif" font-size="10" fill="#8fa8bd" text-anchor="middle">next</text>
+                <text x="130" y="55" font-family="'Segoe UI',sans-serif" font-size="10" fill="#4fc3f7" text-anchor="middle">state</text>
+                <text x="206" y="55" font-family="'Segoe UI',sans-serif" font-size="10" fill="#b388ff" text-anchor="middle">out</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>FSM Introduction <span class="sub">&mdash; state register, next-state logic, output logic</span></h1>
+            <div class="subtitle">Three boxes, three pictures, one machine &middot; running example: a 2-bit up/down counter with a MAX flag</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">The Three Boxes</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">As a State Diagram</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">As a State Table</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">One Machine, Three Pictures</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 -->
+        <div class="page" id="p1">
+            <div class="main">
+                <div class="panel" style="flex:0 0 1180px">
+                    <div class="panel-head"><span class="ph">The three boxes</span><span class="role">every synchronous FSM, no exceptions &middot; click a box, or press <b>N</b> / <b>S</b> / <b>O</b></span></div>
+                    <div class="svgbody"><svg id="blk1" viewBox="20 100 1150 530" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                </div>
+                <div class="col">
+                    <div class="idea big"><b>Only one box remembers.</b> The <span class="cy">state register</span> holds the state. The other two boxes are ordinary combinational logic, wired in a loop.</div>
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head"><span class="ph">What each box does</span><span class="role">click one, or press its key</span></div>
+                        <div class="boxcards">
+                            <div class="bcard nxt" data-box="n"><div class="bt">next-state logic <span class="kk">N</span></div>
+                                <div class="bd">Combinational. Reads the <b>inputs</b> and the <b>current state</b>; produces <span class="mono">D</span>, the state to load at the next edge.</div></div>
+                            <div class="bcard reg" data-box="s"><div class="bt">state register <span class="kk">S</span></div>
+                                <div class="bd">D flip-flops on one clock &mdash; <b>the only memory.</b> Changes only on the rising edge. <b>RESET</b> loads state <span class="mono">0</span>.</div></div>
+                            <div class="bcard out" data-box="o"><div class="bt">output logic <span class="kk">O</span></div>
+                                <div class="bd">Combinational, from the <b>state</b> alone: <span class="mono">MAX = Q1&middot;Q0</span>. Outputs that read only the state make a <b style="color:#b388ff">Moore machine</b>.</div></div>
+                        </div>
+                    </div>
+                    <div class="idea big"><b>Next:</b> the same counter as a <b>state diagram</b> (2), a <b>state table</b> (3), then all three at once (4).</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 -->
+        <div class="page" id="p2">
+            <div class="main">
+                <div class="panel" style="flex:0 0 880px">
+                    <div class="panel-head"><span class="ph">As a state diagram</span><span class="role">bubbles = register values &middot; arcs = what the next-state logic does &middot; the label inside = the output</span></div>
+                    <div class="svgbody"><svg id="sd2" viewBox="60 36 640 500" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                </div>
+                <div class="col">
+                    <div class="idea big"><b>The machine:</b> a 2-bit up/down counter. <span class="mono" style="color:#ffb74d">U=1</span> counts up, <span class="mono" style="color:#ffb74d">U=0</span> counts down, wrapping both ways. <span class="mono" style="color:#b388ff">MAX</span> is 1 in state 3 only.</div>
+                    <div class="legend">
+                        <div class="lg"><span class="lk">bubble</span>a value the register holds &mdash; two flip-flops, four bubbles</div>
+                        <div class="lg"><span class="lk">arc</span>one clock edge, one per value of <span class="mono" style="color:#ffb74d">U</span> &mdash; up arcs inside the ring, down arcs outside</div>
+                        <div class="lg"><span class="lk">inside</span>the output, <span class="mono" style="color:#b388ff">MAX</span> &mdash; it belongs to the state, not to the arc</div>
+                    </div>
+                    <div class="panel stripbig" style="flex:1">
+                        <div class="panel-head"><span class="ph amber">Input strip</span><span class="role" data-striprole></span></div>
+                        <div class="strip" data-strip></div>
+                        <div class="ctrl" data-ctrl></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 -->
+        <div class="page" id="p3">
+            <div class="main">
+                <div class="panel" style="flex:0 0 1000px">
+                    <div class="panel-head"><span class="ph">As a state table</span><span class="role">the same eight arcs, one per row &middot; <span style="color:#ffb74d">U</span> and the current state in, the next state and the output out</span></div>
+                    <div class="svgbody" style="align-items:flex-start; padding: 10px 22px;"><table class="sttab" data-sttab style="width:100%"></table></div>
+                </div>
+                <div class="col">
+                    <div class="idea big"><b>Read a row:</b> with input <span class="mono">U</span> and state <span class="mono">Q1Q0</span>, the next edge loads <span class="mono">Q1&#8314;Q0&#8314;</span>. Eight rows &mdash; one per arc on beat 2.</div>
+                    <div class="panel" style="flex:0 0 auto">
+                        <div class="panel-head"><span class="ph violet">MAX is a column of the state</span></div>
+                        <div class="svgbody" style="padding:0"><table class="sttab" data-maxtab style="width:100%"></table></div>
+                        <div class="idea" style="border:none; background:none; padding: 8px 18px 14px; font-size: 17px;"><span class="mono" style="color:#b388ff">MAX</span> never changes within a state &mdash; the output reads only the state: a <b style="color:#b388ff">Moore machine</b>.</div>
+                    </div>
+                    <div class="panel stripbig" style="flex:1">
+                        <div class="panel-head"><span class="ph amber">Input strip</span><span class="role" data-striprole></span></div>
+                        <div class="strip" data-strip></div>
+                        <div class="ctrl" data-ctrl></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 -->
+        <div class="page" id="p4">
+            <div class="main">
+                <div class="panel" style="flex:0 0 1020px">
+                    <div class="panel-head"><span class="ph">The same three boxes, with the lids off</span><span class="role">next-state logic amber &middot; register cyan &middot; output logic violet &middot; wires carry live values</span></div>
+                    <div class="svgbody"><svg id="ckt4" viewBox="0 0 980 620" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                </div>
+                <div class="col">
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head"><span class="ph">Diagram</span><span class="role">the same clock, the same state</span></div>
+                        <div class="svgbody"><svg id="sd4" viewBox="60 36 640 500" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-head"><span class="ph">Table</span><span class="role">the lit row is the arc being taken now</span></div>
+                        <div class="svgbody" style="padding: 4px 14px;"><table class="sttab" data-sttab style="width:100%"></table></div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel stripmid" style="flex:0 0 auto">
+                <div class="panel-head"><span class="ph amber">Input strip</span><span class="role" data-striprole></span></div>
+                <div class="strip" data-strip></div>
+                <div class="ctrl" data-ctrl></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">&rarr;</span>/<span class="k">&larr;</span> next / previous
+            &middot; <span class="k amber">Space</span> CLK step
+            &middot; <span class="k amber">U</span> toggle the input
+            &middot; <span class="k">R</span> &#8634; reset
+            &middot; beat 1: <span class="k violet">N</span>/<span class="k violet">S</span>/<span class="k violet">O</span> or click a box
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const W0 = '#7d9bb5', W1 = '#4fc3f7', AMB = '#ffb74d', VIO = '#b388ff', INK = '#cfd8dc', DIM = '#90a4ae', LINE = '#8fa8bd';
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+    // ============ THE MACHINE (source of truth) ============
+    // 2-bit up/down counter with a MAX flag. U = 1 counts up, U = 0 counts down; both directions wrap.
+    // Moore: MAX = 1 in state 3 only, so it is a function of the state alone.
+    const NSTATES = 4;
+    const nextState = (s, u) => u ? (s + 1) % NSTATES : (s + NSTATES - 1) % NSTATES;
+    const maxOf = (s) => (s === 3 ? 1 : 0);
+    const bits = (s) => ({ Q1: (s >> 1) & 1, Q0: s & 1 });
+    // the equations the circuit on beat 4 actually draws — checked against nextState() by the assertions
+    const eqD0 = (Q1, Q0, U) => 1 - Q0;
+    const eqD1 = (Q1, Q0, U) => Q1 ^ Q0 ^ (1 - U);
+    const eqMAX = (Q1, Q0) => Q1 & Q0;
+    const PRESET = [1,1,1,1,0,0,0,0,1,1,0,1];        // 12 clocks
+    const N = PRESET.length;
+    // rows of the state table, in the brief's order: U major, then Q1 Q0
+    const ROWS = [];
+    for (const U of [0, 1]) for (const s of [0, 1, 2, 3]) {
+        const { Q1, Q0 } = bits(s), n = nextState(s, U);
+        ROWS.push({ U, s, Q1, Q0, n, N1: (n >> 1) & 1, N0: n & 1, MAX: maxOf(s),
+                    note: (U ? 'up' : 'down') + (U && s === 3 ? ', 3 → 0 wraps' : (!U && s === 0 ? ', 0 → 3 wraps' : '')) });
+    }
+    const rowIndex = (u, s) => ROWS.findIndex(r => r.U === u && r.s === s);
+    function runTrace(us) {
+        const snaps = []; let s = 0;
+        for (let i = 0; i < us.length; i++) { snaps.push({ s, u: us[i], max: maxOf(s) }); s = nextState(s, us[i]); }
+        return { snaps, final: s };
+    }
+
+    // ============ STATE ============
+    const FIRST = 1, LAST = 4;
+    let page = 1, tclk = 0, us = PRESET.slice(), offScript = false, litBox = 's';
+    const pages = Array.from(document.querySelectorAll('.page')), tabs = Array.from(document.querySelectorAll('.tab')), dots = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+
+    // ============ BEAT 1 — THE THREE BOXES ============
+    // Boxes and wires are laid out from this table so the assertions can check the drawing against it.
+    // 210-wide boxes with 130-wide gaps: the longest title ("next-state logic" at 20px) sits inside its box,
+    // and the longest net label ("next state" at 15px) sits inside its gap. Both were tight at 200/140.
+    const BOX = { n: { x: 185, y: 215, w: 210, h: 170, t: 'next-state logic', s: 'combinational' },
+                  s: { x: 525, y: 215, w: 210, h: 170, t: 'state register',  s: 'D flip-flops · one CLK' },
+                  o: { x: 865, y: 215, w: 210, h: 170, t: 'output logic',    s: 'combinational' } };
+    const boxEls = {};
+    (function beat1() {
+        const g = document.getElementById('blk1');
+        const MID = 300;                                   // the spine every box sits on
+        for (const [k, b] of Object.entries(BOX)) {
+            const grp = el('g', { class: 'bgrp', 'data-box': k }, g);
+            const r = el('rect', { class: 'fsmbox', x: b.x, y: b.y, width: b.w, height: b.h, rx: 16 }, grp);
+            const t1 = el('text', { class: 'bt1', x: b.x + b.w / 2, y: MID - 4, 'font-size': 24 }, grp); t1.textContent = b.t;  // measured: 'next-state logic' is 213px at 27, 189px at 24, inside a 210-wide box
+            const t2 = el('text', { class: 'bt2', x: b.x + b.w / 2, y: MID + 26 }, grp); t2.textContent = b.s;
+            grp.style.cursor = 'pointer';
+            grp.addEventListener('click', () => setBox(k));
+            boxEls[k] = { grp, rect: r };
+        }
+        const wire = (pts, col, w) => el('path', { d: 'M' + pts.map(p => p.join(',')).join(' L'), stroke: col || LINE, 'stroke-width': w || 3 }, g);
+        // arrowhead pointing along dir: 'r' right, 'd' down, 'u' up
+        const arrow = (x, y, col, dir) => {
+            const d = dir === 'd' ? `M${x - 8},${y - 14} L${x},${y} L${x + 8},${y - 14}`
+                    : dir === 'u' ? `M${x - 8},${y + 14} L${x},${y} L${x + 8},${y + 14}`
+                    : `M${x - 14},${y - 8} L${x},${y} L${x - 14},${y + 8}`;
+            return el('path', { d, stroke: col || LINE, 'stroke-width': 3, 'stroke-linecap': 'butt', 'stroke-linejoin': 'miter' }, g);
+        };
+        // two-line net label, both lines ABOVE the wire so nothing can land on a box title
+        const netlab = (x, top, bot, col) => {
+            const a = el('text', { class: 'wlab', x, y: MID - 44, fill: col || DIM, 'font-size': 20 }, g); a.textContent = top;
+            const b = el('text', { class: 'wlab', x, y: MID - 20, fill: col || DIM, 'font-size': 15 }, g); b.textContent = bot;
+            return [a, b];
+        };
+        // inputs in
+        wire([[60, MID], [BOX.n.x, MID]], AMB); arrow(BOX.n.x, MID, AMB);
+        netlab(122, 'U', 'the input', AMB);
+        // next → register  (the D wire)
+        wire([[BOX.n.x + BOX.n.w, MID], [BOX.s.x, MID]]); arrow(BOX.s.x, MID);
+        netlab(460, 'D', 'next state', DIM);
+        // register → output logic (the Q wire)
+        wire([[BOX.s.x + BOX.s.w, MID], [BOX.o.x, MID]], W1); arrow(BOX.o.x, MID, W1);
+        netlab(815, 'Q', 'state now', W1);
+        // outputs out
+        wire([[BOX.o.x + BOX.o.w, MID], [1150, MID]], VIO); arrow(1150, MID, VIO);
+        netlab(1112, 'MAX', 'output', VIO);
+        // the feedback path — over the top, tapped off the Q wire
+        const TAPX = 752, TOP = 150, DROPX = 290;
+        el('circle', { cx: TAPX, cy: MID, r: 6, fill: W1 }, g);
+        wire([[TAPX, MID], [TAPX, TOP], [DROPX, TOP], [DROPX, BOX.n.y]], W1, 3);
+        arrow(DROPX, BOX.n.y, W1, 'd');
+        const fb = el('text', { class: 'wlab', x: (DROPX + TAPX) / 2, y: TOP - 16, fill: W1, 'font-size': 19 }, g);
+        fb.textContent = 'the state comes back around';
+        // clock and reset in from below — both land on the register, because both act on the register alone
+        const CLKY = 490, RSTY = 550, CLKX = 600, RSTX = 675, BOT = BOX.s.y + BOX.s.h;
+        wire([[60, CLKY], [CLKX, CLKY], [CLKX, BOT]], AMB);
+        arrow(CLKX, BOT, AMB, 'u');
+        const cl = el('text', { class: 'wlab', x: 105, y: CLKY - 16, fill: AMB, 'font-size': 20 }, g); cl.textContent = 'CLK';
+        wire([[60, RSTY], [RSTX, RSTY], [RSTX, BOT]], AMB);
+        arrow(RSTX, BOT, AMB, 'u');
+        const rl = el('text', { class: 'wlab', x: 118, y: RSTY - 16, fill: AMB, 'font-size': 20 }, g); rl.textContent = 'RESET';
+        // Moore, named here at Mike's request (2026-09-07) — the word now belongs to this beat, not only to the Mealy versus Moore topic
+        const mo = el('text', { class: 'wlab', x: 950, y: 434, fill: VIO, 'font-size': 18 }, g);
+        mo.textContent = 'from the state alone → a Moore machine';
+        // captions under the diagram
+        const ct = el('text', { class: 'bt2', x: 590, y: 606, 'font-size': 18 }, g);
+        ct.textContent = 'one clock for every flip-flop · RESET loads state 0 at the next edge';
+    })();
+    function setBox(k) {
+        litBox = k;
+        for (const [key, o] of Object.entries(boxEls)) o.rect.setAttribute('class', 'fsmbox' + (key === k ? ' lit-' + k : ''));
+        document.querySelectorAll('#p1 .bcard').forEach(c => c.classList.toggle('on', c.dataset.box === k));
+    }
+    document.querySelectorAll('#p1 .bcard').forEach(c => c.addEventListener('click', () => setBox(c.dataset.box)));
+
+    // ============ STATE DIAGRAM (beats 2 and 4) ============
+    // Four bubbles on a ring, 0 → 1 → 2 → 3 clockwise. Every arc is generated from NODES + the machine,
+    // never from a typed list: bend is the perpendicular offset of the control point, n = (-uy, ux), so a
+    // single positive bend puts every count-up arc inside the ring and every count-down arc outside it.
+    const R = 62, BEND = 42;
+    const NODES = [{ x: 200, y: 160 }, { x: 560, y: 160 }, { x: 560, y: 430 }, { x: 200, y: 430 }];
+    const EDGES = [];
+    for (let s = 0; s < NSTATES; s++) for (const u of [0, 1]) EDGES.push({ from: s, to: nextState(s, u), u });
+    function injectMarkers(target) {                 // Chrome drops markers whose defs sit in a display:none subtree
+        const mk = target.id, defs = el('defs', {}, target);
+        for (const [id, fill] of [['ah', LINE], ['ahon', W1], ['ahg', DIM]]) {
+            const m = el('marker', { id: id + '-' + mk, markerWidth: 20, markerHeight: 16, refX: 14, refY: 6.5, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+            el('path', { d: 'M0,0 L16,6.5 L0,13 Z', fill }, m);
+        }
+        return mk;
+    }
+    function buildRing(target, opts) {
+        const sc = opts.scale || 1, mk = injectMarkers(target), arcs = [];
+        for (const ed of EDGES) {
+            const A = NODES[ed.from], B = NODES[ed.to];
+            const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+            const C = { x: (A.x + B.x) / 2 + nx * BEND, y: (A.y + B.y) / 2 + ny * BEND };
+            const sa = Math.atan2(C.y - A.y, C.x - A.x), ea = Math.atan2(C.y - B.y, C.x - B.x);
+            const P0 = { x: A.x + R * Math.cos(sa), y: A.y + R * Math.sin(sa) }, P2 = { x: B.x + (R + 1) * Math.cos(ea), y: B.y + (R + 1) * Math.sin(ea) };
+            const d = `M${P0.x.toFixed(1)},${P0.y.toFixed(1)} Q${C.x.toFixed(1)},${C.y.toFixed(1)} ${P2.x.toFixed(1)},${P2.y.toFixed(1)}`;
+            const mx = 0.25 * P0.x + 0.5 * C.x + 0.25 * P2.x, my = 0.25 * P0.y + 0.5 * C.y + 0.25 * P2.y;
+            const path = el('path', { class: 'arc', 'data-from': ed.from, 'data-to': ed.to, 'data-u': ed.u, d, 'marker-end': `url(#ah-${mk})` }, target);
+            const lb = el('text', { class: 'arc-l', 'data-from': ed.from, 'data-u': ed.u, x: (mx + nx * 20).toFixed(1), y: (my + ny * 20 + 6).toFixed(1), 'font-size': 20 * sc }, target);
+            lb.textContent = 'U=' + ed.u;
+            arcs.push({ edge: ed, path, lab: lb });
+        }
+        const nodes = [];
+        for (let s = 0; s < NSTATES; s++) {
+            const n = NODES[s], g = el('g', { class: 'sd-node' + (maxOf(s) ? ' zone' : ''), 'data-state': s }, target);
+            el('circle', { class: 'sdc', cx: n.x, cy: n.y, r: R }, g);
+            // compact (beat 4): the scaled type cannot fit three lines in the bubble, and the table beside it
+            // already shows Q1 Q0 — so the count and MAX only
+            if (opts.compact) {
+                const t1 = el('text', { class: 'sdname', x: n.x, y: n.y + 4, 'font-size': 46 }, g); t1.textContent = s;
+                const t3 = el('text', { class: 'sdz', x: n.x, y: n.y + 38, 'font-size': 21 }, g); t3.textContent = 'MAX=' + maxOf(s);
+            } else {
+                const t1 = el('text', { class: 'sdname', x: n.x, y: n.y - 8, 'font-size': 34 * sc }, g); t1.textContent = s;
+                const t2 = el('text', { class: 'sdenc', x: n.x, y: n.y + 16, 'font-size': 17 * sc }, g); t2.textContent = 'Q1Q0=' + bits(s).Q1 + bits(s).Q0;
+                const t3 = el('text', { class: 'sdz', x: n.x, y: n.y + 38, 'font-size': 16 * sc }, g); t3.textContent = 'MAX=' + maxOf(s);
+            }
+            nodes.push(g);
+        }
+        // reset arrow into state 0
+        const r0 = NODES[0];
+        el('path', { class: 'rst', d: `M${r0.x - 118},${r0.y - 84} L${r0.x - 46},${r0.y - 42}`, 'marker-end': `url(#ahg-${mk})` }, target);
+        const rl = el('text', { class: 'rstl', x: r0.x - 96, y: r0.y - 96, 'font-size': 16 * sc }, target); rl.textContent = 'reset';
+        if (!opts.nohint) { const hint = el('text', { class: 'sd-hint', x: 380, y: 578, 'font-size': 15 * sc }, target); hint.textContent = opts.hint || ''; }
+        return { mk, arcs, nodes };
+    }
+    const RING2 = buildRing(document.getElementById('sd2'), { nohint: true });
+    const RING4 = buildRing(document.getElementById('sd4'), { scale: 1.5, nohint: true, compact: true });
+
+
+    // ============ BEAT 4 — THE CIRCUIT ============
+    // Geometry table first, so the wire values and the assertions read the same numbers the drawing does.
+    const CK = {
+        xnorIn: [[149, 103], [149, 137]], xnorBody: [160, 85, 80, 70], xnorOut: [257, 120],   // 257 = clear of the bubble
+        xorIn:  [[309, 143], [309, 177]], xorBody: [320, 125, 80, 70], xorOut: [400, 160],   // 400 = the gate's own tip
+        ff1: [470, 90, 120, 110], ff0: [470, 300, 120, 110],
+        andBody: [700, 340, 90, 80], andOut: [790, 380],
+        q1lane: 500, q0lane: 548, q1right: 640, q0right: 660, q1left: 140, q0left: 100,
+        clkY: 596, clkX: 440, d1x: 418, loopY: 470, loopX: 620, d0x: 452,
+    };
+    const ckt = {};
+    (function beat4() {
+        const g = document.getElementById('ckt4');
+        const mk = injectMarkers(g);
+        const P = (pts) => 'M' + pts.map(p => p[0] + ',' + p[1]).join(' L');
+        const net = (name, pts) => { const e = el('path', { class: 'w', 'data-net': name, d: P(pts), stroke: W0, 'stroke-width': 3.4 }, g); (ckt[name] = ckt[name] || []).push(e); return e; };
+        const dot = (x, y, name) => { const c = el('circle', { class: 'w', 'data-net': name, cx: x, cy: y, r: 5.5, fill: W0, stroke: 'none' }, g); (ckt[name] = ckt[name] || []).push(c); return c; };
+        const txt = (x, y, s, col, size, anchor, fam) => { const t = el('text', { x, y, fill: col || DIM, 'font-size': size || 17, 'text-anchor': anchor || 'middle',
+            'font-family': fam || "'Menlo','Consolas',monospace", stroke: 'none' }, g); t.textContent = s; return t; };
+        // dashed region labels — the same three boxes as beat 1
+        const region = (x, y, w, h, col, label) => {
+            el('rect', { x, y, width: w, height: h, rx: 14, fill: 'none', stroke: col, 'stroke-width': 2, 'stroke-dasharray': '8 7', opacity: .55 }, g);
+            txt(x + 12, y - 10, label, col, 16, 'start', "'Segoe UI',sans-serif");
+        };
+        region(110, 60, 318, 200, AMB, 'next-state logic');
+        region(445, 34, 165, 452, W1, 'state register');
+        region(680, 320, 130, 120, VIO, 'output logic');
+        // ---- gates ----
+        // An XOR carries TWO back arcs — one arc alone is an OR, which is exactly how this read before.
+        // The bubble, and only the bubble, is what turns the XOR into an XNOR. Inputs land on the OUTER arc (x - 11).
+        const xorShape = (x, y, w, h, xnor) => {
+            el('path', { d: `M${x - 11},${y} Q${x + 11},${y + h / 2} ${x - 11},${y + h}`, stroke: INK, 'stroke-width': 3 }, g);
+            el('path', { d: `M${x},${y} Q${x + 22},${y + h / 2} ${x},${y + h}`, stroke: INK, 'stroke-width': 3 }, g);
+            el('path', { d: `M${x},${y} Q${x + w * 0.72},${y} ${x + w},${y + h / 2} Q${x + w * 0.72},${y + h} ${x},${y + h}`, stroke: INK, 'stroke-width': 3 }, g);
+            if (xnor) el('circle', { cx: x + w + 9, cy: y + h / 2, r: 8, stroke: INK, 'stroke-width': 3, fill: 'none' }, g);
+        };
+        const andShape = (x, y, w, h) => el('path', { d: `M${x},${y} L${x + w - h / 2},${y} A${h / 2},${h / 2} 0 0 1 ${x + w - h / 2},${y + h} L${x},${y + h} Z`, stroke: INK, 'stroke-width': 3 }, g);
+        xorShape(CK.xnorBody[0], CK.xnorBody[1], CK.xnorBody[2], CK.xnorBody[3], true);
+        xorShape(CK.xorBody[0], CK.xorBody[1], CK.xorBody[2], CK.xorBody[3], false);
+        andShape(CK.andBody[0], CK.andBody[1], CK.andBody[2], CK.andBody[3]);
+        txt(200, 78, 'XNOR', DIM, 13, 'middle', "'Segoe UI',sans-serif");
+        txt(360, 118, 'XOR', DIM, 13, 'middle', "'Segoe UI',sans-serif");
+        txt(745, 332, 'AND', DIM, 13, 'middle', "'Segoe UI',sans-serif");
+        // ---- flip-flops ----
+        const dff = (x, y, w, h, label) => {
+            el('rect', { x, y, width: w, height: h, rx: 8, fill: '#0b1622', stroke: INK, 'stroke-width': 3 }, g);
+            txt(x + 16, y + 36, 'D', INK, 19, 'start'); txt(x + w - 16, y + 36, 'Q', INK, 19, 'end');
+            txt(x + w - 16, y + h - 16, 'Q', INK, 19, 'end');
+            el('path', { d: `M${x + w - 30},${y + h - 34} L${x + w - 12},${y + h - 34}`, stroke: INK, 'stroke-width': 2.2 }, g);
+            el('path', { d: `M${x},${y + h - 40} L${x + 20},${y + h - 30} L${x},${y + h - 20}`, stroke: INK, 'stroke-width': 3 }, g);
+            txt(x + w / 2, y - 10, label, W1, 15, 'middle', "'Segoe UI',sans-serif");
+            return { D: [x, y + 30], CLK: [x, y + h - 30], Q: [x + w, y + 30], Qn: [x + w, y + h - 30] };
+        };
+        const F1 = dff(...CK.ff1, 'flip-flop 1'), F0 = dff(...CK.ff0, 'flip-flop 0');
+        ckt.F1 = F1; ckt.F0 = F0;
+        // ---- U in from the left ----
+        net('U', [[40, CK.xnorIn[0][1]], CK.xnorIn[0]]);
+        txt(32, CK.xnorIn[0][1] + 6, 'U', AMB, 21, 'end');
+        // ---- Q0 feedback → XNOR lower input, and Q̄0 → D0 ----
+        net('Q0', [[F0.Q[0], F0.Q[1]], [CK.q0right, F0.Q[1]], [CK.q0right, CK.q0lane], [CK.q0left, CK.q0lane], [CK.q0left, CK.xnorIn[1][1]], CK.xnorIn[1]]);
+        net('Q1', [[F1.Q[0], F1.Q[1]], [CK.q1right, F1.Q[1]], [CK.q1right, CK.q1lane], [CK.q1left, CK.q1lane], [CK.q1left, CK.xorIn[1][1]], CK.xorIn[1]]);
+        // Q̄0 straight back to its own D — the toggle, with no inverter (the Q̄ pin is the inverter).
+        // A tight loop under flip-flop 0, entirely right of the CLK trunk: one hop, over the CLK stub.
+        const X0 = CK.d0x, CS = F0.CLK[1];
+        net('Q0n', [[F0.Qn[0], F0.Qn[1]], [CK.loopX, F0.Qn[1]], [CK.loopX, CK.loopY], [X0, CK.loopY], [X0, CS + 9]]);
+        const hop0 = el('path', { class: 'w', 'data-net': 'Q0n', d: `M${X0},${CS + 9} A9,9 0 0 0 ${X0},${CS - 9}`, stroke: W0, 'stroke-width': 3.4 }, g);
+        ckt.Q0n.push(hop0);
+        net('Q0n', [[X0, CS - 9], [X0, F0.D[1]], F0.D]);
+        // the equation sits inside the loop it describes; the overbar is drawn, not a combining mark
+        const d0t = txt(536, 440, 'D0 = Q0', INK, 16, 'middle');
+        ckt.d0bar = el('path', { d: `M550,${440 - 14} L569,${440 - 14}`, stroke: INK, 'stroke-width': 2 }, g);
+        // ---- XNOR → XOR → D1 ----
+        net('XN', [CK.xnorOut, [285, CK.xnorOut[1]], [285, CK.xorIn[0][1]], CK.xorIn[0]]);
+        // squared up: along, up, in — never a diagonal into a pin
+        net('D1', [CK.xorOut, [CK.d1x, CK.xorOut[1]], [CK.d1x, F1.D[1]], F1.D]);
+        txt(432, 110, 'D1', INK, 16, 'middle');
+        // ---- MAX ----
+        dot(CK.q1right, 362, 'Q1'); dot(CK.q0right, 398, 'Q0');
+        net('Q1', [[CK.q1right, 362], [652, 362]]);
+        el('path', { d: `M652,354 A9,9 0 0 1 652,370`, stroke: W0, 'stroke-width': 3.4, class: 'w', 'data-net': 'Q1' }, g);
+        ckt.Q1.push(g.lastChild);
+        net('Q1', [[668, 362], [CK.andBody[0], 362]]);
+        net('Q0', [[CK.q0right, 398], [CK.andBody[0], 398]]);
+        net('MAX', [CK.andOut, [900, CK.andOut[1]]]);
+        txt(946, CK.andOut[1] + 7, 'MAX', VIO, 21, 'end');
+        // ---- CLK, entering below and hopping the two feedback lanes ----
+        el('path', { d: P([[104, CK.clkY], [CK.clkX, CK.clkY]]), stroke: AMB, 'stroke-width': 3.4 }, g);
+        const hop = (x, y) => `M${x},${y + 9} A9,9 0 0 0 ${x},${y - 9}`;
+        el('path', { d: P([[CK.clkX, CK.clkY], [CK.clkX, CK.q0lane + 9]]), stroke: AMB, 'stroke-width': 3.4 }, g);
+        el('path', { d: hop(CK.clkX, CK.q0lane), stroke: AMB, 'stroke-width': 3.4 }, g);
+        el('path', { d: P([[CK.clkX, CK.q0lane - 9], [CK.clkX, CK.q1lane + 9]]), stroke: AMB, 'stroke-width': 3.4 }, g);
+        el('path', { d: hop(CK.clkX, CK.q1lane), stroke: AMB, 'stroke-width': 3.4 }, g);
+        el('path', { d: P([[CK.clkX, CK.q1lane - 9], [CK.clkX, F1.CLK[1]], [F1.CLK[0], F1.CLK[1]]]), stroke: AMB, 'stroke-width': 3.4 }, g);
+        el('path', { d: P([[CK.clkX, F0.CLK[1]], [F0.CLK[0], F0.CLK[1]]]), stroke: AMB, 'stroke-width': 3.4 }, g);
+        el('circle', { cx: CK.clkX, cy: F0.CLK[1], r: 5.5, fill: AMB, stroke: 'none' }, g);
+        txt(96, CK.clkY + 7, 'CLK', AMB, 19, 'end');
+        // net name plates on the feedback lanes
+        // live value pills
+        const pill = (x, y, name) => {
+            const grp = el('g', { class: 'pill', 'data-pill': name }, g);
+            el('rect', { x: x - 32, y: y - 15, width: 64, height: 30, rx: 8, fill: '#0b1622', stroke: '#37506a', 'stroke-width': 2 }, grp);
+            const t = el('text', { x, y: y + 7, fill: DIM, 'font-size': 16, 'text-anchor': 'middle', 'font-family': "'Menlo','Consolas',monospace", stroke: 'none' }, grp);
+            return { grp, t };
+        };
+        ckt.pills = { Q1: pill(260, CK.q1lane, 'Q1'), Q0: pill(260, CK.q0lane, 'Q0'),
+                      D1: pill(352, 226, 'D1'), D0: pill(536, CK.loopY, 'D0'), MAX: pill(866, 300, 'MAX'), U: pill(72, 76, 'U') };
+    })();
+
+    // ============ SHARED WIDGETS ============
+    function stripHTML(trace) {
+        const cell = (label, f, lcls) => `<div class="row${lcls === 'hdr' ? ' hdr' : ''}"><span class="rl${lcls && lcls !== 'hdr' ? ' ' + lcls : ''}">${label}</span>${us.map((_, i) => {
+            const o = f(i), now = i === tclk, fut = i > tclk;
+            return `<span class="cell${o.cls ? ' ' + o.cls : ''}${now ? ' now' : ''}${fut ? ' future' : ''}">${o.txt}</span>`;
+        }).join('')}</div>`;
+        return cell('clock', (i) => ({ txt: (i === tclk ? '▲ ' : '') + i }), 'hdr')
+            + cell('U', (i) => ({ txt: us[i], cls: 'amb' }), 'amber')
+            + cell('state', (i) => ({ txt: trace.snaps[i].s, cls: 'one' }))
+            + cell('Q1Q0', (i) => ({ txt: '' + bits(trace.snaps[i].s).Q1 + bits(trace.snaps[i].s).Q0 }))
+            + cell('MAX', (i) => ({ txt: trace.snaps[i].max, cls: trace.snaps[i].max ? 'vio' : 'zero' }), 'violet');
+    }
+    const CTRL = `<span class="btn go" data-step>CLK ▶ step<span class="k">Space</span></span>`
+        + `<span class="btn" data-utog>toggle U<span class="k">U</span></span>`
+        + `<span class="btn" data-reset>↺ reset<span class="k">R</span></span><span class="readout" data-readout></span>`;
+    document.querySelectorAll('[data-ctrl]').forEach(c => c.innerHTML = CTRL);
+
+    function tableHTML(cur, compact) {
+        const cw = compact ? '' : '';
+        let h = `<tr><th>U</th><th>Q1</th><th>Q0</th><th>Q1⁺</th><th>Q0⁺</th><th>MAX</th>${compact ? '' : '<th style="text-align:left">what happens</th>'}</tr>`;
+        ROWS.forEach((r, i) => {
+            const lit = cur && r.U === cur.u && r.s === cur.s;
+            h += `<tr class="st${r.s}${lit ? ' horow' : ''}" data-row="${i}"${i === 4 ? ' style="border-top:2px solid #24384c"' : ''}>`
+              + `<td class="u">${r.U}</td><td>${r.Q1}</td><td>${r.Q0}</td>`
+              + `<td class="nx">${r.N1}</td><td class="nx">${r.N0}</td>`
+              + `<td class="mx${r.MAX ? ' one' : ''}">${r.MAX}</td>`
+              + (compact ? '' : `<td class="note">${r.note}</td>`) + `</tr>`;
+        });
+        return h;
+    }
+    document.querySelector('[data-maxtab]').innerHTML =
+        `<tr><th>state</th><th>Q1 Q0</th><th>MAX</th><th style="text-align:left">U=0 and U=1</th></tr>`
+        + [0,1,2,3].map(s => `<tr class="st${s}"><td>${s}</td><td>${bits(s).Q1} ${bits(s).Q0}</td>`
+            + `<td class="mx${maxOf(s) ? ' one' : ''}">${maxOf(s)}</td>`
+            + `<td class="note">both rows say ${maxOf(s)}</td></tr>`).join('');
+
+    // ============ RENDER ============
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p' + page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function renderClock() {
+        const trace = runTrace(us);
+        const cur = tclk < N ? trace.snaps[tclk] : { s: trace.final, u: null, max: maxOf(trace.final) };
+        const s = cur.s, u = cur.u, { Q1, Q0 } = bits(s);
+        const nxt = u === null ? null : nextState(s, u);
+        // rings
+        for (const RING of [RING2, RING4]) {
+            RING.nodes.forEach((n, i) => n.classList.toggle('on', i === s));
+            RING.arcs.forEach(({ edge, path, lab }) => {
+                const on = u !== null && edge.from === s && edge.u === u;
+                path.classList.toggle('on', on); lab.classList.toggle('on', on);
+                path.setAttribute('marker-end', on ? `url(#ahon-${RING.mk})` : `url(#ah-${RING.mk})`);
+            });
+        }
+        // tables
+        document.querySelectorAll('[data-sttab]').forEach((t, i) => t.innerHTML = tableHTML(u === null ? null : { u, s }, i === 1));
+        // strips + readouts
+        document.querySelectorAll('[data-strip]').forEach(e => e.innerHTML = stripHTML(trace));
+        document.querySelectorAll('[data-striprole]').forEach(e => e.innerHTML =
+            `U = ${PRESET.join('')} over ${N} clocks${offScript ? ' <b style="color:#ffb74d">(edited)</b>' : ''} &middot; the boxed column is the clock about to happen`);
+        document.querySelectorAll('[data-readout]').forEach(e => e.innerHTML = u === null
+            ? `end of strip &middot; state <b>${s}</b> &middot; MAX = <span class="v">${maxOf(s)}</span>`
+            : `state <b>${s}</b> &middot; <span class="a">U = ${u}</span> &middot; MAX = <span class="v">${maxOf(s)}</span> &middot; on CLK → <b>${nxt}</b>`);
+        // circuit wire values
+        const uu = u === null ? 1 : u;
+        const vals = { U: uu, Q1, Q0, Q0n: 1 - Q0, XN: 1 - (uu ^ Q0), D1: eqD1(Q1, Q0, uu), MAX: eqMAX(Q1, Q0) };
+        for (const [name, v] of Object.entries(vals)) {
+            (ckt[name] || []).forEach(e => { const c = v ? W1 : W0; e.setAttribute(e.tagName === 'circle' ? 'fill' : 'stroke', c); });
+        }
+        const pv = { U: 'U=' + uu, Q1: 'Q1=' + Q1, Q0: 'Q0=' + Q0, D1: 'D1=' + vals.D1, D0: 'D0=' + eqD0(Q1, Q0, uu), MAX: 'MAX=' + vals.MAX };
+        for (const [k, p] of Object.entries(ckt.pills)) {
+            const on = +pv[k].slice(-1) === 1;
+            p.t.textContent = pv[k];
+            p.t.setAttribute('fill', on ? (k === 'MAX' ? VIO : k === 'U' ? AMB : W1) : DIM);
+            p.grp.querySelector('rect').setAttribute('stroke', on ? (k === 'MAX' ? VIO : k === 'U' ? AMB : W1) : '#37506a');
+        }
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    function doStep() { if (tclk < N) { tclk++; renderClock(); } }
+    function doReset() { tclk = 0; offScript = false; us = PRESET.slice(); renderClock(); }
+    function toggleU() { if (tclk >= N) return; us[tclk] = 1 - us[tclk]; offScript = us.some((v, i) => v !== PRESET[i]); renderClock(); }
+
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', doStep));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', doReset));
+    document.querySelectorAll('[data-utog]').forEach(b => b.addEventListener('click', toggleU));
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '4') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': doStep(); e.preventDefault(); break;
+            case 'ArrowRight': case 'ArrowDown': setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+            case 'u': case 'U': toggleU(); e.preventDefault(); break;
+            case 'n': case 'N': setBox('n'); e.preventDefault(); break;
+            case 's': case 'S': setBox('s'); e.preventDefault(); break;
+            case 'o': case 'O': setBox('o'); e.preventDefault(); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, step: doStep, reset: doReset, toggleU, setBox,
+        setStrip: (arr) => { us = arr.slice(); offScript = true; tclk = 0; renderClock(); },
+        getState: () => ({ page, tclk, us: us.slice(), offScript, litBox,
+            cur: tclk < N ? runTrace(us).snaps[tclk].s : runTrace(us).final }),
+        model: { NSTATES, nextState, maxOf, bits, eqD0, eqD1, eqMAX, PRESET, ROWS, EDGES, NODES, runTrace, rowIndex, BOX, CK },
+        litArcs: (id) => Array.from(document.querySelectorAll('#' + id + ' .arc.on')).map(p => ({ from: +p.dataset.from, to: +p.dataset.to, u: +p.dataset.u })),
+        litRow: () => { const r = document.querySelector('#p3 [data-sttab] tr.horow'); return r ? +r.dataset.row : -1; },
+        pills: () => Object.fromEntries(Object.entries(ckt.pills).map(([k, p]) => [k, p.t.textContent])),
+        rings: { sd2: RING2, sd4: RING4 },
+    };
+
+    setBox('s');
+    render(); renderClock();
+</script>
+</body>
+</html>

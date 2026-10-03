@@ -615,7 +615,7 @@
           "title": "Finite State Machines (FSM) Introduction",
           "slug": "fsm-introduction",
           "type": "full",
-          "published": false
+          "published": true
         },
         {
           "num": "4.2.1",

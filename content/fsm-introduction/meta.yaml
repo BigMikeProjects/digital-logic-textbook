@@ -1,0 +1,11 @@
+title: "Finite State Machines (FSM) Introduction"
+description: "Every synchronous finite state machine is three boxes: next-state logic, a state register of D flip-flops, and output logic. A 2-bit up/down counter with a MAX flag is read as a state diagram, a state table and a circuit."
+chapter: sequential-logic
+section: fsm
+order: 40200
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the three boxes every synchronous FSM shares — next-state logic, state register, output logic — then a 2-bit up/down counter with a MAX flag stepped through as a state diagram, a next-state table and a circuit"
+  02-interactive.html:
+    caption: "Interactive: every synchronous FSM is three boxes — next-state logic, the state register, output logic — then the same 2-bit up/down counter with a MAX flag as a state diagram, a state table, and a gate-level circuit, all stepping together from one input strip"
