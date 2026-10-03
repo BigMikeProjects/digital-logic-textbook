@@ -625,9 +625,16 @@
           "published": true
         },
         {
-          "num": "4.2.3",
-          "title": "Mealy versus Moore",
-          "slug": "mealy-versus-moore",
+          "num": "4.3.2",
+          "title": "Level-to-Pulse FSM",
+          "slug": "level-to-pulse-fsm",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "4.3.3",
+          "title": "Counters",
+          "slug": "counters",
           "type": "full",
           "published": false
         }
@@ -646,23 +653,16 @@
           "published": false
         },
         {
-          "num": "4.2.4",
-          "title": "Flip-Flop Circuit Analysis",
-          "slug": "flip-flop-circuit-analysis",
+          "num": "4.2.3",
+          "title": "Mealy versus Moore",
+          "slug": "mealy-versus-moore",
           "type": "full",
           "published": false
         },
         {
-          "num": "7.4.1",
-          "title": "Blocking versus NonBlocking",
-          "slug": "blocking-versus-nonblocking",
-          "type": "full",
-          "published": true
-        },
-        {
-          "num": "7.4.3",
-          "title": "Defining State Memory in Verilog",
-          "slug": "state-memory",
+          "num": "4.2.4",
+          "title": "Flip-Flop Circuit Analysis",
+          "slug": "flip-flop-circuit-analysis",
           "type": "full",
           "published": false
         }
@@ -679,6 +679,13 @@
           "slug": "sequence-detector",
           "type": "full",
           "published": true
+        },
+        {
+          "num": "4.3.4",
+          "title": "FSMs with Mux and Decoder Implementations",
+          "slug": "fsms-with-mux-and-decoder-implementations",
+          "type": "full",
+          "published": false
         },
         {
           "num": "4.4.0",
@@ -709,23 +716,23 @@
       "weekday": "Fri",
       "items": [
         {
-          "num": "4.3.2",
-          "title": "Level-to-Pulse FSM",
-          "slug": "level-to-pulse-fsm",
+          "num": "7.4.1",
+          "title": "Blocking versus NonBlocking",
+          "slug": "blocking-versus-nonblocking",
+          "type": "full",
+          "published": true
+        },
+        {
+          "num": "7.4.3",
+          "title": "Defining State Memory in Verilog",
+          "slug": "state-memory",
           "type": "full",
           "published": false
         },
         {
-          "num": "4.3.3",
-          "title": "Counters",
-          "slug": "counters",
-          "type": "full",
-          "published": false
-        },
-        {
-          "num": "4.3.4",
-          "title": "FSMs with Mux and Decoder Implementations",
-          "slug": "fsms-with-mux-and-decoder-implementations",
+          "num": "7.4.4",
+          "title": "FSM Coding Template",
+          "slug": "fsm-coding-template",
           "type": "full",
           "published": false
         }
@@ -824,13 +831,6 @@
           "num": "5.2.1",
           "title": "Switch Debouncer",
           "slug": "switch-debouncer",
-          "type": "full",
-          "published": false
-        },
-        {
-          "num": "7.4.4",
-          "title": "FSM Coding Template",
-          "slug": "fsm-coding-template",
           "type": "full",
           "published": false
         }
