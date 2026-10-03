@@ -674,16 +674,9 @@
       "weekday": "Wed",
       "items": [
         {
-          "num": "4.3.1",
-          "title": "Sequence Detector",
-          "slug": "sequence-detector",
-          "type": "full",
-          "published": true
-        },
-        {
-          "num": "4.3.4",
-          "title": "FSMs with Mux and Decoder Implementations",
-          "slug": "fsms-with-mux-and-decoder-implementations",
+          "num": "4.2.5",
+          "title": "Pipelined Mealy",
+          "slug": "pipelined-mealy",
           "type": "full",
           "published": false
         },
@@ -707,6 +700,27 @@
           "slug": "synchronizers",
           "type": "full",
           "published": true
+        }
+      ]
+    },
+    {
+      "lec": 22,
+      "date": "2026-10-16",
+      "weekday": "Fri",
+      "items": [
+        {
+          "num": "4.3.1",
+          "title": "Sequence Detector",
+          "slug": "sequence-detector",
+          "type": "full",
+          "published": true
+        },
+        {
+          "num": "4.3.4",
+          "title": "FSMs with Mux and Decoder Implementations",
+          "slug": "fsms-with-mux-and-decoder-implementations",
+          "type": "full",
+          "published": false
         }
       ]
     },
