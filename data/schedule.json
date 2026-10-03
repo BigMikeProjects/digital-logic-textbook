@@ -625,9 +625,16 @@
           "published": true
         },
         {
-          "num": "4.2.3",
-          "title": "Mealy versus Moore",
-          "slug": "mealy-versus-moore",
+          "num": "4.3.2",
+          "title": "Level-to-Pulse FSM",
+          "slug": "level-to-pulse-fsm",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "4.3.3",
+          "title": "Counters",
+          "slug": "counters",
           "type": "full",
           "published": false
         }
@@ -646,23 +653,16 @@
           "published": false
         },
         {
-          "num": "4.2.4",
-          "title": "Flip-Flop Circuit Analysis",
-          "slug": "flip-flop-circuit-analysis",
+          "num": "4.2.3",
+          "title": "Mealy versus Moore",
+          "slug": "mealy-versus-moore",
           "type": "full",
           "published": false
         },
         {
-          "num": "7.4.1",
-          "title": "Blocking versus NonBlocking",
-          "slug": "blocking-versus-nonblocking",
-          "type": "full",
-          "published": true
-        },
-        {
-          "num": "7.4.3",
-          "title": "Defining State Memory in Verilog",
-          "slug": "state-memory",
+          "num": "4.2.4",
+          "title": "Flip-Flop Circuit Analysis",
+          "slug": "flip-flop-circuit-analysis",
           "type": "full",
           "published": false
         }
@@ -679,6 +679,13 @@
           "slug": "sequence-detector",
           "type": "full",
           "published": true
+        },
+        {
+          "num": "4.3.4",
+          "title": "FSMs with Mux and Decoder Implementations",
+          "slug": "fsms-with-mux-and-decoder-implementations",
+          "type": "full",
+          "published": false
         },
         {
           "num": "4.4.0",
@@ -709,24 +716,10 @@
       "weekday": "Fri",
       "items": [
         {
-          "num": "4.3.2",
-          "title": "Level-to-Pulse FSM",
-          "slug": "level-to-pulse-fsm",
-          "type": "full",
-          "published": false
-        },
-        {
-          "num": "4.3.3",
-          "title": "Counters",
-          "slug": "counters",
-          "type": "full",
-          "published": false
-        },
-        {
-          "num": "4.3.4",
-          "title": "FSMs with Mux and Decoder Implementations",
-          "slug": "fsms-with-mux-and-decoder-implementations",
-          "type": "full",
+          "num": null,
+          "title": "Exam 2 Review",
+          "slug": null,
+          "type": "no-content",
           "published": false
         }
       ]
@@ -752,7 +745,7 @@
       "items": [
         {
           "num": null,
-          "title": "Exam 2 Review",
+          "title": "Exam 2",
           "slug": null,
           "type": "no-content",
           "published": false
@@ -763,20 +756,6 @@
       "lec": 25,
       "date": "2026-10-23",
       "weekday": "Fri",
-      "items": [
-        {
-          "num": null,
-          "title": "Exam 2",
-          "slug": null,
-          "type": "no-content",
-          "published": false
-        }
-      ]
-    },
-    {
-      "lec": 26,
-      "date": "2026-10-26",
-      "weekday": "Mon",
       "items": [
         {
           "num": "5.1.0",
@@ -802,9 +781,9 @@
       ]
     },
     {
-      "lec": 27,
-      "date": "2026-10-28",
-      "weekday": "Wed",
+      "lec": 26,
+      "date": "2026-10-26",
+      "weekday": "Mon",
       "items": [
         {
           "num": "5.1.3",
@@ -828,6 +807,20 @@
           "published": false
         },
         {
+          "num": "7.4.1",
+          "title": "Blocking versus NonBlocking",
+          "slug": "blocking-versus-nonblocking",
+          "type": "full",
+          "published": true
+        },
+        {
+          "num": "7.4.3",
+          "title": "Defining State Memory in Verilog",
+          "slug": "state-memory",
+          "type": "full",
+          "published": false
+        },
+        {
           "num": "7.4.4",
           "title": "FSM Coding Template",
           "slug": "fsm-coding-template",
@@ -837,9 +830,9 @@
       ]
     },
     {
-      "lec": 28,
-      "date": "2026-10-30",
-      "weekday": "Fri",
+      "lec": 27,
+      "date": "2026-10-28",
+      "weekday": "Wed",
       "items": [
         {
           "num": "5.2.2",
@@ -851,9 +844,9 @@
       ]
     },
     {
-      "lec": 29,
-      "date": "2026-11-02",
-      "weekday": "Mon",
+      "lec": 28,
+      "date": "2026-10-30",
+      "weekday": "Fri",
       "items": [
         {
           "num": "5.2.3",
@@ -865,9 +858,9 @@
       ]
     },
     {
-      "lec": 30,
-      "date": "2026-11-04",
-      "weekday": "Wed",
+      "lec": 29,
+      "date": "2026-11-02",
+      "weekday": "Mon",
       "items": [
         {
           "num": "5.2.4",
@@ -886,9 +879,9 @@
       ]
     },
     {
-      "lec": 31,
-      "date": "2026-11-06",
-      "weekday": "Fri",
+      "lec": 30,
+      "date": "2026-11-04",
+      "weekday": "Wed",
       "items": [
         {
           "num": "2.2.4",
@@ -914,9 +907,9 @@
       ]
     },
     {
-      "lec": 32,
-      "date": "2026-11-09",
-      "weekday": "Mon",
+      "lec": 31,
+      "date": "2026-11-06",
+      "weekday": "Fri",
       "items": [
         {
           "num": "6.2.0",
@@ -928,15 +921,29 @@
       ]
     },
     {
-      "lec": 33,
-      "date": "2026-11-11",
-      "weekday": "Wed",
+      "lec": 32,
+      "date": "2026-11-09",
+      "weekday": "Mon",
       "items": [
         {
           "num": "6.2.1",
           "title": "Inside an FPGA Part 2",
           "slug": "inside-an-fpga-part-2",
           "type": "full",
+          "published": false
+        }
+      ]
+    },
+    {
+      "lec": 33,
+      "date": "2026-11-11",
+      "weekday": "Wed",
+      "items": [
+        {
+          "num": null,
+          "title": "Exam 3 Review",
+          "slug": null,
+          "type": "no-content",
           "published": false
         }
       ]
@@ -962,7 +969,7 @@
       "items": [
         {
           "num": null,
-          "title": "Exam 3 Review",
+          "title": "Exam 3",
           "slug": null,
           "type": "no-content",
           "published": false
@@ -975,20 +982,6 @@
       "weekday": "Wed",
       "items": [
         {
-          "num": null,
-          "title": "Exam 3",
-          "slug": null,
-          "type": "no-content",
-          "published": false
-        }
-      ]
-    },
-    {
-      "lec": 37,
-      "date": "2026-11-20",
-      "weekday": "Fri",
-      "items": [
-        {
           "num": "6.3.0",
           "title": "ASICs versus FPGAs",
           "slug": "asics-versus-fpgas",
@@ -998,9 +991,9 @@
       ]
     },
     {
-      "lec": 38,
-      "date": "2026-11-30",
-      "weekday": "Mon",
+      "lec": 37,
+      "date": "2026-11-20",
+      "weekday": "Fri",
       "items": [
         {
           "num": "6.0.0",
@@ -1026,9 +1019,9 @@
       ]
     },
     {
-      "lec": 39,
-      "date": "2026-12-02",
-      "weekday": "Wed",
+      "lec": 38,
+      "date": "2026-11-30",
+      "weekday": "Mon",
       "items": [
         {
           "num": "6.1.2",
@@ -1047,9 +1040,9 @@
       ]
     },
     {
-      "lec": 40,
-      "date": "2026-12-04",
-      "weekday": "Fri",
+      "lec": 39,
+      "date": "2026-12-02",
+      "weekday": "Wed",
       "items": [
         {
           "num": null,
@@ -1061,9 +1054,9 @@
       ]
     },
     {
-      "lec": 41,
-      "date": "2026-12-07",
-      "weekday": "Mon",
+      "lec": 40,
+      "date": "2026-12-04",
+      "weekday": "Fri",
       "items": [
         {
           "num": null,
@@ -1075,9 +1068,9 @@
       ]
     },
     {
-      "lec": 42,
-      "date": "2026-12-09",
-      "weekday": "Wed",
+      "lec": 41,
+      "date": "2026-12-07",
+      "weekday": "Mon",
       "items": [
         {
           "num": null,
