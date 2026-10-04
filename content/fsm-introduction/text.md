@@ -100,7 +100,9 @@ $$MAX = Q_1 \cdot Q_0$$
 
 That is a single AND gate, and its inputs come only from the flip-flops, as a Moore machine requires.
 
-You can now point at each of the three boxes on the circuit: the XNOR and XOR feeding $D_1$, plus the wire from $\overline{Q_0}$ to $D_0$, are the next-state logic; the two flip-flops are the state register; the AND gate is the output logic. The interactive on this page draws exactly this circuit and steps it alongside the diagram and the table, so you can watch $D$ form from the inputs and the current state and then get loaded on each edge.
+![The counter's circuit, boxed into next-state logic (an XNOR and an XOR feeding D1, and the Q0-bar wire back to D0), the state register (two D flip-flops on one clock), and output logic (one AND gate making MAX). Shown in state 00 with U = 1.](./images/fsm-intro-circuit.svg)
+
+You can now point at each of the three boxes on the circuit: the XNOR and XOR feeding $D_1$, plus the wire from $\overline{Q_0}$ to $D_0$, are the next-state logic; the two flip-flops are the state register; the AND gate is the output logic. The figure is the circuit from the interactive on this page, frozen in state 00 with $U = 1$, so its small labels show the value on each net: $D_1 = 0$ and $D_0 = 1$, which is the next state 01. The interactive steps the same circuit alongside the diagram and the table, so you can watch $D$ form from the inputs and the current state and then get loaded on each edge.
 
 ## The Same Machine in Verilog
 
