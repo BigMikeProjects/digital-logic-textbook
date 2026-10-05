@@ -1,0 +1,11 @@
+title: "One Hot State Assignment"
+description: "One flip-flop per state, exactly one of them holding a 1: how to read every D input straight off the state diagram, why loop-backs must be drawn, how one-hot compares with a binary assignment, and how to handle reset."
+chapter: sequential-logic
+section: fsm
+order: 40202
+
+graphics:
+  01-video.youtube:
+    caption: "Video: one-hot state assignment on a Moore 1-0-1 detector — one flip-flop per state, why loop-backs have to be drawn, reading each D input off the arcs that arrive at a state, the finished circuit, 13 literals against binary's 8, and the almost one-hot fix for an all-zeros reset"
+  02-interactive.html:
+    caption: "Interactive: one-hot state assignment on a Moore 1-0-1 detector — the five-step method and the loop-backs a diagram may not draw, the single 1 moving between four flip-flops, each D equation assembled from the arcs arriving at a state, the stepping circuit, and a scorecard against binary with the all-zeros reset fix"
