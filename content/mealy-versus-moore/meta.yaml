@@ -1,0 +1,11 @@
+title: "Mealy versus Moore"
+description: "A Moore output depends on the state alone; a Mealy output depends on the state and the input. The level-to-pulse converter built both ways shows what the extra path buys (one state fewer, one clock sooner) and what it costs (input glitches reach the output)."
+chapter: sequential-logic
+section: fsm
+order: 40203
+
+graphics:
+  01-video.youtube:
+    caption: "Video: Mealy versus Moore on the level-to-pulse converter — the one extra path from input to output logic, outputs on arcs instead of in states, the Mealy pulse arriving one clock sooner with one state fewer, and the input glitch that passes straight through to a Mealy output"
+  02-interactive.html:
+    caption: "Interactive: Mealy versus Moore — the two block diagrams, both state diagrams stepping together over a shared timing strip, state tables with equations and live circuits, and a timing page where you slide the input edge and inject a glitch to see what reaches each output"

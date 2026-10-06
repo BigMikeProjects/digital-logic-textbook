@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mealy versus Moore — Where the Output Comes From Decides When It Appears</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 = an asserted P / the active state · amber #ffb74d = L and CLK
+       · violet #b388ff = the Mealy extra path and its arc outputs · navy #0d1b2a · logic-0 wires #7d9bb5 */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 196px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 12px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .ov { text-decoration: overline; text-decoration-thickness: 2px; text-underline-offset: 2px; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: baseline; gap: 12px; padding: 9px 18px;
+        border-bottom: 2px solid #24384c; flex-shrink: 0; }
+    .panel-head .ph { font-size: 19px; font-weight: 700; color: #4fc3f7; }
+    .panel-head .ph.amber { color: #ffb74d; }
+    .panel-head .ph.violet { color: #b388ff; }
+    .panel-head .role { font-size: 15px; color: #607d8b; }
+    .main { display: flex; gap: 16px; flex: 1; min-height: 0; }
+    .col { display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 0; min-height: 0; }
+    .svgbody { flex: 1; min-height: 0; padding: 6px 10px; display: flex; align-items: center; justify-content: center; }
+    .svgbody svg { width: 100%; height: 100%; display: block; }
+
+    /* ---- beat 1: the three boxes ---- */
+    .idea { border: 2px solid #37506a; border-radius: 14px; background: #0d1b2a; padding: 13px 18px;
+        font-size: 17px; line-height: 1.5; color: #b0bec5; flex-shrink: 0; }
+    .idea b { color: #cfd8dc; } .idea .cy { color: #4fc3f7; font-weight: 700; }
+    .boxcards { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; flex: 1; min-height: 0; justify-content: space-between; }
+    .bcard { border: 2px solid #24384c; border-radius: 12px; background: #0b1622; padding: 10px 14px;
+        cursor: pointer; transition: border-color .12s, background .12s; }
+    .bcard .bt { font-size: 18px; font-weight: 700; color: #cfd8dc; display: flex; align-items: baseline; gap: 10px; }
+    .bcard .bt .kk { font-size: 12px; border: 1px solid #37506a; border-radius: 6px; padding: 1px 7px; color: #78909c; }
+    .bcard .bd { font-size: 14.5px; color: #90a4ae; line-height: 1.42; margin-top: 4px; }
+    .bcard .bd .mono { color: #4fc3f7; }
+    .bcard.on { border-color: #4fc3f7; background: rgba(79,195,247,0.09); }
+    .bcard.on .bt { color: #4fc3f7; }
+    .bcard.reg.on { border-color: #4fc3f7; }
+    .bcard.out.on { border-color: #b388ff; background: rgba(179,136,255,0.09); }
+    .bcard.out.on .bt { color: #b388ff; }
+    .bcard.nxt.on { border-color: #ffb74d; background: rgba(255,183,77,0.09); }
+    .bcard.nxt.on .bt { color: #ffb74d; }
+
+    .fsmbox { fill: #0b1622; stroke: #4a6274; stroke-width: 3; transition: stroke .15s, fill .15s; }
+    .fsmbox.lit-n { stroke: #ffb74d; stroke-width: 5; fill: rgba(255,183,77,0.10); }
+    .fsmbox.lit-s { stroke: #4fc3f7; stroke-width: 5; fill: rgba(79,195,247,0.10); }
+    .fsmbox.lit-o { stroke: #b388ff; stroke-width: 5; fill: rgba(179,136,255,0.10); }
+    .bt1 { fill: #cfd8dc; font-size: 27px; font-weight: 700; text-anchor: middle; }
+    .bt2 { fill: #78909c; font-size: 17px; text-anchor: middle; }
+    .wlab { font-family: 'Menlo','Consolas',monospace; font-size: 19px; text-anchor: middle; }
+
+    /* ---- state diagram ---- */
+    .sd-node .sdc { fill: #0d1b2a; stroke: #4a6274; stroke-width: 3; transition: stroke .18s, fill .18s; }
+    .sd-node.on .sdc { stroke: #4fc3f7; stroke-width: 4.5; fill: rgba(79,195,247,0.16); }
+    .sd-node .sdname { fill: #cfd8dc; font-family: 'Segoe UI',sans-serif; font-weight: 700; text-anchor: middle; }
+    .sd-node.on .sdname { fill: #4fc3f7; }
+    .sd-node .sdenc { fill: #7a8ea0; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; }
+    .sd-node.on .sdenc { fill: #4fc3f7; }
+    .sd-node .sdz { fill: #607d8b; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; }
+    .sd-node.zone .sdz { fill: #b388ff; }
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 2.6; transition: stroke .18s; }
+    .arc.on { stroke: #4fc3f7; stroke-width: 4.5; }
+    .arc-l { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #16213e; stroke-width: 5; }
+    .arc-l.on { fill: #4fc3f7; }
+    .sd-hint { fill: #607d8b; font-family: 'Segoe UI',sans-serif; font-size: 15px; text-anchor: middle; }
+    .rst { stroke: #90a4ae; stroke-width: 2.6; fill: none; }
+    .rstl { fill: #90a4ae; font-family: 'Segoe UI',sans-serif; font-size: 15px; text-anchor: middle; }
+
+    /* ---- state table ---- */
+    .sttab { border-collapse: collapse; font-family: 'Menlo','Consolas',monospace; }
+    .sttab th { font-family: 'Segoe UI',sans-serif; font-weight: 600; color: #607d8b;
+        border-bottom: 2px solid #24384c; padding: 5px 10px; white-space: nowrap; }
+    .sttab td { text-align: center; color: #b0bec5; border-bottom: 1px solid #16283a; padding: 3px 8px; }
+    #p3 [data-sttab] { font-size: 23px; }
+    #p3 [data-sttab] th { font-size: 18px; padding: 8px 12px; }
+    #p3 [data-sttab] td { padding: 18px 12px; }
+    #p3 .col .svgbody { align-items: flex-start; }
+    #p3 [data-sttab] td.note { font-size: 18px; }
+    #p4 .col { flex-direction: row; }
+    #p4 .col > .panel:first-child { flex: 1; min-width: 0; }
+    #p4 .col > .panel:last-child { flex: 0 0 392px; }
+    #p4 [data-sttab] { font-size: 15px; }
+    #p4 [data-sttab] th { padding: 3px 6px; font-size: 12.5px; }
+    #p4 [data-sttab] td { padding: 11px 6px; }
+    #p4 .col .svgbody { align-items: flex-start; }
+    .sttab td.u { color: #ffb74d; }
+    .sttab td.nx { color: #cfd8dc; }
+    .sttab td.mx { color: #7a8ea0; }
+    .sttab td.mx.one { color: #b388ff; font-weight: 700; }
+    .sttab td.note { font-family: 'Segoe UI',sans-serif; color: #607d8b; text-align: left; }
+    .sttab tr.st0 td.mx { background: rgba(179,136,255,0.05); }
+    .sttab tr.st3 td.mx { background: rgba(179,136,255,0.14); }
+    .sttab tr.horow td { background: rgba(79,195,247,0.13); color: #4fc3f7; }
+    .sttab tr.horow td.u { color: #ffb74d; }
+    .sttab tr.horow td.note { color: #7ea9c4; }
+    .sttab .sep td { border-top: 2px solid #24384c; }
+
+    /* ---- input strip ---- */
+    .strip { display: flex; flex-direction: column; gap: 4px; padding: 8px 14px 10px; }
+    .strip .row { display: flex; align-items: center; gap: 4px; }
+    .strip .rl { width: 92px; flex-shrink: 0; font-size: 13.5px; color: #607d8b; text-align: right; padding-right: 8px; }
+    .strip .rl.amber { color: #ffb74d; } .strip .rl.violet { color: #b388ff; }
+    .strip .cell { flex: 1; min-width: 0; text-align: center; font-family: 'Menlo','Consolas',monospace;
+        font-size: 15px; padding: 2px 0; border: 2px solid transparent; border-radius: 6px; color: #8fa8bd; }
+    .strip .row.hdr .cell { font-size: 12px; color: #55697c; }
+    .strip .cell.one { color: #4fc3f7; font-weight: 700; }
+    .strip .cell.zero { color: #7d9bb5; }
+    .strip .cell.amb { color: #ffb74d; font-weight: 700; }
+    .strip .cell.vio { color: #b388ff; font-weight: 700; }
+    .strip .cell.now { border-color: #ffb74d; }
+    .strip .cell.future { opacity: .38; }
+    .ctrl { display: flex; align-items: center; gap: 10px; padding: 4px 14px 10px; flex-wrap: wrap; }
+    .btn { border: 2px solid #37506a; border-radius: 999px; padding: 4px 14px; font-size: 14.5px;
+        color: #90a4ae; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+    .btn:hover { border-color: #4fc3f7; color: #4fc3f7; }
+    .btn.go { border-color: #ffb74d; color: #ffb74d; }
+    .btn .k { font-size: 11.5px; border: 1px solid currentColor; border-radius: 5px; padding: 0 5px; opacity: .8; }
+    .readout { font-family: 'Menlo','Consolas',monospace; font-size: 14.5px; color: #78909c; margin-left: 4px; }
+    .readout b { color: #4fc3f7; } .readout .a { color: #ffb74d; } .readout .v { color: #b388ff; }
+
+    /* ---- vocabulary ---- */
+    .vocab { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+    .vitem { border: 2px solid #24384c; border-radius: 10px; background: #0b1622; padding: 6px 11px;
+        font-size: 14px; color: #90a4ae; line-height: 1.35; flex: 1 1 300px; }
+    .vitem b { color: #cfd8dc; display: block; font-size: 15px; }
+    .vitem.off { border-style: dashed; opacity: .72; }
+    .vitem.off b { color: #78909c; }
+
+
+    /* ---- this graphic ---- */
+    .two { display: flex; gap: 16px; flex: 1; min-height: 0; }
+    .two > .panel { flex: 1; min-width: 0; }
+    .panel.moore { border-color: #37506a; }
+    .panel.mealy { border-color: #4a3a6a; }
+    .panel.mealy .panel-head { border-bottom-color: #3a2c55; }
+    .tagline { padding: 10px 18px; font-size: 16.5px; color: #90a4ae; line-height: 1.45; border-top: 2px solid #16283a; }
+    .tagline b { color: #cfd8dc; } .tagline .vio { color: #b388ff; font-weight: 700; }
+    .eqline { padding: 10px 18px; font-family: 'Menlo','Consolas',monospace; font-size: 20px; color: #4fc3f7;
+        border-top: 2px solid #16283a; display: flex; gap: 22px; flex-wrap: wrap; }
+    .eqline .eq { white-space: nowrap; }   /* one flex item per equation, so the gap never splits L·Q̄ */
+    .eqline .lbl { color: #607d8b; font-family: 'Segoe UI',sans-serif; font-size: 15px; }
+    .sttab { border-collapse: collapse; font-family: 'Menlo','Consolas',monospace; font-size: 17px; width: 100%; }
+    .sttab th { font-family: 'Segoe UI',sans-serif; font-weight: 600; color: #607d8b; font-size: 13.5px;
+        border-bottom: 2px solid #24384c; padding: 4px 8px; white-space: nowrap; }
+    .sttab td { text-align: center; color: #b0bec5; border-bottom: 1px solid #16283a; padding: 5px 8px; }
+    .sttab td.in { color: #ffb74d; }
+    .sttab td.p { color: #7a8ea0; }
+    .sttab td.p.one { color: #4fc3f7; font-weight: 700; background: rgba(79,195,247,0.12); }
+    .sttab tr.horow td { background: rgba(79,195,247,0.13); color: #4fc3f7; }
+    .sttab tr.horow td.in { color: #ffb74d; }
+    .code { font-family: 'Menlo','Consolas',monospace; font-size: 13.5px; line-height: 1.5; color: #b0bec5;
+        background: #0b1622; border-top: 2px solid #16283a; padding: 9px 16px; white-space: pre; overflow: hidden; }
+    .code .kw { color: #b388ff; } .code .cm { color: #55697c; } .code .hi { color: #4fc3f7; }
+
+    /* state diagrams */
+    .sd-node .sdc { fill: #0d1b2a; stroke: #4a6274; stroke-width: 3; transition: stroke .18s, fill .18s; }
+    .sd-node.on .sdc { stroke: #4fc3f7; stroke-width: 4.5; fill: rgba(79,195,247,0.16); }
+    .sd-node.glow .sdc { stroke: #b388ff; stroke-width: 4.5; }
+    .sd-node .sdname { fill: #cfd8dc; font-family: 'Segoe UI',sans-serif; font-weight: 700; text-anchor: middle; font-size: 26px; }
+    .sd-node.on .sdname { fill: #4fc3f7; }
+    .sd-node .sdenc { fill: #7a8ea0; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 17px; }
+    .sd-node.on .sdenc { fill: #4fc3f7; }
+    .sd-node .sdp { fill: #607d8b; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 18px; font-weight: 700; }
+    .sd-node.pone .sdp { fill: #4fc3f7; }
+    .sd-node.glow .sdp { fill: #b388ff; }
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 2.6; transition: stroke .18s; }
+    .arc.on { stroke: #4fc3f7; stroke-width: 4.5; }
+    .arc-l { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; font-weight: 700; text-anchor: middle; font-size: 19px;
+        paint-order: stroke; stroke: #16213e; stroke-width: 5; }
+    .arc-l.on { fill: #4fc3f7; }
+    .arc-l.pone { fill: #b388ff; }
+    .arc-l.glow { fill: #b388ff; }
+    .sd-hint { fill: #607d8b; font-family: 'Segoe UI',sans-serif; font-size: 15px; text-anchor: middle; }
+    .rst { stroke: #90a4ae; stroke-width: 2.6; fill: none; }
+    .rstl { fill: #90a4ae; font-family: 'Segoe UI',sans-serif; font-size: 15px; text-anchor: middle; }
+
+    /* beat 4 */
+    .wavebody { flex: 1; min-height: 0; padding: 6px 12px; }
+    .wavebody svg { width: 100%; height: 100%; display: block; }
+    .ctrl { display: flex; align-items: center; gap: 10px; padding: 8px 16px 12px; flex-wrap: wrap; }
+    .btn { border: 2px solid #37506a; border-radius: 999px; padding: 4px 14px; font-size: 14.5px;
+        color: #90a4ae; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+    .btn:hover { border-color: #4fc3f7; color: #4fc3f7; }
+    .btn.go { border-color: #ffb74d; color: #ffb74d; }
+    .btn.on { border-color: #b388ff; color: #b388ff; background: rgba(179,136,255,0.10); }
+    .btn .k { font-size: 11.5px; border: 1px solid currentColor; border-radius: 5px; padding: 0 5px; opacity: .8; }
+    .readout { font-family: 'Menlo','Consolas',monospace; font-size: 14.5px; color: #78909c; margin-left: 4px; }
+    .readout b { color: #4fc3f7; } .readout .a { color: #ffb74d; } .readout .v { color: #b388ff; }
+    .wave2body { padding: 4px 12px 6px; } .wave2body svg { width: 100%; display: block; }
+    .headbtns { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+    .facts { display: flex; gap: 14px; padding: 12px 16px; }
+    .fact { flex: 1; border: 2px solid #24384c; border-radius: 12px; background: #0b1622; padding: 10px 14px; }
+    .fact .ft { font-size: 17px; font-weight: 700; color: #cfd8dc; }
+    .fact .fd { font-size: 14.5px; color: #90a4ae; line-height: 1.42; margin-top: 4px; }
+    .fact.vio { border-color: #4a3a6a; } .fact.vio .ft { color: #b388ff; }
+    .fact .fd .mono { color: #4fc3f7; }
+    .fact .tag { display: inline-block; margin-right: 8px; padding: 1px 8px; border-radius: 6px; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; vertical-align: 2px; }
+    .fact.pay { border-color: #1f4a5e; } .fact.pay .ft { color: #4fc3f7; } .fact.pay .tag { background: rgba(79,195,247,0.16); color: #4fc3f7; }
+    .fact.vio .tag { background: rgba(179,136,255,0.16); color: #b388ff; }
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #37506a; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { font-size: 15px; color: #607d8b; }
+    .controls .k { border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        font-family: 'Menlo','Consolas',monospace; color: #90a4ae; }
+    .controls .k.amber { border-color: #6a5324; color: #ffb74d; }
+    .controls .k.violet { border-color: #4a3a6a; color: #b388ff; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 260 100" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="30" y="34" width="52" height="34" rx="6" fill="#0d1b2a" stroke="#8fa8bd" stroke-width="2.4"/>
+                <rect x="102" y="34" width="52" height="34" rx="6" fill="rgba(79,195,247,0.16)" stroke="#4fc3f7" stroke-width="2.6"/>
+                <rect x="174" y="34" width="52" height="34" rx="6" fill="#0d1b2a" stroke="#b388ff" stroke-width="2.4"/>
+                <g stroke="#8fa8bd" stroke-width="2.2">
+                    <path d="M8 51 L30 51"/><path d="M82 51 L102 51"/><path d="M154 51 L174 51"/><path d="M226 51 L250 51"/>
+                </g>
+                <path d="M18 51 L18 84 L200 84 L200 68" stroke="#b388ff" stroke-width="2.4"/>
+                <circle cx="18" cy="51" r="3.2" fill="#b388ff"/>
+                <text x="200" y="98" font-family="'Segoe UI',sans-serif" font-size="11" fill="#b388ff" text-anchor="middle">the extra path</text>
+                <text x="56" y="55" font-family="'Segoe UI',sans-serif" font-size="10" fill="#8fa8bd" text-anchor="middle">next</text>
+                <text x="128" y="55" font-family="'Segoe UI',sans-serif" font-size="10" fill="#4fc3f7" text-anchor="middle">state</text>
+                <text x="200" y="55" font-family="'Segoe UI',sans-serif" font-size="10" fill="#b388ff" text-anchor="middle">out</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Mealy versus Moore <span class="sub">&mdash; where the output comes from decides when it appears</span></h1>
+            <div class="subtitle">One spec, both ways: the level-to-pulse converter &middot; Moore reads the state, Mealy reads the state <i>and</i> the input &middot; everything else follows from that one path</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">The Extra Path</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Two State Diagrams</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Tables &middot; Equations &middot; Circuits</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Payoff / Trade</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 -->
+        <div class="page" id="p1">
+            <div class="two">
+                <div class="panel moore">
+                    <div class="panel-head"><span class="ph">Moore</span><span class="role">the output logic reads the state, and nothing else</span></div>
+                    <div class="svgbody"><svg id="blkM" viewBox="0 0 1000 500" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                    <div class="eqline"><span class="lbl">output</span>P = f(state)</div>
+                    <div class="tagline"><b>The output is a property of where you are.</b> It can only change when the register does &mdash; on a clock edge &mdash; so it is always a whole number of clocks wide and it cannot glitch. Paying for that costs a state and a clock of delay.</div>
+                </div>
+                <div class="panel mealy">
+                    <div class="panel-head"><span class="ph violet">Mealy</span><span class="role">the same three boxes, plus one path &mdash; the input reaches the output logic too</span></div>
+                    <div class="svgbody"><svg id="blkE" viewBox="0 0 1000 500" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                    <div class="eqline"><span class="lbl">output</span>P = f(state, L)</div>
+                    <div class="tagline"><b>The output is a property of where you are <span class="vio">and what is arriving</span>.</b> It can change the moment the input does, without waiting for an edge &mdash; which is both the whole advantage and the whole catch. Everything on the next three beats follows from this one path.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 -->
+        <div class="page" id="p2">
+            <div class="two">
+                <div class="panel moore">
+                    <div class="panel-head"><span class="ph">Moore &mdash; three states</span><span class="role">P is written <b>inside the bubbles</b></span></div>
+                    <div class="svgbody"><svg id="sdM" viewBox="-24 70 830 326" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                    <div class="tagline">A whole state, <span class="mono">PULSE</span>, exists only to make <span class="mono">P</span> high for one clock. The arcs carry only the input.</div>
+                </div>
+                <div class="panel mealy">
+                    <div class="panel-head"><span class="ph violet">Mealy &mdash; two states</span><span class="role">P is written <b>on the arcs</b>, as <span class="mono">L / P</span></span></div>
+                    <div class="svgbody"><svg id="sdE" viewBox="0 128 700 300" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                    <div class="tagline"><span class="mono">L / P</span> on an arc: "if the input is L at this edge, take this arc <b>and</b> drive P to this value". <span class="mono">PULSE</span> needs no bubble.</div>
+                </div>
+            </div>
+            <!-- timing diagram for narration (Mike, 2026-10-05): the same clock steps both diagrams and this strip -->
+            <div class="panel" style="flex:0 0 auto">
+                <div class="panel-head" style="align-items:center"><span class="ph amber">Timing</span><span class="role">one input, both machines &middot; P goes high once per rising edge of L &middot; the boxed cycle is the lit bubble</span>
+                    <span class="headbtns"><span class="btn go" data-step>CLK ▶ step<span class="k">Space</span></span><span class="btn" data-ltog>toggle L<span class="k">L</span></span><span class="btn" data-glow>where P lives<span class="k">M</span></span><span class="btn" data-reset>↺ reset<span class="k">R</span></span></span></div>
+                <div class="wave2body"><svg id="wave2" viewBox="0 0 1720 230" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 -->
+        <div class="page" id="p3">
+            <div class="two">
+                <div class="panel moore">
+                    <div class="panel-head"><span class="ph">Moore</span><span class="role">two flip-flops &middot; four gates &middot; P off the register</span></div>
+                    <div class="svgbody" style="flex:0 0 auto; align-items:flex-start; padding: 4px 16px;"><table class="sttab" data-tabM></table></div>
+                    <div class="eqline"><span class="lbl">next state</span><span class="eq">D1 = L&middot;(Q1 + Q0)</span><span class="eq">D0 = L&middot;<span class="ov">Q1</span>&middot;<span class="ov">Q0</span></span><span class="lbl">output</span><span class="eq">P = <span class="ov">Q1</span>&middot;Q0</span></div>
+                    <div class="svgbody"><svg id="cktM" viewBox="0 0 900 400" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                    <div class="code" data-codeM></div>
+                </div>
+                <div class="panel mealy">
+                    <div class="panel-head"><span class="ph violet">Mealy</span><span class="role">one flip-flop &middot; one gate &middot; P off the input and the register</span></div>
+                    <div class="svgbody" style="flex:0 0 auto; align-items:flex-start; padding: 4px 16px;"><table class="sttab" data-tabE></table></div>
+                    <div class="eqline"><span class="lbl">next state</span><span class="eq">D = L</span><span class="lbl">output</span><span class="eq">P = L&middot;<span class="ov">Q</span></span></div>
+                    <div class="svgbody"><svg id="cktE" viewBox="0 0 900 400" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                    <div class="code" data-codeE></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 -->
+        <div class="page" id="p4">
+            <div class="panel" style="flex:1">
+                <div class="panel-head"><span class="ph amber">Timing</span><span class="role" data-waverole></span></div>
+                <div class="wavebody"><svg id="wave" viewBox="0 0 1720 470" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                <div class="ctrl" data-ctrl></div>
+            </div>
+            <div class="facts" style="padding:0; gap:14px">
+                <div class="fact pay"><div class="ft"><span class="tag">Payoff</span>One clock sooner, one state fewer</div><div class="fd">L rises during a cycle and Mealy's P rises <b>with it</b>, through one AND gate; Moore's P waits for the edge that ends the cycle. Over any input stream <span class="mono">P_mealy[t] = P_moore[t+1]</span> &mdash; exactly one clock earlier. And Mealy does it with <b>two states and one flip-flop</b>, where Moore needs three states and two: <span class="mono">PULSE</span> is gone.</div></div>
+                <div class="fact vio"><div class="ft"><span class="tag">Trade</span>Mealy's pulse is as wide as the input makes it</div><div class="fd"><span class="mono">P = L&middot;<span class="ov">Q</span></span> goes high the moment L does and drops at the next edge. Slide the edge late (<b>E</b>) and the pulse shrinks to a sliver &mdash; a <b>glitch pulse</b>. Moore's P comes straight off flip-flops: one full clock, always.</div></div>
+                <div class="fact vio"><div class="ft"><span class="tag">Trade</span>Nothing between L and P is clocked</div><div class="fd">Press <b>G</b> to put a blip on L in the middle of a cycle. Neither machine's <i>state</i> changes &mdash; the blip is gone before the edge &mdash; but Mealy's P copies it and Moore's does not. Feeding the output logic from <b>registered inputs</b> instead of the raw input is a later topic: <b data-topic="pipelined-mealy">Pipelined Mealy</b>.</div></div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">&rarr;</span>/<span class="k">&larr;</span> next / previous
+            &middot; <span class="k amber">Space</span> CLK step
+            &middot; <span class="k amber">L</span> toggle the input
+            &middot; <span class="k">R</span> &#8634; reset
+            &middot; <span class="k violet">M</span> where P lives (beat 2)
+            &middot; <span class="k violet">E</span> edge position &middot; <span class="k violet">G</span> glitch (beat 4)
+        </div>
+    </div>
+
+</div>
+</div>
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const W0 = '#7d9bb5', W1 = '#4fc3f7', AMB = '#ffb74d', VIO = '#b388ff', INK = '#cfd8dc', DIM = '#90a4ae', LINE = '#8fa8bd';
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+    // ============ THE TWO MACHINES (source of truth — python3 + iverilog verified) ============
+    // One spec: P goes high once per rising edge of the level L.
+    // Moore (from brief 05): 3 states LOW=00, PULSE=01, HIGH=10.  D1 = L·(Q1+Q0)  D0 = L·Q̄1·Q̄0  P = Q̄1·Q0
+    // Mealy: 1 flip-flop.  D = L   P = L·Q̄  — P reads the input directly, so the PULSE state disappears.
+    const MOORE_NAME = { 0: 'LOW', 1: 'PULSE', 2: 'HIGH', 3: '(unused)' };
+    const mD1 = (L, q1, q0) => L & (q1 | q0);
+    const mD0 = (L, q1, q0) => L & (1 - q1) & (1 - q0);
+    const mP  = (q1, q0) => (1 - q1) & q0;
+    const mooreNext = (s, L) => { const q1 = (s >> 1) & 1, q0 = s & 1; return (mD1(L, q1, q0) << 1) | mD0(L, q1, q0); };
+    const eD = (L) => L;
+    const eP = (L, q) => L & (1 - q);
+    const mealyNext = (q, L) => eD(L);
+    const LSTRIP = [0,0,1,1,1,1,0,0,1,1,0,0];       // L = 001111001100
+    const N = LSTRIP.length;
+    // rows of the two state tables
+    const ROWS_M = [];
+    for (const L of [0, 1]) for (const s of [0, 1, 2]) {
+        const q1 = (s >> 1) & 1, q0 = s & 1;
+        ROWS_M.push({ L, s, q1, q0, n: mooreNext(s, L), P: mP(q1, q0) });
+    }
+    const ROWS_E = [];
+    for (const q of [0, 1]) for (const L of [0, 1]) ROWS_E.push({ q, L, n: mealyNext(q, L), P: eP(L, q) });
+    function runBoth(Ls) {
+        const out = []; let s = 0, q = 0;
+        for (const L of Ls) { out.push({ L, s, q, pM: mP((s >> 1) & 1, s & 1), pE: eP(L, q) }); s = mooreNext(s, L); q = mealyNext(q, L); }
+        return out;
+    }
+
+    // ============ STATE ============
+    const FIRST = 1, LAST = 4;
+    const EDGEPOS = [0.10, 0.38, 0.76];             // where inside a cycle L is allowed to move — early / middle / late
+    let page = 1, tclk = 0, Ls = LSTRIP.slice(), offScript = false, glow = false, edgeIx = 0, glitch = false;
+    const GLITCH_CELL = 7, GLITCH_AT = 0.42, GLITCH_W = 0.13;   // cycle 7 has L = 0 and Q = 0, so a blip there reaches P
+    const pages = Array.from(document.querySelectorAll('.page')), tabs = Array.from(document.querySelectorAll('.tab')), dots = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+
+    // ============ BEAT 1 — THE TWO BLOCK DIAGRAMS ============
+    function blockDiagram(target, mealy) {
+        const g = target, MID = 250, BY = 175, BH = 150;
+        const B = { n: { x: 140, y: BY, w: 210, h: BH, t: 'next-state', s: 'logic' },
+                    s: { x: 420, y: BY, w: 210, h: BH, t: 'state register', s: 'flip-flops · one CLK' },
+                    o: { x: 700, y: BY, w: 210, h: BH, t: 'output logic', s: 'combinational' } };
+        for (const [k, b] of Object.entries(B)) {
+            el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 14, fill: '#0b1622',
+                stroke: k === 's' ? W1 : (k === 'o' && mealy ? VIO : '#4a6274'), 'stroke-width': k === 's' || (k === 'o' && mealy) ? 3.4 : 3 }, g);
+            const t1 = el('text', { x: b.x + b.w / 2, y: MID - 2, fill: INK, 'font-size': 21, 'font-weight': 700, 'text-anchor': 'middle' }, g); t1.textContent = b.t;
+            const t2 = el('text', { x: b.x + b.w / 2, y: MID + 24, fill: '#78909c', 'font-size': 15, 'text-anchor': 'middle' }, g); t2.textContent = b.s;
+        }
+        const wire = (pts, col, w) => el('path', { d: 'M' + pts.map(p => p.join(',')).join(' L'), stroke: col || LINE, 'stroke-width': w || 3 }, g);
+        const arrow = (x, y, col, dir) => el('path', { d: dir === 'd' ? `M${x-8},${y-14} L${x},${y} L${x+8},${y-14}` : dir === 'u' ? `M${x-8},${y+14} L${x},${y} L${x+8},${y+14}` : `M${x-14},${y-8} L${x},${y} L${x-14},${y+8}`, stroke: col || LINE, 'stroke-width': 3 }, g);
+        const lab = (x, y, s, col, size) => { const t = el('text', { x, y, fill: col || DIM, 'font-size': size || 18, 'text-anchor': 'middle', 'font-family': "'Menlo','Consolas',monospace" }, g); t.textContent = s; return t; };
+        wire([[40, MID], [B.n.x, MID]], AMB); arrow(B.n.x, MID, AMB); lab(62, MID - 16, 'L', AMB, 20);
+        wire([[B.n.x + B.n.w, MID], [B.s.x, MID]]); arrow(B.s.x, MID);
+        wire([[B.s.x + B.s.w, MID], [B.o.x, MID]], W1); arrow(B.o.x, MID, W1); lab(665, MID - 16, 'state', W1, 16);
+        wire([[B.o.x + B.o.w, MID], [960, MID]], W1); arrow(960, MID, W1); lab(940, MID - 16, 'P', W1, 20);
+        // feedback over the top
+        el('circle', { cx: 665, cy: MID, r: 6, fill: W1 }, g);
+        wire([[665, MID], [665, 100], [245, 100], [245, BY]], W1); arrow(245, BY, W1, 'd');
+        // the Mealy extra path: the input tapped and carried over the top into the output-logic box.
+        // Routed above the feedback lane (y = 100) so it crosses nothing — the picture has no wire crossings at all.
+        if (mealy) {
+            el('circle', { cx: 90, cy: MID, r: 6, fill: VIO }, g);
+            wire([[90, MID], [90, 60], [855, 60], [855, BY]], VIO, 4);
+            arrow(855, BY, VIO, 'd');
+            const t = el('text', { x: 472, y: 44, fill: VIO, 'font-size': 19, 'text-anchor': 'middle', 'font-weight': 700, 'font-family': "'Segoe UI',sans-serif" }, g);
+            t.textContent = 'the extra path — the input reaches the output logic';
+        }
+        // clock
+        wire([[40, 430], [525, 430], [525, BY + BH]], AMB); arrow(525, BY + BH, AMB, 'u');
+        lab(72, 418, 'CLK', AMB, 16);
+        const cap = el('text', { x: 500, y: 478, fill: mealy ? '#6a5a8a' : '#55697c', 'font-size': 17, 'text-anchor': 'middle', 'font-family': "'Segoe UI',sans-serif" }, g);
+        cap.textContent = mealy ? 'P can move the moment L moves — it does not have to wait for an edge'
+                                : 'no path from the input to the output logic — P can only change at an edge';
+    }
+    blockDiagram(document.getElementById('blkM'), false);
+    blockDiagram(document.getElementById('blkE'), true);
+
+    // ============ STATE DIAGRAMS ============
+    function injectMarkers(target) {
+        const mk = target.id, defs = el('defs', {}, target);
+        for (const [id, fill] of [['ah', LINE], ['ahon', W1], ['ahg', DIM]]) {
+            const m = el('marker', { id: id + '-' + mk, markerWidth: 20, markerHeight: 16, refX: 14, refY: 6.5, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+            el('path', { d: 'M0,0 L16,6.5 L0,13 Z', fill }, m);
+        }
+        return mk;
+    }
+    // arcs and self-loops generated from the node table + the machine — never a typed arc list
+    function buildDiagram(target, spec) {
+        const mk = injectMarkers(target), R = spec.r, arcs = [];
+        const attach = [];   // rim angles already taken at the reset node (arc ends, loop feet) — the reset arrow avoids them
+        for (const ed of spec.edges) {
+            const A = spec.nodes[ed.from], B = spec.nodes[ed.to];
+            let d, lx, ly, loopAnchor = null;
+            if (ed.from === ed.to) {
+                const th = ed.loop, a1 = th + 0.45, a2 = th - 0.45, ro = R + 92;
+                const p1 = { x: A.x + R * Math.cos(a1), y: A.y + R * Math.sin(a1) }, p2 = { x: A.x + (R - 1) * Math.cos(a2), y: A.y + (R - 1) * Math.sin(a2) };
+                const c1 = { x: A.x + ro * Math.cos(th + 0.55), y: A.y + ro * Math.sin(th + 0.55) }, c2 = { x: A.x + ro * Math.cos(th - 0.55), y: A.y + ro * Math.sin(th - 0.55) };
+                if (ed.from === spec.reset) attach.push(a1, a2);
+                d = `M${p1.x.toFixed(1)},${p1.y.toFixed(1)} C${c1.x.toFixed(1)},${c1.y.toFixed(1)} ${c2.x.toFixed(1)},${c2.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+                if (spec.loopLabelBelow) {   // centered under the loop's own lowest point (sampled off the curve), clear of it
+                    let xs = [], ymax = -1e9;
+                    for (let i = 0; i <= 24; i++) { const u = i / 24, v = 1 - u;
+                        const px = v*v*v*p1.x + 3*v*v*u*c1.x + 3*v*u*u*c2.x + u*u*u*p2.x, py = v*v*v*p1.y + 3*v*v*u*c1.y + 3*v*u*u*c2.y + u*u*u*p2.y;
+                        xs.push(px); ymax = Math.max(ymax, py); }
+                    // inner edge just outside the bubble, text running outward under the loop: centered, the label
+                    // is wider than the loop and clipped the bubble's outline
+                    const out = Math.cos(th) < 0 ? -1 : 1;
+                    lx = A.x + out * (R + 2); ly = ymax + 26; loopAnchor = out < 0 ? 'end' : 'start';
+                }
+                else { lx = A.x + (R + 82) * Math.cos(th); ly = A.y + (R + 82) * Math.sin(th) + 6; }
+            } else {
+                const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+                const C = { x: (A.x + B.x) / 2 + nx * ed.bend, y: (A.y + B.y) / 2 + ny * ed.bend };
+                const sa = Math.atan2(C.y - A.y, C.x - A.x), ea = Math.atan2(C.y - B.y, C.x - B.x);
+                const P0 = { x: A.x + R * Math.cos(sa), y: A.y + R * Math.sin(sa) }, P2 = { x: B.x + (R + 1) * Math.cos(ea), y: B.y + (R + 1) * Math.sin(ea) };
+                if (ed.from === spec.reset) attach.push(sa);
+                if (ed.to === spec.reset) attach.push(ea);
+                d = `M${P0.x.toFixed(1)},${P0.y.toFixed(1)} Q${C.x.toFixed(1)},${C.y.toFixed(1)} ${P2.x.toFixed(1)},${P2.y.toFixed(1)}`;
+                const mx = 0.25 * P0.x + 0.5 * C.x + 0.25 * P2.x, my = 0.25 * P0.y + 0.5 * C.y + 0.25 * P2.y, sg = Math.sign(ed.bend) || 1;
+                lx = mx + nx * sg * 22; ly = my + ny * sg * 22 + 6;
+            }
+            const path = el('path', { class: 'arc', 'data-from': ed.from, 'data-to': ed.to, 'data-l': ed.L, d, 'marker-end': `url(#ah-${mk})` }, target);
+            const lab = el('text', { class: 'arc-l' + (ed.P ? ' pone' : ''), 'data-from': ed.from, 'data-l': ed.L, x: lx.toFixed(1), y: ly.toFixed(1) }, target);
+            lab.textContent = ed.label;
+            if (loopAnchor) lab.style.textAnchor = loopAnchor;   // inline: the .arc-l CSS rule would beat an attribute
+            arcs.push({ edge: ed, path, lab });
+        }
+        const nodes = {};
+        for (const k of Object.keys(spec.nodes)) {
+            const n = spec.nodes[k], grp = el('g', { class: 'sd-node' + (n.P ? ' pone' : ''), 'data-state': k }, target);
+            el('circle', { class: 'sdc', cx: n.x, cy: n.y, r: R }, grp);
+            const t1 = el('text', { class: 'sdname', x: n.x, y: n.y - (n.enc ? 10 : 2) }, grp); t1.textContent = n.name;
+            if (n.enc) { const t2 = el('text', { class: 'sdenc', x: n.x, y: n.y + 14 }, grp); t2.textContent = n.enc; }
+            const t3 = el('text', { class: 'sdp', x: n.x, y: n.y + (n.enc ? 38 : 26) }, grp); t3.textContent = n.plab;
+            nodes[k] = grp;
+        }
+        const r0 = spec.nodes[spec.reset];
+        // Reset arrow: radial (aimed at the bubble's center), its tip on the rim like every other arc, coming in
+        // from as near the upper left as the rim allows while staying 28° clear of every arc end and loop foot.
+        // (Was a fixed offset: it ended inside the bubble, was not aimed at the center, and touched the loop.)
+        const sep = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+        const want = -3 * Math.PI / 4, clear = 28 * Math.PI / 180;
+        let ra = want, best = 1e9;
+        for (let k = 0; k < 720; k++) { const a = -Math.PI + k * Math.PI / 360;
+            if (attach.every(t => sep(a, t) >= clear) && sep(a, want) < best) { best = sep(a, want); ra = a; } }
+        const rc = Math.cos(ra), rs = Math.sin(ra), pt = (d) => `${(r0.x + d * rc).toFixed(1)},${(r0.y + d * rs).toFixed(1)}`;
+        el('path', { class: 'rst', 'data-angle': ra.toFixed(4), d: `M${pt(R + 58)} L${pt(R + 1)}`, 'marker-end': `url(#ahg-${mk})` }, target);
+        const rl = el('text', { class: 'rstl', x: (r0.x + (R + 78) * rc).toFixed(1), y: (r0.y + (R + 78) * rs + 5).toFixed(1) }, target); rl.textContent = 'reset';
+        const h = el('text', { class: 'sd-hint', x: spec.hintX, y: spec.hintY }, target); h.textContent = spec.hint;
+        return { mk, arcs, nodes };
+    }
+    // Moore: LOW(00) PULSE(01) HIGH(10) — arcs from the equations
+    // Laid out in one row, in the order a rising edge visits them, so it reads left to right like the timing
+    // strip under it (2026-10-05). HIGH → LOW is the one arc that has to clear PULSE, so it bows high over it.
+    const NM = { 0: { x: 170, y: 250, name: 'LOW', enc: 'Q1Q0 = 00', plab: 'P = 0', P: 0 },
+                 1: { x: 390, y: 250, name: 'PULSE', enc: 'Q1Q0 = 01', plab: 'P = 1', P: 1 },
+                 2: { x: 610, y: 250, name: 'HIGH', enc: 'Q1Q0 = 10', plab: 'P = 0', P: 0 } };
+    const EM = [];
+    for (const s of [0, 1, 2]) for (const L of [0, 1]) {
+        const t = mooreNext(s, L);
+        EM.push({ from: s, to: t, L, P: 0, label: 'L=' + L,
+                  bend: Math.abs(NM[s].x - NM[t].x) > 300 ? 230 : 46, loop: s === 0 ? Math.PI : 0 });
+    }
+    // Mealy: two states, outputs on the arcs as L / P
+    const NE = { 0: { x: 230, y: 265, name: 'Q = 0', plab: 'L was low', P: 0 },
+                 1: { x: 470, y: 265, name: 'Q = 1', plab: 'L was high', P: 0 } };
+    const EE = [];
+    for (const q of [0, 1]) for (const L of [0, 1]) {
+        const t = mealyNext(q, L), P = eP(L, q);
+        EE.push({ from: q, to: t, L, P, label: 'L=' + L + ' / P=' + P, bend: 52, loop: q === 0 ? Math.PI : 0 });
+    }
+    const DM = buildDiagram(document.getElementById('sdM'), { r: 72, nodes: NM, edges: EM, reset: 0,
+        hint: 'three bubbles · the output is written in the bubble · arcs carry the input only', hintX: 390, hintY: 384 });
+    const DE = buildDiagram(document.getElementById('sdE'), { r: 72, nodes: NE, edges: EE, reset: 0, loopLabelBelow: true,
+        hint: 'two bubbles · the output rides on the arc, written input / output', hintX: 350, hintY: 416 });
+
+    // ============ BEAT 3 — TABLES, CIRCUITS, VERILOG ============
+    function tablesFor(cur) {
+        document.querySelector('[data-tabM]').innerHTML =
+            `<tr><th>L</th><th>Q1</th><th>Q0</th><th>state</th><th>Q1⁺</th><th>Q0⁺</th><th>P</th></tr>`
+            + ROWS_M.map(r => `<tr class="${cur && cur.L === r.L && cur.s === r.s ? 'horow' : ''}"><td class="in">${r.L}</td><td>${r.q1}</td><td>${r.q0}</td>`
+                + `<td style="color:#78909c">${MOORE_NAME[r.s]}</td><td>${(r.n >> 1) & 1}</td><td>${r.n & 1}</td>`
+                + `<td class="p${r.P ? ' one' : ''}">${r.P}</td></tr>`).join('');
+        document.querySelector('[data-tabE]').innerHTML =
+            `<tr><th>Q</th><th>L</th><th>Q⁺</th><th>P</th></tr>`
+            + ROWS_E.map(r => `<tr class="${cur && cur.L === r.L && cur.q === r.q ? 'horow' : ''}"><td>${r.q}</td><td class="in">${r.L}</td><td>${r.n}</td>`
+                + `<td class="p${r.P ? ' one' : ''}">${r.P}</td></tr>`).join('');
+    }
+    document.querySelector('[data-codeM]').innerHTML =
+`<span class="cm">// iverilog-verified — P reads the state only</span>
+<span class="kw">module</span> l2p_moore (<span class="kw">input</span> clk, rst, L, <span class="kw">output</span> P);
+  <span class="kw">reg</span> q1, q0;
+  <span class="kw">always</span> @(<span class="kw">posedge</span> clk) <span class="kw">if</span> (rst) {q1,q0} &lt;= 2'b00;
+    <span class="kw">else begin</span> q1 &lt;= L &amp; (q1 | q0); q0 &lt;= L &amp; ~q1 &amp; ~q0; <span class="kw">end</span>
+  <span class="kw">assign</span> P = <span class="hi">~q1 &amp; q0</span>;
+<span class="kw">endmodule</span>`;
+    document.querySelector('[data-codeE]').innerHTML =
+`<span class="cm">// the only difference is what P reads</span>
+<span class="kw">module</span> l2p_mealy (<span class="kw">input</span> clk, rst, L, <span class="kw">output</span> P);
+  <span class="kw">reg</span> q;
+  <span class="kw">always</span> @(<span class="kw">posedge</span> clk) <span class="kw">if</span> (rst) q &lt;= 0; <span class="kw">else</span> q &lt;= L;
+
+  <span class="kw">assign</span> P = <span class="hi">L &amp; ~q</span>;
+<span class="kw">endmodule</span>`;
+
+    // ---- circuit helpers ----
+    function ckHelpers(g) {
+        const P = (pts) => 'M' + pts.map(p => p[0] + ',' + p[1]).join(' L');
+        const nets = {};
+        const net = (name, pts) => { const e = el('path', { d: P(pts), stroke: W0, 'stroke-width': 3.2 }, g); (nets[name] = nets[name] || []).push(e); return e; };
+        const dot = (x, y, name) => { const c = el('circle', { cx: x, cy: y, r: 5, fill: W0, stroke: 'none' }, g); (nets[name] = nets[name] || []).push(c); return c; };
+        const txt = (x, y, s, col, size, anchor, fam) => { const t = el('text', { x, y, fill: col || DIM, 'font-size': size || 16, 'text-anchor': anchor || 'middle',
+            'font-family': fam || "'Menlo','Consolas',monospace" }, g); t.textContent = s; return t; };
+        const andShape = (x, y, w, h) => el('path', { d: `M${x},${y} L${x + w - h / 2},${y} A${h / 2},${h / 2} 0 0 1 ${x + w - h / 2},${y + h} L${x},${y + h} Z`, stroke: INK, 'stroke-width': 3 }, g);
+        const orShape = (x, y, w, h) => el('path', { d: `M${x},${y} Q${x + 22},${y + h / 2} ${x},${y + h} Q${x + w * 0.72},${y + h} ${x + w},${y + h / 2} Q${x + w * 0.72},${y} ${x},${y} Z`, stroke: INK, 'stroke-width': 3 }, g);
+        const dff = (x, y, w, h, label) => {
+            el('rect', { x, y, width: w, height: h, rx: 8, fill: '#0b1622', stroke: INK, 'stroke-width': 3 }, g);
+            txt(x + 14, y + 34, 'D', INK, 18, 'start'); txt(x + w - 14, y + 34, 'Q', INK, 18, 'end');
+            txt(x + w - 14, y + h - 14, 'Q', INK, 18, 'end');
+            el('path', { d: `M${x + w - 27},${y + h - 32} L${x + w - 11},${y + h - 32}`, stroke: INK, 'stroke-width': 2 }, g);
+            el('path', { d: `M${x},${y + h - 38} L${x + 18},${y + h - 28} L${x},${y + h - 18}`, stroke: INK, 'stroke-width': 3 }, g);
+            if (label) txt(x + w / 2, y - 9, label, W1, 14, 'middle', "'Segoe UI',sans-serif");
+            return { D: [x, y + 28], CLK: [x, y + h - 28], Q: [x + w, y + 28], Qn: [x + w, y + h - 28] };
+        };
+        // a named-net stub: a short lead carrying the net's name, used instead of long feedback loops
+        // (the house convention from brief 33's beat 3). `bar` draws the complement overbar as a line.
+        const stub = (x, y, net_, label, dir, bar) => {
+            const e = el('path', { d: P(dir === 'out' ? [[x, y], [x + 42, y]] : [[x - 42, y], [x, y]]), stroke: W0, 'stroke-width': 3.2 }, g);
+            (nets[net_] = nets[net_] || []).push(e);
+            const tx = dir === 'out' ? x + 50 : x - 50;
+            const t = txt(tx, y + 6, label, W0, 17, dir === 'out' ? 'start' : 'end');
+            (nets[net_] = nets[net_] || []).push(t);
+            if (bar) { const w = label.length * 10.2, x1 = dir === 'out' ? tx : tx - w;
+                const b = el('path', { d: `M${x1},${y - 12} L${x1 + w},${y - 12}`, stroke: W0, 'stroke-width': 2 }, g);
+                (nets[net_] = nets[net_] || []).push(b); }
+            return e;
+        };
+        return { P, net, dot, txt, andShape, orShape, dff, stub, nets };
+    }
+    // ---- Moore circuit ----
+    const cM = (function () {
+        const g = document.getElementById('cktM'), h = ckHelpers(g);
+        const { net, dot, txt, andShape, orShape, dff, stub, nets } = h;
+        orShape(196, 92, 78, 62); txt(232, 84, 'OR', DIM, 12, 'middle', "'Segoe UI',sans-serif");
+        andShape(330, 46, 84, 62); txt(372, 38, 'AND', DIM, 12, 'middle', "'Segoe UI',sans-serif");
+        andShape(330, 176, 84, 76); txt(372, 168, 'AND', DIM, 12, 'middle', "'Segoe UI',sans-serif");
+        andShape(650, 292, 84, 62); txt(692, 284, 'AND', DIM, 12, 'middle', "'Segoe UI',sans-serif");
+        const F1 = dff(470, 30, 110, 100, 'flip-flop 1'), F0 = dff(470, 168, 110, 100, 'flip-flop 0');
+        // L down the left, tapped into both ANDs
+        net('L', [[40, 20], [110, 20], [110, 192], [330, 192]]);
+        txt(32, 26, 'L', AMB, 20, 'end');
+        dot(110, 62, 'L'); net('L', [[110, 62], [330, 62]]);
+        // OR of the two state bits → the upper AND
+        stub(196, 107, 'Q1', 'Q1', 'in'); stub(196, 139, 'Q0', 'Q0', 'in');
+        net('OR', [[274, 123], [300, 123], [300, 92], [330, 92]]);
+        // lower AND also takes the two complements, straight off the Q̄ pins
+        stub(330, 214, 'Q1n', 'Q1', 'in', true); stub(330, 238, 'Q0n', 'Q0', 'in', true);
+        // gate outputs into the D pins
+        net('D1', [[414, 77], [450, 77], [450, 58], [F1.D[0], F1.D[1]]]);
+        net('D0', [[414, 214], [450, 214], [450, 196], [F0.D[0], F0.D[1]]]);
+        // register outputs leave as named nets
+        stub(F1.Q[0], F1.Q[1], 'Q1', 'Q1', 'out'); stub(F1.Qn[0], F1.Qn[1], 'Q1n', 'Q1', 'out', true);
+        stub(F0.Q[0], F0.Q[1], 'Q0', 'Q0', 'out'); stub(F0.Qn[0], F0.Qn[1], 'Q0n', 'Q0', 'out', true);
+        // output AND: P = Q̄1 · Q0
+        stub(650, 307, 'Q1n', 'Q1', 'in', true); stub(650, 339, 'Q0', 'Q0', 'in');
+        net('P', [[734, 323], [830, 323]]); txt(866, 330, 'P', W1, 20, 'end');
+        // clock: one trunk to both flip-flops, hopping the D0 wire it has to cross
+        const CX = 430;
+        const seg = (pts) => el('path', { d: h.P(pts), stroke: AMB, 'stroke-width': 3.2 }, g);
+        seg([[40, 372], [CX, 372], [CX, 223]]);
+        el('path', { d: `M${CX},223 A9,9 0 0 0 ${CX},205`, stroke: AMB, 'stroke-width': 3.2, fill: 'none' }, g);
+        seg([[CX, 205], [CX, F1.CLK[1]], [F1.CLK[0], F1.CLK[1]]]);
+        seg([[CX, F0.CLK[1]], [F0.CLK[0], F0.CLK[1]]]);
+        el('circle', { cx: CX, cy: F0.CLK[1], r: 5, fill: AMB, stroke: 'none' }, g);
+        txt(32, 378, 'CLK', AMB, 17, 'end');
+        txt(450, 396, 'Q̄ comes straight off the flip-flops’ Q̄ pins — there are no inverters in this circuit', '#607d8b', 15, 'middle', "'Segoe UI',sans-serif");
+        return { nets };
+    })();
+    // ---- Mealy circuit ----
+    const cE = (function () {
+        const g = document.getElementById('cktE'), h = ckHelpers(g);
+        const { net, dot, txt, andShape, dff, nets } = h;
+        const F = dff(300, 60, 110, 100);
+        // title under the box: above it, the L wire at y = 40 sat on the text
+        txt(355, 186, 'the one flip-flop', W1, 14, 'middle', "'Segoe UI',sans-serif");
+        andShape(560, 100, 88, 70); txt(604, 92, 'AND', DIM, 12, 'middle', "'Segoe UI',sans-serif");
+        net('L', [[40, 40], [520, 40]]); txt(32, 46, 'L', AMB, 20, 'end');
+        dot(280, 40, 'L'); net('L', [[280, 40], [280, 88], [F.D[0], F.D[1]]]);
+        net('L', [[520, 40], [520, 117], [560, 117]]);
+        net('Qn', [[F.Qn[0], F.Qn[1]], [490, F.Qn[1]], [490, 153], [560, 153]]);
+        const qn = txt(508, 148, 'Q', W0, 17, 'start');
+        const qb = el('path', { d: 'M508,130 L520,130', stroke: W0, 'stroke-width': 2 }, g);
+        nets.Qn.push(qn, qb);
+        net('P', [[648, 135], [800, 135]]); txt(836, 142, 'P', W1, 20, 'end');
+        el('path', { d: h.P([[40, 250], [270, 250], [270, F.CLK[1]], [F.CLK[0], F.CLK[1]]]), stroke: AMB, 'stroke-width': 3.2 }, g);
+        txt(32, 256, 'CLK', AMB, 17, 'end');
+        txt(450, 330, 'D = L — the flip-flop just remembers what L was at the last edge', '#607d8b', 16, 'middle', "'Segoe UI',sans-serif");
+        txt(450, 358, 'and the AND asks "L now, and not L then" — no flip-flop after it', '#607d8b', 16, 'middle', "'Segoe UI',sans-serif");
+        return { nets };
+    })();
+
+    // ============ BEAT 4 — WAVEFORMS ============
+    // L holds value Ls[t] through cycle t and moves at (or just after) the edge that starts cycle t; the E control
+    // slides that move later into the cycle. P_mealy = L·Q̄ is combinational, so its pulse runs from wherever L rose
+    // to the next edge — that is what makes it narrow. P_moore comes off flip-flops and only ever moves at an edge.
+    const WV = { x0: 150, w: 128, rows: { CLK: 60, L: 165, PM: 275, PE: 385 }, hi: 46 };
+    function waveGeom() {
+        const f = EDGEPOS[edgeIx], tr = runBoth(Ls);
+        const X = (t, frac) => WV.x0 + (t + (frac || 0)) * WV.w;
+        // analogue L: value Ls[t] for cycle t, transitions at t+f when it differs from Ls[t-1]
+        const Lsegs = [];                       // [{x1,x2,v}]
+        let cur = 0, start = X(0);
+        for (let t = 0; t < N; t++) {
+            if (Ls[t] !== cur) { const xt = X(t, t === 0 ? 0 : f); Lsegs.push({ x1: start, x2: xt, v: cur }); start = xt; cur = Ls[t]; }
+        }
+        Lsegs.push({ x1: start, x2: X(N), v: cur });
+        // the glitch blip, if armed: a cycle where L = 0 and Q = 0, so it reaches Mealy's P and nothing else
+        const blip = glitch ? { x1: X(GLITCH_CELL, GLITCH_AT), x2: X(GLITCH_CELL, GLITCH_AT + GLITCH_W) } : null;
+        // Mealy P: high from where L rose to the next edge, for each cycle whose sampled P is 1
+        const Esegs = [];
+        for (let t = 0; t < N; t++) if (tr[t].pE) Esegs.push({ x1: X(t, t === 0 ? 0 : f), x2: X(t + 1), t });
+        if (blip) Esegs.push({ x1: blip.x1, x2: blip.x2, t: GLITCH_CELL, glitch: true });
+        // Moore P: whole cycles
+        const Msegs = [];
+        for (let t = 0; t < N; t++) if (tr[t].pM) Msegs.push({ x1: X(t), x2: X(t + 1), t });
+        return { f, tr, X, Lsegs, Esegs, Msegs, blip };
+    }
+    function drawWave() {
+        const g = document.getElementById('wave');
+        while (g.firstChild) g.removeChild(g.firstChild);
+        const G = waveGeom(), X = G.X;
+        const path = (d, col, w, dash) => el('path', { d, stroke: col, 'stroke-width': w || 3.2, fill: 'none', ...(dash ? { 'stroke-dasharray': dash } : {}) }, g);
+        const txt = (x, y, s, col, size, anchor, fam) => { const t = el('text', { x, y, fill: col, 'font-size': size || 16, 'text-anchor': anchor || 'middle',
+            'font-family': fam || "'Menlo','Consolas',monospace" }, g); t.textContent = s; return t; };
+        // cycle grid + numbers
+        for (let t = 0; t <= N; t++) {
+            const x = X(t), now = t === tclk;
+            path(`M${x},34 L${x},430`, now ? AMB : '#1e3247', now ? 2.4 : 1.6, now ? '' : '6 7');
+            if (t < N) txt(X(t, 0.5), 456, t, t === tclk ? AMB : '#55697c', 15);
+        }
+        if (tclk < N) el('rect', { x: X(tclk), y: 34, width: WV.w, height: 396, fill: 'rgba(255,183,77,0.05)' }, g);
+        // row labels
+        for (const [k, y] of Object.entries(WV.rows)) {
+            const nm = { CLK: 'CLK', L: 'L', PM: 'P  Moore', PE: 'P  Mealy' }[k];
+            const col = { CLK: AMB, L: AMB, PM: W1, PE: VIO }[k];
+            txt(132, y - 8, nm, col, 18, 'end');
+        }
+        // CLK
+        let d = '';
+        for (let t = 0; t < N; t++) { const a = X(t), b = X(t + 0.5), c = X(t + 1), y = WV.rows.CLK, hi = y - WV.hi;
+            d += `M${a},${y} L${a},${hi} L${b},${hi} L${b},${y} L${c},${y} `; }
+        path(d, AMB, 2.6);
+        // L
+        let dl = '', prev = null, y = WV.rows.L, hiY = y - WV.hi;
+        for (const s of G.Lsegs) { const yy = s.v ? hiY : y;
+            if (prev !== null && prev !== yy) dl += `L${s.x1},${yy} `;
+            dl += (dl ? 'L' : 'M') + `${s.x1},${yy} L${s.x2},${yy} `; prev = yy; }
+        path(dl, AMB, 3.4);
+        if (G.blip) path(`M${G.blip.x1},${y} L${G.blip.x1},${hiY} L${G.blip.x2},${hiY} L${G.blip.x2},${y}`, AMB, 3.4);
+        // P rows
+        const drawP = (segs, rowY, col) => {
+            const hiY2 = rowY - WV.hi;
+            path(`M${X(0)},${rowY} L${X(N)},${rowY}`, '#2a3f55', 2.4);
+            for (const s of segs) path(`M${s.x1},${rowY} L${s.x1},${hiY2} L${s.x2},${hiY2} L${s.x2},${rowY}`, col, 3.6);
+        };
+        drawP(G.Msegs, WV.rows.PM, W1);
+        drawP(G.Esegs, WV.rows.PE, VIO);
+        // width callouts on the first pulse of each
+        if (G.Msegs.length) { const s = G.Msegs[0], m = (s.x1 + s.x2) / 2;
+            txt(m, WV.rows.PM - WV.hi - 12, 'one full clock', W1, 15, 'middle', "'Segoe UI',sans-serif"); }
+        if (G.Esegs.length) { const s = G.Esegs.find(q => !q.glitch), pct = Math.round((s.x2 - s.x1) / WV.w * 100), m = (s.x1 + s.x2) / 2;
+            // below the row, right-aligned to the pulse's own edge so it stays inside the pulse's clock cell: vertical
+            // grid/cursor lines only run on cell boundaries, so text kept inside one cell never gets struck through
+            txt(s.x2 - 6, WV.rows.PE + 26, pct + '% of a clock', VIO, 15, 'end', "'Segoe UI',sans-serif"); }
+        if (G.blip) txt(X(GLITCH_CELL, GLITCH_AT + GLITCH_W / 2), WV.rows.L - WV.hi - 12, 'glitch', AMB, 14, 'middle', "'Segoe UI',sans-serif");
+        // the one-clock-apart marker
+        if (G.Esegs.length && G.Msegs.length) {
+            const a = G.Esegs.find(q => !q.glitch), b = G.Msegs[0];
+            const by = (WV.rows.PM + WV.rows.PE - WV.hi) / 2;
+            path(`M${a.x1},${WV.rows.PE - WV.hi} L${a.x1},${by}`, VIO, 1.8, '5 5');
+            path(`M${b.x1},${WV.rows.PM} L${b.x1},${by}`, W1, 1.8, '5 5');
+            path(`M${a.x1},${by} L${b.x1},${by}`, DIM, 1.8);
+            // two short lines just right of the Moore edge: the whole label sits inside Moore's pulse cell, between the
+            // two P rows, where no vertical line runs (one line was wider than a cell and always crossed a boundary)
+            txt(b.x1 + 10, by - 3, 'Mealy is one', DIM, 14, 'start', "'Segoe UI',sans-serif").setAttribute('data-lbl', 'earlier');
+            txt(b.x1 + 10, by + 14, 'clock earlier', DIM, 14, 'start', "'Segoe UI',sans-serif").setAttribute('data-lbl', 'earlier');
+        }
+        return G;
+    }
+
+    // ============ BEAT 2 — TIMING STRIP (for narrating the two diagrams) ============
+    // Same model and same clock as everything else. Each machine gets a state row (what the lit bubble is) and its P
+    // row. L moves ON the clock edge here (f = 0), the same idealised way the state rows and Moore's P are drawn, so
+    // the whole boxed cycle carries the L that the lit arc is labeled with. (It was drawn 10% into the cycle and read
+    // as "L arrives late" — Mike, 2026-10-05.) Where L lands inside a cycle is beat 4's subject, not this one's.
+    const W2 = { x0: 190, w: 126, hi: 20, band: 24, rows: { CLK: 34, L: 66, SM: 90, PM: 134, SE: 158, PE: 202 } };
+    function drawWave2() {
+        const g = document.getElementById('wave2');
+        while (g.firstChild) g.removeChild(g.firstChild);
+        const tr = runBoth(Ls), f = 0, X = (t, fr) => W2.x0 + (t + (fr || 0)) * W2.w, R = W2.rows;
+        const path = (d, col, w, dash) => el('path', { d, stroke: col, 'stroke-width': w || 3, fill: 'none', ...(dash ? { 'stroke-dasharray': dash } : {}) }, g);
+        const txt = (x, y, s, col, size, anchor, fam, bold) => { const t = el('text', { x, y, fill: col, 'font-size': size || 15, 'text-anchor': anchor || 'middle',
+            'font-family': fam || "'Menlo','Consolas',monospace", ...(bold ? { 'font-weight': 700 } : {}) }, g); t.textContent = s; return t; };
+        if (tclk < N) el('rect', { x: X(tclk), y: 8, width: W2.w, height: 200, fill: 'rgba(255,183,77,0.07)' }, g);
+        for (let t = 0; t <= N; t++) {
+            const now = t === tclk;
+            path(`M${X(t)},8 L${X(t)},208`, now ? AMB : '#1e3247', now ? 2.4 : 1.6, now ? '' : '6 7');
+            if (t < N) txt(X(t, 0.5), 225, t, now ? AMB : '#55697c', 14);
+        }
+        const lab = (y, s, col) => txt(174, y, s, col, 16, 'end');
+        lab(R.CLK - 4, 'CLK', AMB); lab(R.L - 4, 'L', AMB);
+        lab(R.SM + 5, 'Moore state', W1); lab(R.PM - 4, 'P  Moore', W1);
+        lab(R.SE + 5, 'Mealy state', VIO); lab(R.PE - 4, 'P  Mealy', VIO);
+        // CLK
+        let d = '';
+        for (let t = 0; t < N; t++) d += `M${X(t)},${R.CLK} L${X(t)},${R.CLK - W2.hi} L${X(t, 0.5)},${R.CLK - W2.hi} L${X(t, 0.5)},${R.CLK} L${X(t + 1)},${R.CLK} `;
+        path(d, AMB, 2.4);
+        // L: holds Ls[t] through cycle t, moving just after the edge that starts it
+        let dl = `M${X(0)},${Ls[0] ? R.L - W2.hi : R.L}`, cur = Ls[0];
+        for (let t = 1; t < N; t++) if (Ls[t] !== cur) { const xt = X(t, f); dl += ` L${xt},${cur ? R.L - W2.hi : R.L} L${xt},${Ls[t] ? R.L - W2.hi : R.L}`; cur = Ls[t]; }
+        path(dl + ` L${X(N)},${cur ? R.L - W2.hi : R.L}`, AMB, 3.2);
+        // state rows: one outlined run per stretch of the same state, the name printed in every cycle
+        const stateRow = (cy, key, name, col, hot) => {
+            let t0 = 0;
+            for (let t = 1; t <= N; t++) if (t === N || tr[t][key] !== tr[t0][key]) {
+                const isHot = hot(tr[t0][key]), here = tclk >= t0 && tclk < t;
+                el('rect', { class: 'srun', x: X(t0) + 3, y: cy - W2.band / 2, width: (t - t0) * W2.w - 6, height: W2.band, rx: 6,
+                    fill: isHot ? 'rgba(79,195,247,0.18)' : '#0b1622', stroke: here || isHot ? col : '#37506a', 'stroke-width': here ? 2.6 : 1.6 }, g);
+                t0 = t;
+            }
+            for (let t = 0; t < N; t++) txt(X(t, 0.5), cy + 5, name(tr[t][key]), t === tclk ? col : (hot(tr[t][key]) ? col : '#90a4ae'), 14, 'middle', null, t === tclk)
+                .setAttribute('data-st', key + t);
+        };
+        stateRow(R.SM, 's', (v) => MOORE_NAME[v], W1, (v) => mP((v >> 1) & 1, v & 1) === 1);
+        stateRow(R.SE, 'q', (v) => 'Q=' + v, VIO, () => false);
+        // P rows: Moore in whole clocks off the register; Mealy from where L rose to the next edge
+        const pRow = (y, col, segs) => { path(`M${X(0)},${y} L${X(N)},${y}`, '#2a3f55', 2.2);
+            for (const sg of segs) path(`M${sg[0]},${y} L${sg[0]},${y - W2.hi} L${sg[1]},${y - W2.hi} L${sg[1]},${y}`, col, 3.4).setAttribute('class', 'pulse'); };
+        const mSeg = [], eSeg = [];
+        for (let t = 0; t < N; t++) { if (tr[t].pM) mSeg.push([X(t), X(t + 1)]); if (tr[t].pE) eSeg.push([X(t, t === 0 ? 0 : f), X(t + 1)]); }
+        pRow(R.PM, W1, mSeg); pRow(R.PE, VIO, eSeg);
+        return { tr, mSeg, eSeg, f, lPath: dl };
+    }
+
+    // ============ RENDER ============
+    const CTRL = `<span class="btn go" data-step>CLK ▶ step<span class="k">Space</span></span>`
+        + `<span class="btn" data-ltog>toggle L<span class="k">L</span></span>`
+        + `<span class="btn" data-edge>edge: <b data-edgelab>early</b><span class="k">E</span></span>`
+        + `<span class="btn" data-glitch>glitch on L<span class="k">G</span></span>`
+        + `<span class="btn" data-reset>↺ reset<span class="k">R</span></span><span class="readout" data-readout></span>`;
+    document.querySelectorAll('[data-ctrl]').forEach(c => c.innerHTML = CTRL);
+
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p' + page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+    }
+    function renderClock() {
+        const tr = runBoth(Ls);
+        const cur = tclk < N ? tr[tclk] : { ...tr[N - 1], L: null };
+        const s = tclk < N ? tr[tclk].s : mooreNext(tr[N - 1].s, tr[N - 1].L);
+        const q = tclk < N ? tr[tclk].q : mealyNext(tr[N - 1].q, tr[N - 1].L);
+        const L = tclk < N ? Ls[tclk] : null;
+        // diagrams
+        Object.entries(DM.nodes).forEach(([k, n]) => { n.classList.toggle('on', +k === s); n.classList.toggle('glow', glow); });
+        Object.entries(DE.nodes).forEach(([k, n]) => { n.classList.toggle('on', +k === q); n.classList.toggle('glow', false); });
+        DM.arcs.forEach(({ edge, path, lab }) => { const on = L !== null && edge.from === s && edge.L === L;
+            path.classList.toggle('on', on); lab.classList.toggle('on', on); lab.classList.toggle('glow', false);
+            path.setAttribute('marker-end', on ? `url(#ahon-${DM.mk})` : `url(#ah-${DM.mk})`); });
+        DE.arcs.forEach(({ edge, path, lab }) => { const on = L !== null && edge.from === q && edge.L === L;
+            path.classList.toggle('on', on); lab.classList.toggle('on', on); lab.classList.toggle('glow', glow && !on);
+            path.setAttribute('marker-end', on ? `url(#ahon-${DE.mk})` : `url(#ah-${DE.mk})`); });
+        // tables
+        tablesFor(L === null ? null : { L, s, q });
+        // circuits carry live values
+        const q1 = (s >> 1) & 1, q0 = s & 1, LL = L === null ? 0 : L;
+        const vM = { L: LL, Q1: q1, Q0: q0, Q1n: 1 - q1, Q0n: 1 - q0, Q0n2: q0, OR: q1 | q0,
+                     D1: mD1(LL, q1, q0), D0: mD0(LL, q1, q0), P: mP(q1, q0) };
+        for (const [n, v] of Object.entries(vM)) (cM.nets[n] || []).forEach(e => {
+            const c = v ? W1 : W0;
+            if (e.tagName === 'circle') e.setAttribute('fill', c); else if (e.tagName === 'text') e.setAttribute('fill', c); else e.setAttribute('stroke', c); });
+        const vE = { L: LL, Qn: 1 - q, P: eP(LL, q) };
+        for (const [n, v] of Object.entries(vE)) (cE.nets[n] || []).forEach(e => {
+            const c = v ? W1 : W0;
+            if (e.tagName === 'circle') e.setAttribute('fill', c); else if (e.tagName === 'text') e.setAttribute('fill', c); else e.setAttribute('stroke', c); });
+        // waves + readouts
+        drawWave(); drawWave2();
+        document.querySelectorAll('[data-waverole]').forEach(e => e.innerHTML =
+            `L = ${LSTRIP.join('')} over ${N} clocks${offScript ? ' <b style="color:#ffb74d">(edited)</b>' : ''} &middot; the boxed cycle is the one about to be clocked &middot; edge position: <b style="color:#b388ff">${['early','middle','late'][edgeIx]}</b>${glitch ? ' &middot; <b style="color:#ffb74d">glitch armed</b>' : ''}`);
+        document.querySelectorAll('[data-edgelab]').forEach(e => e.textContent = ['early','middle','late'][edgeIx]);
+        document.querySelectorAll('[data-edge]').forEach(e => e.classList.toggle('on', edgeIx > 0));
+        document.querySelectorAll('[data-glitch]').forEach(e => e.classList.toggle('on', glitch));
+        document.querySelectorAll('[data-glow]').forEach(e => e.classList.toggle('on', glow));
+        document.querySelectorAll('[data-readout]').forEach(e => e.innerHTML = L === null
+            ? `end of strip &middot; Moore <b>${MOORE_NAME[s]}</b> &middot; Mealy <b>Q=${q}</b>`
+            : `<span class="a">L = ${L}</span> &middot; Moore <b>${MOORE_NAME[s]}</b>, P = ${mP(q1, q0)} &middot; Mealy <b>Q=${q}</b>, P = <span class="v">${eP(L, q)}</span> &middot; on CLK → ${MOORE_NAME[mooreNext(s, L)]} / Q=${mealyNext(q, L)}`);
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    function doStep() { if (tclk < N) { tclk++; renderClock(); } }
+    function doReset() { tclk = 0; offScript = false; Ls = LSTRIP.slice(); renderClock(); }
+    function toggleL() { if (tclk >= N) return; Ls[tclk] = 1 - Ls[tclk]; offScript = Ls.some((v, i) => v !== LSTRIP[i]); renderClock(); }
+    function cycleEdge() { edgeIx = (edgeIx + 1) % EDGEPOS.length; renderClock(); }
+    function toggleGlitch() { glitch = !glitch; renderClock(); }
+    function toggleGlow() { glow = !glow; renderClock(); }
+
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', doStep));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', doReset));
+    document.querySelectorAll('[data-ltog]').forEach(b => b.addEventListener('click', toggleL));
+    document.querySelectorAll('[data-edge]').forEach(b => b.addEventListener('click', cycleEdge));
+    document.querySelectorAll('[data-glitch]').forEach(b => b.addEventListener('click', toggleGlitch));
+    document.querySelectorAll('[data-glow]').forEach(b => b.addEventListener('click', toggleGlow));
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '4') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': doStep(); e.preventDefault(); break;
+            case 'ArrowRight': case 'ArrowDown': setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+            case 'l': case 'L': toggleL(); e.preventDefault(); break;
+            case 'm': case 'M': toggleGlow(); e.preventDefault(); break;
+            case 'e': case 'E': cycleEdge(); e.preventDefault(); break;
+            case 'g': case 'G': toggleGlitch(); e.preventDefault(); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, step: doStep, reset: doReset, toggleL, cycleEdge, toggleGlitch, toggleGlow,
+        setStrip: (arr) => { Ls = arr.slice(); offScript = true; tclk = 0; renderClock(); },
+        setEdge: (i) => { edgeIx = i; renderClock(); },
+        getState: () => ({ page, tclk, Ls: Ls.slice(), offScript, glow, edgeIx, glitch }),
+        model: { MOORE_NAME, mD1, mD0, mP, mooreNext, eD, eP, mealyNext, LSTRIP, ROWS_M, ROWS_E, runBoth, EM, EE, EDGEPOS, GLITCH_CELL },
+        waveGeom, drawWave2,
+        litArcs: (id) => Array.from(document.querySelectorAll('#' + id + ' .arc.on')).map(p => ({ from: +p.dataset.from, to: +p.dataset.to, L: +p.dataset.l })),
+        litRows: () => ({ moore: Array.from(document.querySelectorAll('[data-tabM] tr.horow')).length,
+                          mealy: Array.from(document.querySelectorAll('[data-tabE] tr.horow')).length }),
+        diagrams: { moore: DM, mealy: DE },
+    };
+
+    render(); renderClock();
+</script>
+</body>
+</html>
