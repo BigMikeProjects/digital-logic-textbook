@@ -1,0 +1,11 @@
+title: "Flip-Flop Circuit Analysis"
+description: "Analysis is synthesis run backwards: from a flip-flop circuit, recover the excitation and output equations, the state table and the state diagram. Worked on a two-flip-flop circuit that turns out to be a Gray-code up/down counter."
+chapter: sequential-logic
+section: fsm
+order: 40204
+
+graphics:
+  01-video.youtube:
+    caption: "Video: analyzing a flip-flop circuit — find the state, read the excitation and output equations off the schematic, fill in the state table row by row using Q+ = D, and draw the state diagram, which shows the circuit to be a Gray-code up/down counter"
+  02-interactive.html:
+    caption: "Interactive: flip-flop circuit analysis in six steps — tag the equations on the schematic, compute the state table one row at a time from the live circuit, draw the state diagram one arc per row, then clock the recovered machine through an input sequence to check it"
