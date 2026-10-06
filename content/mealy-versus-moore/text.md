@@ -114,7 +114,7 @@ The Moore machine does not have this problem because its output logic is isolate
 
 A sound working rule: **use a Moore machine unless you know the inputs are synchronized to the clock.** If an input comes from flip-flops on the same clock as the machine, it changes just after each edge and holds still for the rest of the cycle, and the Mealy machine's faster response comes with no risk. If an input comes from the outside world, the Moore machine's extra state and extra clock of delay buy an output that cannot glitch.
 
-It is also possible to get most of the Mealy machine's economy while keeping the input away from the output, by passing signals through flip-flops first. That design is the subject of Pipelined Mealy.
+It is also possible to get most of the Mealy machine's economy while keeping the input away from the output, by passing signals through flip-flops first. That design is the subject of Registered Outputs.
 
 ## Both Machines in Verilog
 

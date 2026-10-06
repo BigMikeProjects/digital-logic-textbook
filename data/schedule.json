@@ -675,8 +675,8 @@
       "items": [
         {
           "num": "4.2.5",
-          "title": "Pipelined Mealy",
-          "slug": "pipelined-mealy",
+          "title": "Registered Outputs",
+          "slug": "registered-outputs",
           "type": "full",
           "published": false
         },
