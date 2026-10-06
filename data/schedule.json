@@ -674,41 +674,6 @@
       "weekday": "Wed",
       "items": [
         {
-          "num": "4.2.5",
-          "title": "Registered Outputs",
-          "slug": "registered-outputs",
-          "type": "full",
-          "published": false
-        },
-        {
-          "num": "4.4.0",
-          "title": "Practical Considerations Overview",
-          "slug": "practical-considerations-overview",
-          "type": "full",
-          "published": false
-        },
-        {
-          "num": "4.4.1",
-          "title": "Metastable States",
-          "slug": "metastable-states",
-          "type": "full",
-          "published": true
-        },
-        {
-          "num": "4.4.2",
-          "title": "Synchronizers",
-          "slug": "synchronizers",
-          "type": "full",
-          "published": true
-        }
-      ]
-    },
-    {
-      "lec": 22,
-      "date": "2026-10-16",
-      "weekday": "Fri",
-      "items": [
-        {
           "num": "4.3.1",
           "title": "Sequence Detector",
           "slug": "sequence-detector",
@@ -721,6 +686,41 @@
           "slug": "fsms-with-mux-and-decoder-implementations",
           "type": "full",
           "published": false
+        }
+      ]
+    },
+    {
+      "lec": 22,
+      "date": "2026-10-16",
+      "weekday": "Fri",
+      "items": [
+        {
+          "num": "4.4.0",
+          "title": "Practical Considerations Overview",
+          "slug": "practical-considerations-overview",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "4.4.1",
+          "title": "Clock Skew",
+          "slug": "clock-skew",
+          "type": "full",
+          "published": false
+        },
+        {
+          "num": "4.4.2",
+          "title": "Metastable States",
+          "slug": "metastable-states",
+          "type": "full",
+          "published": true
+        },
+        {
+          "num": "4.4.3",
+          "title": "Synchronizers",
+          "slug": "synchronizers",
+          "type": "full",
+          "published": true
         }
       ]
     },
@@ -771,6 +771,13 @@
       "date": "2026-10-26",
       "weekday": "Mon",
       "items": [
+        {
+          "num": "4.2.5",
+          "title": "Registered Outputs",
+          "slug": "registered-outputs",
+          "type": "full",
+          "published": false
+        },
         {
           "num": "7.4.1",
           "title": "Blocking versus NonBlocking",
