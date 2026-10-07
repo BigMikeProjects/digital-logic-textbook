@@ -1,0 +1,11 @@
+title: "Practical Considerations Overview"
+description: "A real flip-flop needs its D input to hold still for a short decision window around the clock edge. Setup time, hold time, clock-to-output delay and logic delay set the slack and the maximum clock speed, and there are three ways a change can land in the window."
+chapter: sequential-logic
+section: practical-considerations
+order: 40400
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the decision window around a clock edge — setup and hold time, the timing budget of clock-to-output delay, logic delay and setup time that fixes the slack and the clock speed, and the three ways a change on D can land in the window"
+  02-interactive.html:
+    caption: "Interactive: drag D's transition across the decision window and watch Q, trade clock period against logic depth on a to-scale timing budget with live slack and maximum frequency, then fire an unsynchronized input at random moments and count how often it lands in the window"

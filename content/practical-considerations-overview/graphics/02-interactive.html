@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practical Considerations — The Decision Window</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens — one meaning per color:
+       amber #ffb74d = clock · cyan #4fc3f7 = data · violet #b388ff = the decision window
+       green #81c784 = OK / slack · red #ef5350 = violation / unknown · slate = secondary · navy #0d1b2a */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #b388ff; border-radius: 12px;
+        background: rgba(179,136,255,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 72px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #e8eef3; font-size: 42px; font-weight: 700; line-height: 1.1; }
+    .titles h1 .vi { color: #b388ff; }
+    .titles .subtitle { color: #90a4ae; font-size: 21px; margin-top: 6px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #b388ff; font-size: 26px; }
+    .defs-btn { flex-shrink: 0; color: #90a4ae; font-size: 20px; font-weight: 600; line-height: 1.15;
+        border: 2px solid #37506a; border-radius: 999px; padding: 8px 20px; cursor: pointer; user-select: none;
+        display: flex; align-items: center; gap: 10px; align-self: center; }
+    .defs-btn::before { content: ''; height: 30px; }
+    .defs-btn .k { font-family: 'Menlo','Consolas',monospace; font-size: 18px; border: 1px solid #37506a; border-radius: 6px; padding: 0 7px; }
+    .defs-btn.on { color: #b388ff; border-color: #b388ff; background: rgba(179,136,255,0.10); }
+    .topbar { gap: 20px; }
+
+    /* ---- definitions overlay ---- */
+    .defs-ov { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center;
+        background: rgba(10,15,28,0.80); border-radius: 14px; }
+    .defs-ov.open { display: flex; }
+    .defs-card { width: 1240px; background: #0d1b2a; border: 2px solid #b388ff; border-radius: 16px; padding: 20px 40px 22px; }
+    .defs-title { font-size: 34px; font-weight: 700; color: #e8eef3; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: baseline; }
+    .defs-title .hint { font-size: 20px; font-weight: 400; color: #607d8b; }
+    .defs-list { display: grid; grid-template-columns: 250px 1fr; column-gap: 24px; row-gap: 6px; align-items: baseline; }
+    .dsym { font-size: 28px; font-weight: 700; white-space: nowrap; }
+    .ddef { font-size: 24px; color: #b0bec5; line-height: 1.28; }
+    .ddef b { color: #e8eef3; }
+    .defs-scale { border-top: 1px solid #37506a; margin-top: 14px; padding-top: 12px; }
+    .defs-scale .sh { font-size: 24px; font-weight: 700; color: #b0bec5; margin-bottom: 4px; }
+    .sctab { border-collapse: collapse; font-size: 22px; color: #cfd8dc; font-variant-numeric: tabular-nums; }
+    .sctab th { font-weight: 600; color: #90a4ae; padding: 5px 22px; border-bottom: 2px solid #37506a; text-align: center; white-space: nowrap; }
+    .sctab td { padding: 5px 22px; border-bottom: 1px solid #24384c; text-align: center; white-space: nowrap; }
+    .sctab th:first-child, .sctab td:first-child { text-align: left; padding-left: 0; }
+    .sctab td b { font-weight: 700; }
+    .defs-scale .sn { font-size: 20px; color: #78909c; margin-top: 8px; }
+    .dsmall { font-size: 18px; color: #607d8b; line-height: 1.3; margin-top: 4px; }
+
+    .tabstrip { display: flex; gap: 16px; margin: 16px 0 0; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 14px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 10px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 21px; font-weight: 700; }
+    .tab .tlabel { font-size: 22px; font-weight: 700; }
+    .tab.on { color: #b388ff; border-color: #b388ff; background: rgba(179,136,255,0.08); }
+    .tab.on .tnum { background: #b388ff; color: #0d1b2a; border-color: #b388ff; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 16px; }
+    .page { position: absolute; inset: 0; display: none; gap: 16px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    sub { font-size: 0.7em; line-height: 0; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; min-height: 0; }
+    .side { flex: 0 0 400px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+    .hero { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+    .svgbody { flex: 1; min-height: 0; padding: 8px 10px; display: flex; align-items: center; justify-content: center; }
+    .svgbody svg { width: 100%; height: 100%; display: block; }
+    .ph { font-size: 22px; font-weight: 700; color: #90a4ae; padding: 14px 22px 0; letter-spacing: .3px; }
+
+    .c-clk { color: #ffb74d; } .c-dat { color: #4fc3f7; } .c-win { color: #b388ff; }
+    .c-ok { color: #81c784; } .c-bad { color: #ef5350; }
+
+    /* verdict chip — rounded pill, 28px bold */
+    .chip { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px;
+        font-size: 28px; font-weight: 700; padding: 12px 30px; border: 3px solid #81c784;
+        color: #81c784; background: rgba(129,199,132,0.12); white-space: nowrap; }
+    .chip.bad { border-color: #ef5350; color: #ef5350; background: rgba(239,83,80,0.14); }
+
+    /* sliders */
+    input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 14px;
+        border-radius: 7px; background: #24384c; outline: none; cursor: pointer; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 38px; height: 38px;
+        border-radius: 50%; background: #e8eef3; border: 4px solid #0d1b2a; box-shadow: 0 0 0 3px #e8eef3; cursor: grab; }
+    input.sl-amber::-webkit-slider-thumb { background: #ffb74d; box-shadow: 0 0 0 3px #ffb74d; }
+    input.sl-cyan::-webkit-slider-thumb { background: #4fc3f7; box-shadow: 0 0 0 3px #4fc3f7; }
+
+    /* ---- beat 1 ---- */
+    .ffcard { padding-bottom: 12px; }
+    .ffcard svg { width: 100%; height: 190px; display: block; }
+    .ffcap { font-size: 22px; color: #b0bec5; padding: 0 22px; line-height: 1.35; }
+    .ffcap b { color: #e8eef3; }
+    .cases { flex: 1; padding: 12px 16px 14px; gap: 10px; }
+    .cases .ph { padding: 2px 6px 4px; }
+    .case { border: 2px solid #24384c; border-radius: 12px; padding: 10px 16px; flex: 1;
+        display: flex; flex-direction: column; justify-content: center; }
+    .case .ct { font-size: 22px; font-weight: 700; color: #90a4ae; }
+    .case .cd { font-size: 20px; color: #78909c; margin-top: 2px; }
+    .case.on.ok { border-color: #81c784; background: rgba(129,199,132,0.10); }
+    .case.on.ok .ct { color: #81c784; } .case.on .cd { color: #cfd8dc; }
+    .case.on.bad { border-color: #ef5350; background: rgba(239,83,80,0.12); }
+    .case.on.bad .ct { color: #ef5350; }
+    .note { font-size: 20px; color: #78909c; line-height: 1.35; padding: 0; margin: 0 -2px; word-spacing: -1.5px; letter-spacing: -0.3px; }
+    .ctl1 { flex: 0 0 104px; flex-direction: row; align-items: center; gap: 30px; padding: 0 30px; }
+    .ctl1 .lab { font-size: 24px; color: #b0bec5; white-space: nowrap; }
+    .ctl1 .lab b { color: #4fc3f7; font-size: 32px; display: inline-block; min-width: 132px; text-align: right; }
+    .ctl1 .rng { flex: 1; display: flex; align-items: center; gap: 14px; font-size: 20px; color: #607d8b; white-space: nowrap; }
+    .ctl1 .chip { min-width: 520px; }
+
+    /* ---- beat 2 ---- */
+    .circ { flex: 0 0 196px; }
+    .sliders { padding: 6px 16px 16px; gap: 10px; }
+    .slb { border: 2px solid transparent; border-radius: 12px; padding: 10px 12px 16px; }
+    .slb.focus { border-color: #37506a; background: #0b1622; }
+    .slb .sn { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+    .slb .sn .nm { font-size: 24px; font-weight: 700; }
+    .slb .sn .vl { font-size: 32px; font-weight: 700; }
+    .slb .ends { display: flex; justify-content: space-between; font-size: 20px; color: #607d8b; margin-top: 10px; }
+    .reads { flex: 1; padding: 10px 28px 18px; justify-content: space-between; }
+    .rd { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1b2c3d; padding: 9px 0; }
+    .rd .rl { font-size: 22px; color: #90a4ae; }
+    .rd .rv { font-size: 30px; white-space: nowrap; font-weight: 700; color: #e8eef3; }
+    .ineq { font-size: 24px; color: #b0bec5; text-align: center; padding-top: 10px; line-height: 1.5; }
+    .ineq .nums { font-size: 28px; font-weight: 700; color: #e8eef3; }
+    .reads .chip { align-self: center; margin-top: 10px; min-width: 330px; }
+
+    /* ---- beat 3 ---- */
+    .way { flex: 1 1 0; min-width: 0; padding: 18px 18px 18px; }
+    .way.wide { flex: 0 0 784px; min-width: auto; }
+    .whead { display: flex; align-items: center; gap: 14px; padding: 0 4px; min-height: 68px; }
+    .wnum { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #b388ff; color: #b388ff; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; }
+    .wtitle { font-size: 28px; font-weight: 700; color: #e8eef3; line-height: 1.2; }
+    .way svg { width: 100%; display: block; margin-top: 10px; }
+    .wwrong { font-size: 23px; color: #cfd8dc; line-height: 1.35; padding: 6px 6px 0; }
+    .wsp { flex: 1; }
+    .pointer { border: 2px solid #37506a; border-radius: 999px; padding: 11px 24px; font-size: 22px; color: #90a4ae;
+        text-align: center; background: #0b1622; white-space: nowrap; }
+    .pointer b { color: #e8eef3; }
+    .stats { display: flex; align-items: center; gap: 26px; padding: 12px 6px 0; }
+    .stat .big { font-size: 36px; font-weight: 700; color: #e8eef3; line-height: 1.1; white-space: nowrap; }
+    .stat .big .hit { color: #ef5350; }
+    .stat .sm { font-size: 20px; color: #78909c; white-space: nowrap; }
+    .exp { margin-left: auto; text-align: right; font-size: 22px; color: #b0bec5; line-height: 1.4; white-space: nowrap; }
+    .exp b { color: #b388ff; font-size: 26px; }
+    .outc { font-size: 24px; color: #cfd8dc; padding: 8px 6px 0; line-height: 1.25; white-space: nowrap; }
+    .outc + .outc { padding-top: 2px; }
+    .outc.bad { color: #ef5350; }
+    .btnrow { display: flex; gap: 16px; padding: 14px 6px 0; }
+    .btn { border: 2px solid #4fc3f7; border-radius: 999px; padding: 9px 24px; font-size: 22px; font-weight: 700;
+        color: #4fc3f7; background: rgba(79,195,247,0.08); cursor: pointer; user-select: none; white-space: nowrap; }
+    .btn.gray { border-color: #37506a; color: #90a4ae; background: none; }
+    .btn .k { font-size: 20px; font-weight: 600; border: 1px solid currentColor; border-radius: 6px; padding: 0 8px; margin-left: 8px; opacity: .8; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 14px; flex-shrink: 0; }
+    .progress { display: flex; gap: 8px; }
+    .dot { width: 34px; height: 8px; border-radius: 4px; background: #24384c; }
+    .dot.on { background: #b388ff; }
+    .controls { flex: 1; text-align: right; font-size: 20px; color: #78909c; }
+    .controls .k { border: 1px solid #37506a; border-radius: 6px; padding: 1px 9px; color: #b0bec5;
+        font-family: 'Menlo','Consolas',monospace; font-size: 20px; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 72" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="52" y="5" width="42" height="62" fill="rgba(179,136,255,0.22)" stroke="#b388ff" stroke-width="2"/>
+                <path d="M8 26 L78 26 L82 10 L142 10" stroke="#ffb74d" stroke-width="3.5"/>
+                <path d="M8 60 L30 60 L34 44 L142 44" stroke="#4fc3f7" stroke-width="3.5"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Practical Considerations <span class="vi">&mdash; the decision window</span></h1>
+            <div class="subtitle">A real flip-flop needs D to hold still for a short window around the clock edge. One window, three ways to hit it.</div>
+        </div>
+        <div class="defs-btn" id="defsBtn">Definitions <span class="k">D</span></div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 3</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">A Real Flip-Flop Has a Window</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">The Window Sets the Clock Speed</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Three Ways into the Window</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 -->
+        <div class="page" id="p1">
+            <div class="side">
+                <div class="panel ffcard">
+                    <div class="ph">On paper: an instant</div>
+                    <svg id="svff" viewBox="0 0 396 190"></svg>
+                    <div class="ffcap">The ideal flip-flop reads D at <b>one instant</b>.</div>
+                </div>
+                <div class="panel cases">
+                    <div class="ph">In silicon: a window</div>
+                    <div class="case" data-case="new"><div class="ct">D changes before it</div><div class="cd">Q takes the new value</div></div>
+                    <div class="case" data-case="unknown"><div class="ct">D changes inside it</div><div class="cd">Q is not guaranteed</div></div>
+                    <div class="case" data-case="old"><div class="ct">D changes after it</div><div class="cd">Q keeps the old value</div></div>
+                    <div class="note">Round numbers on the scale of the Basys&nbsp;3 board. See Definitions for faster chips.</div>
+                </div>
+            </div>
+            <div class="hero">
+                <div class="panel" style="flex:1"><div class="svgbody"><svg id="sv1" viewBox="0 0 1380 640" style="touch-action:none"></svg></div></div>
+                <div class="panel ctl1">
+                    <div class="lab"><span>Drag D: it changes at</span> <b class="mono" id="xval"></b></div>
+                    <div class="rng"><span>&minus;3</span><input type="range" class="sl-cyan" id="slx" min="-3" max="3" step="0.1" value="-2"><span>+3 ns</span></div>
+                    <div class="chip" id="chip1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 -->
+        <div class="page" id="p2">
+            <div class="side">
+                <div class="panel sliders">
+                    <div class="ph" style="padding:10px 12px 0">Sliders</div>
+                    <div class="slb" id="slbT">
+                        <div class="sn"><span class="nm c-clk">Clock period T</span><span class="vl mono c-clk" id="Tval"></span></div>
+                        <input type="range" class="sl-amber" id="slT" min="6" max="14" step="1" value="10">
+                        <div class="ends"><span>6</span><span>14 ns</span></div>
+                    </div>
+                    <div class="slb" id="slbP">
+                        <div class="sn"><span class="nm c-dat">Logic depth t<sub>pd</sub></span><span class="vl mono c-dat" id="Pval"></span></div>
+                        <input type="range" class="sl-cyan" id="slP" min="1" max="9" step="1" value="5">
+                        <div class="ends"><span>1</span><span>9 ns</span></div>
+                    </div>
+                </div>
+                <div class="panel reads">
+                    <div>
+                        <div class="rd"><span class="rl">Slack</span><span class="rv mono" id="rSlack"></span></div>
+                        <div class="rd"><span class="rl">Minimum period</span><span class="rv mono" id="rMin"></span></div>
+                        <div class="rd"><span class="rl">Max frequency</span><span class="rv mono" id="rF"></span></div>
+                    </div>
+                    <div class="ineq"><div>T &ge; t<sub>co</sub> + t<sub>pd</sub> + t<sub>su</sub></div><div class="nums mono" id="ineqNums"></div></div>
+                    <div class="chip" id="chip2"></div>
+                </div>
+            </div>
+            <div class="hero">
+                <div class="panel circ"><div class="svgbody"><svg id="svc" viewBox="0 0 1380 200"></svg></div></div>
+                <div class="panel" style="flex:1"><div class="svgbody"><svg id="sv2" viewBox="0 0 1380 610"></svg></div></div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 -->
+        <div class="page" id="p3">
+            <div class="panel way">
+                <div class="whead"><div class="wnum">1</div><div class="wtitle">The logic is too slow for the clock</div></div>
+                <svg id="sv3a" viewBox="0 0 444 530"></svg>
+                <div class="wwrong">A faster clock or more logic, and the data arrives late.</div>
+                <div class="wsp"></div>
+                <div class="pointer"><span>Fix in </span><b>beat 2</b><span>: longer T or less logic</span></div>
+            </div>
+            <div class="panel way">
+                <div class="whead"><div class="wnum">2</div><div class="wtitle">The clocks disagree</div></div>
+                <svg id="sv3b" viewBox="0 0 444 530"></svg>
+                <div class="wwrong">The window itself moves, onto data that was safe.</div>
+                <div class="wsp"></div>
+                <div class="pointer"><span>Handled in </span><b data-topic="clock-skew">Clock Skew</b></div>
+            </div>
+            <div class="panel way wide">
+                <div class="whead"><div class="wnum">3</div><div class="wtitle">The input ignores the clock</div></div>
+                <svg id="sv3c" viewBox="0 0 744 366"></svg>
+                <div class="wwrong">A push button or another system can change at any moment.</div>
+                <div class="stats">
+                    <div class="stat"><div class="big mono"><span class="hit" id="nHit">0</span> / <span id="nTot">0</span></div><div class="sm">in a window / changes fired</div></div>
+                    <div class="stat"><div class="big mono" id="pct">&mdash;</div><div class="sm">hit rate</div></div>
+                    <div class="exp"><div>expected <b>15 %</b> <span>= (t<sub>su</sub> + t<sub>h</sub>) / T</span></div><div>No clock period makes it zero.</div></div>
+                </div>
+                <div class="outc"><span><b>Usually:</b> seen on this clock or the next. You can't tell which.</span></div>
+                <div class="outc bad"><span><b>Rarely:</b> Q hovers between 0 and 1. A metastable state.</span></div>
+                <div class="btnrow">
+                    <div class="btn" id="bF1">Fire 1 <span class="k">F</span></div>
+                    <div class="btn" id="bF100">Fire 100 <span class="k">Shift+F</span></div>
+                    <div class="btn gray" id="bR">&#8634; Reset <span class="k">R</span></div>
+                </div>
+                <div class="wsp"></div>
+                <div class="pointer"><span>Handled in </span><b data-topic="metastable-states">Metastable States</b><span>, cured by </span><b data-topic="synchronizers">Synchronizers</b></div>
+            </div>
+        </div>
+
+        <!-- DEFINITIONS (overlay; same design as Clock Skew) -->
+        <div class="defs-ov" id="defsOv">
+            <div class="defs-card" id="defsCard">
+                <div class="defs-title"><span>Definitions</span><span class="hint">Esc or D to close</span></div>
+                <div class="defs-list">
+                    <div class="dsym c-clk" data-def="T">T</div>
+                    <div class="ddef"><b>clock period</b> &mdash; the time from one rising clock edge to the next.</div>
+                    <div class="dsym c-dat" data-def="tco">t<sub>co</sub></div>
+                    <div class="ddef"><b>clock-to-output delay</b> &mdash; from the clock edge until Q shows the new value.
+                        <div class="dsmall">FPGA datasheets quote clock-to-output at the chip's pins. That figure is larger: it includes the clock wiring and the output buffer.</div></div>
+                    <div class="dsym c-dat" data-def="tpd">t<sub>pd</sub></div>
+                    <div class="ddef"><b>logic propagation delay</b> &mdash; how long the logic between two flip-flops takes to settle after its inputs change.</div>
+                    <div class="dsym c-win" data-def="tsu">t<sub>su</sub></div>
+                    <div class="ddef"><b>setup time</b> &mdash; how long D must be steady before the clock edge.</div>
+                    <div class="dsym c-win" data-def="th">t<sub>h</sub></div>
+                    <div class="ddef"><b>hold time</b> &mdash; how long D must stay steady after the clock edge.</div>
+                    <div class="dsym c-win" data-def="window">decision window</div>
+                    <div class="ddef">from t<sub>su</sub> before the edge to t<sub>h</sub> after it; D must not change inside it.</div>
+                    <div class="dsym c-ok" data-def="slack">slack</div>
+                    <div class="ddef">the time left over in the clock period; negative slack means a violation.</div>
+                    <div class="dsym c-bad" data-def="metastable">metastable state</div>
+                    <div class="ddef">Q hovering between 0 and 1 before it settles to one of them.</div>
+                </div>
+                <div class="defs-scale" id="defsScale">
+                    <div class="sh">How fast is this?</div>
+                    <table class="sctab">
+                        <tr><th></th><th>Basys 3 board (these graphics)</th><th>Inside a 5 GHz processor</th></tr>
+                        <tr data-scale="T"><td>Clock period <b class="c-clk">T</b></td><td>10 ns (100 MHz)</td><td>200 ps</td></tr>
+                        <tr data-scale="ff"><td>Flip-flop times <b class="c-dat">t<sub>co</sub></b>, <b class="c-win">t<sub>su</sub></b>, <b class="c-win">t<sub>h</sub></b></td><td>about a nanosecond or less</td><td>tens of picoseconds</td></tr>
+                    </table>
+                    <div class="sn">1 ns = 1000 ps. The numbers here are rounded for easy arithmetic.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div><div class="dot" data-dot="3"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">3</span> beat
+            &middot; <span class="k">D</span> definitions
+            &middot; <span class="k">&larr;</span> <span class="k">&rarr;</span> nudge the slider
+            &middot; <span class="k">&uarr;</span> <span class="k">&darr;</span> pick a slider (beat 2)
+            &middot; <span class="k">F</span> fire &middot; <span class="k">Shift+F</span> fire 100 (beat 3)
+            &middot; <span class="k">R</span> &#8634; reset
+        </div>
+    </div>
+
+</div>
+</div>
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ TOKENS + SVG HELPERS ============
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const AMB = '#ffb74d', CY = '#4fc3f7', CYD = '#2b93c6', VIO = '#b388ff', GRN = '#81c784', RED = '#ef5350',
+          INK = '#e8eef3', DIM = '#90a4ae', SLATE = '#607d8b', NAVY = '#0d1b2a';
+    const SANS = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", MONO = "'Menlo','Consolas','Courier New',monospace";
+    const WSTROKE = 3.5, SLOPE = 0.15;                    // waveform stroke px, transition width ns
+    const $ = id => document.getElementById(id);
+    function S(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+    // text with subscripts written as t_{co}; every font-size is an attribute (no CSS font-size on svg text)
+    function T(parent, x, y, str, fs, attrs) {
+        const t = S('text', Object.assign({ x, y, 'font-size': fs, 'font-family': SANS, fill: INK }, attrs || {}), parent);
+        t.style.whiteSpace = 'pre';
+        const re = /_\{([^}]*)\}|([^_]+)/g; let m, pend = 0;
+        while ((m = re.exec(str))) {
+            const ts = S('tspan', {}, t);
+            if (m[1] !== undefined) { ts.setAttribute('font-size', fs * 0.7); ts.setAttribute('dy', fs * 0.25 + pend); pend = -fs * 0.25; ts.textContent = m[1]; }
+            else { if (pend) { ts.setAttribute('dy', pend); pend = 0; } ts.textContent = m[2]; }
+        }
+        return t;
+    }
+    function defs(sv, sfx) {                              // defs live inside every svg that uses them
+        const d = S('defs', {}, sv);
+        const p = S('pattern', { id: 'hatch-' + sfx, patternUnits: 'userSpaceOnUse', width: 12, height: 12, patternTransform: 'rotate(45)' }, d);
+        S('rect', { x: 0, y: 0, width: 12, height: 12, fill: 'rgba(239,83,80,0.10)' }, p);
+        S('line', { x1: 3, y1: 0, x2: 3, y2: 12, stroke: RED, 'stroke-width': 4 }, p);
+    }
+    // waveform: sloped transitions centered on each toggle time
+    function wave(parent, X, yLo, yHi, init, toggles, t0, t1, color, extra) {
+        let lvl = init; const y = v => v ? yHi : yLo;
+        const ts = toggles.filter(t => t > t0 + SLOPE && t < t1 - SLOPE).sort((a, b) => a - b);
+        let d = `M${X(t0)} ${y(lvl)}`;
+        for (const t of ts) { d += ` L${X(t - SLOPE / 2)} ${y(lvl)} L${X(t + SLOPE / 2)} ${y(1 - lvl)}`; lvl = 1 - lvl; }
+        d += ` L${X(t1)} ${y(lvl)}`;
+        return S('path', Object.assign({ d, fill: 'none', stroke: color, 'stroke-width': WSTROKE, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, extra || {}), parent);
+    }
+    // the decision window: violet band, 22% fill, 2px outline, full height of its rows
+    function band(parent, x1, x2, y1, y2, extra) {
+        return S('rect', Object.assign({ x: x1, y: y1, width: x2 - x1, height: y2 - y1, fill: 'rgba(179,136,255,0.22)', stroke: VIO, 'stroke-width': 2, 'data-band': 1 }, extra || {}), parent);
+    }
+    // dimension arrow with explicit arrowheads (no markers)
+    function dimArrow(parent, x1, x2, y, color, hl) {
+        hl = hl || 13; const g = S('g', {}, parent), hw = hl * 0.42;
+        S('line', { x1: x1 + hl - 1, y1: y, x2: x2 - hl + 1, y2: y, stroke: color, 'stroke-width': 2.5 }, g);
+        S('polygon', { points: `${x1},${y} ${x1 + hl},${y - hw} ${x1 + hl},${y + hw}`, fill: color }, g);
+        S('polygon', { points: `${x2},${y} ${x2 - hl},${y - hw} ${x2 - hl},${y + hw}`, fill: color }, g);
+        return g;
+    }
+    // time axis: tick every `tick` ns, label every `lab` ns
+    function axis(parent, X, t0, t1, y, tick, lab, fs) {
+        S('line', { x1: X(t0), y1: y, x2: X(t1), y2: y, stroke: SLATE, 'stroke-width': 2 }, parent);
+        for (let t = Math.ceil(t0 / tick) * tick; t <= t1 + 1e-9; t += tick) {
+            const major = Math.abs(t / lab - Math.round(t / lab)) < 1e-9;
+            S('line', { x1: X(t), y1: y, x2: X(t), y2: y + (major ? 13 : 7), stroke: SLATE, 'stroke-width': 2 }, parent);
+            if (major) T(parent, X(t), y + 13 + fs, (t < 0 ? '−' : '') + Math.abs(t), fs, { 'text-anchor': 'middle', fill: DIM, 'font-family': MONO });
+        }
+    }
+    // overbar: a <line> positioned from the text baseline, measured on the active page
+    function overbar(parent, textEl, fs, color) {
+        const bb = textEl.getBBox(); const y = +textEl.getAttribute('y') - 0.88 * fs;
+        return S('line', { x1: bb.x + 1, y1: y, x2: bb.x + bb.width - 1, y2: y, stroke: color, 'stroke-width': Math.max(2, fs * 0.09), 'data-overbar': 1 }, parent);
+    }
+    // D flip-flop symbol: D, clock triangle, Q and Q-bar pins
+    function dff(parent, x, y, w, h, name, fs) {
+        S('rect', { x, y, width: w, height: h, rx: 8, fill: '#0b1622', stroke: INK, 'stroke-width': 3 }, parent);
+        const yd = y + h * 0.29, yc = y + h * 0.75;
+        T(parent, x + 12, yd + fs * 0.35, 'D', fs, { 'font-weight': 700, fill: CY });
+        S('path', { d: `M${x} ${yc - 12} L${x + 18} ${yc} L${x} ${yc + 12}`, fill: 'none', stroke: AMB, 'stroke-width': 3, 'stroke-linejoin': 'round' }, parent);
+        T(parent, x + w - 12, yd + fs * 0.35, 'Q', fs, { 'font-weight': 700, fill: CY, 'text-anchor': 'end' });
+        const qb = T(parent, x + w - 12, yc + fs * 0.35, 'Q', fs, { 'font-weight': 700, fill: DIM, 'text-anchor': 'end' });
+        overbar(parent, qb, fs, DIM);
+        if (name) T(parent, x + w / 2, y + h * 0.55 + 7, name, 21, { 'text-anchor': 'middle', fill: DIM, 'font-weight': 600 });
+        return { yd, yc, xl: x, xr: x + w };
+    }
+    const fmt = (v, n) => (v < 0 ? '−' : '') + Math.abs(v).toFixed(n === undefined ? 1 : n);
+
+    const sgn = v => (v > 0 ? '+' : '') + fmt(v);
+
+    // ============ MODEL (ns) — shared with Clock Skew ============
+    const TS = 1, TH = 0.5, TCQ = 1, T_DEF = 10, PD_DEF = 5, X_DEF = -2;
+    // beat 1: 'new' | 'unknown' | 'old'. Integer tenths so the boundaries are exact.
+    function classify(x) { const xi = Math.round(x * 10);
+        return xi <= -Math.round(TS * 10) ? 'new' : (xi >= Math.round(TH * 10) ? 'old' : 'unknown'); }
+    const slackOf = (T_, pd) => T_ - (TCQ + pd + TS);
+    const minPeriod = pd => TCQ + pd + TS;
+    const fmax = pd => 1000 / minPeriod(pd);
+    // beat 3: seeded generator (mulberry32) — same sequence after every reset
+    const SEED = 47, STRIP = 80, EDGES = [5, 15, 25, 35, 45, 55, 65, 75];
+    let rngState = SEED;
+    function rnd() { rngState = (rngState + 0x6D2B79F5) | 0; let t = rngState;
+        t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+    const inWindow = t => EDGES.some(e => t - e > -TS && t - e < TH);
+
+    // ============ STATE ============
+    const FIRST = 1, LAST = 3, MAXDRAW = 2000;
+    let page = 1, xD = X_DEF, Tclk = T_DEF, pd = PD_DEF, focus2 = 'T', nHit = 0, nTot = 0, changes = [];
+
+    // ============ BEAT 1 ============
+    const G1 = { X0: 150, ppn: 150, t0: -4, t1: 4, clk: [112, 200], d: [262, 350], q: [412, 500], bandY: [92, 548], axisY: 560, QRES: 2.6 };
+    const X1 = t => G1.X0 + (t - G1.t0) * G1.ppn;
+    function drawFF() {
+        const sv = $('svff'); sv.innerHTML = '';
+        const f = dff(sv, 138, 22, 120, 146, '', 26);
+        S('line', { x1: 60, y1: f.yd, x2: 138, y2: f.yd, stroke: CY, 'stroke-width': WSTROKE }, sv);
+        S('line', { x1: 60, y1: f.yc, x2: 138, y2: f.yc, stroke: AMB, 'stroke-width': WSTROKE }, sv);
+        S('line', { x1: 258, y1: f.yd, x2: 336, y2: f.yd, stroke: CY, 'stroke-width': WSTROKE }, sv);
+        S('line', { x1: 258, y1: f.yc, x2: 336, y2: f.yc, stroke: DIM, 'stroke-width': WSTROKE }, sv);
+        T(sv, 50, f.yc + 8, 'CLK', 22, { 'text-anchor': 'end', fill: AMB, 'font-weight': 700 });
+    }
+    function draw1() {
+        const sv = $('sv1'); sv.innerHTML = ''; defs(sv, 'b1');
+        const g = G1, cls = classify(xD), bad = cls === 'unknown';
+        const xs = X1(-TS), xe = X1(0), xh = X1(TH);
+        // window + its dimensions
+        band(sv, xs, xh, g.bandY[0], g.bandY[1]);
+        T(sv, (xs + xh) / 2, 34, 'decision window = t_{su} + t_{h} = 1.5 ns', 26, { 'text-anchor': 'middle', fill: VIO, 'font-weight': 700 });
+        dimArrow(sv, xs, xe, 70, VIO); dimArrow(sv, xe, xh, 70, VIO);
+        T(sv, xs - 14, 78, 'setup time t_{su} = 1 ns', 24, { 'text-anchor': 'end', fill: VIO });
+        T(sv, xh + 14, 78, 'hold time t_{h} = 0.5 ns', 24, { fill: VIO });
+        // the clock edge
+        S('line', { x1: xe, y1: 58, x2: xe, y2: g.axisY, stroke: AMB, 'stroke-width': 2, 'stroke-dasharray': '7 7', opacity: 0.8 }, sv);
+        // row labels
+        T(sv, 126, 166, 'CLK', 28, { 'text-anchor': 'end', fill: AMB, 'font-weight': 700 });
+        T(sv, 126, 316, 'D', 28, { 'text-anchor': 'end', fill: CY, 'font-weight': 700 });
+        T(sv, 126, 466, 'Q', 28, { 'text-anchor': 'end', fill: CY, 'font-weight': 700 });
+        // CLK, D
+        wave(sv, X1, g.clk[1], g.clk[0], 0, [0], g.t0, g.t1, AMB);
+        wave(sv, X1, g.d[1], g.d[0], 0, [xD], g.t0, g.t1, CY, { 'data-wave': 'D' });
+        // Q
+        if (cls === 'new') {
+            wave(sv, X1, g.q[1], g.q[0], 0, [TCQ], g.t0, g.t1, CY, { 'data-wave': 'Q', 'data-resp': 'edge' });
+        } else if (cls === 'old') {
+            wave(sv, X1, g.q[1], g.q[0], 0, [], g.t0, g.t1, CY, { 'data-wave': 'Q', 'data-resp': 'none' });
+        } else {
+            S('path', { d: `M${X1(g.t0)} ${g.q[1]} L${X1(TCQ)} ${g.q[1]}`, fill: 'none', stroke: CY, 'stroke-width': WSTROKE, 'stroke-linecap': 'round', 'data-wave': 'Q' }, sv);
+            S('rect', { x: X1(TCQ), y: g.q[0], width: X1(g.QRES) - X1(TCQ), height: g.q[1] - g.q[0], fill: 'url(#hatch-b1)', stroke: RED, 'stroke-width': 2.5, 'data-unknown': 1 }, sv);
+            for (const yy of g.q) S('line', { x1: X1(g.QRES), y1: yy, x2: X1(g.t1), y2: yy, stroke: RED, 'stroke-width': WSTROKE, 'stroke-dasharray': '12 9', 'stroke-linecap': 'round' }, sv);
+            T(sv, X1(g.QRES) + 22, 465, '1 or 0 ?', 26, { fill: RED, 'font-weight': 700 });
+        }
+        // t_co from the edge to Q's response
+        if (cls !== 'old') {
+            dimArrow(sv, xe, X1(TCQ), 388, CY);
+            T(sv, X1(TCQ) + 14, 368, 'clock-to-output delay', 24, { fill: CY });
+            T(sv, X1(TCQ) + 14, 398, 't_{co} = 1 ns', 24, { fill: CY, 'font-weight': 700 });
+        }
+        // Q caption, left of the edge where Q is always still low
+        const cap = { new: ['Q takes the new value', GRN], unknown: ['Q is not guaranteed', RED], old: ['Q keeps the old value', GRN] }[cls];
+        T(sv, X1(-3.9), 446, cap[0], 26, { fill: cap[1], 'font-weight': 700 });
+        if (cls === 'old') T(sv, X1(-3.9), 476, 'the new one is caught at the next edge', 21, { fill: DIM });
+        if (cls === 'unknown') T(sv, X1(-3.9), 476, 'either value, or hovering before it settles', 21, { fill: DIM });
+        // drag handle on D's transition
+        const hx = X1(xD), hy = (g.d[0] + g.d[1]) / 2, hc = bad ? RED : CY;
+        const h = S('g', { 'data-handle': 1, style: 'cursor:ew-resize' }, sv);
+        S('circle', { cx: hx, cy: hy, r: 21, fill: NAVY, stroke: hc, 'stroke-width': 3.5 }, h);
+        S('polygon', { points: `${hx - 14},${hy} ${hx - 5},${hy - 7} ${hx - 5},${hy + 7}`, fill: hc }, h);
+        S('polygon', { points: `${hx + 14},${hy} ${hx + 5},${hy - 7} ${hx + 5},${hy + 7}`, fill: hc }, h);
+        const tag = T(sv, hx, 242, sgn(xD) + ' ns', 24, { 'text-anchor': 'middle', fill: hc, 'font-family': MONO, 'font-weight': 700, 'data-xtag': 1 });
+        const tb = tag.getBBox();
+        if (tb.width) sv.insertBefore(S('rect', { x: tb.x - 8, y: tb.y - 1, width: tb.width + 16, height: tb.height + 2, rx: 6, fill: NAVY, opacity: 0.92 }), tag);
+        // axis
+        axis(sv, X1, g.t0, g.t1, g.axisY, 1, 2, 20);
+        T(sv, X1(0), 628, 'time relative to the clock edge (ns)', 20, { 'text-anchor': 'middle', fill: SLATE });
+        // html
+        $('xval').textContent = sgn(xD) + ' ns'; $('slx').value = xD;
+        const chip = $('chip1'); chip.classList.toggle('bad', bad);
+        chip.textContent = { new: 'OK — Q takes the new value', unknown: 'Violation — Q not guaranteed', old: 'OK — Q keeps the old value' }[cls];
+        chip.dataset.verdict = cls;
+        document.querySelectorAll('#p1 .case').forEach(c => { const on = c.dataset.case === cls;
+            c.className = 'case' + (on ? ' on ' + (bad ? 'bad' : 'ok') : ''); });
+    }
+    function setX(v) { xD = Math.max(-3, Math.min(3, Math.round(v * 10) / 10)); if (page === 1) draw1(); }
+    // where Q's drawn response begins, in axis ns (read back from the geometry)
+    function qEdgeT() {
+        const hb = document.querySelector('#sv1 [data-unknown]');
+        if (hb) return (+hb.getAttribute('x') - G1.X0) / G1.ppn + G1.t0;
+        const p = document.querySelector('#sv1 [data-resp="edge"]'); if (!p) return null;
+        const n = p.getAttribute('d').match(/-?[\d.]+/g).map(Number);       // M x y L x y L x y L x y
+        return ((n[2] + n[4]) / 2 - G1.X0) / G1.ppn + G1.t0;
+    }
+    (function dragSetup() {
+        const sv = $('sv1'); let drag = false;
+        const toT = e => { const pt = sv.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+            const p = pt.matrixTransform(sv.getScreenCTM().inverse()); return { t: (p.x - G1.X0) / G1.ppn + G1.t0, y: p.y }; };
+        sv.addEventListener('pointerdown', e => { const p = toT(e);
+            if (p.y > G1.d[0] - 40 && p.y < G1.d[1] + 40) { drag = true; sv.setPointerCapture(e.pointerId); setX(p.t); e.preventDefault(); } });
+        sv.addEventListener('pointermove', e => { if (drag) setX(toT(e).t); });
+        const end = () => { drag = false; };
+        sv.addEventListener('pointerup', end); sv.addEventListener('pointercancel', end);
+    })();
+
+    // ============ BEAT 2 ============
+    const G2 = { X0: 120, ppn: 78, t0: -1, t1: 15, clk: [60, 130], q: [158, 228], d: [256, 326], bandY: [44, 340], bar: [362, 442], lane2: [450, 520], axisY: 540 };
+    const X2 = t => G2.X0 + (t - G2.t0) * G2.ppn;
+    function drawCircuit() {
+        const sv = $('svc'); sv.innerHTML = '';
+        const yb = 40, hb = 120, f1 = dff(sv, 300, yb, 120, hb, 'FF1', 26), f2 = dff(sv, 1010, yb, 120, hb, 'FF2', 26);
+        const yw = f1.yd, yc = f1.yc, ytr = 180;
+        // logic block: one chip per ns of depth
+        const lx = 560, lw = 320;
+        S('rect', { x: lx, y: yw - 34, width: lw, height: 68, rx: 12, fill: '#0b1622', stroke: CY, 'stroke-width': 3 }, sv);
+        S('line', { x1: lx, y1: yw, x2: lx + lw, y2: yw, stroke: CY, 'stroke-width': 2, opacity: 0.5 }, sv);
+        const cw = 24, gap = 9, tot = pd * cw + (pd - 1) * gap, cx0 = lx + lw / 2 - tot / 2;
+        for (let i = 0; i < pd; i++) S('rect', { x: cx0 + i * (cw + gap), y: yw - 15, width: cw, height: 30, rx: 5, fill: CY }, sv);
+        T(sv, lx + lw / 2, yw + 68, 'logic propagation delay t_{pd} = ' + pd + ' ns', 24, { 'text-anchor': 'middle', fill: CY, 'font-weight': 700 });
+        // data wires
+        const dw = (x1, x2) => S('line', { x1, y1: yw, x2, y2: yw, stroke: CY, 'stroke-width': WSTROKE }, sv);
+        dw(200, f1.xl); dw(f1.xr, lx); dw(lx + lw, f2.xl); dw(f2.xr, 1230);
+        T(sv, (f1.xr + lx) / 2, yw - 14, 'Q_{1}', 26, { 'text-anchor': 'middle', fill: CY, 'font-weight': 700 });
+        T(sv, (lx + lw + f2.xl) / 2, yw - 14, 'D_{2}', 26, { 'text-anchor': 'middle', fill: CY, 'font-weight': 700 });
+        // clock trunk with a tee to FF1 and a corner to FF2
+        S('path', { d: `M150 ${ytr} L970 ${ytr} L970 ${yc} L${f2.xl} ${yc}`, fill: 'none', stroke: AMB, 'stroke-width': WSTROKE, 'stroke-linejoin': 'round' }, sv);
+        S('path', { d: `M260 ${ytr} L260 ${yc} L${f1.xl} ${yc}`, fill: 'none', stroke: AMB, 'stroke-width': WSTROKE, 'stroke-linejoin': 'round' }, sv);
+        S('circle', { cx: 260, cy: ytr, r: 6.5, fill: AMB }, sv);
+        T(sv, 138, ytr + 9, 'CLK', 26, { 'text-anchor': 'end', fill: AMB, 'font-weight': 700 });
+        // what each flip-flop contributes
+        T(sv, 360, 26, 'launches: t_{co} = 1 ns', 24, { 'text-anchor': 'middle', fill: DIM });
+        T(sv, 1070, 26, 'captures: needs t_{su} = 1 ns', 24, { 'text-anchor': 'middle', fill: DIM });
+    }
+    function draw2() {
+        const sv = $('sv2'); sv.innerHTML = ''; defs(sv, 'b2');
+        const g = G2, sl = slackOf(Tclk, pd), ok = sl >= 0, arrive = TCQ + pd;
+        // FF2's window at every capturing edge on the axis
+        let first = true;
+        for (let k = 1; k * Tclk - TS < g.t1; k++) {
+            band(sv, X2(k * Tclk - TS), X2(Math.min(g.t1, k * Tclk + TH)), g.bandY[0], g.bandY[1]);
+            if (first) T(sv, X2(k * Tclk - 0.25), 30, "FF2's decision window", 22, { 'text-anchor': 'middle', fill: VIO, 'font-weight': 700 });
+            first = false;
+        }
+        // rows
+        T(sv, 100, 106, 'CLK', 26, { 'text-anchor': 'end', fill: AMB, 'font-weight': 700 });
+        T(sv, 100, 204, 'Q_{1}', 26, { 'text-anchor': 'end', fill: CY, 'font-weight': 700 });
+        T(sv, 100, 302, 'D_{2}', 26, { 'text-anchor': 'end', fill: CY, 'font-weight': 700 });
+        const ck = [], qt = [], dt = [];
+        for (let k = 0; k * Tclk < g.t1; k++) { ck.push(k * Tclk, k * Tclk + Tclk / 2); qt.push(k * Tclk + TCQ); dt.push(k * Tclk + arrive); }
+        wave(sv, X2, g.clk[1], g.clk[0], 0, ck, g.t0, g.t1, AMB);
+        wave(sv, X2, g.q[1], g.q[0], 0, qt, g.t0, g.t1, CY);
+        wave(sv, X2, g.d[1], g.d[0], 0, dt, g.t0, g.t1, CY, { 'data-wave': 'D2' });
+        // guides from the waveforms down to the bar
+        const guide = (t, y1) => S('line', { x1: X2(t), y1, x2: X2(t), y2: g.bar[0], stroke: DIM, 'stroke-width': 1.5, 'stroke-dasharray': '5 6' }, sv);
+        guide(0, g.clk[1]); guide(TCQ, g.q[1]); guide(arrive, g.d[1]);
+        // violation marker on D2's transition
+        if (!ok) dt.filter(t => t < g.t1 - SLOPE).forEach(t =>
+            S('circle', { cx: X2(t), cy: (g.d[0] + g.d[1]) / 2, r: 24, fill: 'none', stroke: RED, 'stroke-width': 4, 'data-viol': 1 }, sv));
+        // budget bar on the same axis: t_co | t_pd | t_su | slack
+        T(sv, 100, g.bar[0] + 48, 'budget', 24, { 'text-anchor': 'end', fill: DIM, 'font-weight': 700 });
+        const segs = [['tco', 't_{co}', TCQ, CYD], ['tpd', 't_{pd}', pd, CY], ['tsu', 't_{su}', TS, VIO]];
+        let t = 0; const bh = g.bar[1] - g.bar[0];
+        const seg = (id, name, t1_, w, color, y) => {
+            if (w <= 0) return;
+            S('rect', { x: X2(t1_), y, width: w * g.ppn, height: bh, fill: color, stroke: NAVY, 'stroke-width': 2, 'data-seg': id, 'data-ns': w }, sv);
+            const cx = X2(t1_ + w / 2);
+            T(sv, cx, y + 34, name, 24, { 'text-anchor': 'middle', fill: NAVY, 'font-weight': 700, 'data-seglab': id });
+            T(sv, cx, y + 64, (id === 'slack' && !ok ? '−' : '') + w + ' ns', 20, { 'text-anchor': 'middle', fill: NAVY, 'font-weight': 700, 'font-family': MONO, 'data-seglab': id });
+        };
+        for (const s of segs) { seg(s[0], s[1], t, s[2], s[3], g.bar[0]); t += s[2]; }
+        if (ok) seg('slack', 'slack', t, sl, GRN, g.bar[0]);
+        else seg('slack', 'slack', Tclk, -sl, RED, g.lane2[0]);       // hangs past the period mark
+        // the period mark and its dimension
+        S('line', { x1: X2(Tclk), y1: g.bar[0] - 10, x2: X2(Tclk), y2: g.lane2[1] + 6, stroke: AMB, 'stroke-width': 3, 'data-tmark': 1 }, sv);
+        S('line', { x1: X2(0), y1: g.bar[1], x2: X2(0), y2: g.lane2[1] + 6, stroke: AMB, 'stroke-width': 2 }, sv);
+        const yd = 486; dimArrow(sv, X2(0), X2(Tclk), yd, AMB);
+        const lab = T(sv, X2(Tclk / 2), yd + 8, 'one clock period, T = ' + Tclk + ' ns', 22, { 'text-anchor': 'middle', fill: AMB, 'font-weight': 700 });
+        const bb = lab.getBBox();
+        if (bb.width) sv.insertBefore(S('rect', { x: bb.x - 12, y: bb.y, width: bb.width + 24, height: bb.height, fill: NAVY }), lab);
+        // axis
+        axis(sv, X2, g.t0, g.t1, g.axisY, 1, 2, 20);
+        T(sv, X2(7), 602, 'time after the launching clock edge (ns)', 20, { 'text-anchor': 'middle', fill: SLATE });
+        // html
+        $('Tval').textContent = Tclk + ' ns'; $('Pval').textContent = pd + ' ns'; $('slT').value = Tclk; $('slP').value = pd;
+        $('slbT').classList.toggle('focus', focus2 === 'T'); $('slbP').classList.toggle('focus', focus2 === 'pd');
+        const rs = $('rSlack'); rs.textContent = (sl > 0 ? '+' : '') + fmt(sl, 0) + ' ns'; rs.style.color = ok ? GRN : RED;
+        $('rMin').textContent = minPeriod(pd) + ' ns'; $('rF').textContent = fmax(pd).toFixed(1) + ' MHz';
+        $('ineqNums').innerHTML = `${Tclk} ${ok ? '&ge;' : '&lt;'} 1 + ${pd} + 1`; $('ineqNums').style.color = ok ? INK : RED;
+        const chip = $('chip2'); chip.classList.toggle('bad', !ok); chip.textContent = ok ? 'Meets timing' : 'Too slow — fails'; chip.dataset.verdict = ok ? 'ok' : 'fail';
+    }
+    function setT(v) { Tclk = Math.max(6, Math.min(14, Math.round(v))); if (page === 2) draw2(); }
+    function setPd(v) { pd = Math.max(1, Math.min(9, Math.round(v))); if (page === 2) { drawCircuit(); draw2(); } }
+    function barSegments() {
+        return Array.from(document.querySelectorAll('#sv2 [data-seg]')).map(r => ({ id: r.dataset.seg,
+            t0: (+r.getAttribute('x') - G2.X0) / G2.ppn + G2.t0, ns: +r.getAttribute('width') / G2.ppn, fill: r.getAttribute('fill'), y: +r.getAttribute('y') }));
+    }
+
+    // ============ BEAT 3 ============
+    const G3 = { X0: 76, ppn: 8, clk: [66, 140], inp: [200, 282], bandY: [50, 298], axisY: 312 };
+    const X3 = t => G3.X0 + t * G3.ppn;
+    function mini(sv, sfx) { sv.innerHTML = ''; defs(sv, sfx); }
+    const XM = t => 96 + (t + 3) * 48;                    // both mini sketches: same scale, same axis line
+    function draw3a() {                                    // late data
+        const sv = $('sv3a'); mini(sv, 'b3a'); const X = XM;
+        band(sv, X(-TS), X(TH), 60, 460);
+        T(sv, 84, 145, 'CLK', 28, { 'text-anchor': 'end', fill: AMB, 'font-weight': 700 });
+        T(sv, 84, 385, 'D', 28, { 'text-anchor': 'end', fill: CY, 'font-weight': 700 });
+        wave(sv, X, 190, 80, 0, [0], -3, 4, AMB);
+        wave(sv, X, 430, 320, 0, [-2.4], -3, 4, CY, { 'stroke-dasharray': '4 9', opacity: 0.55 });
+        wave(sv, X, 430, 320, 0, [-0.4], -3, 4, CY);
+        S('circle', { cx: X(-0.4), cy: 375, r: 24, fill: 'none', stroke: RED, 'stroke-width': 4 }, sv);
+        dimArrow(sv, X(-2.4), X(-0.4) - 28, 272, RED, 13);
+        T(sv, X(-2.3), 256, 'late', 26, { fill: RED, 'font-weight': 700 });
+        axis(sv, X, -3, 4, 476, 1, 2, 20);
+    }
+    function draw3b() {                                    // the window displaced
+        const sv = $('sv3b'); mini(sv, 'b3b'); const X = XM, SK = 1;
+        T(sv, 84, 105, 'CLK_{1}', 28, { 'text-anchor': 'end', fill: AMB, 'font-weight': 700 });
+        T(sv, 84, 269, 'CLK_{2}', 28, { 'text-anchor': 'end', fill: AMB, 'font-weight': 700 });
+        T(sv, 84, 405, 'D_{2}', 28, { 'text-anchor': 'end', fill: CY, 'font-weight': 700 });
+        S('rect', { x: X(-TS), y: 198, width: X(TH) - X(-TS), height: 262, fill: 'none', stroke: VIO, 'stroke-width': 2, 'stroke-dasharray': '6 6', opacity: 0.7 }, sv);
+        band(sv, X(SK - TS), X(SK + TH), 198, 460);
+        wave(sv, X, 140, 50, 0, [0], -3, 4, AMB);
+        wave(sv, X, 304, 214, 0, [SK], -3, 4, AMB);
+        wave(sv, X, 440, 350, 0, [0.9], -3, 4, CY);
+        S('circle', { cx: X(0.9), cy: 395, r: 24, fill: 'none', stroke: RED, 'stroke-width': 4 }, sv);
+        S('line', { x1: X(0), y1: 140, x2: X(0), y2: 182, stroke: AMB, 'stroke-width': 1.5, 'stroke-dasharray': '4 4' }, sv);
+        S('line', { x1: X(SK), y1: 156, x2: X(SK), y2: 214, stroke: AMB, 'stroke-width': 1.5, 'stroke-dasharray': '4 4' }, sv);
+        dimArrow(sv, X(0), X(SK), 170, AMB, 13);
+        T(sv, X(SK) + 12, 178, 't_{skew}', 26, { fill: AMB, 'font-weight': 700 });
+        axis(sv, X, -3, 4, 476, 1, 2, 20);
+    }
+    function draw3c() {                                    // asynchronous input
+        const sv = $('sv3c'); mini(sv, 'b3c'); const g = G3;
+        for (const e of EDGES) band(sv, X3(e - TS), X3(e + TH), g.bandY[0], g.bandY[1]);
+        T(sv, 60, 112, 'CLK', 26, { 'text-anchor': 'end', fill: AMB, 'font-weight': 700 });
+        T(sv, 60, 251, 'IN', 26, { 'text-anchor': 'end', fill: CY, 'font-weight': 700 });
+        const ck = []; for (const e of EDGES) ck.push(e, e + 5);
+        wave(sv, X3, g.clk[1], g.clk[0], 0, ck, 0, STRIP, AMB);
+        S('line', { x1: X3(0), y1: g.inp[1], x2: X3(STRIP), y2: g.inp[1], stroke: CY, 'stroke-width': 2, opacity: 0.45 }, sv);
+        const gt = S('g', { id: 'ticks' }, sv);
+        const from = Math.max(0, changes.length - MAXDRAW);
+        for (let i = from; i < changes.length; i++) { const c = changes[i];
+            S('line', { x1: X3(c.t), y1: g.inp[0], x2: X3(c.t), y2: g.inp[1], stroke: c.hit ? RED : CY, 'stroke-width': c.hit ? 3 : 2,
+                opacity: c.hit ? 1 : 0.8, 'data-tick': c.hit ? 'hit' : 'miss' }, gt); }
+        // axis: this strip is 80 ns wide, so ticks every 10 ns and labels every 20
+        axis(sv, X3, 0, STRIP, g.axisY, 10, 20, 20);
+        T(sv, 50, g.axisY + 33, 'ns', 20, { 'text-anchor': 'end', fill: DIM });
+        $('nHit').textContent = nHit; $('nTot').textContent = nTot;
+        $('pct').textContent = nTot ? (100 * nHit / nTot).toFixed(1) + ' %' : '—';
+    }
+    function fire(n) {
+        n = n || 1;
+        for (let i = 0; i < n; i++) { const t = rnd() * STRIP, hit = inWindow(t); changes.push({ t, hit }); nTot++; if (hit) nHit++; }
+        if (changes.length > MAXDRAW) changes = changes.slice(-MAXDRAW);
+        if (page === 3) draw3c();
+    }
+    function drawnTicks() { return Array.from(document.querySelectorAll('#sv3c [data-tick]')).map(l => ({
+        t: (+l.getAttribute('x1') - G3.X0) / G3.ppn, red: l.getAttribute('stroke') === RED })); }
+    function drawnBands3() { return Array.from(document.querySelectorAll('#sv3c [data-band]')).map(r => {
+        const a = (+r.getAttribute('x') - G3.X0) / G3.ppn; return [a, a + (+r.getAttribute('width')) / G3.ppn]; }); }
+
+    // ============ PAGE / RENDER ============
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    function render() {
+        document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'p' + page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        document.querySelectorAll('[data-dot]').forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        $('pcNum').textContent = page;
+        // draw on the ACTIVE page only, so every measurement is real
+        if (page === 1) { drawFF(); draw1(); }
+        if (page === 2) { drawCircuit(); draw2(); }
+        if (page === 3) { draw3a(); draw3b(); draw3c(); }
+    }
+    function defsOpen() { return $('defsOv').classList.contains('open'); }
+    function openDefs() { $('defsOv').classList.add('open'); $('defsBtn').classList.add('on'); }
+    function closeDefs() { $('defsOv').classList.remove('open'); $('defsBtn').classList.remove('on'); }
+    function toggleDefs() { if (defsOpen()) closeDefs(); else openDefs(); }
+    function setPage(n) { closeDefs(); page = Math.max(FIRST, Math.min(LAST, n)); render(); }
+    function doReset() { xD = X_DEF; Tclk = T_DEF; pd = PD_DEF; focus2 = 'T'; rngState = SEED; nHit = 0; nTot = 0; changes = []; render(); }
+    function nudge(dir) {
+        if (page === 1) setX(xD + dir * 0.1);
+        else if (page === 2) { if (focus2 === 'T') setT(Tclk + dir); else setPd(pd + dir); }
+    }
+    function doStep() { if (page === 3) fire(1); else nudge(1); }
+
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    $('slx').addEventListener('input', e => setX(+e.target.value));
+    $('slT').addEventListener('input', e => { focus2 = 'T'; setT(+e.target.value); });
+    $('slP').addEventListener('input', e => { focus2 = 'pd'; setPd(+e.target.value); });
+    $('slbT').addEventListener('pointerdown', () => { focus2 = 'T'; if (page === 2) draw2(); });
+    $('slbP').addEventListener('pointerdown', () => { focus2 = 'pd'; if (page === 2) draw2(); });
+    $('bF1').addEventListener('click', () => fire(1));
+    $('bF100').addEventListener('click', () => fire(100));
+    $('bR').addEventListener('click', doReset);
+    $('defsBtn').addEventListener('click', toggleDefs);
+    $('defsOv').addEventListener('click', e => { if (e.target === $('defsOv')) closeDefs(); });
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '3') { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (k === 'Escape') { closeDefs(); e.preventDefault(); return; }
+        if (defsOpen()) { e.preventDefault(); return; }          // sliders, fire and reset wait until it is closed
+        switch (k) {
+            case 'ArrowRight': nudge(1); e.preventDefault(); break;
+            case 'ArrowLeft': nudge(-1); e.preventDefault(); break;
+            case 'ArrowUp': case 'ArrowDown':
+                if (page === 2) { focus2 = focus2 === 'T' ? 'pd' : 'T'; draw2(); } e.preventDefault(); break;
+            case 'f': case 'F': if (page === 3) fire(e.shiftKey ? 100 : 1); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, step: doStep, reset: doReset, nudge, openDefs, closeDefs, defsOpen,
+        setX, getX: () => xD, classify, getVerdict1: () => $('chip1').dataset.verdict, qEdgeT,
+        setT, setPd, getT: () => Tclk, getPd: () => pd,
+        getSlack: () => slackOf(Tclk, pd), getMinPeriod: () => minPeriod(pd), getFmax: () => fmax(pd),
+        getVerdict2: () => $('chip2').dataset.verdict, barSegments,
+        getReadouts2: () => ({ slack: $('rSlack').textContent, min: $('rMin').textContent, fmax: $('rF').textContent }),
+        fire, getCounts: () => ({ hit: nHit, total: nTot, pct: nTot ? 100 * nHit / nTot : null }),
+        drawnTicks, drawnBands3, inWindow,
+        getState: () => ({ page, xD, Tclk, pd, focus2, nHit, nTot }),
+        model: { TS, TH, TCQ, T_DEF, PD_DEF, SEED, STRIP, EDGES, SLOPE, G1, G2, G3 },
+    };
+
+    render();
+</script>
+</body>
+</html>
