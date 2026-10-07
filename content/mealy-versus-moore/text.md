@@ -62,7 +62,9 @@ $$D = L \qquad P = L\,\overline{Q}$$
 | Gates | 4 | 1 |
 | $P$ depends on | $Q_1$, $Q_0$ | $L$, $Q$ |
 
-The Mealy circuit is one flip-flop and one AND gate. The flip-flop simply stores $L$, and the AND gate asks "is $L$ high now, and was it low at the last edge?" The complement $\overline{Q}$ comes from the flip-flop's $\overline{Q}$ pin.
+The Moore circuit is two flip-flops and four gates: one OR gate and one AND gate for $D_1$, one AND gate for $D_0$, and one AND gate for $P$. The complements $\overline{Q_1}$ and $\overline{Q_0}$ come from the flip-flops' $\overline{Q}$ pins, so no inverters are needed and none are counted.
+
+The Mealy circuit is one flip-flop and one AND gate. The flip-flop simply stores $L$, and the AND gate asks "is $L$ high now, and was it low at the last edge?" Here too, the complement $\overline{Q}$ comes from the flip-flop's $\overline{Q}$ pin.
 
 Look at where that AND gate sits. One of its inputs is $L$ itself, and its output is $P$. There is no flip-flop anywhere on the path from $L$ to $P$. In the Moore circuit, the only signals that reach the output gate are flip-flop outputs.
 
