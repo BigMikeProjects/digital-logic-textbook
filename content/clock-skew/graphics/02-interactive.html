@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clock Skew — When the Clock Edge Arrives at Different Times</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens (shared with graphic 47): amber #ffb74d = clock · cyan #4fc3f7 = data · violet #b388ff = the
+       decision window · green #81c784 = positive slack / OK · red #ef5350 = violation / unknown · slate = secondary */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #e8eef2; font-size: 40px; font-weight: 700; line-height: 1.15; }
+    .titles h1 .sub { color: #90a4ae; font-size: 26px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 20px; margin-top: 4px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #e8eef2; font-size: 26px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; }
+    .defs-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 20px; font-weight: 600;
+        color: #cfd8dc; background: transparent; border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k { border: 1px solid #37506a; border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: #90a4ae; line-height: 26px; }
+    .defs-btn.on { border-color: #b388ff; color: #e8eef2; background: rgba(179,136,255,0.10); }
+
+    /* Definitions overlay — same design as graphic 47 */
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(8,13,24,0.78); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1240px; background: #0d1b2a; border: 2px solid #b388ff; border-radius: 16px; padding: 16px 38px 18px; box-shadow: 0 18px 60px rgba(0,0,0,0.55); }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    .defs-title { font-size: 34px; font-weight: 700; color: #e8eef2; }
+    .defs-close { font-size: 20px; color: #607d8b; }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 5px; align-items: baseline; }
+    .defs-list .ds { font-size: 28px; font-weight: 700; white-space: nowrap; }
+    .defs-list .dd { font-size: 24px; line-height: 1.22; color: #b0bec5; }
+    .defs-list .dd b { color: #e8eef2; }
+    .defs-list .dnote { display: block; font-size: 18px; line-height: 1.3; color: #90a4ae; margin-top: 2px; }
+    .defs-scale { border-top: 2px solid #24384c; margin-top: 12px; padding-top: 10px; }
+    .defs-scale .sh { font-size: 24px; font-weight: 700; color: #cfd8dc; }
+    .defs-scale table { border-collapse: collapse; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .defs-scale th, .defs-scale td { font-size: 22px; padding: 4px 26px; border-bottom: 1px solid #24384c; text-align: center; white-space: nowrap; color: #e8eef2; }
+    .defs-scale th { font-weight: 600; color: #90a4ae; border-bottom: 2px solid #37506a; }
+    .defs-scale th:first-child, .defs-scale td:first-child { text-align: left; padding-left: 0; color: #b0bec5; }
+    .defs-scale td b { font-weight: 700; }
+    .defs-scale .sn { font-size: 20px; color: #90a4ae; margin-top: 7px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 21px; font-weight: 700; white-space: nowrap; }
+    .tab.on { color: #e8eef2; border-color: #cfd8dc; background: rgba(207,216,220,0.07); }
+    .tab.on .tnum { background: #cfd8dc; color: #0d1b2a; border-color: #cfd8dc; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 24px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    sub { font-size: 0.7em; line-height: 0; }
+
+    .lcol { flex: 0 0 540px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .rcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+    .panel svg { display: block; }
+    .pad { padding: 16px 22px; }
+    .phead { font-size: 22px; font-weight: 700; color: #cfd8dc; padding: 10px 22px 0; }
+    .phead span.dimtxt { color: #90a4ae; font-weight: 500; }
+
+    /* numbers list (beat 1) */
+    .nums { display: grid; grid-template-columns: 58px 1fr auto; row-gap: 9px; column-gap: 12px; align-items: baseline; }
+    .nums .s { font-size: 28px; font-weight: 700; }
+    .nums .m { font-size: 21px; color: #90a4ae; }
+    .nums .v { font-size: 28px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; text-align: right; color: #e8eef2; }
+    .c-clk { color: #ffb74d; } .c-data { color: #4fc3f7; } .c-win { color: #b388ff; }
+    .c-ok { color: #81c784; } .c-bad { color: #ef5350; } .c-dim { color: #90a4ae; }
+
+    .legend { display: flex; align-items: center; gap: 14px; font-size: 21px; color: #b0bec5; }
+    .legend .sw { width: 34px; height: 30px; flex-shrink: 0; border: 2px solid #b388ff; background: rgba(179,136,255,0.22); border-radius: 3px; }
+    .caption { font-size: 22px; line-height: 1.38; color: #b0bec5; }
+    .caption b { color: #e8eef2; }
+
+    /* sliders */
+    .sl { padding: 12px 22px 12px; }
+    .sl + .sl { border-top: 2px solid #1b2c3d; }
+    .sl-top { display: flex; align-items: baseline; justify-content: space-between; }
+    .sl-name { font-size: 28px; font-weight: 700; }
+    .sl-desc { font-size: 20px; font-weight: 500; color: #90a4ae; margin-left: 10px; }
+    .sl-val { font-size: 30px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; color: #e8eef2; }
+    .sl input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 5px;
+        background: #24384c; outline: none; margin: 16px 0 16px; display: block; }
+    .sl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; border-radius: 50%;
+        background: var(--tc, #cfd8dc); border: 4px solid #0d1b2a; box-shadow: 0 0 0 2px var(--tc, #cfd8dc); cursor: pointer; }
+    .sl input[type=range]:focus::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--tc, #cfd8dc), 0 0 0 7px rgba(255,255,255,0.20); }
+    .sl.clk { --tc: #ffb74d; } .sl.data { --tc: #4fc3f7; }
+    .sl-ends { display: flex; justify-content: space-between; font-size: 20px; color: #607d8b; font-family: 'Menlo','Consolas',monospace; }
+    .tnote { font-size: 20px; color: #b0bec5; margin-top: 4px; transition: color .2s; }   /* a standing statement, not a hint: readable at rest */
+    .tnote b { color: #ffb74d; }
+    .tnote.flash { animation: tflash 1.6s ease-out; }
+    @keyframes tflash { 0% { color: #ffffff; } 60% { color: #ffffff; } 100% { color: #b0bec5; } }
+    .tnote.hot { color: #e8eef2; }
+
+    /* readouts */
+    .tiles { display: flex; gap: 14px; }
+    .tile { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; padding: 12px 20px; }
+    .tile .tl { font-size: 20px; color: #90a4ae; }
+    .tile .tv { font-size: 38px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; margin-top: 2px; white-space: nowrap; }
+    .tile .tv small { font-size: 22px; font-weight: 500; color: #90a4ae; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .chiprow { display: flex; align-items: center; gap: 16px; }
+    .chip { display: inline-block; font-size: 28px; font-weight: 700; border-radius: 999px; padding: 9px 26px;
+        border: 3px solid currentColor; white-space: nowrap; }
+    .trace td .one { color: #4fc3f7; }                  /* the travelling 1, in the data color, so it can be followed across the row */
+    #chip4 { font-size: 24px; padding: 10px 22px; }      /* beat 4's longest verdict must fit the 540px column */
+    .chip.ok { color: #81c784; background: rgba(129,199,132,0.12); }
+    .chip.bad { color: #ef5350; background: rgba(239,83,80,0.13); }
+    .hint { font-size: 22px; color: #b0bec5; line-height: 1.35; }
+    .hint b { color: #e8eef2; }
+
+    /* equation strip under the diagram */
+    .eq { display: flex; align-items: center; gap: 28px; padding: 0 30px; height: 126px; border-top: 2px solid #1b2c3d; }
+    .eq .lab { font-size: 22px; color: #90a4ae; flex-shrink: 0; width: 138px; line-height: 1.25; }
+    .eq .sym { font-size: 30px; font-weight: 700; white-space: nowrap; }
+    .eq .numr { font-size: 30px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; white-space: nowrap; color: #e8eef2; }
+    .eq .arrow { font-size: 26px; color: #607d8b; }
+
+    /* beat 2 definition */
+    .defn { padding: 26px 34px; display: flex; flex-direction: column; gap: 30px; flex: 1; justify-content: center; }
+    .panel.fill { flex: 1; display: flex; flex-direction: column; }
+    .closing { font-size: 20px; line-height: 1.4; color: #90a4ae; margin-top: auto; }
+    .defn .dline { font-size: 34px; font-weight: 700; color: #e8eef2; }
+    .defn .dline .paren { font-weight: 500; color: #b0bec5; }
+    .signs { display: flex; gap: 20px; }
+    .sign { flex: 1; border: 3px solid #24384c; border-radius: 14px; padding: 22px 26px; opacity: .5; transition: all .15s; }
+    .sign .s1 { font-size: 30px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; color: #b0bec5; }
+    .sign .s2 { font-size: 30px; font-weight: 700; color: #b0bec5; margin-top: 4px; }
+    .sign .s3 { font-size: 21px; color: #90a4ae; margin-top: 6px; }
+    .sign.on { opacity: 1; border-color: #ffb74d; background: rgba(255,183,77,0.08); }
+    .sign.on .s1, .sign.on .s2 { color: #ffb74d; }
+
+    /* beat 4 */
+    .sr { display: flex; align-items: stretch; }
+    .trace { flex: 1; padding: 6px 22px 0 30px; }
+    .trace table { border-collapse: collapse; width: 100%; }
+    .trace th { font-size: 20px; font-weight: 600; color: #90a4ae; padding: 4px 0 8px; text-align: center; }
+    .trace th.rl, .trace td.rl { text-align: left; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 22px; font-weight: 700; color: #cfd8dc; white-space: nowrap; padding-right: 10px; }
+    .trace td { font-family: 'Menlo','Consolas',monospace; font-size: 28px; font-weight: 700; text-align: center; padding: 9px 0;
+        border-top: 2px solid #1b2c3d; color: #cfd8dc; }
+    .trace td.fut { color: #33485c; }
+    .trace td.now { background: rgba(255,183,77,0.10); box-shadow: inset 0 0 0 2px #ffb74d; }
+    .trace td.wrong { color: #ef5350; }
+    .trace .q { color: #ef5350; }
+    .trace td.unk { background: rgba(239,83,80,0.16); }
+    .trace td.unk.now { background: rgba(239,83,80,0.16); }
+    .trace .tcap { font-size: 20px; color: #90a4ae; margin-top: 8px; min-height: 28px; }
+    .trace .tcap.bad { color: #ef5350; font-weight: 700; } .trace .tcap.ok { color: #81c784; font-weight: 700; }
+    .ineq { padding: 12px 22px; }
+    .ineq .i1 { font-size: 26px; font-weight: 700; white-space: nowrap; }
+    .ineq .i2 { font-size: 26px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; margin-top: 4px; white-space: nowrap; color: #e8eef2; }
+    .steprow { display: flex; align-items: center; gap: 14px; }
+    .btn { font: inherit; font-size: 24px; font-weight: 700; color: #ffb74d; background: rgba(255,183,77,0.10);
+        border: 3px solid #ffb74d; border-radius: 12px; padding: 9px 22px; cursor: pointer; white-space: nowrap; }
+    .btn.reset { color: #cfd8dc; border-color: #607d8b; background: transparent; padding: 9px 18px; }
+    .btn:disabled { opacity: .4; cursor: default; }
+    .clkcount { font-size: 22px; color: #90a4ae; white-space: nowrap; }
+    .clkcount b { color: #e8eef2; font-size: 28px; font-family: 'Menlo','Consolas',monospace; }
+
+    .seg { cursor: pointer; }
+    .hl { opacity: 0; transition: opacity .12s; pointer-events: none; }
+    .hl.on { opacity: 1; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #37506a; }
+    .dot.on { background: #cfd8dc; border-color: #cfd8dc; }
+    .controls { font-size: 20px; color: #607d8b; }
+    .controls .k { border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        font-family: 'Menlo','Consolas',monospace; color: #90a4ae; }
+    .controls .k.amber { border-color: #6a5324; color: #ffb74d; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 26 L40 26 L44 8 L96 8 L100 26 L144 26" stroke="#ffb74d" stroke-width="3"/>
+                <path d="M6 54 L64 54 L68 36 L120 36 L124 54 L144 54" stroke="#ffb74d" stroke-width="3"/>
+                <path d="M42 30 L42 58 M66 4 L66 34" stroke="#90a4ae" stroke-width="1.5" stroke-dasharray="3 3"/>
+                <path d="M44 31 L64 31" stroke="#e8eef2" stroke-width="2"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Clock Skew <span class="sub">&mdash; when the clock edge arrives at different times</span></h1>
+            <div class="subtitle">The clock is a wire too. Delay the launch clock and the data is too late; delay the capture clock and the next data is too soon.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Zero Skew: the Budget</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">The Clock Is a Wire Too</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Launch Clock Late &rarr; Setup</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Capture Clock Late &rarr; Hold</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 -->
+        <div class="page" id="p1">
+            <div class="lcol">
+                <div class="panel"><svg id="ckt1" width="536" height="264" viewBox="0 0 536 264"></svg></div>
+                <div class="panel pad">
+                    <div class="nums">
+                        <span class="s c-clk">T</span><span class="m" id="mT">clock period (Basys 3: 100 MHz)</span><span class="v">10 ns</span>
+                        <span class="s c-data">t<sub>co</sub></span><span class="m">clock-to-output delay</span><span class="v">1 ns</span>
+                        <span class="s c-data">t<sub>pd</sub></span><span class="m">logic propagation delay</span><span class="v">5 ns</span>
+                        <span class="s c-win">t<sub>su</sub></span><span class="m">setup time</span><span class="v">1 ns</span>
+                        <span class="s c-win">t<sub>h</sub></span><span class="m">hold time</span><span class="v">0.5 ns</span>
+                    </div>
+                </div>
+                <div class="panel pad">
+                    <div class="legend"><span class="sw"></span><span><b class="c-win">Decision window</b>: t<sub>su</sub> before the edge to t<sub>h</sub> after. D2 must hold still inside it.</span></div>
+                </div>
+                <div class="caption"><b>Zero skew</b> is the assumption behind every FSM drawn so far. Hover a budget segment to find it on the waveforms.</div>
+            </div>
+            <div class="rcol">
+                <div class="panel">
+                    <svg id="td1" width="1248" height="650" viewBox="0 0 1248 650"></svg>
+                    <div class="eq">
+                        <span class="lab">one period must cover</span>
+                        <span class="sym"><span class="c-data">t<sub>co</sub></span> + <span class="c-data">t<sub>pd</sub></span> + <span class="c-win">t<sub>su</sub></span> &le; <span class="c-clk">T</span></span>
+                        <span class="arrow">&rarr;</span>
+                        <span class="numr">1 + 5 + 1 = 7 &le; 10</span>
+                        <span class="arrow">&rarr;</span>
+                        <span class="numr c-ok">slack 3 ns</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 -->
+        <div class="page" id="p2">
+            <div class="lcol">
+                <div class="panel"><svg id="ckt2" width="536" height="340" viewBox="0 0 536 340"></svg></div>
+                <div class="panel">
+                    <div class="sl clk">
+                        <div class="sl-top"><span class="sl-name c-clk">t<sub>skew</sub><span class="sl-desc">move FF2 along the wire</span></span><span class="sl-val" id="v2skew"></span></div>
+                        <input type="range" id="s2skew" min="-4" max="4" step="0.5" value="2">
+                        <div class="sl-ends"><span>&minus;4</span><span>0</span><span>+4 ns</span></div>
+                    </div>
+                </div>
+                <div class="caption"><b>Nothing fails on this beat.</b> It only names the quantity and its sign: FF1 launches the data, FF2 captures it.</div>
+            </div>
+            <div class="rcol">
+                <div class="panel fill">
+                    <svg id="td2" width="1248" height="420" viewBox="0 0 1248 420"></svg>
+                    <div class="defn" style="border-top:2px solid #1b2c3d">
+                        <div class="dline"><span class="c-clk">t<sub>skew</sub></span> = <span class="paren">(time the edge reaches</span> FF2<span class="paren">)</span> &minus; <span class="paren">(time the edge reaches</span> FF1<span class="paren">)</span></div>
+                        <div class="signs">
+                            <div class="sign" id="signNeg"><div class="s1">t<sub>skew</sub> &lt; 0</div><div class="s2">launch clock late</div><div class="s3">FF1 sees the edge last</div></div>
+                            <div class="sign" id="signPos"><div class="s1">t<sub>skew</sub> &gt; 0</div><div class="s2">capture clock late</div><div class="s3">FF2 sees the edge last</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 -->
+        <div class="page" id="p3">
+            <div class="lcol">
+                <div class="panel"><svg id="ckt3" width="536" height="264" viewBox="0 0 536 264"></svg></div>
+                <div class="panel">
+                    <div class="sl clk">
+                        <div class="sl-top"><span class="sl-name c-clk">launch delay<span class="sl-desc">FF1&rsquo;s clock is late by</span></span><span class="sl-val" id="v3late"></span></div>
+                        <input type="range" id="s3late" min="0" max="4" step="0.5" value="2">
+                        <div class="sl-ends"><span>0</span><span>2</span><span>4 ns</span></div>
+                    </div>
+                    <div class="sl clk">
+                        <div class="sl-top"><span class="sl-name c-clk">T<span class="sl-desc">clock period</span></span><span class="sl-val" id="v3T"></span></div>
+                        <input type="range" id="s3T" min="6" max="14" step="1" value="10">
+                        <div class="sl-ends"><span>6</span><span>10</span><span>14 ns</span></div>
+                    </div>
+                </div>
+                <div class="tiles">
+                    <div class="tile"><div class="tl">setup slack</div><div class="tv" id="r3slack"></div></div>
+                    <div class="tile"><div class="tl">minimum period</div><div class="tv" id="r3min"></div></div>
+                </div>
+                <div class="chiprow"><span class="chip" id="chip3"></span></div>
+                <div class="hint" id="hint3"></div>
+            </div>
+            <div class="rcol">
+                <div class="panel">
+                    <svg id="td3" width="1248" height="650" viewBox="0 0 1248 650"></svg>
+                    <div class="eq">
+                        <span class="lab">setup check, long path</span>
+                        <span class="sym"><span class="c-clk">T</span> &minus; <span class="c-clk">launch delay</span> &ge; <span class="c-data">t<sub>co</sub></span> + <span class="c-data">t<sub>pd</sub></span> + <span class="c-win">t<sub>su</sub></span></span>
+                        <span class="arrow">&rarr;</span>
+                        <span class="numr" id="eq3"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 -->
+        <div class="page" id="p4">
+            <div class="lcol">
+                <div class="panel">
+                    <div class="sl clk">
+                        <div class="sl-top"><span class="sl-name c-clk">t<sub>skew</sub><span class="sl-desc">FF2&rsquo;s clock is late by</span></span><span class="sl-val" id="v4skew"></span></div>
+                        <input type="range" id="s4skew" min="0" max="3" step="0.5" value="2">
+                        <div class="sl-ends"><span>0</span><span>3 ns</span></div>
+                    </div>
+                    <div class="sl clk">
+                        <div class="sl-top"><span class="sl-name c-clk">T<span class="sl-desc">try slowing the clock</span></span><span class="sl-val" id="v4T"></span></div>
+                        <input type="range" id="s4T" min="6" max="14" step="1" value="10">
+                        <div class="tnote" id="tnote"><b>No effect:</b> T is not in the hold inequality.</div>
+                    </div>
+                </div>
+                <div class="panel ineq">
+                    <div class="i1"><span class="c-dim" style="font-weight:500">hold:</span> <span class="c-data">t<sub>co</sub></span> &ge; <span class="c-win">t<sub>h</sub></span> + <span class="c-clk">t<sub>skew</sub></span></div>
+                    <div class="i2" id="eq4"></div>
+                </div>
+                <div class="chiprow"><span class="chip" id="chip4"></span></div>
+                <div class="hint" id="hint4"></div>
+                <div class="steprow">
+                    <button class="btn" data-step>Clock &#9655; <span style="font-weight:500;font-size:20px">Space</span></button>
+                    <button class="btn reset" data-reset>&#8634; <span style="font-weight:500;font-size:20px">R</span></button>
+                    <span class="clkcount">clock <b id="clkN">0</b> of 4</span>
+                </div>
+                <div class="closing">Clock networks are built to keep skew small. Design tools check both inequalities on every path.</div>
+            </div>
+            <div class="rcol">
+                <div class="panel">
+                    <div class="phead"><span>Shift register, short path</span> <span class="dimtxt">&mdash; a single 1 shifted in: IN = 1, 0, 0, 0</span></div>
+                    <div class="sr">
+                        <svg id="ckt4" width="760" height="262" viewBox="0 0 760 262"></svg>
+                        <div class="trace"><div id="trace4"></div><div class="tcap" id="tcap4"></div></div>
+                    </div>
+                </div>
+                <div class="panel"><svg id="td4" width="1248" height="466" viewBox="0 0 1248 466"></svg></div>
+            </div>
+        </div>
+
+        <div class="defs" id="defs">
+            <div class="defs-card" id="defsCard">
+                <div class="defs-head"><span class="defs-title">Definitions</span><span class="defs-close">Esc or D to close</span></div>
+                <div class="defs-list">
+                    <span class="ds c-clk" data-def="T">T</span><span class="dd"><b>clock period</b> &mdash; the time from one rising clock edge to the next.</span>
+                    <span class="ds c-data" data-def="tco">t<sub>co</sub></span><span class="dd"><b>clock-to-output delay</b> &mdash; from the clock edge until Q shows the new value.<span class="dnote">FPGA datasheets quote clock-to-output at the chip&rsquo;s pins. That figure is larger: it includes the clock wiring and the output buffer.</span></span>
+                    <span class="ds c-data" data-def="tpd">t<sub>pd</sub></span><span class="dd"><b>logic propagation delay</b> &mdash; how long the logic between two flip-flops takes to settle after its inputs change.</span>
+                    <span class="ds c-win" data-def="tsu">t<sub>su</sub></span><span class="dd"><b>setup time</b> &mdash; how long D must be steady before the clock edge.</span>
+                    <span class="ds c-win" data-def="th">t<sub>h</sub></span><span class="dd"><b>hold time</b> &mdash; how long D must stay steady after the clock edge.</span>
+                    <span class="ds c-win" data-def="window">decision window</span><span class="dd">from t<sub>su</sub> before the edge to t<sub>h</sub> after it; D must not change inside it.</span>
+                    <span class="ds c-clk" data-def="tskew">t<sub>skew</sub></span><span class="dd"><b>clock skew</b> &mdash; when the edge reaches the capture flip-flop minus when it reaches the launch flip-flop. Positive: capture clock late. Negative: launch clock late.</span>
+                    <span class="ds c-ok" data-def="slack">slack</span><span class="dd">the time left over; negative slack means a violation.</span>
+                </div>
+                <div class="defs-scale" id="defsScale">
+                    <div class="sh">How fast is this?</div>
+                    <table>
+                        <tr><th></th><th>Basys 3 board (these graphics)</th><th>Inside a 5 GHz processor</th></tr>
+                        <tr data-scale="T"><td>Clock period <b class="c-clk">T</b></td><td>10 ns (100 MHz)</td><td>200 ps</td></tr>
+                        <tr data-scale="ff"><td>Flip-flop times <b class="c-data">t<sub>co</sub></b>, <b class="c-win">t<sub>su</sub></b>, <b class="c-win">t<sub>h</sub></b></td><td>about a nanosecond or less</td><td>tens of picoseconds</td></tr>
+                    </table>
+                    <div class="sn">1 ns = 1000 ps. The numbers here are rounded for easy arithmetic.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span><span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">&larr;</span> <span class="k">&rarr;</span> nudge the focused slider
+            &middot; <span class="k amber">Space</span>/<span class="k amber">C</span> clock step (beat 4)
+            &middot; <span class="k">R</span> &#8634; reset this beat
+            &middot; <span class="k">D</span> definitions</span>
+        </div>
+    </div>
+
+</div>
+</div>
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ MODEL ============
+    const P = { T: 10, tco: 1, tpd: 5, tsu: 1, th: 0.5 };          // ns — shared with graphic 47
+    const IN_SEQ = [1, 0, 0, 0], NCLK = 4;
+    const DEF = { skew2: 2, late3: 2, T3: 10, skew4: 2, T4: 10 };   // late3: wire delay on FF1's clock branch (t_skew = −late3)
+    const S = { page: 1, ...DEF, clk: 0, hover: null };
+
+    const slackSetup = (T, skew) => T + skew - (P.tco + P.tpd + P.tsu);
+    const minPeriod  = (skew) => P.tco + P.tpd + P.tsu - skew;
+    const slackHoldLong = (skew) => P.tco + P.tpd - P.th - skew;
+    const slackHold  = (skew, b) => P.tco + b - P.th - skew;      // short path: t_pd = 0, T absent
+    function regime(skew, b) {
+        if (slackHold(skew, b) >= -1e-9) return 'ok';              // window closes before Q1's change arrives
+        if (skew >= P.tco + b + P.tsu - 1e-9) return 'race';        // window opens after it: new value, cleanly
+        return 'unknown';                                          // the change lands inside the window
+    }
+    const REG = {
+        ok:      { chip: 'correct', cls: 'ok' },
+        unknown: { chip: 'hold violation — unpredictable', cls: 'bad' },
+        race:    { chip: 'race-through — the bit skips a flip-flop', cls: 'bad' },
+    };
+    // Three flip-flops IN → FF1 → FF2 → FF3. Only FF2's clock is late, so only FF2's capture depends on the regime.
+    function trace(reg, n) {
+        let q = [0, 0, 0]; const out = [q.slice()];
+        for (let k = 0; k < n; k++) {
+            const n1 = IN_SEQ[k] ?? 0;
+            const n2 = (q[0] === n1) ? q[0] : (reg === 'ok' ? q[0] : reg === 'race' ? n1 : '?');
+            q = [n1, n2, q[1]]; out.push(q.slice());
+        }
+        return out;
+    }
+
+    // ============ SVG HELPERS ============
+    const C = { clk: '#ffb74d', data: '#4fc3f7', dataD: '#2a8fc0', win: '#b388ff', ok: '#81c784', bad: '#ef5350',
+        slate: '#90a4ae', dim: '#607d8b', line: '#37506a', faint: '#1b2c3d', navy: '#0d1b2a', text: '#cfd8dc', white: '#e8eef2', wire: '#8fa8bd' };
+    const SANS = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", MONO = "'Menlo','Consolas','Courier New',monospace";
+    const r = v => Math.round(v * 100) / 100;
+    const num = v => String(r(v)).replace('-', '−');
+    const sgn = v => (v > 0 ? '+' : '') + num(v);
+    function tx(x, y, s, o = {}) {
+        const fs = o.fs || 20;
+        return `<text x="${r(x)}" y="${r(y)}" font-size="${fs}" fill="${o.fill || C.text}" text-anchor="${o.a || 'start'}" font-weight="${o.w || 400}" font-family="${o.mono ? MONO : SANS}"${o.attr ? ' ' + o.attr : ''}>${s}</text>`;
+    }
+    const tsub = (sub, fs) => `t<tspan dy="${r(fs*0.22)}" font-size="${r(fs*0.7)}">${sub}</tspan><tspan dy="${r(-fs*0.22)}">​</tspan>`;
+    const hsub = (sub) => `t<sub>${sub}</sub>`;
+    function defs(id) {
+        const mk = (n, col) => `<marker id="ah-${n}-${id}" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0.8 L10 5 L0 9.2 z" fill="${col}"/></marker>`;
+        return `<defs>${mk('clk', C.clk)}${mk('ok', C.ok)}${mk('bad', C.bad)}${mk('data', C.data)}${mk('slate', C.slate)}
+            <pattern id="hatch-${id}" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="11" height="11" fill="rgba(239,83,80,0.14)"/><line x1="2" y1="0" x2="2" y2="11" stroke="${C.bad}" stroke-width="3.5"/></pattern></defs>`;
+    }
+    // horizontal dimension arrow with end ticks; arrowheads only when there is room for them
+    function dim(id, xa, xb, y, col, name) {
+        const a = Math.min(xa, xb), b = Math.max(xa, xb), w = b - a;
+        let s = `<g data-dim="${name || ''}"><path d="M${r(a)} ${y-9} V${y+9} M${r(b)} ${y-9} V${y+9}" stroke="${C[col]}" stroke-width="2"/>`;
+        if (w >= 26) s += `<line x1="${r(a+1)}" y1="${y}" x2="${r(b-1)}" y2="${y}" stroke="${C[col]}" stroke-width="2.5" marker-start="url(#ah-${col}-${id})" marker-end="url(#ah-${col}-${id})"/>`;
+        else if (w > 0.5) s += `<line x1="${r(a)}" y1="${y}" x2="${r(b)}" y2="${y}" stroke="${C[col]}" stroke-width="2.5"/>`;
+        return s + '</g>';
+    }
+
+    // ---- timing diagram frame ----
+    const SLOPE = 0.15;
+    function TD(o) {
+        const td = { ...o };
+        td.X = t => o.x0 + (t - o.tMin) * o.pp;
+        td.st = i => o.top + i * o.rowH;  td.sb = i => o.top + (i + 1) * o.rowH;
+        td.hi = i => td.st(i) + 20;       td.lo = i => td.sb(i) - 28;   td.mid = i => (td.hi(i) + td.lo(i)) / 2;
+        td.bottom = td.sb(o.n - 1);       td.axisY = td.bottom + 36;
+        return td;
+    }
+    function frame(td, rows) {   // rows: [{label, sub, col}] or null for an unlabeled lane
+        let s = defs(td.id) + `<defs><clipPath id="clip-${td.id}"><rect x="${td.X(td.tMin) + 5}" y="${td.top - 60}" width="${td.X(td.tMax) - td.X(td.tMin) - 5}" height="${td.bottom - td.top + 120}"/></clipPath></defs>`;
+        for (let t = Math.ceil(td.tMin); t <= td.tMax; t++) if (t % 2 === 0)
+            s += `<line x1="${td.X(t)}" y1="${td.top}" x2="${td.X(t)}" y2="${td.bottom}" stroke="${C.faint}" stroke-width="1.5"/>`;
+        rows.forEach((rw, i) => {
+            s += `<line x1="${td.X(td.tMin)}" y1="${td.sb(i)}" x2="${td.X(td.tMax)}" y2="${td.sb(i)}" stroke="${C.faint}" stroke-width="1.5"/>`;
+            if (!rw) return;
+            const yb = rw.sub ? td.mid(i) + 1 : td.mid(i) + 9;
+            s += tx(td.x0 - 18, yb, rw.label, { fs: 26, w: 700, fill: C[rw.col], a: 'end' });
+            if (rw.sub) s += tx(td.x0 - 18, yb + 25, rw.sub, { fs: 20, fill: C.slate, a: 'end' });
+        });
+        const ay = td.axisY;
+        s += `<line x1="${td.X(td.tMin)}" y1="${ay}" x2="${td.X(td.tMax)}" y2="${ay}" stroke="${C.dim}" stroke-width="2"/>`;
+        for (let t = Math.ceil(td.tMin); t <= td.tMax; t++) {
+            const big = t % 2 === 0;
+            s += `<line x1="${td.X(t)}" y1="${ay}" x2="${td.X(t)}" y2="${ay + (big ? 11 : 7)}" stroke="${C.dim}" stroke-width="2"/>`;
+            if (big) s += tx(td.X(t), ay + 32, num(t), { fs: 20, fill: C.slate, a: 'middle', mono: true });
+        }
+        s += tx(td.x0 - 18, ay + 32, 'time (ns)', { fs: 20, fill: C.slate, a: 'end' });
+        return s;
+    }
+    // a waveform: level `init` (0/1) at the far left, toggling at each time in `edges`; 0.15 ns sloped transitions
+    function wave(td, slot, init, edges, col, name, extra) {
+        const y = v => v ? td.hi(slot) : td.lo(slot);
+        let lv = init, d = `M${r(td.X(td.tMin - 1))} ${y(lv)}`;
+        edges.slice().sort((a, b) => a - b).forEach(t => {
+            d += ` L${r(td.X(t - SLOPE/2))} ${y(lv)}`; lv = 1 - lv; d += ` L${r(td.X(t + SLOPE/2))} ${y(lv)}`;
+        });
+        d += ` L${r(td.X(td.tMax + 1))} ${y(lv)}`;
+        return `<path d="${d}" fill="none" stroke="${C[col]}" stroke-width="3.5" stroke-linejoin="round" clip-path="url(#clip-${td.id})"${name ? ` data-wave="${name}"` : ''}${extra || ''}/>`;
+    }
+    function clockEdges(td, T, off) {   // all toggles of a 50% clock with rising edges at off + kT; returns {init, edges}
+        const e = []; const t0 = td.tMin - 1;
+        for (let k = Math.floor((t0 - off) / T) - 1; off + k*T <= td.tMax + 1; k++) {
+            [off + k*T, off + k*T + T/2].forEach(t => { if (t > t0 && t <= td.tMax + 1) e.push(t); });
+        }
+        const ph = (((t0 - off) % T) + T) % T;
+        return { init: ph < T/2 ? 1 : 0, edges: e };
+    }
+    function windowBand(td, edge, s0, s1, labelY) {
+        const xa = td.X(edge - P.tsu), xb = td.X(edge + P.th), xe = td.X(edge);
+        let s = `<g clip-path="url(#clip-${td.id})"><rect data-window x="${r(xa)}" y="${td.st(s0) + 2}" width="${r(xb - xa)}" height="${td.sb(s1) - td.st(s0) - 4}" fill="${C.win}" fill-opacity="0.22" stroke="${C.win}" stroke-width="2"/></g>`;
+        s += tx((xa + xe) / 2, labelY, tsub('su', 20), { fs: 20, w: 700, fill: C.win, a: 'middle' });
+        s += tx((xe + xb) / 2 + (td.pp < 60 ? 6 : 0), labelY, tsub('h', 20), { fs: 20, w: 700, fill: C.win, a: 'middle' });
+        return s;
+    }
+    const guideBar = (td, x, y1, y2, col, op) => guide(x, y1, td.axisY + 12, col, op) + guide(x, td.axisY + 40, y2, col, op);
+    const guide = (x, y1, y2, col, op) => `<line x1="${r(x)}" y1="${r(y1)}" x2="${r(x)}" y2="${r(y2)}" stroke="${C[col]}" stroke-width="1.5" stroke-dasharray="5 5" opacity="${op || 0.55}"/>`;
+
+    // ---- budget bar: t_co | t_pd | t_su | slack, drawn on the diagram's own time axis ----
+    const BAR_H = 72;
+    function budgetBar(td, y, cap, o = 0, sub = 'one period') {   // o: time of the launch edge; cap: time the path gets
+        const segs = [
+            { k: 'co', a: 0, v: P.tco, fill: C.dataD, name: tsub('co', 22) },
+            { k: 'pd', a: P.tco, v: P.tpd, fill: C.data, name: tsub('pd', 22) },
+            { k: 'su', a: P.tco + P.tpd, v: P.tsu, fill: C.win, name: tsub('su', 22) },
+        ];
+        const need = P.tco + P.tpd + P.tsu, slack = cap - need;
+        let s = tx(td.x0 - 18, y + 30, 'budget', { fs: 26, w: 700, fill: C.text, a: 'end' }) +
+                tx(td.x0 - 18, y + 55, sub, { fs: 20, fill: C.slate, a: 'end' });
+        segs.forEach(g => {
+            const x = td.X(o + g.a), w = g.v * td.pp;
+            s += `<g class="seg" data-seg="${g.k}"><rect data-bar="${g.k}" data-val="${g.v}" x="${r(x)}" y="${y}" width="${r(w)}" height="${BAR_H}" fill="${g.fill}" stroke="${C.navy}" stroke-width="2"/>` +
+                 tx(x + w/2, y + 31, g.name, { fs: 22, w: 700, fill: C.navy, a: 'middle' }) +
+                 tx(x + w/2, y + 59, num(g.v), { fs: 22, w: 700, fill: C.navy, a: 'middle', mono: true }) + `</g>`;
+        });
+        const xn = td.X(o + need), xc = td.X(o + cap);
+        if (slack > 1e-9) {
+            const w = slack * td.pp;
+            s += `<g class="seg" data-seg="slack"><rect data-bar="slack" data-val="${slack}" x="${r(xn)}" y="${y}" width="${r(w)}" height="${BAR_H}" fill="${C.ok}" stroke="${C.navy}" stroke-width="2"/>`;
+            if (w >= 86) s += tx(xn + w/2, y + 31, 'slack', { fs: 22, w: 700, fill: C.navy, a: 'middle' }) + tx(xn + w/2, y + 59, num(slack), { fs: 22, w: 700, fill: C.navy, a: 'middle', mono: true });
+            s += `</g>`;
+            if (w < 86) s += tx(xc + 12, y + 44, 'slack ' + sgn(slack) + ' ns', { fs: 24, w: 700, fill: C.ok });
+        } else if (slack < -1e-9) {
+            // negative slack: the period ends before the budget does — the shortfall is drawn red in its own lane
+            s += `<rect data-bar="slack" data-val="${slack}" x="${r(xc)}" y="${y + BAR_H + 8}" width="${r(-slack * td.pp)}" height="40" fill="${C.bad}" stroke="${C.navy}" stroke-width="2"/>`;
+            // the note goes right of the shortfall when there is room, otherwise left of it
+            const note = 'slack ' + num(slack) + (o ? ' ns — the capture edge comes too soon' : ' ns — the period ends too soon');
+            const fits = xn + 12 + note.length * 13.5 <= td.X(td.tMax);
+            s += tx(fits ? xn + 12 : xc - 12, y + BAR_H + 37, note, { fs: 24, w: 700, fill: C.bad, a: fits ? 'start' : 'end' });
+        } else {
+            s += `<rect data-bar="slack" data-val="0" x="${r(xn)}" y="${y}" width="0" height="${BAR_H}" fill="${C.ok}"/>`;
+            const fits0 = xn + 12 + 390 <= td.X(td.tMax);
+            s += tx(fits0 ? xn + 12 : td.X(o) - 12, y + 44, 'slack 0 ns — nothing to spare', { fs: 24, w: 700, fill: C.ok, a: fits0 ? 'start' : 'end' });
+        }
+        return s;
+    }
+
+    // ---- flip-flop symbol: D, ▷, Q and Q̄ pins ----
+    function ff(x, y, w, h, name) {
+        const dq = y + h*0.3, qb = y + h*0.7, ck = y + h*0.74;
+        let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#0b1622" stroke="${C.text}" stroke-width="2.5"/>`;
+        s += tx(x + 11, dq + 7, 'D', { fs: 20, mono: true, fill: C.text });
+        s += tx(x + w - 11, dq + 7, 'Q', { fs: 20, mono: true, fill: C.text, a: 'end' });
+        s += tx(x + w - 11, qb + 7, 'Q', { fs: 20, mono: true, fill: C.text, a: 'end', attr: 'data-ovt="1"' });
+        s += `<line data-ov="1" x1="${x + w - 23}" y1="${r(qb + 7 - 0.88*20)}" x2="${x + w - 11}" y2="${r(qb + 7 - 0.88*20)}" stroke="${C.text}" stroke-width="2"/>`;
+        s += `<path d="M${x} ${ck - 10} L${x + 15} ${ck} L${x} ${ck + 10}" fill="none" stroke="${C.clk}" stroke-width="2.5"/>`;
+        s += `<path d="M${x + w} ${qb} h14" stroke="${C.wire}" stroke-width="2.5"/>`;      // Q̄ stub, unused here
+        if (name) s += tx(x + w/2, y + h/2 + 8, name, { fs: 22, w: 700, fill: C.white, a: 'middle' });
+        return { s, dq, qb, ck };
+    }
+    // overbars are placed from the measured glyph box on the ACTIVE page (baseline − 0.88·font-size)
+    function fixOverbars(svg) {
+        svg.querySelectorAll('line[data-ov]').forEach(ln => {
+            const t = ln.previousElementSibling; if (!t || !t.getBBox) return;
+            const bb = t.getBBox(); if (!bb.width) return;
+            const y = +t.getAttribute('y') - 0.88 * +t.getAttribute('font-size');
+            ln.setAttribute('x1', r(bb.x + 0.5)); ln.setAttribute('x2', r(bb.x + bb.width - 0.5));
+            ln.setAttribute('y1', r(y)); ln.setAttribute('y2', r(y));
+        });
+    }
+    const dot = (x, y, col) => `<circle cx="${x}" cy="${y}" r="5" fill="${C[col]}"/>`;
+    const wire = (d, col) => `<path d="${d}" fill="none" stroke="${C[col]}" stroke-width="2.5" stroke-linejoin="round"/>`;
+
+    // ---- beats 1 & 3: FF1 → logic (5 ns) → FF2 ----
+    function drawCkt2ff(svgId, withSkew, skew) {
+        const y = 46, w = 100, h = 124, x1 = 64, x2 = 364, cx = 262, bus = 220;
+        const f1 = ff(x1, y, w, h, 'FF1'), f2 = ff(x2, y, w, h, 'FF2'), dq = f1.dq, ck = f1.ck;
+        let s = defs(svgId);
+        s += wire(`M12 ${dq} H${x1}`, 'data') + tx(12, dq - 11, 'IN', { fs: 20, mono: true, fill: C.data });
+        s += wire(`M${x1 + w} ${dq} H${cx - 53}`, 'data') + tx((x1 + w + cx - 53) / 2, dq - 11, 'Q1', { fs: 20, mono: true, fill: C.data, a: 'middle' });
+        s += wire(`M${cx + 53} ${dq} H${x2}`, 'data') + tx((cx + 53 + x2) / 2, dq - 11, 'D2', { fs: 20, mono: true, fill: C.data, a: 'middle' });
+        s += wire(`M${x2 + w} ${dq} H524`, 'data') + tx(x2 + w + 32, dq - 11, 'Q2', { fs: 20, mono: true, fill: C.data, a: 'middle' });
+        // logic cloud
+        s += `<path d="M${cx - 38} ${dq + 34} a19 19 0 0 1 -4 -37 a21 21 0 0 1 24 -22 a25 25 0 0 1 40 -4 a21 21 0 0 1 22 26 a19 19 0 0 1 -6 37 z" fill="rgba(79,195,247,0.08)" stroke="${C.data}" stroke-width="2.5"/>`;
+        s += tx(cx, dq - 2, 'logic', { fs: 20, fill: C.text, a: 'middle' }) + tx(cx, dq + 23, '5 ns', { fs: 22, w: 700, fill: C.data, a: 'middle', mono: true });
+        // clock: fed at the middle of the bus, one run to each flip-flop. Skew is drawn as what it physically is —
+        // extra WIRE DELAY (always positive) on whichever branch gets the edge later: FF2's when t_skew > 0, FF1's when < 0.
+        const b1 = x1 - 26, b2 = x2 - 26, fx = (b1 + b2) / 2;
+        s += tx(fx, bus + 35, 'CLK', { fs: 20, w: 700, fill: C.clk, mono: true, a: 'middle' }) + wire(`M${fx} ${bus + 15} V${bus}`, 'clk');
+        const run = (bx, x, late) => {
+            if (!late) return wire(`M${fx} ${bus} H${bx} V${ck} H${x}`, 'clk');
+            const cx2 = (fx + bx) / 2, bw = 84;
+            return wire(`M${fx} ${bus} H${cx2 + (bx < fx ? bw/2 : -bw/2)} M${cx2 + (bx < fx ? -bw/2 : bw/2)} ${bus} H${bx} V${ck} H${x}`, 'clk') +
+                `<rect data-delay="${bx < fx ? 'ff1' : 'ff2'}" x="${cx2 - bw/2}" y="${bus - 18}" width="${bw}" height="36" rx="8" fill="rgba(255,183,77,0.10)" stroke="${C.clk}" stroke-width="2.5"/>` +
+                tx(cx2, bus + 7, num(Math.abs(skew)) + ' ns', { fs: 20, w: 700, fill: C.clk, a: 'middle', mono: true }) +
+                tx(cx2, bus - 26, 'wire delay', { fs: 20, fill: C.clk, a: 'middle' });
+        };
+        s += run(b1, x1, withSkew && skew < 0) + run(b2, x2, withSkew && skew > 0);
+        if (!withSkew) s += tx(fx + 34, bus + 35, 'one edge, both flip-flops', { fs: 20, fill: C.slate });
+        s += dot(fx, bus, 'clk') + f1.s + f2.s;
+        const el = document.getElementById(svgId); el.innerHTML = s; fixOverbars(el);
+    }
+
+    // ---- beat 2 floorplan: a clock source, one wire, two taps ----
+    const FP = { x0: 96, pp: 44, wy: 170, d1: 4 };       // FF1 taps the wire 4 ns from the source; FF2's tap slides
+    function drawFloorplan() {
+        const id = 'ckt2', wy = FP.wy, xs = 84, xe = 520;
+        const t1 = FP.x0 + FP.d1 * FP.pp, t2 = t1 + S.skew2 * FP.pp;
+        let s = defs(id);
+        s += `<rect x="12" y="${wy - 30}" width="72" height="60" rx="8" fill="rgba(255,183,77,0.10)" stroke="${C.clk}" stroke-width="2.5"/>` + tx(48, wy + 7, 'CLK', { fs: 20, w: 700, fill: C.clk, a: 'middle', mono: true });
+        s += wire(`M${xs} ${wy} H${xe}`, 'clk');
+        const block = (xt, above, name) => {
+            const w = 100, h = 84, x = xt - w/2, y = above ? wy - 44 - h : wy + 44;
+            let g = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#0b1622" stroke="${C.text}" stroke-width="2.5"/>`;
+            g += tx(x + 10, y + 34, 'D', { fs: 20, mono: true }) + tx(x + w - 10, y + 34, 'Q', { fs: 20, mono: true, a: 'end' });
+            const qy = y + 66;
+            g += tx(x + w - 10, qy, 'Q', { fs: 20, mono: true, a: 'end' }) + `<line data-ov="1" x1="${x + w - 22}" y1="${r(qy - 17.6)}" x2="${x + w - 10}" y2="${r(qy - 17.6)}" stroke="${C.text}" stroke-width="2"/>`;
+            const ey = above ? y + h : y;                       // clock pin on the edge facing the wire
+            g += `<path d="M${xt - 10} ${ey} L${xt} ${ey + (above ? -15 : 15)} L${xt + 10} ${ey}" fill="none" stroke="${C.clk}" stroke-width="2.5"/>`;
+            g += wire(`M${xt} ${wy} V${ey}`, 'clk') + dot(xt, wy, 'clk');
+            g += tx(xt, above ? y - 12 : y + h + 28, name, { fs: 22, w: 700, fill: C.white, a: 'middle' });
+            return g;
+        };
+        s += block(t1, true, 'FF1 · launch') + `<g data-ff2>` + block(t2, false, 'FF2 · capture') + `</g>`;
+        s += tx(xe, wy - 14, 'longer wire, later edge', { fs: 20, fill: C.slate, a: 'end' });
+        const el = document.getElementById(id); el.innerHTML = s; fixOverbars(el);
+    }
+
+    // ============ BEAT 1 ============
+    const TD13 = { x0: 186, pp: 44, tMin: -5, tMax: 19, top: 64, rowH: 88 };
+    const BAR_Y = 510;
+    function drawBeat1() {
+        const td = TD({ ...TD13, n: 4, id: 'td1' });
+        let s = frame(td, [{ label: 'CLK', col: 'clk' }, { label: 'Q1', col: 'data' }, { label: 'D2', col: 'data' }, { label: 'Q2', col: 'data' }]);
+        const T = P.T, cap = T;
+        s += guideBar(td, td.X(0), td.top - 26, BAR_Y + BAR_H, 'clk') + guideBar(td, td.X(cap), td.top - 26, BAR_Y + BAR_H, 'clk');
+        s += guideBar(td, td.X(P.tco), td.lo(1), BAR_Y, 'data', 0.4) + guideBar(td, td.X(P.tco + P.tpd), td.lo(2), BAR_Y, 'data', 0.4);
+        // hover highlights: where each budget segment lives on the waveforms
+        const hl = (k, a, b, s0, s1, col) => `<rect class="hl" data-hl="${k}" x="${r(td.X(a))}" y="${td.st(s0) + 5}" width="${r(td.X(b) - td.X(a))}" height="${td.sb(s1) - td.st(s0) - 10}" fill="${col}" fill-opacity="0.30" stroke="${col}" stroke-width="3"/>`;
+        s += hl('co', 0, P.tco, 1, 1, C.dataD) + hl('pd', P.tco, P.tco + P.tpd, 2, 2, C.data) + hl('su', cap - P.tsu, cap, 0, 2, C.win) + hl('slack', P.tco + P.tpd, cap - P.tsu, 2, 2, C.ok);
+        s += windowBand(td, cap, 0, 2, td.top - 8);
+        const ck = clockEdges(td, T, 0);
+        s += wave(td, 0, ck.init, ck.edges, 'clk', 'clk1');
+        s += wave(td, 1, 0, [P.tco, T + P.tco], 'data', 'q1');
+        s += wave(td, 2, 0, [P.tco + P.tpd, T + P.tco + P.tpd], 'data', 'd2');
+        s += wave(td, 3, 0, [T + P.tco], 'data', 'q2');
+        s += tx(td.X(0) - 8, td.top - 36, 'launch edge', { fs: 20, fill: C.clk, a: 'end' });
+        s += tx(td.X(cap) - 8 - P.tsu * td.pp, td.top - 36, 'capture edge', { fs: 20, fill: C.clk, a: 'end' });
+        s += budgetBar(td, BAR_Y, cap);
+        document.getElementById('td1').innerHTML = s;
+        applyHover();
+    }
+    function applyHover() {
+        document.querySelectorAll('#td1 .hl').forEach(e => e.classList.toggle('on', e.dataset.hl === S.hover));
+        document.querySelectorAll('#td1 [data-bar]').forEach(e => { const on = e.dataset.bar === S.hover; e.setAttribute('stroke', on ? '#ffffff' : C.navy); e.setAttribute('stroke-width', on ? 4 : 2); });
+    }
+
+    // ============ BEAT 2 ============
+    function drawBeat2() {
+        const td = TD({ ...TD13, n: 3, id: 'td2' }), k = S.skew2, T = P.T;
+        let s = frame(td, [{ label: 'CLK@FF1', sub: 'launch', col: 'clk' }, null, { label: 'CLK@FF2', sub: 'capture', col: 'clk' }]);
+        const c1 = clockEdges(td, T, 0), c2 = clockEdges(td, T, k);
+        const ly = (td.st(1) + td.sb(1)) / 2 - 4;
+        s += guide(td.X(0), td.hi(0), ly + 12, 'clk', 0.7) + guide(td.X(k), ly - 12, td.lo(2), 'clk', 0.7);
+        s += wave(td, 0, c1.init, c1.edges, 'clk', 'clk1') + wave(td, 2, c2.init, c2.edges, 'clk', 'clk2');
+        s += dim('td2', td.X(0), td.X(k), ly, 'clk', 'skew');
+        const words = k > 0 ? 'capture clock late' : k < 0 ? 'launch clock late' : 'no skew: the edges line up';
+        s += tx(td.X(Math.max(0, k)) + 16, ly + 9, tsub('skew', 26) + ' = ' + sgn(k) + ' ns', { fs: 26, w: 700, fill: C.clk, attr: 'data-skewlabel="1"' });
+        s += tx(td.X(Math.max(0, k)) + 16 + 232, ly + 9, '·  ' + words, { fs: 26, w: 700, fill: C.white, attr: 'data-words="1"' });
+        const el = document.getElementById('td2'); el.innerHTML = s;
+        const a = el.querySelector('[data-skewlabel]'), b = el.querySelector('[data-words]');
+        try { const bb = a.getBBox(); if (bb.width) b.setAttribute('x', r(bb.x + bb.width + 16)); } catch (e) {}
+        drawFloorplan();
+        document.getElementById('v2skew').textContent = sgn(k) + ' ns';
+        document.getElementById('signNeg').classList.toggle('on', k < 0);
+        document.getElementById('signPos').classList.toggle('on', k > 0);
+    }
+
+    // ============ BEAT 3 ============
+    // Launch clock late: the wire delay d sits on FF1's branch. FF2's capture edge and its window stay put;
+    // FF1's edge, Q1 and D2 all slide right by d, so the path gets T − d instead of T.
+    function drawBeat3() {
+        const td = TD({ ...TD13, n: 4, id: 'td3' }), d = S.late3, k = -d, T = S.T3, cap = T - d;
+        const sl = slackSetup(T, k), okv = sl >= -1e-9;
+        let s = frame(td, [{ label: 'CLK@FF1', sub: 'launch', col: 'clk' }, { label: 'Q1', col: 'data' }, { label: 'D2', col: 'data' }, { label: 'CLK@FF2', sub: 'capture', col: 'clk' }]);
+        const arrive = d + P.tco + P.tpd;
+        s += guideBar(td, td.X(d), td.top - 26, BAR_Y + BAR_H, 'clk') + guideBar(td, td.X(T), td.hi(3), BAR_Y + BAR_H + (okv ? 0 : 48), 'clk', 0.8);
+        s += guideBar(td, td.X(d + P.tco), td.lo(1), BAR_Y, 'data', 0.4) + guideBar(td, td.X(arrive), td.lo(2), BAR_Y, 'data', 0.4);
+        s += windowBand(td, T, 2, 3, td.st(2) - 8);
+        const c1 = clockEdges(td, T, d), c2 = clockEdges(td, T, 0);
+        s += wave(td, 0, c1.init, c1.edges, 'clk', 'clk1');
+        s += wave(td, 1, 0, [d + P.tco, T + d + P.tco], 'data', 'q1');
+        s += wave(td, 2, 0, [arrive, T + arrive], 'data', 'd2');
+        s += wave(td, 3, c2.init, c2.edges, 'clk', 'clk2');
+        if (!okv) s += `<circle cx="${td.X(arrive)}" cy="${td.mid(2)}" r="17" fill="none" stroke="${C.bad}" stroke-width="3.5"/>`;
+        // where the edge would have been with no delay, and how late the launch is
+        if (d > 0) s += guide(td.X(0), td.top - 26, td.lo(0), 'clk', 0.7) + dim('td3', td.X(0), td.X(d), td.top - 14, 'clk', 'late');
+        s += tx(td.X(d) + 10, td.top - 34, d > 0 ? `launch edge, ${num(d)} ns late` : 'launch edge', { fs: 20, fill: C.clk, attr: 'data-launchlabel="1"' });
+        s += tx(td.X(T) + 10, td.bottom + 25, 'capture edge', { fs: 20, fill: C.clk });
+        s += budgetBar(td, BAR_Y, cap, d, 'launch to capture');
+        document.getElementById('td3').innerHTML = s;
+        drawCkt2ff('ckt3', true, k);
+        document.getElementById('v3late').textContent = num(d) + ' ns';
+        document.getElementById('v3T').textContent = num(T) + ' ns';
+        const rs = document.getElementById('r3slack'); rs.innerHTML = sgn(sl) + ' <small>ns</small>'; rs.className = 'tv ' + (okv ? 'c-ok' : 'c-bad');
+        document.getElementById('r3min').innerHTML = num(minPeriod(k)) + ' <small>ns</small>';
+        const ch = document.getElementById('chip3'); ch.textContent = okv ? 'meets setup' : 'setup violation'; ch.className = 'chip ' + (okv ? 'ok' : 'bad');
+        document.getElementById('hint3').innerHTML = okv
+            ? `D2 settles ${num(sl)} ns before the window opens. Minimum period = 7 + launch delay.`
+            : `<b>Fix it:</b> lengthen T to ${num(minPeriod(k))} ns or more, or shorten the logic.`;
+        document.getElementById('eq3').innerHTML = `${num(T)} &minus; ${num(d)} &ge; 7 <span class="arrow" style="margin:0 14px">&rarr;</span><span class="${okv ? 'c-ok' : 'c-bad'}">${num(cap)} &ge; 7 ${okv ? '✓' : '✗'}</span>`;
+    }
+
+    // ============ BEAT 4 ============
+    function drawCkt4(q, inNext, reg) {
+        const id = 'ckt4', y = 52, w = 110, h = 120, xs = [80, 320, 550], bus = 232;
+        const f = xs.map((x, i) => ff(x, y, w, h, 'FF' + (i + 1))), dq = f[0].dq, ck = f[0].ck;
+        let s = defs(id);
+        const val = (cx, name, v) => {
+            let g = '';
+            if (v === '?') g += `<rect x="${r(cx + 30)}" y="${dq - 58}" width="19" height="30" rx="3" fill="rgba(239,83,80,0.16)" data-qhatch="1"/>`;
+            return g + tx(cx, dq - 34, `${name} = ${v}`, { fs: 26, w: 700, mono: true, a: 'middle', fill: v === '?' ? C.bad : v ? C.data : C.slate, attr: `data-q="${name}"` });
+        };
+        s += wire(`M12 ${dq} H${xs[0]}`, 'data') + tx(12, dq - 12, 'IN=' + inNext, { fs: 22, w: 700, mono: true, fill: inNext ? C.data : C.slate });
+        s += wire(`M${xs[0] + w} ${dq} H${xs[1]}`, 'data') + wire(`M${xs[1] + w} ${dq} H${xs[2]}`, 'data') + wire(`M${xs[2] + w} ${dq} H752`, 'data');
+        const bx = (xs[0] + w + xs[1]) / 2;
+        s += val(bx, 'Q1', q[0]) + val((xs[1] + w + xs[2]) / 2, 'Q2', q[1]) + val(xs[2] + w + 48, 'Q3', q[2]);
+        // clock bus: tees to FF1 and FF2, the far end to FF3; FF2's branch carries the extra delay
+        const b = xs.map(x => x - 44);
+        s += tx(12, bus + 24, 'CLK', { fs: 20, w: 700, fill: C.clk, mono: true });
+        s += wire(`M12 ${bus} H${b[2]} V${ck} H${xs[2]}`, 'clk') + wire(`M${b[0]} ${bus} V${ck} H${xs[0]}`, 'clk');
+        if (S.skew4 > 0) {     // FF2's branch is the longer wire: a positive wire delay, nothing at zero skew
+            s += wire(`M${b[1]} ${bus} V${bus - 12} M${b[1]} ${bus - 48} V${ck} H${xs[1]}`, 'clk');
+            s += `<rect data-delay="ff2" x="${b[1] - 42}" y="${bus - 48}" width="84" height="36" rx="8" fill="rgba(255,183,77,0.10)" stroke="${C.clk}" stroke-width="2.5"/>` + tx(b[1], bus - 23, num(S.skew4) + ' ns', { fs: 20, w: 700, fill: C.clk, a: 'middle', mono: true });
+            s += tx(b[1] - 52, bus - 23, 'wire delay', { fs: 20, fill: C.clk, a: 'end' });
+        } else s += wire(`M${b[1]} ${bus} V${ck} H${xs[1]}`, 'clk');
+        s += dot(b[0], bus, 'clk') + dot(b[1], bus, 'clk') + f.map(o => o.s).join('');
+        const el = document.getElementById(id); el.innerHTML = s; fixOverbars(el);
+        el.querySelectorAll('rect[data-qhatch]').forEach(rc => {      // sit the hatch exactly behind the measured "?" glyph
+            try { const t = rc.nextElementSibling, e = t.getExtentOfChar(t.getNumberOfChars() - 1); if (!e.width) return;
+                rc.setAttribute('x', r(e.x - 4)); rc.setAttribute('width', r(e.width + 8)); rc.setAttribute('y', r(e.y + 1)); rc.setAttribute('height', r(e.height - 2)); } catch (err) {}
+        });
+    }
+    function drawBeat4() {
+        const k = S.skew4, b = 0, T = S.T4;      // b: no added data-path delay (the buffer slider was removed 10-7)
+        const reg = regime(k, b), sh = slackHold(k, b);
+        const td = TD({ x0: 186, pp: 150, tMin: -1, tMax: 6, top: 18, rowH: 88, n: 4, id: 'td4' });
+        let s = frame(td, [{ label: 'CLK@FF1', sub: 'launch', col: 'clk' }, { label: 'Q1', sub: 'FF2’s D input', col: 'data' }, { label: 'CLK@FF2', sub: 'capture', col: 'clk' }, { label: 'Q2', sub: reg === 'ok' ? 'keeps the old Q1' : reg === 'race' ? 'takes the new Q1' : 'unknown', col: reg === 'ok' ? 'data' : 'bad' }]);
+        const chg = P.tco + b, wEnd = k + P.th, ay = td.bottom + 17;
+        s += guide(td.X(wEnd), td.sb(2), ay, 'win', 0.6) + guide(td.X(chg), td.lo(1), ay, 'data', 0.6);
+        s += windowBand(td, k, 1, 2, td.st(1) - 8);
+        const c1 = clockEdges(td, T, 0), c2 = clockEdges(td, T, k);
+        s += wave(td, 0, c1.init, c1.edges, 'clk', 'clk1');
+        s += wave(td, 1, 0, [chg], 'data', 'd2');
+        s += wave(td, 2, c2.init, c2.edges, 'clk', 'clk2');
+        const qt = k + P.tco;      // when Q2 would respond
+        if (reg === 'ok') s += wave(td, 3, 0, [], 'data', 'q2');
+        else if (reg === 'race') s += wave(td, 3, 0, [qt], 'bad', 'q2');
+        else {
+            s += `<path d="M${td.X(td.tMin)} ${td.lo(3)} H${r(td.X(qt))}" fill="none" stroke="${C.data}" stroke-width="3.5"/>`;
+            s += `<rect data-unknown="1" x="${r(td.X(qt))}" y="${td.hi(3)}" width="${r(td.X(td.tMax) - td.X(qt))}" height="${td.lo(3) - td.hi(3)}" fill="url(#hatch-td4)" stroke="${C.bad}" stroke-width="2"/>`;
+        }
+        // hold slack: from the end of the window to the moment D2 changes
+        const col = sh >= -1e-9 ? 'ok' : 'bad';
+        s += dim('td4', td.X(wEnd), td.X(chg), ay, col, 'hold');
+        s += tx(Math.max(td.X(wEnd), td.X(chg)) + 14, ay + 8, 'hold slack ' + sgn(sh) + ' ns', { fs: 22, w: 700, fill: C[col] });
+        document.getElementById('td4').innerHTML = s;
+
+        const tr = trace(reg, NCLK), ideal = trace('ok', NCLK), n = S.clk;
+        drawCkt4(tr[n], IN_SEQ[n] ?? 0, reg);
+        const cell = (v, ref, i) => {
+            if (i > n) return `<td class="fut">···</td>`;
+            const wrong = ref && v.join('') !== ref.join('');
+            const unk = v.includes('?');
+            return `<td class="${i === n ? 'now ' : ''}${unk ? 'unk' : wrong ? 'wrong' : ''}">${v.map(c => c === '?' ? '<span class="q">?</span>' : (c === 1 && !wrong && !unk) ? '<span class="one">1</span>' : c).join('')}</td>`;
+        };
+        let h = `<table><tr><th class="rl">after clock</th>${[0,1,2,3,4].map(i => `<th>${i}</th>`).join('')}</tr>`;
+        h += `<tr><td class="rl">ideal</td>${ideal.map((v, i) => cell(v, null, i)).join('')}</tr>`;
+        h += `<tr><td class="rl">this circuit</td>${tr.map((v, i) => cell(v, ideal[i], i)).join('')}</tr></table>`;
+        document.getElementById('trace4').innerHTML = h;
+        const tc = document.getElementById('tcap4');
+        const diverged = tr.slice(0, n + 1).some((v, i) => v.join('') !== ideal[i].join(''));
+        tc.className = 'tcap' + (diverged ? ' bad' : n > 0 ? ' ok' : '');
+        tc.textContent = n === 0 ? 'Q1 Q2 Q3 · press Space to clock'
+            : !diverged ? 'Q1 Q2 Q3 · matches the ideal register'
+            : reg === 'race' ? (n >= 2 ? 'The 1 reached Q3 a clock early: three stages act as two' : 'The 1 went through two flip-flops on one edge')
+            : 'Q2 cannot be predicted, and it spreads to Q3';
+
+        document.getElementById('v4skew').textContent = (k > 0 ? '+' : '') + num(k) + ' ns';
+        document.getElementById('v4T').textContent = num(T) + ' ns';
+        document.getElementById('eq4').innerHTML = `1 &ge; 0.5 + ${num(k)} <span class="arrow c-dim" style="margin:0 10px">&rarr;</span><span class="c-${col}">${num(P.tco + b)} &ge; ${num(P.th + k)} ${sh >= -1e-9 ? '✓' : '✗'}</span>`;
+        const ch = document.getElementById('chip4'); ch.textContent = REG[reg].chip; ch.className = 'chip ' + REG[reg].cls;
+        document.getElementById('hint4').innerHTML = reg === 'ok'
+            ? `The window closes before Q1 moves, so FF2 keeps the old Q1.`
+            : `<b>Fix it:</b> make the two clocks arrive together. Slowing the clock does nothing.`;
+        document.getElementById('clkN').textContent = n;
+        document.querySelectorAll('[data-step]').forEach(e => e.disabled = n >= NCLK);
+    }
+
+    // ============ RENDER / CONTROL ============
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    function drawPage() {
+        if (S.page === 1) { drawCkt2ff('ckt1', false, 0); drawBeat1(); }
+        else if (S.page === 2) drawBeat2();
+        else if (S.page === 3) drawBeat3();
+        else drawBeat4();
+    }
+    function render() {
+        ['p1','p2','p3','p4'].forEach((id, i) => document.getElementById(id).classList.toggle('active', i + 1 === S.page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === S.page));
+        document.querySelectorAll('[data-dot]').forEach(d => d.classList.toggle('on', +d.dataset.dot <= S.page));
+        document.getElementById('pcNum').textContent = S.page;
+        drawPage();
+    }
+    const SLIDERS = { s2skew: 'skew2', s3late: 'late3', s3T: 'T3', s4skew: 'skew4', s4T: 'T4' };
+    function syncSliders() { Object.entries(SLIDERS).forEach(([id, key]) => { document.getElementById(id).value = S[key]; }); }
+    function flashT() {
+        const n = document.getElementById('tnote'); n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash');
+    }
+    function setVal(key, v, fromInput) {
+        const changed = S[key] !== v; S[key] = v;
+        if (!fromInput) syncSliders();
+        if (key === 'T4' && changed) flashT();
+        drawPage();
+    }
+    Object.entries(SLIDERS).forEach(([id, key]) => document.getElementById(id).addEventListener('input', e => setVal(key, +e.target.value, true)));
+    function firstSlider() { return document.querySelector('#p' + S.page + ' input[type=range]'); }
+    const defsEl = document.getElementById('defs'), defsBtn = document.getElementById('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) {
+        closeDefs();
+        S.page = Math.max(1, Math.min(4, n)); S.hover = null; render();
+        const f = firstSlider(); if (f) f.focus({ preventScroll: true }); else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    }
+    function doStep() { if (defsOpen()) return; if (S.page === 4 && S.clk < NCLK) { S.clk++; drawPage(); } }
+    // ↺ / R resets the beat on screen and stays on it: beat 4 rewinds the clock to 0; beats 2 and 3 put their sliders back.
+    function doReset() {
+        if (defsOpen()) return;
+        if (S.page === 4) S.clk = 0;
+        else if (S.page === 2) S.skew2 = DEF.skew2;
+        else if (S.page === 3) { S.late3 = DEF.late3; S.T3 = DEF.T3; }
+        S.hover = null; syncSliders(); drawPage();
+    }
+    function setHover(k) { S.hover = k; applyHover(); }
+
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => { doStep(); b.blur(); }));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    const td1el = document.getElementById('td1');
+    td1el.addEventListener('mouseover', e => { const g = e.target.closest('[data-seg]'); setHover(g ? g.dataset.seg : null); });
+    td1el.addEventListener('mouseleave', () => setHover(null));
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '4') { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) {      // panel open: Esc closes it; slider and clock keys do nothing
+            if (k === 'Escape') closeDefs();
+            if (k === ' ' || k.startsWith('Arrow') || 'cCrR'.includes(k)) e.preventDefault();
+            return;
+        }
+        const isRange = document.activeElement && document.activeElement.type === 'range';
+        switch (k) {
+            case ' ': case 'c': case 'C': doStep(); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowRight': case 'ArrowUp': case 'ArrowDown':
+                // arrows nudge the focused slider (native); with nothing focused, they pick up the beat's first slider
+                if (!isRange) { const f = firstSlider(); if (f) { f.focus({ preventScroll: true });
+                    const d = (k === 'ArrowRight' || k === 'ArrowUp') ? 1 : -1;
+                    const v = Math.max(+f.min, Math.min(+f.max, +f.value + d * +f.step)); f.value = v; setVal(SLIDERS[f.id], v, true); }
+                    e.preventDefault(); }
+                break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    function edgesOf(svgId, name) {     // rising-edge times (ns) read back from the DRAWN path, midpoint of each slope
+        const p = document.querySelector(`#${svgId} [data-wave="${name}"]`); if (!p) return [];
+        const cfg = svgId === 'td4' ? { x0: 186, pp: 150, tMin: -1, tMax: 6 } : TD13;
+        const pts = p.getAttribute('d').match(/-?\d+(\.\d+)?/g).map(Number), out = [];
+        for (let i = 2; i + 1 < pts.length; i += 2) {
+            if (pts[i + 1] < pts[i - 1]) { const t = ((pts[i] + pts[i - 2]) / 2 - cfg.x0) / cfg.pp + cfg.tMin; if (t >= cfg.tMin && t <= cfg.tMax) out.push(r(t)); }
+        }
+        return out;
+    }
+    window.__api = {
+        setPage, step: doStep, reset: doReset, hover: setHover, openDefs, closeDefs, defsOpen,
+        key: (k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })),
+        setSkew: (v, p) => setVal('skew' + (p || S.page), v),
+        setT: (v, p) => setVal('T' + (p || S.page), v),
+        setLate: (v) => setVal('late3', v),
+        getState: () => ({ ...S }),
+        params: P,
+        slackSetup: () => slackSetup(S.T3, -S.late3),
+        minPeriod: () => minPeriod(-S.late3),
+        slackHoldLong: () => slackHoldLong(-S.late3),
+        verdict3: () => document.getElementById('chip3').textContent,
+        shownSlack3: () => document.getElementById('r3slack').textContent,
+        slackHold: () => slackHold(S.skew4, 0),
+        regime: () => regime(S.skew4, 0),
+        verdict4: () => document.getElementById('chip4').textContent,
+        clock: () => S.clk,
+        trace: () => trace(regime(S.skew4, 0), NCLK).map(v => v.join('')),
+        ideal: () => trace('ok', NCLK).map(v => v.join('')),
+        shownTrace: () => Array.from(document.querySelectorAll('#trace4 tr')).slice(1).map(tr => Array.from(tr.querySelectorAll('td')).slice(1).map(td => td.textContent)),
+        shownQ: () => Array.from(document.querySelectorAll('#ckt4 [data-q]')).map(t => t.textContent.slice(-1)).join(''),
+        barSegs: (p) => Array.from(document.querySelectorAll('#td' + (p || S.page) + ' [data-bar]')).map(e => ({ k: e.dataset.bar, val: +e.dataset.val, x: +e.getAttribute('x'), w: +e.getAttribute('width') })),
+        pxPerNs: (p) => (p || S.page) === 4 ? 150 : TD13.pp,
+        drawnEdges: (name, p) => edgesOf('td' + (p || S.page), name),
+        windowBox: (p) => { const e = document.querySelector('#td' + (p || S.page) + ' [data-window]'); return e ? { x: +e.getAttribute('x'), w: +e.getAttribute('width') } : null; },
+        delayBox: (svgId) => { const e = document.querySelector('#' + svgId + ' [data-delay]'); return e ? e.dataset.delay : 'none'; },
+        tNoteFlashed: () => document.getElementById('tnote').classList.contains('flash'),
+        model: { slackSetup, minPeriod, slackHold, slackHoldLong, regime, trace, REG },
+    };
+
+    syncSliders(); setPage(1);
+</script>
+</body>
+</html>

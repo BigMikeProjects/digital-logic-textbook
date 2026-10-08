@@ -1,0 +1,11 @@
+title: "Clock Skew"
+description: "The clock edge does not reach every flip-flop at the same instant. That difference is clock skew: a late launch clock eats setup slack and costs speed, and a late capture clock on a short path causes hold violations and race-through that no clock period can fix."
+chapter: sequential-logic
+section: practical-considerations
+order: 40401
+
+graphics:
+  01-video.youtube:
+    caption: "Video: what clock skew is and where it comes from, the launch and capture flip-flops, how a late launch clock uses up setup slack, and how a late capture clock causes a hold violation and then race-through in a shift register"
+  02-interactive.html:
+    caption: "Interactive: slide one flip-flop along the clock wire to create skew, delay the launch clock and watch the setup slack shrink on a to-scale timing budget, then delay the capture clock on a shift register and step a single 1 through it to see the bit skip a flip-flop"
