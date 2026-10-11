@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sequence Detector — Find 1 0 1 0 in a Stream of Bits</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 = logic 1 / the state the machine is in / the arc about to be taken
+       amber #ffb74d = the input x and CLK · violet #b388ff = the piece that links two views (the piece just added,
+       the matched window and its Z pulse, the table row and its two arcs, the one arc that differs)
+       navy #0d1b2a panels · logic-0 / inactive #7d9bb5 · no red anywhere (nothing here is a failure) */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 236px; height: 72px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 36px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 24px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 20px; margin-top: 4px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 10px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 21px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 12px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: baseline; gap: 14px; padding: 8px 18px;
+        border-bottom: 2px solid #24384c; flex-shrink: 0; white-space: nowrap; }
+    .panel-head .ph { font-size: 22px; font-weight: 700; color: #4fc3f7; }
+    .panel-head .ph.amber { color: #ffb74d; }
+    .panel-head .ph.violet { color: #b388ff; }
+    .panel-head .role { font-size: 20px; color: #78909c; }
+    .main { display: flex; gap: 16px; flex: 1; min-height: 0; }
+    .col { display: flex; flex-direction: column; gap: 12px; flex: 1; min-width: 0; min-height: 0; }
+
+    /* state diagram */
+    .diag { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 4px 10px; }
+    .diag svg { width: 100%; height: 100%; display: block; }
+    .diag { position: relative; }
+    /* which version this diagram is: shown on every state diagram pane */
+    .varbadge { position: absolute; top: 12px; left: 16px; z-index: 2; cursor: pointer; user-select: none; white-space: nowrap;
+        border: 2px solid #b388ff; border-radius: 999px; padding: 5px 10px 5px 18px; background: rgba(179,136,255,0.12);
+        color: #b388ff; font-size: 22px; display: inline-flex; align-items: center; gap: 10px; }
+    .varbadge b { font-weight: 700; }
+    .sd-node .sdc { fill: #0d1b2a; stroke: #6f8799; stroke-width: 3; transition: stroke .18s, fill .18s; }
+    .sd-node.on .sdc { stroke: #4fc3f7; stroke-width: 5; fill: rgba(79,195,247,0.16); }
+    .sd-node.vio .sdc { stroke: #b388ff; stroke-width: 5; fill: rgba(179,136,255,0.16); }
+    .sd-node.pick { cursor: pointer; }
+    .sd-node .sdname { fill: #e0e0e0; font-family: 'Segoe UI',sans-serif; font-weight: 700; text-anchor: middle; font-size: 34px; }
+    .sd-node.on .sdname { fill: #4fc3f7; }
+    .sd-node.vio .sdname { fill: #b388ff; }
+    .sd-node .sdseen { fill: #cfd8dc; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 30px; }
+    .sd-node .sdseen.none { fill: #90a4ae; font-family: 'Segoe UI',sans-serif; font-style: italic; }
+    .sd-node .sdz { fill: #7d9bb5; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 30px; }
+    .sd-node.zone .sdz { fill: #4fc3f7; font-weight: 700; }
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 3; transition: stroke .18s; }
+    .arc.on { stroke: #4fc3f7; stroke-width: 5.5; }
+    .arc.vio { stroke: #b388ff; stroke-width: 5.5; }
+    .arc.ghost { stroke: #5d7488; stroke-width: 3; stroke-dasharray: 10 9; }
+    .arc-hit { fill: none; stroke: transparent; stroke-width: 30; pointer-events: stroke; cursor: pointer; }
+    .arc-l { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; font-size: 30px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #0d1b2a; stroke-width: 9px; stroke-linejoin: round; }
+    .arc-l.on { fill: #4fc3f7; }
+    .arc-l.vio { fill: #b388ff; }
+    .hid { display: none; }
+
+    /* callouts */
+    .idea { border: 2px solid #245066; border-radius: 12px; background: rgba(79,195,247,0.06); padding: 12px 20px;
+        font-size: 23px; color: #cfd8dc; line-height: 1.42; }
+    .idea b { color: #4fc3f7; } .idea .am { color: #ffb74d; font-weight: 700; } .idea .vi { color: #b388ff; font-weight: 700; }
+    .idea .mono { font-size: 22px; }
+
+    /* beat 1 */
+    .b1svg { flex: 1; min-height: 0; padding: 6px 14px; display: flex; align-items: center; justify-content: center; }
+    .b1svg svg { width: 100%; height: 100%; display: block; }
+    .cards { display: flex; gap: 16px; flex: 0 0 auto; }
+    .card { flex: 1; border: 2px solid #37506a; border-radius: 12px; background: #0d1b2a; padding: 10px 20px;
+        font-size: 21px; color: #cfd8dc; line-height: 1.42; }
+    .card b.h { color: #4fc3f7; font-size: 23px; }
+    .card .vi { color: #b388ff; font-weight: 700; }
+
+    /* buttons, pills, readouts */
+    .ctrl { display: flex; align-items: center; gap: 14px; padding: 9px 16px; white-space: nowrap; flex-shrink: 0; }
+    .ctrl.top { border-top: 2px solid #24384c; }
+    .stepbtn { cursor: pointer; user-select: none; border: 2px solid #ffb74d; border-radius: 999px; padding: 5px 20px; white-space: nowrap;
+        color: #ffb74d; font-size: 21px; background: rgba(255,183,77,0.08); font-weight: 700; letter-spacing: .5px; }
+    .stepbtn.violet { border-color: #b388ff; color: #b388ff; background: rgba(179,136,255,0.10); }
+    .rstbtn { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px; padding: 5px 16px; white-space: nowrap;
+        color: #90a4ae; font-size: 20px; background: #0b1622; }
+    .rstbtn:hover { border-color: #ffb74d; color: #ffb74d; }
+    .k { display: inline-block; font-family: 'Menlo','Consolas','Courier New',monospace; font-size: 20px; color: #90a4ae;
+        border: 1px solid #37506a; border-radius: 6px; padding: 0 8px; margin: 0 2px; }
+    .stepbtn .k { color: #c9a25e; border-color: #6a5324; margin-left: 10px; }
+    .stepbtn.violet .k { color: #b388ff; border-color: #6a4fa0; }
+    .rstbtn .k { margin-left: 8px; }
+    .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .k.violet { color: #b388ff; border-color: #6a4fa0; }
+    .stepbtn.off { opacity: 0.4; cursor: default; }
+    @keyframes b1in { from { opacity: 0; } to { opacity: 1; } }
+    #s1 .enter { animation: b1in 0.35s ease-out; }
+    .readout b { color: #e8eef2; } .readout b.am { color: #ffb74d; } .readout b.vi { color: #b388ff; }
+    .readout { margin-left: auto; font-family: 'Menlo','Consolas',monospace; font-size: 22px; color: #90a4ae; white-space: nowrap; }
+    .readout b { color: #4fc3f7; } .readout .amber { color: #ffb74d; }
+    .pills { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+    .pill { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px; padding: 5px 18px;
+        font-size: 21px; font-weight: 700; color: #90a4ae; background: #0b1622; }
+    .pill.on { border-color: #b388ff; color: #b388ff; background: rgba(179,136,255,0.12); }
+
+    /* beat 2 */
+    .b2side { padding: 16px 22px; display: flex; flex-direction: column; gap: 18px; flex: 1; min-height: 0; justify-content: center; }
+    .b2side .q { font-size: 25px; color: #cfd8dc; line-height: 1.4; }
+    .b2side .q b { color: #b388ff; }
+    .namelist { display: flex; flex-direction: column; gap: 11px; }
+    .nm { display: flex; align-items: baseline; gap: 14px; font-size: 27px; color: #cfd8dc; border: 2px solid #24384c;
+        border-radius: 10px; padding: 10px 18px; background: #0b1622; }
+    .nm .s { font-weight: 700; width: 50px; } .nm .m { font-family: 'Menlo','Consolas',monospace; color: #cfd8dc; width: 140px; }
+    .nm .d { font-size: 23px; color: #90a4ae; }
+    .nm.new { border-color: #b388ff; background: rgba(179,136,255,0.10); } .nm.new .s { color: #b388ff; }
+    .nm.off { opacity: .28; }
+    .seenline { font-size: 25px; color: #90a4ae; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .seenline .bits { font-family: 'Menlo','Consolas',monospace; font-size: 36px; color: #cfd8dc; letter-spacing: 8px; }
+    .seenline .bits .nb { color: #ffb74d; font-weight: 700; }
+    .seenline .bits .used { color: #4a6274; text-decoration: line-through; }
+    .endt { border-collapse: collapse; font-size: 28px; align-self: center; }
+    .endt th { font-size: 21px; font-weight: 600; color: #78909c; padding: 6px 28px; border-bottom: 2px solid #37506a; text-align: center; }
+    .endt td { padding: 9px 28px; text-align: center; font-family: 'Menlo','Consolas',monospace; color: #cfd8dc;
+        border-bottom: 1px solid #24384c; font-variant-numeric: tabular-nums; letter-spacing: 4px; }
+    .endt tr:nth-child(even) td { background: rgba(79,195,247,0.04); }
+    .endt td.yn { font-family: 'Segoe UI',sans-serif; letter-spacing: 0; color: #7d9bb5; }
+    .endt tr.hit td { color: #b388ff; font-weight: 700; background: rgba(179,136,255,0.10); }
+    .arcq { display: flex; flex-direction: column; gap: 8px; border-left: 4px solid #b388ff; padding-left: 14px; }
+    .arcq .seenline .bits { font-size: 32px; letter-spacing: 6px; }
+    .arcq .res { color: #cfd8dc; font-size: 24px; white-space: nowrap; } .arcq .res b { color: #b388ff; }
+    .arcq .why { font-size: 22px; color: #90a4ae; }
+    .arcq.ask { border-left-color: #ffb74d; } .arcq .why.ask { color: #ffb74d; font-weight: 700; }
+    .placed { font-size: 22px; color: #b388ff; font-weight: 700; }
+    .arcq .endt { font-size: 24px; align-self: flex-start; }
+    .arcq .endt th { font-size: 20px; padding: 3px 22px; } .arcq .endt td { padding: 4px 22px; }
+    .verdict { font-size: 25px; color: #cfd8dc; line-height: 1.4; border-left: 4px solid #b388ff; padding-left: 14px; }
+    .verdict b { color: #b388ff; } .verdict .mono { color: #b388ff; }
+    .reason { padding: 10px 20px 2px; font-size: 26px; color: #e0e0e0; line-height: 1.35; white-space: nowrap; }
+    .reason b { color: #b388ff; } .reason .am { color: #ffb74d; font-weight: 700; }
+    .stepno { font-size: 21px; color: #90a4ae; } .stepno b { color: #b388ff; font-size: 24px; }
+    .tally { margin-left: auto; font-size: 21px; color: #90a4ae; } .tally b { color: #cfd8dc; }
+
+    /* beat 3 */
+    .b3side { padding: 16px 22px; display: flex; flex-direction: column; gap: 14px; flex: 1; justify-content: center; }
+    .b3side .lead { font-size: 23px; color: #cfd8dc; line-height: 1.4; }
+    .b3side .lead b { color: #b388ff; }
+    .vrow { font-size: 22px; line-height: 1.4; color: #6f8799; border: 2px solid #24384c; border-radius: 10px; padding: 9px 16px; }
+    .vrow b { color: #90a4ae; } .vrow .mono { font-size: 20px; }
+    .vrow.on { color: #cfd8dc; border-color: #6a4fa0; background: rgba(179,136,255,0.08); } .vrow.on b { color: #b388ff; }
+    .legend { font-size: 20px; color: #78909c; }
+    .counts { font-size: 22px; color: #90a4ae; border-top: 2px solid #24384c; padding-top: 10px; margin-top: 2px; }
+    .counts b { color: #7d9bb5; font-family: 'Menlo','Consolas',monospace; font-size: 26px; }
+    .counts .cur { color: #cfd8dc; } .counts .cur b { color: #4fc3f7; }
+    .stripbody { display: flex; flex-direction: column; gap: 5px; padding: 8px 16px; }
+    .row { display: flex; align-items: center; gap: 5px; }
+    .row .rl { width: 92px; flex-shrink: 0; font-family: 'Menlo','Consolas',monospace; font-size: 22px; color: #90a4ae; text-align: right; padding-right: 14px; }
+    .row .rl.amber { color: #ffb74d; font-weight: 700; }
+    .cell { flex: 1; text-align: center; font-family: 'Menlo','Consolas',monospace; font-size: 24px; padding: 3px 0;
+        border: 2px solid transparent; border-radius: 8px; color: #cfd8dc; white-space: nowrap; }
+    .cell.one { color: #4fc3f7; font-weight: 700; }
+    .cell.zero { color: #7d9bb5; }
+    .cell.zhit { background: rgba(79,195,247,0.20); border-color: #4fc3f7; }
+    .cell.future { opacity: .36; }
+    .cell.now { border-color: #ffb74d; background: rgba(255,183,77,0.10); }
+    .cell.x { cursor: pointer; border-color: #2c435a; font-size: 26px; }
+    .cell.x.now { border-color: #ffb74d; }
+    .cell.x:hover { border-color: #ffb74d; }
+    .row.hdr .cell { font-size: 20px; color: #78909c; padding: 0; font-weight: 400; }
+    .row.hdr .cell.now { color: #ffb74d; border-color: transparent; background: none; font-weight: 700; }
+    .editnote { font-size: 20px; color: #78909c; }
+    .editnote.edited { color: #ffb74d; }
+
+    /* beat 4 */
+    .sttab { border-collapse: collapse; margin: 14px auto 10px; font-variant-numeric: tabular-nums; }
+    .sttab th { font-size: 21px; font-weight: 600; color: #90a4ae; padding: 6px 24px; border-bottom: 2px solid #37506a; text-align: center; line-height: 1.25; }
+    .sttab th .am { color: #ffb74d; font-family: 'Menlo','Consolas',monospace; }
+    .sttab td { font-family: 'Menlo','Consolas',monospace; font-size: 32px; color: #cfd8dc; text-align: center; padding: 19px 26px;
+        border-bottom: 1px solid #24384c; cursor: pointer; }
+    .sttab td.ps { font-family: 'Segoe UI',sans-serif; font-weight: 700; text-align: left; white-space: nowrap; }
+    .sttab td.ps small { font-family: 'Menlo','Consolas',monospace; font-weight: 400; font-size: 22px; color: #78909c; margin-left: 12px; }
+    .sttab tr:nth-child(even) td { background: rgba(79,195,247,0.04); }
+    .sttab td.z1 { color: #4fc3f7; font-weight: 700; } .sttab td.z0 { color: #7d9bb5; }
+    .sttab tr.sel td { background: rgba(179,136,255,0.13); }
+    .sttab tr.sel td.ps, .sttab tr.sel td.nx { color: #b388ff; font-weight: 700; }
+    .sttab td.diff { box-shadow: inset 0 0 0 2px #b388ff; border-radius: 8px; }
+    .rowsay { padding: 10px 22px 8px; font-size: 23px; color: #cfd8dc; line-height: 1.4; text-align: center; }
+    .rowsay b { color: #b388ff; } .rowsay .am { color: #ffb74d; font-weight: 700; }
+    .closeline { border: 2px solid #245066; border-radius: 12px; background: rgba(79,195,247,0.06);
+        padding: 11px 20px; font-size: 22px; color: #cfd8dc; line-height: 1.42; flex: 0 0 auto; }
+    .closeline b { color: #4fc3f7; }
+    .hint { font-size: 20px; color: #78909c; text-align: center; padding: 0 12px 10px; white-space: nowrap; }
+
+    /* beat 5: the one-hot circuit and its equations */
+    .circ5 { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 4px 10px; position: relative; }
+    .circ5 svg { width: 100%; height: 100%; display: block; }
+    .c5pick { cursor: pointer; }
+    .eq5list { display: flex; flex-direction: column; flex: 1; min-height: 0; justify-content: space-evenly; padding: 6px 12px; }
+    .eq5row { cursor: pointer; border: 2px solid transparent; border-radius: 10px; padding: 4px 14px 6px; }
+    .eq5row:nth-child(even) { background: rgba(79,195,247,0.04); }
+    .eq5row .eqn { font-family: 'Menlo','Consolas','Courier New',monospace; font-size: 30px; line-height: 1.3; color: #e0e0e0; white-space: nowrap; }
+    .eq5row .eqn sub { font-size: 20px; }
+    .eq5row .eqn .op { color: #90a4ae; }
+    .eq5row .eqn .am { color: #ffb74d; }
+    .eq5row .eqn .ov { text-decoration: overline; text-decoration-thickness: 2.5px; }
+    .eq5row .eqn .dterm { box-shadow: 0 0 0 2px #b388ff; border-radius: 6px; padding: 0 2px; margin: 0 5px 0 2px; }
+    .eq5row .note { font-size: 20px; line-height: 1.3; color: #90a4ae; }
+    .eq5row .dnote { font-size: 20px; line-height: 1.3; color: #cfd8dc; }
+    .eq5row .dnote b { color: #b388ff; }
+    .eq5row.diff { box-shadow: inset 0 0 0 2px #6a4fa0; }
+    .eq5row.sel { background: rgba(179,136,255,0.13); border-color: #b388ff; }
+    .eq5row.sel .eqn, .eq5row.sel .eqn .op { color: #b388ff; font-weight: 700; }
+    .eq5row.z { border-top-left-radius: 0; border-top-right-radius: 0; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 8px; height: 34px; white-space: nowrap; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #78909c; font-size: 20px; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 236 72" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <text x="2" y="44" font-family="Menlo,Consolas,monospace" font-size="24" font-weight="700" fill="#ffb74d">x</text>
+                <g stroke="#b388ff" stroke-width="2.4" fill="rgba(179,136,255,0.10)">
+                    <rect x="24" y="18" width="32" height="38" rx="5"/><rect x="60" y="18" width="32" height="38" rx="5"/>
+                    <rect x="96" y="18" width="32" height="38" rx="5"/><rect x="132" y="18" width="32" height="38" rx="5"/>
+                </g>
+                <g font-family="Menlo,Consolas,monospace" font-size="24" font-weight="700" text-anchor="middle">
+                    <text x="40" y="46" fill="#4fc3f7">1</text><text x="76" y="46" fill="#7d9bb5">0</text>
+                    <text x="112" y="46" fill="#4fc3f7">1</text><text x="148" y="46" fill="#7d9bb5">0</text>
+                </g>
+                <path d="M 168 37 L 186 37" stroke="#b388ff" stroke-width="2.4"/><path d="M 181 31 L 188 37 L 181 43" stroke="#b388ff" stroke-width="2.4"/>
+                <text x="194" y="46" font-family="Menlo,Consolas,monospace" font-size="24" font-weight="700" fill="#4fc3f7">Z</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Sequence Detector <span class="sub">&mdash; find 1 0 1 0 in a stream of bits</span></h1>
+            <div class="subtitle">One input x, one bit per clock &middot; Moore output Z &middot; five states, each named for what has been seen so far</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> of 5</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">What It Detects</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Build the Diagram</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Run It</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">The State Table</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">The One-Hot Circuit</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 — what it detects -->
+        <div class="page" id="p1">
+            <div class="idea">The machine watches <span class="am">x</span>, one bit per clock, and raises <b>Z</b> for one clock each time the last four bits were <span class="mono vi">1 0 1 0</span>. Z is a <b>Moore</b> output, so it belongs to a state: the clock edge that samples the fourth bit moves the machine into its &ldquo;seen 1 0 1 0&rdquo; state, and <b>Z is 1 during the next clock</b>, one column after the fourth bit.</div>
+            <div class="panel" style="flex:1">
+                <div class="panel-head"><span class="ph">One stream, two ways to count</span><span class="role">digits correct = how much of 1 0 1 0 the machine holds coming into that clock &middot; 4 correct is the state where Z is 1</span></div>
+                <div class="b1svg"><svg id="s1" viewBox="0 0 1780 512" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                <div class="ctrl top">
+                    <span class="stepbtn" id="clk1">CLK &#9654; next bit<span class="k">Space</span></span>
+                    <span class="rstbtn" id="rst1" title="Empty the stream, on this page">&#8634; reset<span class="k">R</span></span>
+                    <span class="rstbtn" id="all1" title="Fill in the whole stream">show all<span class="k">A</span></span>
+                    <span class="readout" id="ro1"></span>
+                </div>
+            </div>
+            <div class="cards">
+                <div class="card"><b class="h">Overlapping</b> &mdash; the end of one match may begin the next. <span class="mono">1 0 1 0 1 0</span> holds two matches that share the middle <span class="mono">1 0</span>. <span data-b1-ov></span></div>
+                <div class="card"><b class="h">Non-overlapping</b> &mdash; each bit belongs to one match at most. After a detection the machine starts over. <span data-b1-no></span></div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 — build the diagram -->
+        <div class="page" id="p2">
+            <div class="main">
+                <div class="panel" style="flex:0 0 1190px">
+                    <div class="panel-head"><span class="ph violet">The state diagram, one question at a time</span><span class="role">each circle: name &middot; digits seen &middot; Z &nbsp;&middot;&nbsp; lit circle = the state being asked about</span></div>
+                    <div class="diag"><span class="varbadge" data-varbadge title="Switch between the overlapping and non-overlapping versions"><b></b><span class="k violet">V</span></span><svg id="sd2" viewBox="0 0 1360 590" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                </div>
+                <div class="col">
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head"><span class="ph violet" id="b2title"></span></div>
+                        <div class="b2side" id="b2side"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel" style="flex:0 0 auto">
+                <div class="reason" id="b2reason"></div>
+                <div class="ctrl">
+                    <span class="stepbtn violet" id="ubtn">ask x = 0 &#9654;<span class="k">U</span></span>
+                    <span class="rstbtn" id="ubk">&#9664; back<span class="k">Shift+U</span></span>
+                    <span class="rstbtn" id="urst" title="Back to S0 alone, on this page">&#8634; reset<span class="k">R</span></span>
+                    <span class="stepno" id="b2step"></span>
+                    <span class="tally" id="b2tally"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 — run it -->
+        <div class="page" id="p3">
+            <div class="main">
+                <div class="panel" style="flex:0 0 1090px">
+                    <div class="panel-head"><span class="ph">The machine, live</span><span class="role">lit circle = the state now &middot; lit arc = the one the next CLK takes</span></div>
+                    <div class="diag"><span class="varbadge" data-varbadge title="Switch between the overlapping and non-overlapping versions"><b></b><span class="k violet">V</span></span><svg id="sd3" viewBox="0 0 1360 590" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                </div>
+                <div class="col">
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head"><span class="ph violet">Two versions, one arc apart</span></div>
+                        <div class="b3side">
+                            <div class="pills"><span class="pill" data-var="ov">Overlapping</span><span class="pill" data-var="no">Non-overlapping</span><span class="k violet">V</span></div>
+                            <div class="lead">The diagram is the same except for where <b>S4</b> goes on <b>x = 1</b>.</div>
+                            <div class="vrow" data-vrow="ov"><b>Overlapping &rarr; S3.</b> <span class="mono">1 0 1 0 1</span> ends in <span class="mono">1 0 1</span>: three bits of the next match are already in.</div>
+                            <div class="vrow" data-vrow="no"><b>Non-overlapping &rarr; S1.</b> The match is used up. This 1 is a new first bit.</div>
+                            <div class="legend">dashed arc = where the other version sends it</div>
+                            <div class="counts" id="counts3"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel" style="flex:0 0 auto">
+                <div class="panel-head"><span class="ph amber">Input strip</span><span class="role">click an x cell to flip it &middot; boxed column = the clock about to happen &middot; the future is dimmed</span></div>
+                <div class="stripbody" id="strip3"></div>
+                <div class="ctrl top">
+                    <span class="stepbtn" id="stepbtn">CLK &#9654; step<span class="k">Space</span></span>
+                    <span class="rstbtn" id="rst3" title="Back to clock 0 and the original strip, on this page">&#8634; reset<span class="k">R</span></span>
+                    <span class="editnote" id="editnote"></span>
+                    <span class="readout" id="ro3"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 — the state table -->
+        <div class="page" id="p4">
+            <div class="main">
+                <div class="col" style="flex:0 0 1120px">
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head"><span class="ph">The diagram</span><span class="role">click a state or an arc &middot; its row lights in the table</span></div>
+                        <div class="diag"><span class="varbadge" data-varbadge title="Switch between the overlapping and non-overlapping versions"><b></b><span class="k violet">V</span></span><svg id="sd4" viewBox="0 0 1360 590" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                    </div>
+                    <div class="closeline">Five states need <b>three</b> flip-flops with a binary assignment (two flip-flops give only four codes; three give eight, so three codes go unused) or <b>five</b> with one-hot. <b data-topic="binary-state-assignment">Binary State Assignment</b> takes this table to K&#8209;maps; <b data-topic="one-hot-state-assignment">One Hot State Assignment</b> reads its equations straight off the diagram.</div>
+                </div>
+                <div class="col">
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head"><span class="ph violet">The state table</span><span class="role">one row = two arcs &middot; <span class="k">&uarr;</span><span class="k">&darr;</span> change row</span></div>
+                        <table class="sttab" id="sttab"></table>
+                        <div class="rowsay" id="rowsay"></div>
+                        <div class="ctrl top" style="margin-top:auto">
+                            <div class="pills"><span class="pill" data-var="ov">Overlapping</span><span class="pill" data-var="no">Non-overlapping</span><span class="k violet">V</span></div>
+                            <span class="rstbtn" id="rst4" style="margin-left:auto" title="Back to the S3 row, on this page">&#8634; reset<span class="k">R</span></span>
+                        </div>
+                        <div class="hint" id="hint4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 5 — the one-hot circuit -->
+        <div class="page" id="p5">
+            <div class="main">
+                <div class="panel" style="flex:0 0 1130px">
+                    <div class="panel-head"><span class="ph">The one-hot circuit</span><span class="role">one D flip-flop per state &middot; a flag is a named wire: same name, same wire</span></div>
+                    <div class="circ5"><span class="varbadge" data-varbadge title="Switch between the overlapping and non-overlapping versions"><b></b><span class="k violet">V</span></span><svg id="c5" viewBox="0 0 1170 676" fill="none" stroke-linecap="round" stroke-linejoin="round"></svg></div>
+                </div>
+                <div class="col">
+                    <div class="panel" style="flex:1">
+                        <div class="panel-head"><span class="ph violet">The equations</span><span class="role">click one, or a flip-flop &middot; <span class="k">&uarr;</span><span class="k">&darr;</span></span></div>
+                        <div class="eq5list" id="eq5"></div>
+                        <div class="ctrl top">
+                            <div class="pills"><span class="pill" data-var="ov">Overlapping</span><span class="pill" data-var="no">Non-overlapping</span><span class="k violet">V</span></div>
+                            <span class="rstbtn" id="rst5" style="margin-left:auto" title="Clear the selection, on this page">&#8634; clear<span class="k">R</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="closeline">One-hot: one flip-flop per state, <b>exactly one of the five holding a 1</b>. Each D input is one AND term per arc into that state, ORed. <b data-topic="one-hot-state-assignment">One Hot State Assignment</b> explains reading the equations off the arcs and what reset has to do. No reset logic is drawn here: reset must load S0 = 1 and the other four 0, since all zeros is not a state.</div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div><div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div><div class="dot" data-dot="5"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">5</span> beat
+            &middot; <span class="k">&larr;</span><span class="k">&rarr;</span> previous / next
+            &middot; <span class="k violet">U</span> / <span class="k violet">Shift+U</span> build (beat 2)
+            &middot; <span class="k amber">Space</span> or <span class="k amber">C</span> CLK step (beats 1, 3) &middot; <span class="k">A</span> show all (beat 1)
+            &middot; <span class="k violet">V</span> overlapping / non-overlapping
+            &middot; <span class="k">R</span> &#8634; reset
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const W0 = '#7d9bb5', W1 = '#4fc3f7', AMB = '#ffb74d', VIO = '#b388ff', INK = '#cfd8dc', DIM = '#90a4ae';
+    const $ = (id) => document.getElementById(id);
+
+    // ============ THE MACHINE (source of truth: BRIEF.md content spec; python3 brute force to length 16) ============
+    // Moore "1 0 1 0" detector on x. S0 nothing useful / S1 seen 1 / S2 seen 10 / S3 seen 101 / S4 seen 1010 (Z = 1 in S4 only).
+    // The two versions differ in exactly one arc: S4 on x = 1.
+    const PATTERN = '1010';
+    const STATES = ['S0', 'S1', 'S2', 'S3', 'S4'];
+    const SEEN = { S0: '', S1: '1', S2: '10', S3: '101', S4: '1010' };
+    const OUT = { S0: 0, S1: 0, S2: 0, S3: 0, S4: 1 };
+    const TRANS = {
+        ov: { S0: { 0: 'S0', 1: 'S1' }, S1: { 0: 'S2', 1: 'S1' }, S2: { 0: 'S0', 1: 'S3' }, S3: { 0: 'S4', 1: 'S1' }, S4: { 0: 'S0', 1: 'S3' } },
+        no: { S0: { 0: 'S0', 1: 'S1' }, S1: { 0: 'S2', 1: 'S1' }, S2: { 0: 'S0', 1: 'S3' }, S3: { 0: 'S4', 1: 'S1' }, S4: { 0: 'S0', 1: 'S1' } },
+    };
+    const VNAME = { ov: 'Overlapping', no: 'Non-overlapping' };
+    const PRESET = [1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1];      // 14 clocks: an overlapping pair, a 1 1 stall, a clean match
+    const N = PRESET.length;
+
+    // run: st[i] = state during clock i (before edge i samples xs[i]); st[N] = state after the last edge. z[i] = OUT[st[i]].
+    function run(xs, v) { const st = ['S0']; for (const x of xs) st.push(TRANS[v][st[st.length - 1]][x]); return { st, z: st.map(s => OUT[s]) }; }
+    // reference by direct string matching (independent of TRANS): indices of the LAST bit of each counted match
+    function matchEnds(xs, v) {
+        const ends = []; let last = -1;
+        for (let i = 3; i < xs.length; i++) if (xs.slice(i - 3, i + 1).join('') === PATTERN && (v === 'ov' || i - 3 > last)) { ends.push(i); last = i; }
+        return ends;
+    }
+    // every window that matches, counted or not (beat 1 draws the uncounted one dashed)
+    function allWindows(xs) { const w = []; for (let i = 3; i < xs.length; i++) if (xs.slice(i - 3, i + 1).join('') === PATTERN) w.push(i); return w; }
+    // the design rule beat 2 teaches: after the new bit, keep the longest ending that is also a beginning of the pattern.
+    // Non-overlapping: the four matched bits are used up, so from S4 only the new bit counts.
+    function endingTest(state, x, v) {
+        const used = (v === 'no' && state === 'S4');
+        const base = used ? '' : SEEN[state], cand = base + x, rows = [];
+        let L = 0;
+        for (let n = Math.min(PATTERN.length, cand.length); n >= 1; n--) {
+            const end = cand.slice(-n), pre = PATTERN.slice(0, n), ok = end === pre;
+            rows.push({ end, pre, ok });
+            if (ok) { L = n; break; }
+        }
+        return { used, base, cand, rows, L, to: 'S' + L };
+    }
+    function derive(v) { const t = {}; for (const s of STATES) t[s] = { 0: endingTest(s, 0, v).to, 1: endingTest(s, 1, v).to }; return t; }
+
+    // ---- diagram geometry: five states in a row; x = 1 fallbacks bow above, x = 0 fallbacks bow below ----
+    const R = 78, CY = 295, VBW = 1360, VBH = 590;
+    const NODES = {}; STATES.forEach((s, i) => NODES[s] = { x: 100 + i * 290, y: CY });
+    // line: straight rim to rim · loop: self-loop pointing at this angle (degrees, screen coordinates, negative = up)
+    // a / b: angle the arc leaves the source rim / arrives on the target rim · k: handle length · side: -1 label above, +1 below
+    const GEOM = {
+        'S0>S1': { line: 1 }, 'S1>S2': { line: 1 }, 'S2>S3': { line: 1 }, 'S3>S4': { line: 1 },
+        'S0>S0': { loop: -90 }, 'S1>S1': { loop: -122 },
+        'S3>S1': { a: -146, b: -34, k: 185, side: -1 },
+        'S4>S1': { a: -112, b: -68, k: 232, side: -1 },
+        'S2>S0': { a: 146, b: 34, k: 185, side: 1 },
+        'S4>S0': { a: 112, b: 68, k: 232, side: 1 },
+        'S4>S3': { a: 150, b: 30, k: 70, side: 1 },
+    };
+    // EDGES: generated from the two transition tables. An arc present in both versions appears once (v: null);
+    // the one arc that differs appears twice, tagged with its version.
+    const EDGES = [];
+    for (const from of STATES) for (const x of [0, 1]) {
+        const tov = TRANS.ov[from][x], tno = TRANS.no[from][x];
+        const add = (to, v) => { const g = GEOM[from + '>' + to]; if (!g) throw new Error('no geometry for ' + from + '>' + to);
+            EDGES.push({ id: from + ':' + x + (v ? ':' + v : ''), from, to, x, v, ...g }); };
+        if (tov === tno) add(tov, null); else { add(tov, 'ov'); add(tno, 'no'); }
+    }
+    const DIFF = EDGES.filter(e => e.v);                       // the arcs that depend on the version
+    const arcId = (from, x, v) => { const e = EDGES.find(e => e.from === from && e.x === x && (!e.v || e.v === v)); return e.id; };
+
+    // ============ STATE ============
+    const FIRST = 1, LAST = 5, LASTSTEP = 20;
+    let page = 1, variant = 'ov';
+    let c1 = 0, b1Enter = false;                               // beat 1: clocks arrived so far, 0..N
+    let build = 0;                                             // beat 2: 0..10
+    let tclk = 0, xs = PRESET.slice(), varFlash = false;       // beat 3
+    const SEL0 = 'S3'; let sel = SEL0;                         // beat 4
+    let sel5 = null;                                           // beat 5: null, a state (its flip-flop and gates), or 'Z'
+    const pages = Array.from(document.querySelectorAll('.page')), tabs = Array.from(document.querySelectorAll('.tab')), dots = Array.from(document.querySelectorAll('.dot'));
+
+    // ============ STATE DIAGRAM GENERATOR ============
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+    // Chrome does not render markers whose <defs> live inside a display:none subtree, so every
+    // diagram SVG gets its own defs; marker ids are suffixed with the svg id.
+    function injectMarkers(target) {
+        const mk = target.id, defs = el('defs', {}, target);
+        for (const [id, fill] of [['ah', '#8fa8bd'], ['ahon', W1], ['ahvio', VIO], ['ahghost', '#5d7488']]) {
+            const m = el('marker', { id: id + '-' + mk, markerWidth: 20, markerHeight: 16, refX: 14, refY: 6.5, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+            el('path', { d: 'M0,0 L16,6.5 L0,13 Z', fill }, m);
+        }
+        return mk;
+    }
+    const rad = (d) => d * Math.PI / 180, f1 = (n) => n.toFixed(1);
+    function arcPath(ed) {
+        const A = NODES[ed.from], B = NODES[ed.to];
+        if (ed.line) {
+            const s = Math.sign(B.x - A.x);
+            return { d: `M${A.x + s * R},${A.y} L${B.x - s * (R + 2)},${B.y}`, lx: (A.x + B.x) / 2, ly: A.y - 16 };
+        }
+        if (ed.loop !== undefined) {
+            const th = rad(ed.loop), a1 = th + 0.45, a2 = th - 0.45, ro = R + 84;
+            const p1 = { x: A.x + R * Math.cos(a1), y: A.y + R * Math.sin(a1) }, p2 = { x: A.x + (R + 2) * Math.cos(a2), y: A.y + (R + 2) * Math.sin(a2) };
+            const c1 = { x: A.x + ro * Math.cos(th + 0.55), y: A.y + ro * Math.sin(th + 0.55) }, c2 = { x: A.x + ro * Math.cos(th - 0.55), y: A.y + ro * Math.sin(th - 0.55) };
+            return { d: `M${f1(p1.x)},${f1(p1.y)} C${f1(c1.x)},${f1(c1.y)} ${f1(c2.x)},${f1(c2.y)} ${f1(p2.x)},${f1(p2.y)}`,
+                     lx: A.x + (R + 80) * Math.cos(th), ly: A.y + (R + 80) * Math.sin(th) + 10 };
+        }
+        const a = rad(ed.a), b = rad(ed.b);
+        const P0 = { x: A.x + R * Math.cos(a), y: A.y + R * Math.sin(a) }, P3 = { x: B.x + (R + 2) * Math.cos(b), y: B.y + (R + 2) * Math.sin(b) };
+        const C1 = { x: P0.x + ed.k * Math.cos(a), y: P0.y + ed.k * Math.sin(a) }, C2 = { x: P3.x + ed.k * Math.cos(b), y: P3.y + ed.k * Math.sin(b) };
+        const mx = (P0.x + 3 * C1.x + 3 * C2.x + P3.x) / 8, my = (P0.y + 3 * C1.y + 3 * C2.y + P3.y) / 8;
+        return { d: `M${f1(P0.x)},${f1(P0.y)} C${f1(C1.x)},${f1(C1.y)} ${f1(C2.x)},${f1(C2.y)} ${f1(P3.x)},${f1(P3.y)}`,
+                 lx: mx, ly: ed.side < 0 ? my - 14 : my + 36 };
+    }
+    // Builds every arc (both versions of the one that differs) and all five circles; paintDiagram decides what shows.
+    function buildDiagram(target, onPick) {
+        const mk = injectMarkers(target), arcs = {}, nodes = {};
+        for (const ed of EDGES) {
+            const g = arcPath(ed);
+            const path = el('path', { class: 'arc', 'data-id': ed.id, d: g.d }, target);
+            const lab = el('text', { class: 'arc-l', 'data-id': ed.id, x: f1(g.lx), y: f1(g.ly) }, target); lab.textContent = 'x=' + ed.x;
+            let hit = null;
+            if (onPick) { hit = el('path', { class: 'arc-hit', d: g.d }, target); hit.addEventListener('click', () => onPick(ed.from)); }
+            arcs[ed.id] = { edge: ed, path, lab, hit };
+        }
+        for (const k of STATES) {
+            const n = NODES[k];
+            const g = el('g', { class: 'sd-node' + (onPick ? ' pick' : '') + (OUT[k] ? ' zone' : ''), 'data-state': k }, target);
+            el('circle', { class: 'sdc', cx: n.x, cy: n.y, r: R }, g);
+            el('text', { class: 'sdname', x: n.x, y: n.y - 22 }, g).textContent = k;
+            el('text', { class: 'sdseen' + (SEEN[k] ? '' : ' none'), x: n.x, y: n.y + 12 }, g).textContent = SEEN[k] || 'none';
+            el('text', { class: 'sdz', x: n.x, y: n.y + 46 }, g).textContent = 'Z=' + OUT[k];
+            if (onPick) g.addEventListener('click', () => onPick(k));
+            nodes[k] = g;
+        }
+        return { mk, arcs, nodes };
+    }
+    // spec.nodes[k] / spec.arcs[id] ∈ 'hid' | '' | 'on' | 'vio' | 'ghost'
+    function paintDiagram(D, spec) {
+        for (const k of STATES) { const c = spec.nodes[k] || ''; const g = D.nodes[k];
+            g.classList.toggle('hid', c === 'hid'); g.classList.toggle('on', c === 'on'); g.classList.toggle('vio', c === 'vio'); }
+        for (const id in D.arcs) {
+            const c = spec.arcs[id] === undefined ? '' : spec.arcs[id], { path, lab, hit } = D.arcs[id];
+            path.setAttribute('class', 'arc' + (c ? ' ' + c : ''));
+            lab.setAttribute('class', 'arc-l' + (c === 'ghost' ? ' hid' : c ? ' ' + c : ''));
+            if (hit) hit.setAttribute('class', 'arc-hit' + (c === 'hid' || c === 'ghost' ? ' hid' : ''));
+            path.setAttribute('marker-end', `url(#ah${c === 'on' || c === 'vio' || c === 'ghost' ? c : ''}-${D.mk})`);
+        }
+    }
+    // the arcs of the current version, everything else hidden — the base every beat starts from
+    function baseArcs(ghostOther) {
+        const a = {};
+        for (const e of EDGES) a[e.id] = (!e.v || e.v === variant) ? '' : (ghostOther ? 'ghost' : 'hid');
+        return a;
+    }
+    const D2 = buildDiagram($('sd2')), D3 = buildDiagram($('sd3')), D4 = buildDiagram($('sd4'), (s) => select(s));
+
+    // ============ BEAT 1 — the stream, drawn from PRESET and the string-matching reference ============
+    // The stream arrives one bit per clock. c1 = how many clocks have happened: columns 0 .. c1-1 are filled in,
+    // from the left. A column holds what exists during that clock: the bit on x, and Z from the state the machine is in.
+    function paintB1() {
+        const svg = $('s1'), GX = 272, CW = (1780 - GX - 10) / N, cx = (i) => GX + i * CW + CW / 2;
+        let o = '';
+        const T = (x, y, t, fill, size, anchor = 'middle', fam = 'Menlo,Consolas,monospace', w = 400, cls = '', attr = '') =>
+            `<text${cls ? ` class="${cls}"` : ''}${attr ? ' ' + attr : ''} x="${f1(x)}" y="${y}" fill="${fill}" font-size="${size}" text-anchor="${anchor}" font-family="${fam}" font-weight="${w}">${t}</text>`;
+        const SANS = "'Segoe UI',sans-serif";
+        const nw = (i) => (b1Enter && i === c1 - 1) ? 'enter' : '';          // the column that just arrived fades in
+        o += `<defs><marker id="ahvio-s1" markerWidth="20" markerHeight="16" refX="14" refY="6.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L16,6.5 L0,13 Z" fill="${VIO}"/></marker></defs>`;
+        // faint column guides so a bracket far below the x row still reads against its columns
+        for (let i = 0; i <= N; i++) o += `<line x1="${f1(GX + i * CW)}" y1="114" x2="${f1(GX + i * CW)}" y2="506" stroke="#1c2f42" stroke-width="2"/>`;
+        o += T(GX - 22, 30, 'clock', '#78909c', 22, 'end', SANS);
+        o += T(GX - 22, 90, 'x', AMB, 40, 'end', 'Menlo,Consolas,monospace', 700);
+        for (let i = 0; i < N; i++) {
+            const here = i < c1, last = i === c1 - 1;
+            o += T(cx(i), 30, i, here ? (last ? AMB : '#90a4ae') : '#455a64', 22);
+            o += `<rect data-x1="${i}" x="${f1(GX + i * CW + 6)}" y="44" width="${f1(CW - 12)}" height="64" rx="9" fill="#0b1622" stroke="${last ? AMB : here ? '#37506a' : '#1c2f42'}" stroke-width="${last ? 3 : 2}"/>`;
+            if (here) o += T(cx(i), 90, PRESET[i], PRESET[i] ? W1 : W0, 38, 'middle', 'Menlo,Consolas,monospace', 700, nw(i), 'data-xt="1"');
+        }
+        const band = (v, yLaneHi, yLaneLo, yZ, title) => {
+            const ends = matchEnds(PRESET, v), R = run(PRESET, v), z = R.z, all = allWindows(PRESET), yD = yZ + 62;
+            // digits correct toward the sequence = the state number: S0 is 0 digits, S4 is all four
+            const correct = R.st.map(st => STATES.indexOf(st));
+            const sofar = ends.filter(e => e + 1 < c1).length;                // a detection shows once its Z = 1 column has arrived
+            o += T(8, yLaneLo + 2, title, W1, 28, 'start', SANS, 700);
+            o += T(8, yLaneLo + 40, sofar + (sofar === 1 ? ' detection' : ' detections'), VIO, 24, 'start', SANS, 700);
+            o += T(GX - 22, yZ + 43, 'Z', W1, 40, 'end', 'Menlo,Consolas,monospace', 700);
+            o += T(GX - 22, yD + 31, 'digits correct', VIO, 22, 'end', SANS, 700);
+            all.forEach((e, n) => {
+                if (e + 1 >= c1) return;                                      // its Z column has not arrived yet
+                const counted = ends.includes(e), prevOverlap = n > 0 && all[n - 1] > e - 4, cl = nw(e + 1) ? ' class="enter"' : '';
+                const y = prevOverlap ? yLaneHi : yLaneLo, xl = GX + (e - 3) * CW + 12, xr = GX + (e + 1) * CW - 12;
+                if (counted) {
+                    o += `<path${cl} d="M${f1(xl)},${y - 10} L${f1(xl)},${y} L${f1(xr)},${y} L${f1(xr)},${y - 10}" stroke="${VIO}" stroke-width="4"/>`;
+                    o += `<path${cl} d="M${f1(xr)},${y} L${f1(cx(e + 1))},${y} L${f1(cx(e + 1))},${yZ - 3}" stroke="${VIO}" stroke-width="4" marker-end="url(#ahvio-s1)"/>`;
+                } else {
+                    o += `<path${cl} d="M${f1(xl)},${y - 10} L${f1(xl)},${y} L${f1(xr)},${y} L${f1(xr)},${y - 10}" stroke="#6f8799" stroke-width="3" stroke-dasharray="9 8"/>`;
+                    o += T((xl + xr) / 2, y - 16, 'shares bits with the match before it: not counted', DIM, 22, 'middle', SANS, 400, nw(e + 1));
+                }
+            });
+            for (let i = 0; i < N; i++) {
+                const here = i < c1, one = here && z[i] === 1;
+                o += `<rect data-z1="${v}${i}" x="${f1(GX + i * CW + 6)}" y="${yZ}" width="${f1(CW - 12)}" height="58" rx="9" fill="${one ? 'rgba(79,195,247,0.20)' : '#0b1622'}" stroke="${one ? W1 : here ? '#24384c' : '#16283a'}" stroke-width="${one ? 3 : 2}"/>`;
+                if (here) o += T(cx(i), yZ + 42, z[i], one ? W1 : W0, 36, 'middle', 'Menlo,Consolas,monospace', one ? 700 : 400, nw(i), `data-zt="${v}"`);
+                const c = correct[i], full = here && c === 4;
+                o += `<rect data-c1="${v}${i}" x="${f1(GX + i * CW + 6)}" y="${yD}" width="${f1(CW - 12)}" height="44" rx="8" fill="${full ? 'rgba(179,136,255,0.22)' : '#0b1622'}" stroke="${full ? VIO : here && c ? '#4a3d73' : here ? '#24384c' : '#16283a'}" stroke-width="2"/>`;
+                if (here) o += T(cx(i), yD + 32, c, c ? VIO : '#5d7286', 28, 'middle', 'Menlo,Consolas,monospace', c === 4 ? 700 : 400, nw(i), `data-ct="${v}"`);
+            }
+            return { sofar, zNow: c1 ? z[c1 - 1] : null, cNow: c1 ? correct[c1 - 1] : null };
+        };
+        const ov = band('ov', 138, 164, 188, 'Overlapping');
+        o += `<line x1="0" y1="306" x2="1780" y2="306" stroke="#24384c" stroke-width="2"/>`;
+        const no = band('no', 346, 372, 396, 'Non-overlapping');
+        svg.innerHTML = o;
+        const say = (v, n) => { const e = matchEnds(PRESET, v);
+            return c1 < N ? `So far: <span class="vi">${n} ${n === 1 ? 'detection' : 'detections'}</span>.`
+                : `This stream: <span class="vi">${e.length} detections</span>, in clock${e.length > 1 ? 's' : ''} ${e.map(i => i + 1).join(', ').replace(/, ([^,]*)$/, ' and $1')}.`; };
+        document.querySelector('[data-b1-ov]').innerHTML = say('ov', ov.sofar);
+        document.querySelector('[data-b1-no]').innerHTML = say('no', no.sofar);
+        $('ro1').innerHTML = c1 === 0 ? 'no clocks yet &middot; press CLK: one bit of x arrives each clock'
+            : `clock <b>${c1 - 1}</b> &middot; x = <b class="am">${PRESET[c1 - 1]}</b> &middot; digits correct <b class="vi">${ov.cNow}</b> / <b class="vi">${no.cNow}</b> &middot; Z <b>${ov.zNow}</b> / <b>${no.zNow}</b>${c1 === N ? ' &middot; end of the stream' : ''}`;
+        $('clk1').classList.toggle('off', c1 >= N);
+        b1Enter = false;
+    }
+
+    // ============ BEAT 2 — the build ============
+    // The build goes state by state, the way the states are taught: a state is "this many digits correct toward
+    // 1 0 1 0", and from each one both questions are asked together: what does x = 0 do to the count, and x = 1?
+    // step 0 = S0 alone. Then four presses per state, asked the way it is asked in class:
+    //   phase 0  show x = 0 and ask which state is next      phase 1  reveal that answer, show x = 1 and ask again
+    //   phase 2  reveal the x = 1 answer                     phase 3  place both arcs (and any new state) on the diagram
+    const STEPS = [{ node: 'S0' }, { from: 'S0', node: 'S1' }, { from: 'S1', node: 'S2' }, { from: 'S2', node: 'S3' }, { from: 'S3', node: 'S4' }, { from: 'S4' }];
+    const PHASES = 4;
+    const stageOf = (b) => b === 0 ? { si: 0, ph: PHASES - 1 } : { si: Math.floor((b - 1) / PHASES) + 1, ph: (b - 1) % PHASES };   // si indexes STEPS
+    const DIGITS = (st) => STATES.indexOf(st);                     // digits correct = the state number
+    const goodBit = (st) => DIGITS(st) < PATTERN.length ? +PATTERN[DIGITS(st)] : null;      // the bit that adds a digit
+    const sp = (s) => s.split('').join(' ');
+    // one line per state, hand-written; both destinations named in each are checked against TRANS by the assertion block
+    const REASON = {
+        'start': 'Start with <b>S0</b>: 0 digits correct, Z = 0. From each state, ask what a <span class="am">0</span> and a <span class="am">1</span> each do to the count.',
+        'S0': '<b>S0</b>, 0 correct. A <span class="am">1</span> is the first digit: 1 correct, new state <b>S1</b>. A <span class="am">0</span> starts nothing: stay in <b>S0</b>.',
+        'S1': '<b>S1</b>, 1 correct. A <span class="am">0</span> is the second digit: new state <b>S2</b>. A <span class="am">1</span> is wrong, but it is a first digit itself: stay in <b>S1</b>.',
+        'S2': '<b>S2</b>, 2 correct. A <span class="am">1</span> is the third digit: new state <b>S3</b>. A <span class="am">0</span> leaves 1 0 0, nothing useful: back to <b>S0</b>.',
+        'S3': '<b>S3</b>, 3 correct. A <span class="am">0</span> completes 1 0 1 0: new state <b>S4</b>, Z = 1. A <span class="am">1</span> leaves only its own 1 correct: <b>S1</b>.',
+        'S4|ov': '<b>S4</b>, all 4 correct, Z = 1. A <span class="am">0</span> leaves nothing useful: <b>S0</b>. A <span class="am">1</span> leaves 1 0 1 0 1, ending in 1 0 1: 3 correct, <b>S3</b>.',
+        'S4|no': '<b>S4</b>, all 4 correct, Z = 1. The match is used up. A <span class="am">0</span> starts nothing: <b>S0</b>. A <span class="am">1</span> is a new first digit: <b>S1</b>.',
+    };
+    const AM = (x) => `<span class="am">${x}</span>`;
+    function reasonFor(b) {
+        if (b === 0) return REASON.start;
+        const { si, ph } = stageOf(b), st = STEPS[si].from, d = DIGITS(st), t0 = endingTest(st, 0, variant), t1 = endingTest(st, 1, variant);
+        const head = `<b>${st}</b>, ${d === 4 ? 'all 4' : d} correct.`, a0 = `A ${AM(0)} gives ${t0.L} correct: <b>${t0.to}</b>.`, a1 = `A ${AM(1)} gives ${t1.L} correct: <b>${t1.to}</b>.`;
+        if (ph === 0) return `${head} Suppose the next bit is a ${AM(0)}. How many digits are correct then, and which state is next?`;
+        if (ph === 1) return `${a0} Now suppose the next bit is a ${AM(1)}. Which state is next?`;
+        if (ph === 2) return `${a0} ${a1} Press again to draw both arcs.`;
+        return REASON[st] || REASON[st + '|' + variant];
+    }
+    function paintBuild() {
+        const spec = { nodes: {}, arcs: {} }, { si, ph } = stageOf(build), placed = ph === PHASES - 1;
+        for (const e of EDGES) spec.arcs[e.id] = 'hid';
+        for (const k of STATES) spec.nodes[k] = 'hid';
+        STEPS.forEach((st, i) => {
+            if (i > si || (i === si && !placed)) return;                       // this state's pieces are not on the diagram yet
+            const now = i === si;
+            if (st.node) spec.nodes[st.node] = now ? 'vio' : '';
+            if (st.from) [0, 1].forEach(x => { spec.arcs[arcId(st.from, x, variant)] = now ? 'vio' : ''; });
+        });
+        if (si > 0) spec.nodes[STEPS[si].from] = 'on';                         // the state being asked about
+        paintDiagram(D2, spec);
+        $('b2reason').innerHTML = reasonFor(build);
+        $('b2step').innerHTML = build === 0 ? `press <b>0</b> of ${LASTSTEP}` : `${STEPS[si].from} &middot; press <b>${ph + 1}</b> of ${PHASES}`;
+        const done = si - (placed ? 0 : 1), arcsDrawn = 2 * Math.max(0, done), nodesDrawn = Math.min(Math.max(0, done), 4) + 1;
+        $('b2tally').innerHTML = build === LASTSTEP
+            ? `<b>Done:</b> 5 states, 10 arcs &mdash; every state has one arc out for x=0 and one for x=1`
+            : `<b>${nodesDrawn}</b> of 5 states &middot; <b>${arcsDrawn}</b> of 10 arcs &middot; every state needs two arcs out`;
+        $('ubtn').firstChild.textContent = build === LASTSTEP ? 'done ' : ['ask x = 0 \u25B6', 'answer \u00B7 ask x = 1 \u25B6', 'answer \u25B6', 'draw the arcs \u25B6'][(ph + 1) % PHASES];
+        $('ubtn').classList.toggle('off', build === LASTSTEP);
+        const side = $('b2side');
+        if (build === 0) {
+            $('b2title').textContent = 'A state is a count of digits correct';
+            const descr = { S0: '0 digits correct', S1: '1 digit correct', S2: '2 digits correct', S3: '3 digits correct', S4: 'all 4: Z = 1' };
+            side.innerHTML = `<div class="q">Each state stands for <b>how many digits of 1 0 1 0 are correct so far</b>. The state number is that count.</div>`
+                + `<div class="namelist">${STATES.map((s, i) => `<div class="nm${i === 0 ? ' new' : ' off'}" data-nm="${s}"><span class="s">${s}</span><span class="m">${SEEN[s] ? sp(SEEN[s]) : '&ndash;'}</span><span class="d">${descr[s]}</span></div>`).join('')}</div>`;
+        } else {
+            const st = STEPS[si].from, d = DIGITS(st);
+            $('b2title').textContent = d === 4 ? `${st}: all 4 digits correct` : `${st}: ${d} digit${d === 1 ? '' : 's'} correct`;
+            const used = variant === 'no' && st === 'S4';
+            // one question: the bits held, then the new bit. Until it is revealed the answer is a question mark.
+            const block = (x, shown) => { const t = endingTest(st, x, variant), good = x === goodBit(st);
+                const seenBits = t.used ? `<span class="used">${SEEN[st]}</span><span class="nb">${x}</span>` : `${t.base}<span class="nb">${x}</span>`;
+                return `<div class="arcq${shown ? '' : ' ask'}" data-arcq="${x}" data-shown="${shown ? 1 : 0}"><div class="seenline"><span>x = <b style="color:#ffb74d">${x}</b></span><span class="bits">${seenBits}</span>`
+                    + (shown ? `<span class="res">&rarr; <b>${t.L}</b> correct &rarr; <b>${t.to}</b></span></div>`
+                        + (good ? `<div class="why">the next digit of 1 0 1 0: one more correct</div>`
+                            : `<table class="endt"><tr><th>last bits</th><th>pattern starts</th><th>same?</th></tr>${t.rows.map(r => `<tr class="${r.ok ? 'hit' : ''}"><td>${r.end}</td><td>${r.pre}</td><td class="yn">${r.ok ? 'yes' : 'no'}</td></tr>`).join('')}</table>`)
+                      : `<span class="res">&rarr; <b>?</b> correct &rarr; <b>S?</b></span></div><div class="why ask">How many digits are correct now? Which state is next?</div>`)
+                    + `</div>`; };
+            side.innerHTML = `<div class="q">${used ? 'Non-overlapping: the four matched bits are <b>used up</b>, so only the new bit counts. ' : ''}A wrong bit keeps the <b>longest ending that is also a beginning</b> of 1 0 1 0.</div>`
+                + block(0, ph >= 1) + (ph >= 1 ? block(1, ph >= 2) : '')
+                + (placed ? `<div class="placed">Both arcs are on the diagram.</div>` : '');
+        }
+    }
+
+    // ============ BEAT 3 — run ============
+    function paintRun() {
+        const tr = run(xs, variant), cur = tr.st[tclk], x = tclk < N ? xs[tclk] : null, nxt = x === null ? null : TRANS[variant][cur][x];
+        const spec = { nodes: {}, arcs: baseArcs(true) };
+        spec.nodes[cur] = 'on';
+        if (varFlash) spec.arcs[arcId('S4', 1, variant)] = 'vio';
+        if (x !== null && !(varFlash && cur === 'S4' && x === 1)) spec.arcs[arcId(cur, x, variant)] = 'on';
+        paintDiagram(D3, spec);
+        const edited = xs.some((v, i) => v !== PRESET[i]);
+        const cellRow = (label, f, cls, lcls) => `<div class="row${cls ? ' ' + cls : ''}"><span class="rl${lcls ? ' ' + lcls : ''}">${label}</span>${tr.st.map((_, i) => {
+            const c = f(i); return `<span class="cell${c.cls ? ' ' + c.cls : ''}${i === tclk ? ' now' : ''}${i > tclk ? ' future' : ''}"${c.attr || ''}>${c.txt}</span>`; }).join('')}</div>`;
+        $('strip3').innerHTML =
+              cellRow('clock', (i) => ({ txt: i < N ? i : 'end' }), 'hdr')
+            + cellRow('x', (i) => i < N ? { txt: xs[i], cls: 'x ' + (xs[i] ? 'one' : 'zero'), attr: ` data-xi="${i}"` } : { txt: '&nbsp;' }, '', 'amber')
+            + cellRow('state', (i) => ({ txt: tr.st[i] }))
+            + cellRow('Z', (i) => ({ txt: tr.z[i], cls: tr.z[i] ? 'one zhit' : 'zero' }));
+        $('strip3').querySelectorAll('[data-xi]').forEach(c => c.addEventListener('click', () => flipX(+c.dataset.xi)));
+        const dets = tr.z.slice(0, tclk + 1).reduce((a, b) => a + b, 0);
+        $('ro3').innerHTML = x === null
+            ? `end of strip &middot; state <b>${cur}</b> &middot; Z = <b>${OUT[cur]}</b> &middot; detections <b>${dets}</b> &middot; &#8634; to restart`
+            : `state <b>${cur}</b> &middot; <span class="amber">x = ${x}</span> &middot; Z = <b>${OUT[cur]}</b> &middot; <span class="amber">on CLK &rarr;</span> <b>${nxt}</b> &middot; detections so far <b>${dets}</b>`;
+        const tot = (v) => run(xs, v).z.reduce((a, b) => a + b, 0);
+        $('counts3').innerHTML = `Detections on this strip: ` + ['ov', 'no'].map(v => `<span class="${v === variant ? 'cur' : ''}">${VNAME[v].toLowerCase()} <b>${tot(v)}</b></span>`).join(' &middot; ');
+        $('editnote').textContent = edited ? 'strip edited: ↺ restores the original' : '';
+        $('editnote').classList.toggle('edited', edited);
+    }
+
+    // ============ BEAT 4 — the state table ============
+    function paintTable() {
+        const spec = { nodes: {}, arcs: baseArcs(false) };
+        if (sel) { spec.nodes[sel] = 'vio'; for (const x of [0, 1]) spec.arcs[arcId(sel, x, variant)] = 'vio'; }
+        paintDiagram(D4, spec);
+        const T = TRANS[variant];
+        $('sttab').innerHTML = `<tr><th>Present<br>state</th><th>Next state<br><span class="am">x = 0</span></th><th>Next state<br><span class="am">x = 1</span></th><th>Output<br>Z</th></tr>`
+            + STATES.map(s => `<tr data-row="${s}" class="${s === sel ? 'sel' : ''}"><td class="ps">${s}<small>${SEEN[s] || '&ndash;'}</small></td>`
+                + [0, 1].map(x => `<td class="nx${TRANS.ov[s][x] !== TRANS.no[s][x] ? ' diff' : ''}" data-x="${x}">${T[s][x]}</td>`).join('')
+                + `<td class="${OUT[s] ? 'z1' : 'z0'}">${OUT[s]}</td></tr>`).join('');
+        $('sttab').querySelectorAll('[data-row]').forEach(r => r.addEventListener('click', () => select(r.dataset.row)));
+        $('rowsay').innerHTML = sel
+            ? `In <b>${sel}</b>: <span class="am">x = 0</span> goes to <b>${T[sel][0]}</b>, <span class="am">x = 1</span> goes to <b>${T[sel][1]}</b>, and Z = ${OUT[sel]}.`
+            : 'Click a row, a state, or an arc.';
+        $('hint4').innerHTML = `outlined cell = the one entry the two versions disagree on`;
+    }
+
+    // ============ BEAT 5 — the one-hot circuit ============
+    // One D flip-flop per state, named for the state; exactly one holds a 1. Each D input is read off the diagram:
+    // one AND term per arc INTO that state (the source state AND the arc's input condition), ORed together.
+    // Everything on this beat is generated from TRANS and OUT; no equation is typed in.
+    // ohEq(t, v) = the arcs into t, grouped by input condition: [{ x, sources: [...] }]
+    function ohEq(t, v) { const g = []; for (const x of [0, 1]) { const sources = STATES.filter(s => TRANS[v][s][x] === t); if (sources.length) g.push({ x, sources }); } return g; }
+    // canonical text form (for the tests; never shown): ~x is the complement of x
+    const ohCanon = (t, v) => t === 'Z' ? 'Z = ' + STATES.filter(s => OUT[s]).join(' + ')
+        : 'D_' + t + ' = ' + ohEq(t, v).map(g => (g.x ? 'x' : '~x') + '·' + (g.sources.length > 1 ? '(' + g.sources.join(' + ') + ')' : g.sources[0])).join(' + ');
+    const ohDiff = STATES.filter(t => ohCanon(t, 'ov') !== ohCanon(t, 'no'));      // the equations the two versions disagree on
+    const PICK5 = STATES.concat(['Z']);                                           // what can be selected on beat 5
+    const NUM = ['no', 'One', 'Two', 'Three', 'Four', 'Five'];
+    const listAnd = (a) => a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0];
+    const SANS5 = "'Segoe UI',Tahoma,sans-serif";
+    // circuit grid, per column: net flags → OR → AND → D flip-flop → Q flag, then the clock trunk. y in C5ROW = the AND's upper input.
+    const C5 = { fw: 66, fhh: 18, pitch: 44, or: 90, orw: 92, and: 222, andw: 72, andh: 76, a: 22, ff: 332, ffw: 108, ffh: 116, q: 472, trunk: 556, rail: 650 };
+    const C5X0 = [24, 612], C5ROW = { S0: { c: 0, y: 166 }, S1: { c: 0, y: 450 }, S2: { c: 1, y: 106 }, S3: { c: 1, y: 316 }, S4: { c: 1, y: 500 } };
+    function paintOneHot() {
+        const svg = $('c5'), dArc = DIFF.find(e => e.v === variant), BASE = '#8fa8bd', zOn = sel5 === 'Z';
+        let under = '', wires = '', bodies = '', texts = '', dots = '', hits = '';
+        const wire = (pts, col, row, w = 3) => `<polyline class="c5w" data-row="${row}" points="${pts.map(p => p[0] + ',' + p[1]).join(' ')}" stroke="${col}" stroke-width="${w}"/>`;
+        const dot = (x, y, col) => `<circle class="c5dot" cx="${x}" cy="${y}" r="6" fill="${col}"/>`;
+        const T = (x, y, t, fill, size, anchor = 'middle', w = 700, fam = 'Menlo,Consolas,monospace', attr = '') =>
+            `<text x="${f1(x)}" y="${f1(y)}" fill="${fill}" font-size="${size}" text-anchor="${anchor}" font-family="${fam}" font-weight="${w}"${attr ? ' ' + attr : ''}>${t}</text>`;
+        // an overbar is a line 0.88 em above the baseline
+        const bar = (x1, x2, base, size, col) => `<line class="c5bar" x1="${f1(x1)}" y1="${f1(base - 0.88 * size)}" x2="${f1(x2)}" y2="${f1(base - 0.88 * size)}" stroke="${col}" stroke-width="2.4"/>`;
+        // a net flag is a named wire: same name, same wire. role src = the wire leaves from its point; sink = the wire arrives at its back.
+        function flag(x, y, net, role, row, st) {
+            const isX = net === 'x' || net === '~x', c = st ? VIO : isX ? AMB : '#7d9bb5', tc = st ? VIO : isX ? AMB : INK, w = C5.fw, hh = C5.fhh, cx = x + (w - 10) / 2;
+            return `<path class="c5body" data-kind="flag" data-net="${net}" data-role="${role}" data-row="${row}" data-pin="${role === 'src' ? [x + w, y] : [x, y]}" d="M${x},${y - hh} L${x + w - 12},${y - hh} L${x + w},${y} L${x + w - 12},${y + hh} L${x},${y + hh} Z" fill="${st === 'sel' ? 'rgba(179,136,255,0.16)' : '#0d1b2a'}" stroke="${c}" stroke-width="${st ? 3 : 2}"/>`
+                + T(cx, y + 8, isX ? 'x' : net, tc, 23) + (net === '~x' ? bar(cx - 7, cx + 7, y + 8, 23, tc) : '');
+        }
+        const orIn = (x, w, h, dy) => +(x + 0.52 * w * (0.5 - dy / h) * (0.5 + dy / h)).toFixed(1);       // where an input meets the OR's concave back
+        const gfill = (on) => on ? 'rgba(179,136,255,0.16)' : '#0d1b2a';
+
+        // the input x and the circuit's one inverter, which hands x̄ to a flag
+        { const y = 40, ix = 506;
+          texts += T(440, y + 9, 'x', AMB, 28, 'start', 700, 'Menlo,Consolas,monospace', `data-port="x" data-pin="${[462, y]}"`);
+          wires += wire([[462, y], [ix, y]], AMB, 'x');
+          bodies += `<path class="c5body" data-kind="not" data-in="${[ix, y]}" data-out="${[ix + 48, y]}" d="M${ix},${y - 18} L${ix + 34},${y} L${ix},${y + 18} Z" fill="#0d1b2a" stroke="${INK}" stroke-width="3"/><circle class="c5body" cx="${ix + 41}" cy="${y}" r="7" fill="#0d1b2a" stroke="${INK}" stroke-width="3"/>`;
+          wires += wire([[ix + 48, y], [590, y]], AMB, 'x');
+          bodies += flag(590, y, '~x', 'sink', 'x', '');
+          texts += T(678, y + 8, 'one inverter makes the complement of x', '#90a4ae', 22, 'start', 400, SANS5); }
+
+        for (const t of STATES) {
+            const g = ohEq(t, variant);
+            if (g.length !== 1) throw new Error('beat 5 draws one OR into one AND per flip-flop; ' + t + ' has arcs on both input values');
+            const cond = g[0].x, sources = g[0].sources, n = sources.length, r = C5ROW[t], x0 = C5X0[r.c], in1 = r.y, in2 = in1 + 2 * C5.a, ry = in1 + C5.a;
+            const on = sel5 === t, col = on ? VIO : BASE, ww = on ? 4.5 : 3, st = on ? 'sel' : '', isDiff = ohDiff.includes(t);
+            const top = in1 - (n - 1) / 2 * C5.pitch - C5.fhh, xy = n > 1 ? in1 + (n - 1) / 2 * C5.pitch + C5.pitch : in2;
+            const srcFlag = (s, yy) => flag(x0, yy, s, 'src', t, on ? 'sel' : (isDiff && dArc.from === s && dArc.to === t) ? 'diff' : '');
+            if (n > 1) {                                                   // several arcs arrive: OR the source states
+                const oh = n * C5.pitch, ox = x0 + C5.or, w = C5.orw, tp = in1 - oh / 2, bt = in1 + oh / 2, ins = [];
+                sources.forEach((s, k) => { const dy = (k - (n - 1) / 2) * C5.pitch, yy = in1 + dy, px = orIn(ox, w, oh, dy);
+                    bodies += srcFlag(s, yy); wires += wire([[x0 + C5.fw, yy], [px, yy]], col, t, ww); ins.push([px, yy]); });
+                bodies += `<path class="c5body" data-kind="or" data-row="${t}" data-in="${ins.map(p => p.join(',')).join(';')}" data-out="${[ox + w, in1]}" d="M${ox},${tp} C${f1(ox + w * 0.42)},${tp} ${f1(ox + w * 0.78)},${f1(in1 - oh * 0.3)} ${ox + w},${in1} C${f1(ox + w * 0.78)},${f1(in1 + oh * 0.3)} ${f1(ox + w * 0.42)},${bt} ${ox},${bt} Q${f1(ox + w * 0.26)},${in1} ${ox},${tp} Z" fill="${gfill(on)}" stroke="${on ? VIO : INK}" stroke-width="${on ? 4.5 : 3}"/>`;
+                wires += wire([[ox + w, in1], [x0 + C5.and, in1]], col, t, ww);
+            } else {                                                       // a single arc: its source state goes straight into the AND
+                bodies += srcFlag(sources[0], in1); wires += wire([[x0 + C5.fw, in1], [x0 + C5.and, in1]], col, t, ww);
+            }
+            // the arc's input condition, x or x̄, from its flag
+            bodies += flag(x0, xy, cond ? 'x' : '~x', 'src', t, st);
+            wires += wire(xy === in2 ? [[x0 + C5.fw, xy], [x0 + C5.and, in2]] : [[x0 + C5.fw, xy], [x0 + C5.and - 22, xy], [x0 + C5.and - 22, in2], [x0 + C5.and, in2]], col, t, ww);
+            { const ax = x0 + C5.and, at = ry - C5.andh / 2, rr = C5.andh / 2;
+              bodies += `<path class="c5body" data-kind="and" data-row="${t}" data-in="${[ax, in1]};${[ax, in2]}" data-out="${[ax + C5.andw, ry]}" d="M${ax},${at} L${ax + C5.andw - rr},${at} A${rr},${rr} 0 0 1 ${ax + C5.andw - rr},${at + C5.andh} L${ax},${at + C5.andh} Z" fill="${gfill(on)}" stroke="${on ? VIO : INK}" stroke-width="${on ? 4.5 : 3}"/>`;
+              wires += wire([[ax + C5.andw, ry], [x0 + C5.ff, ry]], col, t, ww); }
+            // the flip-flop: D, clock triangle, Q and Q̄ (Q̄ is not used here), named for its state
+            { const fx = x0 + C5.ff, fy = ry - 35, w = C5.ffw, h = C5.ffh, cy = fy + 87, lit = on || (zOn && OUT[t]), lc = lit ? VIO : INK;
+              bodies += `<rect class="c5body" data-kind="ff" data-state="${t}" data-d="${[fx, ry]}" data-clk="${[fx, cy]}" data-q="${[fx + w, ry]}" x="${fx}" y="${fy}" width="${w}" height="${h}" rx="8" fill="${gfill(lit)}" stroke="${lit ? VIO : INK}" stroke-width="${lit ? 4.5 : 3}"/>`
+                  + `<path d="M${fx},${cy - 11} L${fx + 19},${cy} L${fx},${cy + 11}" stroke="${AMB}" stroke-width="3"/>`;
+              texts += T(fx + 12, ry + 8, 'D', lc, 22, 'start', 400) + T(fx + w - 12, ry + 8, 'Q', lc, 22, 'end', 400) + T(fx + w - 12, cy + 8, 'Q', lc, 22, 'end', 400)
+                  + bar(fx + w - 25.4, fx + w - 12, cy + 8, 22, lc) + T(fx + w / 2, fy + h / 2 + 9, t, lit ? VIO : '#e0e0e0', 26, 'middle', 700, 'Menlo,Consolas,monospace', `data-ffname="${t}"`);
+              wires += wire([[fx + w, ry], [x0 + C5.q, ry]], col, t, ww);
+              bodies += flag(x0 + C5.q, ry, t, 'sink', t, st); }
+            const rowBottom = Math.max(xy + C5.fhh, ry + 81);
+            hits += `<rect class="c5pick" data-pick="${t}" x="${x0 - 12}" y="${top - 12}" width="${C5.q + C5.fw + 20}" height="${rowBottom + 10 - (top - 12)}" fill="transparent" pointer-events="all"/>`;
+            if (OUT[t]) {                                                  // a Moore output is a wire off this state's Q
+                const zx = x0 + C5.ff + C5.ffw + 16, zy = ry + 48, zc = zOn ? VIO : BASE;
+                wires += wire([[zx, ry], [zx, zy], [x0 + C5.q + 4, zy]], zc, 'Z', zOn ? 4.5 : 3); dots += dot(zx, ry, on || zOn ? VIO : BASE);
+                texts += T(x0 + C5.q + 12, zy + 10, 'Z', zOn ? VIO : W1, 28, 'start', 700, 'Menlo,Consolas,monospace', `data-port="Z" data-pin="${[x0 + C5.q + 4, zy]}"`);
+                hits += `<rect class="c5pick" data-pick="Z" x="${zx - 10}" y="${ry + 20}" width="${C5.q + 44 - (C5.ff + C5.ffw + 6)}" height="44" fill="transparent" pointer-events="all"/>`;
+            }
+            if (isDiff) {                                                  // the two flip-flops whose gates depend on the version
+                const bx = x0 - 10, by = top - 10;
+                under += `<rect class="c5diff" data-row="${t}" x="${bx}" y="${by}" width="${C5.and + C5.andw + 16}" height="${xy + C5.fhh + 10 - by}" rx="12" stroke="${VIO}" stroke-width="2" stroke-dasharray="7 7"/>`;
+                texts += T(bx + 2, by - 10, 'the one arc that differs', VIO, 22, 'start', 700, SANS5, `class="c5difftag" data-row="${t}"`);
+            }
+        }
+        // CLK: along the bottom, up beside each column, and in under each flip-flop to its triangle, so it crosses nothing
+        const lastCol = C5X0.length - 1;
+        C5X0.forEach((x0, c) => { const tr = x0 + C5.trunk, tx = x0 + C5.ff - 16, rows = STATES.filter(t => C5ROW[t].c === c).sort((a, b) => C5ROW[a].y - C5ROW[b].y);
+            rows.forEach((t, i) => { const ry = C5ROW[t].y + C5.a, ty = ry + 95, tail = [[tx, ty], [tx, ry + 52], [x0 + C5.ff, ry + 52]];
+                if (i === 0) wires += wire((c === lastCol ? [[84, C5.rail], [tr, C5.rail]] : [[tr, C5.rail]]).concat([[tr, ty]], tail), AMB, 'CLK');
+                else { wires += wire([[tr, ty]].concat(tail), AMB, 'CLK'); dots += dot(tr, ty, AMB); } });
+            if (c !== lastCol) dots += dot(tr, C5.rail, AMB); });
+        texts += T(24, C5.rail + 8, 'CLK', AMB, 23, 'start', 700, 'Menlo,Consolas,monospace', `data-port="CLK" data-pin="${[84, C5.rail]}"`);
+        svg.innerHTML = under + wires + bodies + dots + texts + hits;
+        svg.querySelectorAll('[data-pick]').forEach(h => h.addEventListener('click', () => select5(h.dataset.pick)));
+
+        // the equations, one per row, with where each comes from
+        const term = (s, x, t) => (dArc.from === s && dArc.x === x && dArc.to === t) ? `<span class="dterm">${s}</span>` : s;
+        const PLUS = '<span class="op"> + </span>';
+        const rhs = (t) => ohEq(t, variant).map(g => `<span class="am${g.x ? '' : ' ov'}">x</span><span class="op">&middot;</span>`
+            + (g.sources.length > 1 ? '(' + g.sources.map(s => term(s, g.x, t)).join(PLUS) + ')' : term(g.sources[0], g.x, t))).join(PLUS);
+        const note = (t) => { const g = ohEq(t, variant), n = g.reduce((a, q) => a + q.sources.length, 0);
+            if (n === 1) return `One arc enters ${t}: from ${g[0].sources[0]} on x = ${g[0].x}.`;
+            if (g.length === 1) return `${NUM[n]} arcs enter ${t}, ${n === 2 ? 'both' : 'all'} on x = ${g[0].x}: from ${listAnd(g[0].sources)}.`;
+            return `${NUM[n]} arcs enter ${t}: ` + g.map(q => `from ${listAnd(q.sources)} on x = ${q.x}`).join('; ') + '.'; };
+        const zs = STATES.filter(s => OUT[s]);
+        $('eq5').innerHTML = PICK5.map(t => { const isD = ohDiff.includes(t), isZ = t === 'Z';
+            return `<div class="eq5row${isZ ? ' z' : ''}${isD ? ' diff' : ''}${sel5 === t ? ' sel' : ''}" data-eq="${t}">`
+                + `<div class="eqn">${isZ ? 'Z' : `D<sub>${t}</sub>`}<span class="op"> = </span>${isZ ? zs.join(PLUS) : rhs(t)}</div>`
+                + `<div class="note">${isZ ? `Moore output, 1 only in ${listAnd(zs)}: that flip-flop's Q, a wire with no gate.` : note(t)}</div>`
+                + (isD ? `<div class="dnote"><b>The one arc that differs:</b> ${dArc.from} on x = ${dArc.x} ${dArc.to === t ? 'arrives here' : 'goes to ' + dArc.to} in this version.</div>` : '')
+                + `</div>`; }).join('');
+        $('eq5').querySelectorAll('[data-eq]').forEach(r => r.addEventListener('click', () => select5(r.dataset.eq)));
+    }
+
+    // ============ RENDER ============
+    function paintVariant() {
+        document.querySelectorAll('.pill').forEach(p => p.classList.toggle('on', p.dataset.var === variant));
+        document.querySelectorAll('[data-varbadge] b').forEach(b => { b.textContent = variant === 'ov' ? 'Overlapping version' : 'Non-overlapping version'; });
+        document.querySelectorAll('[data-vrow]').forEach(r => r.classList.toggle('on', r.dataset.vrow === variant));
+    }
+    function paint() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p' + page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        $('pcNum').textContent = page;
+        paintB1(); paintVariant(); paintBuild(); paintRun(); paintTable(); paintOneHot();
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); paint(); }
+    function setBuild(b) { build = Math.max(0, Math.min(LASTSTEP, b)); paint(); }
+    function stepBuild(dir) { if (page === 2) setBuild(build + dir); }
+    function doStep() { if (page === 1 && c1 < N) { c1++; b1Enter = true; paint(); } else if (page === 3 && tclk < N) { tclk++; varFlash = false; paint(); } }
+    function setB1(k) { c1 = Math.max(0, Math.min(N, k)); paint(); }
+    function showAllB1() { if (page === 1) setB1(N); }
+    function flipX(i) { if (i >= 0 && i < N) { xs[i] = 1 - xs[i]; paint(); } }
+    function setVariant(v) { if (v !== 'ov' && v !== 'no') return; if (v !== variant) { variant = v; varFlash = true; } paint(); }
+    function toggleVariant() { if (page !== 1) setVariant(variant === 'ov' ? 'no' : 'ov'); }
+    function select(s) { sel = s; paint(); }
+    function select5(s) { sel5 = (s === null || PICK5.includes(s)) ? s : sel5; paint(); }
+    function cycle5(dir) { const i = sel5 === null ? (dir > 0 ? -1 : 0) : PICK5.indexOf(sel5); select5(PICK5[(i + dir + PICK5.length) % PICK5.length]); }
+    function cycleSelect(dir) { const i = sel === null ? (dir > 0 ? -1 : 0) : STATES.indexOf(sel); select(STATES[(i + dir + STATES.length) % STATES.length]); }
+    // R / ↺ restarts only what the current page animates: the build on beat 2, the clock and the strip on beat 3, the selection on beats 4 and 5
+    function doReset() {
+        if (page === 1) c1 = 0;
+        else if (page === 2) build = 0;
+        else if (page === 3) { tclk = 0; xs = PRESET.slice(); varFlash = false; }
+        else if (page === 4) sel = SEL0;
+        else if (page === 5) sel5 = null;
+        paint();
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    $('ubtn').addEventListener('click', () => stepBuild(1));
+    $('ubk').addEventListener('click', () => stepBuild(-1));
+    $('urst').addEventListener('click', doReset);
+    $('stepbtn').addEventListener('click', doStep);
+    $('clk1').addEventListener('click', doStep);
+    $('rst1').addEventListener('click', doReset);
+    $('all1').addEventListener('click', showAllB1);
+    $('rst3').addEventListener('click', doReset);
+    $('rst4').addEventListener('click', doReset);
+    $('rst5').addEventListener('click', doReset);
+    document.querySelectorAll('.pill').forEach(p => p.addEventListener('click', () => setVariant(p.dataset.var)));
+    document.querySelectorAll('[data-varbadge]').forEach(b => b.addEventListener('click', toggleVariant));
+
+    // ============ KEYS ============
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '5') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'c': case 'C': doStep(); e.preventDefault(); break;
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
+            case 'a': case 'A': showAllB1(); e.preventDefault(); break;
+            case 'u': case 'U': stepBuild(e.shiftKey ? -1 : 1); e.preventDefault(); break;
+            case 'v': case 'V': toggleVariant(); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+            case 'ArrowUp': if (page === 4) { cycleSelect(-1); e.preventDefault(); } else if (page === 5) { cycle5(-1); e.preventDefault(); } break;
+            case 'ArrowDown': if (page === 4) { cycleSelect(1); e.preventDefault(); } else if (page === 5) { cycle5(1); e.preventDefault(); } break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, setBuild, stepBuild, setB1, showAllB1, step: doStep, reset: doReset, flipX, setVariant, toggleVariant, select, cycleSelect, select5, cycle5,
+        setStrip: (arr) => { xs = arr.slice(0, N); while (xs.length < N) xs.push(0); tclk = 0; paint(); },
+        getState: () => ({ page, variant, c1, build, tclk, xs: xs.slice(), varFlash, sel, sel5, cur: run(xs, variant).st[tclk] }),
+        model: { PATTERN, STATES, SEEN, OUT, TRANS, PRESET, EDGES, DIFF, NODES, STEPS, PHASES, stageOf, REASON, DIGITS, goodBit, run, matchEnds, allWindows, endingTest, derive, arcId, reasonFor, ohEq, ohCanon, ohDiff, PICK5 },
+        diagrams: { d2: D2, d3: D3, d4: D4 },
+        shown: (id) => { const svg = $(id); return {
+            nodes: Array.from(svg.querySelectorAll('.sd-node:not(.hid)')).map(g => g.dataset.state),
+            arcs: Array.from(svg.querySelectorAll('path.arc:not(.hid):not(.ghost)')).map(p => p.dataset.id),
+            vio: Array.from(svg.querySelectorAll('path.arc.vio')).map(p => p.dataset.id).concat(Array.from(svg.querySelectorAll('.sd-node.vio')).map(g => g.dataset.state)),
+            on: Array.from(svg.querySelectorAll('path.arc.on')).map(p => p.dataset.id),
+            ghost: Array.from(svg.querySelectorAll('path.arc.ghost')).map(p => p.dataset.id) }; },
+    };
+
+    paint();
+</script>
+</body>
+</html>

@@ -1,5 +1,11 @@
 title: "Sequence Detector"
-description: ""
+description: "A 1 0 1 0 sequence detector designed from problem statement to circuit: states named by the number of digits correct toward the sequence, the state diagram built one state at a time, the single arc that separates overlapping from non-overlapping detection, and the one-hot equations read off the diagram."
 chapter: sequential-logic
 section: fsm-applications
 order: 40301
+
+graphics:
+  01-video.youtube:
+    caption: "Video: what a 1 0 1 0 sequence detector does, counting digits correct toward the sequence, building the overlapping state diagram one state at a time, the non-overlapping variation, and the one-hot circuit"
+  02-interactive.html:
+    caption: "Interactive: clock a bit stream in and watch the digits-correct count for overlapping and non-overlapping detection, build the state diagram by answering what a 0 and a 1 each do from every state, run the finished machine on a stream you can edit, then see the state table and the one-hot circuit with its equations"
