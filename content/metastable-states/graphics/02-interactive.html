@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metastable States — Balanced Between 0 and 1</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens (shared with graphics 47 and 48): amber #ffb74d = clock and the push · cyan #4fc3f7 = data / logic 1 ·
+       #7d9bb5 = logic 0 · violet #b388ff = the decision window · green #81c784 = OK · red #ef5350 = metastable / not guaranteed */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #e8eef2; font-size: 40px; font-weight: 700; line-height: 1.15; }
+    .titles h1 .sub { color: #90a4ae; font-size: 26px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 20px; margin-top: 4px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #e8eef2; font-size: 26px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; }
+    .defs-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 20px; font-weight: 600;
+        color: #cfd8dc; background: transparent; border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k { border: 1px solid #37506a; border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: #90a4ae; line-height: 26px; }
+    .defs-btn.on { border-color: #b388ff; color: #e8eef2; background: rgba(179,136,255,0.10); }
+
+    /* Definitions overlay — same design as graphics 47 and 48 */
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(8,13,24,0.78); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1240px; background: #0d1b2a; border: 2px solid #b388ff; border-radius: 16px; padding: 18px 38px 22px; box-shadow: 0 18px 60px rgba(0,0,0,0.55); }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+    .defs-title { font-size: 34px; font-weight: 700; color: #e8eef2; }
+    .defs-close { font-size: 20px; color: #607d8b; }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 12px; align-items: baseline; }
+    .defs-list .ds { font-size: 28px; font-weight: 700; white-space: nowrap; }
+    .defs-list .dd { font-size: 24px; line-height: 1.25; color: #b0bec5; }
+    .defs-list .dd b { color: #e8eef2; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 22px; font-weight: 700; white-space: nowrap; }
+    .tab.on { color: #e8eef2; border-color: #cfd8dc; background: rgba(207,216,220,0.07); }
+    .tab.on .tnum { background: #cfd8dc; color: #0d1b2a; border-color: #cfd8dc; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 24px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    sub { font-size: 0.7em; line-height: 0; }
+
+    .lcol { flex: 0 0 540px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .rcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+    .panel svg { display: block; }
+    .pad { padding: 14px 20px; }
+    .phead { font-size: 22px; font-weight: 700; color: #cfd8dc; padding: 12px 22px 0; }
+    .phead span.dimtxt { color: #90a4ae; font-weight: 500; }
+    .c-clk { color: #ffb74d; } .c-data { color: #4fc3f7; } .c-win { color: #b388ff; } .c-zero { color: #7d9bb5; }
+    .c-ok { color: #81c784; } .c-bad { color: #ef5350; } .c-dim { color: #90a4ae; } .c-ink { color: #e8eef2; }
+    .caption { font-size: 21px; line-height: 1.36; color: #b0bec5; }
+    .caption b { color: #e8eef2; }
+
+    /* beat 1: the three pushes */
+    .pushes { display: flex; flex-direction: column; gap: 8px; padding: 10px; }
+    .pcard { display: block; width: 100%; text-align: left; font: inherit; color: #b0bec5; background: transparent;
+        border: 2px solid #24384c; border-radius: 12px; padding: 7px 16px 9px; cursor: pointer; }
+    .pcard .pt { display: flex; align-items: center; justify-content: space-between; font-size: 24px; font-weight: 700; color: #e8eef2; }
+    .pcard .pd { font-size: 20px; line-height: 1.3; margin-top: 2px; }
+    .pcard .k, .btn .k { border: 1px solid #6a5324; border-radius: 6px; padding: 0 9px; font-family: 'Menlo','Consolas',monospace;
+        font-size: 20px; font-weight: 500; color: #ffb74d; line-height: 28px; }
+    .pcard.on { border-color: #ffb74d; background: rgba(255,183,77,0.08); }
+
+    .chiprow { display: flex; align-items: center; gap: 14px; }
+    .chip { display: inline-block; font-size: 24px; font-weight: 700; border-radius: 999px; padding: 9px 24px;
+        border: 3px solid currentColor; white-space: nowrap; }
+    .chip.ok { color: #81c784; background: rgba(129,199,132,0.12); }
+    .chip.bad { color: #ef5350; background: rgba(239,83,80,0.13); }
+    .chip.idle { color: #90a4ae; background: rgba(144,164,174,0.08); }
+    .btn { font: inherit; font-size: 24px; font-weight: 700; color: #ffb74d; background: rgba(255,183,77,0.10);
+        border: 3px solid #ffb74d; border-radius: 12px; padding: 9px 20px; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 12px; }
+    .btn.reset { color: #cfd8dc; border-color: #607d8b; background: transparent; padding: 9px 16px; }
+    .btn.reset .k { border-color: #37506a; color: #90a4ae; }
+    .steprow { display: flex; align-items: center; gap: 14px; }
+
+    /* tables: horizontal rules only, tabular digits, faint tint on even rows */
+    table.t { border-collapse: collapse; font-variant-numeric: tabular-nums; width: 100%; }
+    table.t th { font-size: 20px; font-weight: 600; color: #90a4ae; padding: 3px 22px 5px; border-bottom: 2px solid #37506a; text-align: center; white-space: nowrap; }
+    table.t td { font-size: 22px; padding: 3px 22px; border-bottom: 1px solid #24384c; text-align: center; color: #e8eef2; white-space: nowrap; font-family: 'Menlo','Consolas',monospace; }
+    table.t tr:nth-child(odd) td { background: rgba(255,255,255,0.03); }
+    table.t td.now { color: #ef5350; }
+    .hsum { font-size: 20px; color: #90a4ae; margin-top: 8px; }
+    .hsum b { color: #e8eef2; }
+
+    /* beat 2 */
+    .sl { padding: 12px 22px 12px; }
+    .sl-top { display: flex; align-items: baseline; justify-content: space-between; }
+    .sl-name { font-size: 26px; font-weight: 700; }
+    .sl-val { font-size: 30px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; color: #e8eef2; }
+    .sl input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 5px;
+        background: #24384c; outline: none; margin: 14px 0 14px; display: block; }
+    .sl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; border-radius: 50%;
+        background: #4fc3f7; border: 4px solid #0d1b2a; box-shadow: 0 0 0 2px #4fc3f7; cursor: pointer; }
+    .sl input[type=range]:focus::-webkit-slider-thumb { box-shadow: 0 0 0 2px #4fc3f7, 0 0 0 7px rgba(255,255,255,0.20); }
+    .sl-ends { display: flex; justify-content: space-between; font-size: 20px; color: #607d8b; font-family: 'Menlo','Consolas',monospace; }
+    .tally { display: flex; gap: 10px; margin-top: 8px; }
+    .tally .tc { flex: 1; border: 2px solid #24384c; border-radius: 10px; padding: 6px 12px; }
+    .tally .tn { font-size: 32px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; color: #e8eef2; }
+    .tally .tw { font-size: 20px; line-height: 1.2; color: #90a4ae; }
+    .tally .tc.meta .tn { color: #ef5350; }
+    .tl { font-size: 20px; color: #90a4ae; }
+    #p2 .lcol, #p3 .lcol { gap: 12px; }
+    .pushrow { display: flex; align-items: center; gap: 12px; margin-top: 6px; font-size: 21px; color: #90a4ae; }
+    .pushrow b { color: #ffb74d; font-weight: 700; white-space: nowrap; }
+    .meter { flex: 1; height: 10px; border-radius: 5px; background: #1b2c3d; overflow: hidden; }
+    .meter i { display: block; height: 100%; background: #ffb74d; border-radius: 5px; }
+    .hist { display: flex; flex-direction: column; gap: 7px; margin-top: 9px; }
+    .hr { display: flex; align-items: center; gap: 12px; font-size: 20px; color: #90a4ae; }
+    .hr .hl { flex: 0 0 178px; white-space: nowrap; }
+    .hr .hb { flex: 1; position: relative; height: 22px; border-radius: 5px; background: #1b2c3d; }
+    .hr .hb i { display: block; height: 100%; border-radius: 5px; width: 0; }
+    .hr .hb u { position: absolute; top: -3px; bottom: -3px; width: 3px; margin-left: -1.5px; background: #e8eef2; border-radius: 2px; opacity: 0.85; }
+    .hr .on { background: #4fc3f7; } .hr .oo { background: #7d9bb5; } .hr .om { background: #ef5350; }
+    .hr b { flex: 0 0 52px; text-align: right; font-size: 26px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; color: #e8eef2; }
+    .hr.meta b { color: #ef5350; }
+    .btn.many { border-color: #7d9bb5; color: #cfd8dc; }
+    .hint { font-size: 21px; color: #b0bec5; line-height: 1.34; }
+    .hint b { color: #e8eef2; }
+    .cases { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .case { flex: 1; background: #0d1b2a; border: 2px solid #24384c; border-radius: 14px; padding: 12px 20px; opacity: .62; transition: all .15s; }
+    .case.wide { flex: 1.45; }
+    .case .ct { font-size: 24px; font-weight: 700; color: #cfd8dc; }
+    .case .cd { font-size: 21px; line-height: 1.32; color: #b0bec5; margin-top: 4px; }
+    .case .cd b { color: #e8eef2; }
+    .case.on { opacity: 1; }
+    .case.on.ok { border-color: #81c784; background: rgba(129,199,132,0.08); } .case.on.ok .ct { color: #81c784; }
+    .case.on.bad { border-color: #ef5350; background: rgba(239,83,80,0.08); } .case.on.bad .ct { color: #ef5350; }
+
+    /* beat 3 */
+    .legend { display: flex; align-items: center; gap: 10px; font-size: 21px; color: #b0bec5; margin-top: 8px; }
+    .legend .sw { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+    .tiles { display: flex; gap: 14px; }
+    .tile { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; padding: 10px 18px; }
+    .tile .tv { font-size: 34px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; margin-top: 2px; white-space: nowrap; color: #e8eef2; }
+    .tile .tv small { font-size: 22px; font-weight: 500; color: #90a4ae; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .left3 { display: flex; gap: 0; border-top: 2px solid #1b2c3d; }
+    .left3 .lt { flex: 1; padding: 10px 22px 12px; }
+    .left3 .lt + .lt { border-left: 2px solid #1b2c3d; }
+    .left3 .lv { font-size: 34px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; color: #e8eef2; white-space: nowrap; }
+    .left3 .lv small { font-size: 22px; font-weight: 500; color: #90a4ae; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .left3 .lt.edge { background: rgba(255,183,77,0.06); }
+    .closing { font-size: 26px; line-height: 1.4; color: #b0bec5; padding: 14px 28px; flex: 1; display: flex; align-items: center; }
+    .closing b { color: #e8eef2; }
+    .note { font-size: 20px; line-height: 1.34; color: #90a4ae; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #37506a; }
+    .dot.on { background: #cfd8dc; border-color: #cfd8dc; }
+    .controls { font-size: 20px; color: #607d8b; }
+    .controls .k { border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        font-family: 'Menlo','Consolas',monospace; color: #90a4ae; }
+    .controls .k.amber { border-color: #6a5324; color: #ffb74d; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 22 C18 62 38 62 46 50 C58 30 64 16 75 16 C86 16 92 30 104 50 C112 62 132 62 142 22" stroke="#90a4ae" stroke-width="3"/>
+                <circle cx="75" cy="8.5" r="6.5" fill="#ef5350"/>
+                <path d="M58 8 L46 8 M92 8 L104 8" stroke="#ef5350" stroke-width="2" stroke-dasharray="3 4"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Metastable States <span class="sub">&mdash; balanced between 0 and 1</span></h1>
+            <div class="subtitle">A flip-flop has two stable states and a hill between them. Change D inside the decision window and the ball may stop on top.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 3</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Two Stable States and a Hill</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">What Makes the Push Marginal</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">How Long Does It Take to Settle?</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 -->
+        <div class="page" id="p1">
+            <div class="lcol">
+                <div class="panel pushes" id="pushes">
+                    <button class="pcard" data-push="weak"><div class="pt"><span>Too weak</span><span class="k">W</span></div>
+                        <div class="pd">The ball rolls part of the way up and falls back. Q keeps the old value.</div></button>
+                    <button class="pcard" data-push="strong"><div class="pt"><span>Strong</span><span class="k">S</span></div>
+                        <div class="pd">The ball goes cleanly over the hill. Q takes the new value.</div></button>
+                    <button class="pcard" data-push="marginal"><div class="pt"><span>Marginal</span><span class="k">M</span></div>
+                        <div class="pd">The ball stops near the top and wobbles there, then rolls off one side. Which side, and how long it waits, cannot be predicted.</div></button>
+                </div>
+                <div class="chiprow">
+                    <span class="chip idle" id="chip1"></span>
+                    <button class="btn reset" data-reset>&#8634; <span class="k">R</span></button>
+                </div>
+                <div class="panel pad">
+                    <div class="tl" style="color:#cfd8dc;font-weight:700;font-size:22px;margin-bottom:6px">Marginal pushes so far <span style="color:#90a4ae;font-weight:500;font-size:20px">&mdash; repeat with M or Space</span></div>
+                    <div id="hist1"></div>
+                    <div class="hsum" id="hsum1"></div>
+                </div>
+                <div class="caption">Each push heads for the other valley.</div>
+            </div>
+            <div class="rcol">
+                <div class="panel">
+                    <div class="phead">The storage loop holds either valley indefinitely. <span class="dimtxt">Storing a new value means pushing the ball over the hill.</span></div>
+                    <svg id="hill1" width="1248" height="352" viewBox="0 0 1248 352"></svg>
+                </div>
+                <div class="panel"><svg id="tr1" width="1248" height="386" viewBox="0 0 1248 386"></svg></div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 -->
+        <div class="page" id="p2">
+            <div class="lcol">
+                <div class="panel"><svg id="hill2" width="536" height="236" viewBox="0 0 536 236"></svg></div>
+                <div class="panel">
+                    <div class="sl">
+                        <div class="sl-top"><span class="sl-name c-data">D changes at</span><span class="sl-val" id="v2x"></span></div>
+                        <input type="range" id="s2x" min="-3" max="3" step="0.1" value="-2">
+                        <div class="sl-ends"><span>&minus;3</span><span>clock edge</span><span>+3 ns</span></div>
+                        <div class="pushrow"><span>push</span><span class="meter"><i id="m2push"></i></span><b id="v2push"></b></div>
+                    </div>
+                </div>
+                <div class="chiprow"><span class="chip" id="chip2"></span></div>
+                <div class="steprow">
+                    <button class="btn" data-fire>Clock &#9655; <span class="k">Space</span></button>
+                    <button class="btn many" data-many>&times;100 <span class="k">H</span></button>
+                    <button class="btn reset" data-reset>&#8634; <span class="k">R</span></button>
+                </div>
+                <div class="panel pad">
+                    <div class="tl">Captures at this setting: <b class="c-ink" id="t2n">0</b> &nbsp;&middot;&nbsp; tick = the chance here</div>
+                    <div class="hist" id="hist2">
+                        <div class="hr"><span class="hl">took the new value</span><span class="hb"><i class="on" id="h2new"></i><u id="k2new"></u></span><b id="t2new">0</b></div>
+                        <div class="hr"><span class="hl">kept the old value</span><span class="hb"><i class="oo" id="h2old"></i><u id="k2old"></u></span><b id="t2old">0</b></div>
+                        <div class="hr meta"><span class="hl">stalled first</span><span class="hb"><i class="om" id="h2meta"></i><u id="k2meta"></u></span><b id="t2meta">0</b></div>
+                    </div>
+                </div>
+                <div class="hint" id="hint2"></div>
+            </div>
+            <div class="rcol">
+                <div class="panel"><svg id="td2" width="1248" height="610" viewBox="0 0 1248 610"></svg></div>
+                <div class="cases">
+                    <div class="case" data-case="new"><div class="ct">D changes before the window</div><div class="cd"><b>A strong push.</b> Q takes the new value, t<sub>co</sub> after the edge.</div></div>
+                    <div class="case wide" data-case="unknown"><div class="ct">D changes inside the window</div><div class="cd"><b>The push fades across the window.</b> Early, Q usually takes the new value; late, it usually keeps the old. <b>In between, the ball can stall:</b> a metastable state.</div></div>
+                    <div class="case" data-case="old"><div class="ct">D changes after the window</div><div class="cd"><b>No push.</b> Q keeps the old value until the next edge.</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 -->
+        <div class="page" id="p3">
+            <div class="lcol">
+                <div class="panel"><svg id="hill3" width="536" height="236" viewBox="0 0 536 236"></svg></div>
+                <div class="panel pad">
+                    <div class="caption"><b>Each dot is one stalled capture,</b> placed where its Q became a clean 0 or 1.</div>
+                    <div class="legend"><span class="sw" style="background:#4fc3f7"></span><span>to 1</span>
+                        <span class="sw" style="background:#7d9bb5;margin-left:18px"></span><span>to 0</span>
+                        <span class="sw" style="background:#ef5350;margin-left:18px"></span><span>too late for the next window</span></div>
+                </div>
+                <div class="panel">
+                    <div class="sl">
+                        <div class="sl-top"><span class="sl-name c-clk">Clock period T</span><span class="sl-val" id="v3t"></span></div>
+                        <input type="range" id="s3t" min="3" max="10" step="0.5" value="10">
+                        <div class="sl-ends"><span>3</span><span>a faster clock waits less</span><span>10 ns</span></div>
+                    </div>
+                </div>
+                <div class="steprow">
+                    <button class="btn" data-run>Run 200 captures <span class="k">Space</span></button>
+                    <button class="btn reset" data-reset>&#8634; <span class="k">R</span></button>
+                </div>
+                <div class="tiles">
+                    <div class="tile"><div class="tl">settled to 1 / to 0</div><div class="tv" id="r3sides">&ndash;</div></div>
+                    <div class="tile"><div class="tl">longest wait</div><div class="tv" id="r3max">&ndash;</div></div>
+                </div>
+                <div class="panel pad">
+                    <div class="tl">All runs so far</div>
+                    <div class="hint" id="r3all" style="margin-top:4px"></div>
+                </div>
+            </div>
+            <div class="rcol">
+                <div class="panel">
+                    <svg id="dp3" width="1248" height="500" viewBox="0 0 1248 500"></svg>
+                    <div class="left3" id="left3">
+                        <div class="lt"><div class="tl">still unsettled after 2 ns</div><div class="lv" data-left="2">&ndash;</div></div>
+                        <div class="lt"><div class="tl">after 4 ns</div><div class="lv" data-left="4">&ndash;</div></div>
+                        <div class="lt"><div class="tl">after 6 ns</div><div class="lv" data-left="6">&ndash;</div></div>
+                        <div class="lt edge"><div class="tl" id="l3edge">at the next window, 9 ns</div><div class="lv" data-left="T">&ndash;</div></div>
+                    </div>
+                </div>
+                <div class="panel closing" id="closing"><div><b>A metastable state cannot be designed away.</b> Anything that stores a bit has two stable states, and there is always a balance point between them. What a designer can do is <b>give it time</b>: each extra bit of waiting makes an unsettled output much less likely. That is what <b data-topic="synchronizers">Synchronizers</b> does.</div></div>
+            </div>
+        </div>
+
+        <div class="defs" id="defs">
+            <div class="defs-card" id="defsCard">
+                <div class="defs-head"><span class="defs-title">Definitions</span><span class="defs-close">Esc or D to close</span></div>
+                <div class="defs-list">
+                    <span class="ds c-win" data-def="window">decision window</span><span class="dd">from t<sub>su</sub> before the clock edge to t<sub>h</sub> after it; D must not change inside it. Here it is 1.5 ns wide.</span>
+                    <span class="ds c-win" data-def="tsu">t<sub>su</sub></span><span class="dd"><b>setup time</b> &mdash; how long D must be steady before the clock edge. 1 ns here.</span>
+                    <span class="ds c-win" data-def="th">t<sub>h</sub></span><span class="dd"><b>hold time</b> &mdash; how long D must stay steady after the clock edge. 0.5 ns here.</span>
+                    <span class="ds c-data" data-def="tco">t<sub>co</sub></span><span class="dd"><b>clock-to-output delay</b> &mdash; from the clock edge until Q shows the new value. 1 ns here.</span>
+                    <span class="ds c-bad" data-def="meta">metastable state</span><span class="dd">Q balanced between 0 and 1, neither a valid 0 nor a valid 1. It does not last: Q hovers near halfway, wobbling, for a while, then settles to one of them.</span>
+                    <span class="ds c-ink" data-def="settle">settling time</span><span class="dd">also called <b>resolution time</b> &mdash; how long a metastable Q takes to become a clean 0 or 1, measured here from the clock edge. It cannot be predicted, and it is usually short.</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div><div class="dot" data-dot="3"></div>
+        </div>
+        <div class="controls">
+            <span><span class="k">1</span>&ndash;<span class="k">3</span> beat
+            &middot; <span class="k amber">W</span> <span class="k amber">S</span> <span class="k amber">M</span> push (beat 1)
+            &middot; <span class="k">&larr;</span> <span class="k">&rarr;</span> move D (beat 2) or T (beat 3)
+            &middot; <span class="k amber">Space</span> marginal push / clock / run &middot; <span class="k">H</span> 100 clocks (beat 2)
+            &middot; <span class="k">R</span> &#8634; reset this beat
+            &middot; <span class="k">D</span> definitions</span>
+        </div>
+    </div>
+
+</div>
+</div>
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ MODEL ============
+    const P = { T: 10, tco: 1, tsu: 1, th: 0.5 };                  // ns — shared with graphics 47 and 48
+    // Illustrative model of one capture. Time is ns after the clock edge (the push).
+    //   t0, w   : every response starts moving at t0 and a clean one takes w, so it crosses halfway at t_co
+    //   roll    : time to roll from the hilltop down into a valley
+    //   mean    : mean extra hover on the hilltop (illustrative, not a device measurement)
+    //   wob, wobT : while it is stalled Q wobbles about halfway: amplitude (fraction of the swing) and period (ns)
+    //   ballWob   : the ball rocks on the hilltop by only this fraction of Q's wobble, so it reads as balancing, not bouncing
+    //   xc, sig, pk : inside the window the push fades from strong (setup side) to nothing (hold side). xc is the
+    //               instant whose push is exactly marginal; the stall chance peaks there (pk) and falls off over sig.
+    //   lw, lmin  : away from xc a capture takes the new value (earlier) or keeps the old one (later); lw is how
+    //               sharply that tips, lmin the chance always left for the other result. Illustrative, not a device.
+    const M = { t0: 0.7, w: 0.6, roll: 0.3, mean: 0.8, bump: 0.22, xc: -0.2, sig: 0.2, pk: 0.6, pmin: 0.02, lw: 0.15, lmin: 0.04, nRun: 200, b1Max: 7.5, wob: 0.08, wobT: 0.4, ballWob: 0.3 };
+    const TS_MIN = P.tco + M.roll;                                 // 1.3 ns: a stall that did not wait at all
+    const SEEDS = { b1: 119, b2: 53, b3: 18 };
+    // seeded generator (mulberry32, as in graphic 47); one independent stream per beat
+    function makeRng(seed) { let st = seed | 0; return () => { st = (st + 0x6D2B79F5) | 0; let t = st;
+        t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+    const RNG = { b1: makeRng(SEEDS.b1), b2: makeRng(SEEDS.b2), b3: makeRng(SEEDS.b3) };
+    // one stall: which side it rolls to, and when Q is finally clean (ns after the edge, on a 0.1 ns grid)
+    function stall(rnd) { const side = rnd() < 0.5 ? 1 : 0; const e = Math.floor(-M.mean * Math.log(1 - rnd()) * 10) / 10;
+        return { side, ts: Math.round((TS_MIN + e) * 10) / 10 }; }
+    const ss = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+    // how far the ball is from the old valley (0) toward the new one (1), t ns after the edge
+    function prof(kind, t, o) {
+        const a = M.t0;
+        if (kind === 'none' || t <= a) return 0;
+        if (kind === 'clean') return ss((t - a) / M.w);
+        if (kind === 'weak') { if (t >= a + M.w) return 0; const s = Math.sin(Math.PI * (t - a) / M.w); return M.bump * s * s; }
+        if (t < P.tco) return 0.5 * Math.sin(Math.PI / 2 * (t - a) / (P.tco - a));       // up to the top, slowing
+        const tr = o.ts - M.roll;
+        if (t < tr) {                                                                   // stalled: a small oscillation about halfway
+            const env = Math.max(0, Math.min(1, (t - P.tco) / 0.1, (tr - t) / 0.15));   // eases in and out, so the curve is continuous
+            return 0.5 + M.wob * env * Math.sin(2 * Math.PI * (t - P.tco) / M.wobT);
+        }
+        return 0.5 + (o.side - 0.5) * ss((t - tr) / M.roll);                            // rolls off one side
+    }
+    // where the ball sits for a given Q level: the same thing, except that its rocking while stalled is toned down
+    function ballU(kind, t, o, level) {
+        return kind === 'meta' && t >= P.tco && t < o.ts - M.roll ? 0.5 + (level - 0.5) * M.ballWob : level;
+    }
+    // beat 2, inside the window: the chances of each result when D changes x ns from the clock edge
+    function odds(x) {
+        const d = (x - M.xc) / M.sig, meta = Math.max(M.pmin, M.pk * Math.exp(-d * d));
+        const l = Math.max(M.lmin, Math.min(1 - M.lmin, 1 / (1 + Math.exp((x - M.xc) / M.lw))));
+        return { new: (1 - meta) * l, old: (1 - meta) * (1 - l), meta };
+    }
+    // the push the flip-flop gets, in beat 1's words
+    function pushName(x) { const c = classify(x); if (c === 'new') return 'strong'; if (c === 'old') return 'none';
+        const o = odds(x); return o.meta >= 0.3 ? 'marginal' : x < M.xc ? 'nearly strong' : 'weak'; }
+    const pushLevel = x => Math.max(0, Math.min(1, (P.th - x) / (P.tsu + P.th)));      // 1 at the setup edge, 0 at the hold edge
+    // beat 2: where D's change falls. Integer tenths so the boundaries are exact (same rule as graphic 47).
+    function classify(x) { const xi = Math.round(x * 10);
+        return xi <= -Math.round(P.tsu * 10) ? 'new' : (xi >= Math.round(P.th * 10) ? 'old' : 'unknown'); }
+    const KIND = { clean: 'clean', new: 'clean', none: 'none', old: 'weak', meta: 'meta' };
+    const finalOf = cap => (cap.outcome === 'clean' || cap.outcome === 'new') ? 1 : cap.outcome === 'meta' ? cap.side : 0;
+    // beat 2: Q over two clock edges. D is 1 and steady at the second edge, so whatever happened at the first, Q is 1 after it.
+    function q2(cap, t) {
+        if (t < P.T + M.t0) return prof(KIND[cap.outcome], t, cap);
+        return finalOf(cap) ? 1 : prof('clean', t - P.T);
+    }
+
+    // ============ STATE ============
+    const S = { page: 1 };
+    const B1 = { runs: [], tNow: Infinity };                      // run: {kind, side, ts, n}
+    const B2 = { x: -2, cap: null, tNow: Infinity, tally: { new: 0, old: 0, meta: 0 } };
+    const B3 = { runs: 0, last: [], all: [], total: 0, longest: 0, T: P.T };      // T: beat 3's own clock period, set by its slider
+    const X_DEF = -2;
+
+    // ============ SVG HELPERS ============
+    const C = { clk: '#ffb74d', data: '#4fc3f7', zero: '#7d9bb5', win: '#b388ff', ok: '#81c784', bad: '#ef5350',
+        slate: '#90a4ae', dim: '#607d8b', line: '#37506a', faint: '#1b2c3d', navy: '#0d1b2a', text: '#cfd8dc', white: '#e8eef2' };
+    const SANS = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", MONO = "'Menlo','Consolas','Courier New',monospace";
+    const r = v => Math.round(v * 100) / 100;
+    const f1 = v => (v < 0 ? '−' : '') + Math.abs(v).toFixed(1);
+    const sgn = v => (v > 0 ? '+' : '') + f1(v);
+    const $ = id => document.getElementById(id);
+    function tx(x, y, s, o = {}) {
+        const fs = o.fs || 20;
+        return `<text x="${r(x)}" y="${r(y)}" font-size="${fs}" fill="${o.fill || C.text}" text-anchor="${o.a || 'start'}" font-weight="${o.w || 400}" font-family="${o.mono ? MONO : SANS}"${o.attr ? ' ' + o.attr : ''}>${s}</text>`;
+    }
+    const tsub = (sub, fs) => `t<tspan dy="${r(fs*0.22)}" font-size="${r(fs*0.7)}">${sub}</tspan><tspan dy="${r(-fs*0.22)}">​</tspan>`;
+    function defs(id) {      // defs live inside every svg that uses them
+        return `<defs><pattern id="hatch-${id}" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="12" height="12" fill="rgba(239,83,80,0.10)"/><line x1="3" y1="0" x2="3" y2="12" stroke="${C.bad}" stroke-width="4"/></pattern></defs>`;
+    }
+    // dimension arrow with explicit arrowheads (as in graphic 47)
+    function dimArrow(x1, x2, y, col, hl = 13) {
+        const hw = hl * 0.42;
+        return `<g><line x1="${r(x1 + hl - 1)}" y1="${y}" x2="${r(x2 - hl + 1)}" y2="${y}" stroke="${col}" stroke-width="2.5"/>` +
+            `<polygon points="${r(x1)},${y} ${r(x1 + hl)},${y - hw} ${r(x1 + hl)},${y + hw}" fill="${col}"/>` +
+            `<polygon points="${r(x2)},${y} ${r(x2 - hl)},${y - hw} ${r(x2 - hl)},${y + hw}" fill="${col}"/></g>`;
+    }
+    const SLOPE = 0.15, WSTROKE = 3.5;
+    // house waveform: sloped transitions centered on each toggle time
+    function wave(X, yLo, yHi, init, toggles, t0, t1, col, attr) {
+        let lv = init; const y = v => v ? yHi : yLo; let d = `M${r(X(t0))} ${y(lv)}`;
+        toggles.filter(t => t > t0 + SLOPE && t < t1 - SLOPE).sort((a, b) => a - b).forEach(t => {
+            d += ` L${r(X(t - SLOPE/2))} ${y(lv)} L${r(X(t + SLOPE/2))} ${y(1 - lv)}`; lv = 1 - lv; });
+        d += ` L${r(X(t1))} ${y(lv)}`;
+        return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${WSTROKE}" stroke-linejoin="round" stroke-linecap="round"${attr ? ' ' + attr : ''}/>`;
+    }
+    // the decision window: violet band, 22% fill, 2px outline, full height of its rows (as in graphics 47 and 48)
+    const band = (x1, x2, y1, y2, edge) => `<rect data-band="${edge}" x="${r(x1)}" y="${y1}" width="${r(x2 - x1)}" height="${y2 - y1}" fill="rgba(179,136,255,0.22)" stroke="${C.win}" stroke-width="2"/>`;
+    // an analog trace of f(t) from ta to tb, as one path
+    function curve(X, Y, f, ta, tb, col, sw, attr) {
+        if (tb <= ta) return '';
+        const n = Math.max(2, Math.ceil((tb - ta) / 0.02)); let d = '';
+        for (let i = 0; i <= n; i++) { const t = ta + (tb - ta) * i / n; d += (i ? ' L' : 'M') + r(X(t)) + ' ' + r(Y(f(t))); }
+        return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"${attr ? ' ' + attr : ''}/>`;
+    }
+
+    // ---- the hill: two valleys (Q = 0, Q = 1) and a hilltop halfway between them ----
+    const H1 = { id: 'hill1', w: 1248, h: 352, cx: 624, k: 390, base: 262, amp: 186, r: 22, big: true };
+    const H2 = { id: 'hill2', w: 536, h: 236, cx: 268, k: 165, base: 166, amp: 116, r: 14, big: false };
+    const H3 = { ...H2, id: 'hill3' };
+    const hillY = (g, x) => g.base - g.amp * (1 - x * x) * (1 - x * x);
+    function ballPos(g, u) {                 // ball resting ON the curve: center one radius along the surface normal
+        const x = -1 + 2 * u, X = g.cx + x * g.k, Y = hillY(g, x);
+        const m = 4 * g.amp * x * (1 - x * x) / g.k, n = Math.sqrt(1 + m * m);
+        return { cx: X + m * g.r / n, cy: Y - g.r / n };
+    }
+    function drawHill(g, u, hot, rest, from = 0) {      // from: the valley this push starts in (it holds the old value)
+        let d = '', X0 = g.cx - 1.3 * g.k, X1 = g.cx + 1.3 * g.k;
+        for (let i = 0; i <= 130; i++) { const x = -1.3 + 2.6 * i / 130; d += (i ? ' L' : 'M') + r(g.cx + x * g.k) + ' ' + r(hillY(g, x)); }
+        const yw = r(hillY(g, 1.3));
+        d = `M0 ${yw} L${d.slice(1)} L${g.w} ${yw}`;      // level ground out to the panel edges
+        let s = `<path d="${d} L${g.w} ${g.h} L0 ${g.h} Z" fill="#13273a"/><path d="${d}" fill="none" stroke="${C.slate}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>`;
+        const top = g.base - g.amp, fsV = g.big ? 28 : 24;
+        s += tx(g.cx - g.k, g.base + (g.big ? 40 : 32), 'Q = 0', { fs: fsV, w: 700, fill: C.zero, a: 'middle', mono: true });
+        s += tx(g.cx + g.k, g.base + (g.big ? 40 : 32), 'Q = 1', { fs: fsV, w: 700, fill: C.data, a: 'middle', mono: true });
+        const oldT = g.big ? 'stable: the old value' : 'old value', newT = g.big ? 'stable: the new value' : 'new value';
+        s += tx(g.cx - g.k, g.base + (g.big ? 70 : 62), from ? newT : oldT, { fs: 20, fill: C.slate, a: 'middle' });
+        s += tx(g.cx + g.k, g.base + (g.big ? 70 : 62), from ? oldT : newT, { fs: 20, fill: C.slate, a: 'middle' });
+        s += tx(g.cx, top + (g.big ? 74 : 84), 'balance point', { fs: g.big ? 24 : 20, w: 700, fill: hot ? C.bad : C.text, a: 'middle', attr: 'data-top="1"' });
+        if (g.big) s += tx(g.cx, top + 104, 'halfway between 0 and 1', { fs: 20, fill: C.slate, a: 'middle' }) + tx(g.cx, top + 130, 'not stable', { fs: 20, fill: C.slate, a: 'middle' });
+        const b = ballPos(g, u);
+        if (rest) {          // the push, drawn in the input color
+            const dir = u > 0.5 ? -1 : 1;      // toward the other valley
+            const ay = b.cy - g.r - (g.big ? 20 : 14), ax = b.cx - dir * (g.big ? 30 : 20), bx = b.cx + dir * (g.big ? 46 : 32);
+            s += `<line x1="${r(ax)}" y1="${r(ay)}" x2="${r(bx - dir * 12)}" y2="${r(ay)}" stroke="${C.clk}" stroke-width="3.5" stroke-linecap="round"/>` +
+                 `<polygon points="${r(bx)},${r(ay)} ${r(bx - dir * 15)},${r(ay - 7)} ${r(bx - dir * 15)},${r(ay + 7)}" fill="${C.clk}"/>` +
+                 tx((ax + bx) / 2, ay - 12, 'push', { fs: 20, w: 700, fill: C.clk, a: 'middle' });
+        }
+        s += `<circle data-ball="1" cx="${r(b.cx)}" cy="${r(b.cy)}" r="${g.r}" fill="${hot ? C.bad : C.white}" stroke="${C.navy}" stroke-width="3"/>`;
+        $(g.id).innerHTML = s;
+    }
+
+    // ============ ANIMATION ============
+    // One animation at a time. segs: [{a, b, ms}] — time a → b ns played over ms milliseconds.
+    let anim = null, paused = null;      // paused: an animation frozen by seek(), still owed its done()
+    function startAnim(segs, draw, done) {
+        paused = null; anim = { segs, draw, done, start: performance.now(), dur: segs.reduce((n, g) => n + g.ms, 0) };
+        schedule();
+    }
+    // next frame: requestAnimationFrame when the browser is painting, a timer when it is not (a hidden or headless page)
+    let tickId = 0;
+    function schedule() { const id = ++tickId; let ran = false;
+        const go = () => { if (ran || id !== tickId) return; ran = true; tick(); };
+        requestAnimationFrame(go); setTimeout(go, 34); }
+    function tick() {
+        if (!anim) return;
+        let el = performance.now() - anim.start;
+        if (el >= anim.dur) { finishAnim(); return; }
+        for (const g of anim.segs) { if (el <= g.ms) { anim.draw(g.a + (g.b - g.a) * el / g.ms); break; } el -= g.ms; }
+        schedule();
+    }
+    function finishAnim() { const a = anim || paused; anim = paused = null; if (a) a.done(); }
+    const cancelAnim = () => { anim = paused = null; };
+
+    // Playback is not uniform: the ball's climb and its roll-off each last only 0.3 ns, so those stretches are
+    // played slowly enough to follow, and the stall slowly enough to see each oscillation. kind is a prof() kind.
+    const PACE = { move: 1700, stall: 1500, lead: 500, tail: 500, cap: 5000 };   // move: ms for one climb or roll; others: ms per ns; cap: longest stall on screen
+    function paceSegs(kind, o, tStart, tEnd) {
+        const cuts = kind === 'meta' ? [[M.t0, PACE.lead], [P.tco, null], [o.ts - M.roll, PACE.stall], [o.ts, null]]
+                                     : [[M.t0, PACE.lead], [M.t0 + M.w, null]];
+        const segs = []; let a = tStart;
+        for (const [b, rate] of cuts) { if (b > a) { segs.push({ a, b, ms: rate === null ? PACE.move : Math.min((b - a) * rate, PACE.cap) }); a = b; } }
+        if (tEnd > a) segs.push({ a, b: tEnd, ms: (tEnd - a) * PACE.tail });
+        return segs;
+    }
+
+    // ============ BEAT 1 ============
+    const G1 = { x0: 150, pp: 130, t0: 0, t1: 8, y1: 86, y0: 262, axisY: 296 };
+    const X1 = t => G1.x0 + (t - G1.t0) * G1.pp, Y1 = u => G1.y0 - u * (G1.y0 - G1.y1);
+    const B1KIND = { weak: 'weak', strong: 'clean', marginal: 'meta' };
+    const cur1 = () => B1.runs[B1.runs.length - 1] || null;
+    // Q for one beat-1 push. A push starts in the valley the ball is in (run.from) and heads for the other one,
+    // so prof() is evaluated along the direction of travel and mirrored when the push starts from Q = 1.
+    function q1(run, t) {
+        const p = prof(B1KIND[run.kind], t, { ts: run.ts, side: run.from ? 1 - run.side : run.side });
+        return run.from ? 1 - p : p;
+    }
+    function stalled(run, t) { return run && run.kind === 'marginal' && t >= P.tco - 0.08 && t < run.ts - M.roll + 0.04; }
+    function drawBeat1() {
+        const run = cur1(), t = B1.tNow, g = G1;
+        const u = run ? ballU(B1KIND[run.kind], t, run, q1(run, Math.min(t, 1e6))) : 0;
+        drawHill(H1, u, stalled(run, t), !run || t === Infinity, run ? run.from : 0);
+        // ---- Q against time ----
+        let s = '';
+        s += `<line x1="${X1(g.t0)}" y1="${g.y1}" x2="${X1(g.t1)}" y2="${g.y1}" stroke="${C.faint}" stroke-width="1.5"/>`;
+        s += `<line x1="${X1(g.t0)}" y1="${g.y0}" x2="${X1(g.t1)}" y2="${g.y0}" stroke="${C.faint}" stroke-width="1.5"/>`;
+        s += `<line x1="${X1(g.t0)}" y1="${Y1(0.5)}" x2="${X1(g.t1)}" y2="${Y1(0.5)}" stroke="${C.dim}" stroke-width="1.5" stroke-dasharray="6 7"/>`;
+        s += tx(62, Y1(0.5) + 10, 'Q', { fs: 30, w: 700, fill: C.data, a: 'middle' });
+        s += tx(g.x0 - 18, g.y1 + 8, '1', { fs: 24, w: 700, fill: C.data, a: 'end', mono: true });
+        s += tx(g.x0 - 18, g.y0 + 8, '0', { fs: 24, w: 700, fill: C.zero, a: 'end', mono: true });
+        s += tx(X1(g.t1), Y1(0.5) - 10, 'halfway', { fs: 20, fill: C.slate, a: 'end' });
+        s += `<line x1="${X1(0)}" y1="52" x2="${X1(0)}" y2="${g.axisY}" stroke="${C.clk}" stroke-width="2" stroke-dasharray="7 7" opacity="0.8"/>`;
+        s += tx(X1(0), 38, 'push', { fs: 20, w: 700, fill: C.clk, a: 'middle' });
+        // axis: tick every 1 ns, label every 2 ns
+        s += `<line x1="${X1(g.t0)}" y1="${g.axisY}" x2="${X1(g.t1)}" y2="${g.axisY}" stroke="${C.dim}" stroke-width="2"/>`;
+        for (let k = g.t0; k <= g.t1; k++) { const big = k % 2 === 0;
+            s += `<line x1="${X1(k)}" y1="${g.axisY}" x2="${X1(k)}" y2="${g.axisY + (big ? 11 : 7)}" stroke="${C.dim}" stroke-width="2"/>`;
+            if (big) s += tx(X1(k), g.axisY + 32, k, { fs: 20, fill: C.slate, a: 'middle', mono: true }); }
+        s += tx(X1(4), g.axisY + 66, 'time after the push (ns)', { fs: 20, fill: C.slate, a: 'middle' });
+        // earlier pushes, dimmed
+        B1.runs.slice(0, -1).slice(-6).forEach(p => { s += curve(X1, Y1, tt => q1(p, tt), g.t0, g.t1, C.slate, 2, 'opacity="0.42" data-ghost="1"'); });
+        if (!run) s += curve(X1, Y1, () => 0, g.t0, g.t1, C.data, WSTROKE, 'data-q="1"');
+        else {
+            const f = tt => q1(run, tt), te = Math.min(t, g.t1);
+            if (run.kind === 'marginal') {
+                s += curve(X1, Y1, f, g.t0, Math.min(te, P.tco), C.data, WSTROKE, 'data-q="1"');
+                s += curve(X1, Y1, f, P.tco, Math.min(te, run.ts), C.bad, WSTROKE, 'data-q="1" data-hover="1"');
+                s += curve(X1, Y1, f, run.ts, te, C.data, WSTROKE, 'data-q="1"');
+                if (t >= run.ts) {
+                    s += `<line x1="${r(X1(run.ts))}" y1="52" x2="${r(X1(run.ts))}" y2="${g.axisY}" stroke="${C.bad}" stroke-width="2" stroke-dasharray="5 5" opacity="0.75"/>`;
+                    s += tx(Math.min(Math.max(X1(run.ts), X1(0) + 190), 1248 - 150), 38, `settled to ${run.side} after ${f1(run.ts)} ns`, { fs: 22, w: 700, fill: C.bad, a: 'middle', attr: 'data-settle="1"' });
+                }
+            } else s += curve(X1, Y1, f, g.t0, te, C.data, WSTROKE, 'data-q="1"');
+            if (t < g.t1) s += `<circle cx="${r(X1(te))}" cy="${r(Y1(f(te)))}" r="7" fill="${stalled(run, t) ? C.bad : C.white}" stroke="${C.navy}" stroke-width="2"/>`;
+        }
+        $('tr1').innerHTML = s;
+        // ---- html ----
+        document.querySelectorAll('#pushes .pcard').forEach(b => b.classList.toggle('on', !!run && b.dataset.push === run.kind));
+        const chip = $('chip1'), done = t === Infinity;
+        if (!run) { chip.textContent = 'ball at rest in Q = 0'; chip.className = 'chip idle'; }
+        else if (run.kind === 'weak') { chip.textContent = done ? `fell back: Q stays ${run.from}` : 'not enough…'; chip.className = 'chip idle'; }
+        else if (run.kind === 'strong') { chip.textContent = done ? `over the hill: Q = ${run.side}` : 'going over…'; chip.className = 'chip ' + (done ? 'ok' : 'idle'); }
+        else if (t < P.tco - 0.08) { chip.textContent = 'climbing…'; chip.className = 'chip idle'; }
+        else { chip.textContent = t >= run.ts ? `settled to ${run.side} after ${f1(run.ts)} ns` : stalled(run, t) ? 'wobbling on the hilltop…' : `rolling off toward ${run.side}…`; chip.className = 'chip bad'; }
+        const mg = B1.runs.filter(p => p.kind === 'marginal'), show = mg.slice(-5);
+        let h = `<table class="t"><tr><th>push</th><th>rolled to</th><th>settled after</th></tr>`;
+        show.forEach(p => { const pend = p === run && t < p.ts;
+            h += `<tr><td>${p.n}</td><td${pend ? ' class="now"' : ''}>${pend ? '?' : 'Q = ' + p.side}</td><td${pend ? ' class="now"' : ''}>${pend ? '…' : f1(p.ts) + ' ns'}</td></tr>`; });
+        for (let i = show.length; i < 5; i++) h += `<tr><td>&nbsp;</td><td></td><td></td></tr>`;
+        $('hist1').innerHTML = h + '</table>';
+        const fin = mg.filter(p => !(p === run && t < p.ts));
+        $('hsum1').innerHTML = fin.length ? `to Q = 1: <b>${fin.filter(p => p.side === 1).length}</b> &nbsp;·&nbsp; to Q = 0: <b>${fin.filter(p => p.side === 0).length}</b> &nbsp;·&nbsp; waits <b>${f1(Math.min(...fin.map(p => p.ts)))}</b> to <b>${f1(Math.max(...fin.map(p => p.ts)))} ns</b>` : 'none yet';
+    }
+    function push(kind, instant) {
+        if (defsOpen() || S.page !== 1) return;
+        finishAnim();
+        const prev = cur1(), from = prev ? prev.side : 0;          // start where the last push left the ball
+        const run = { kind, from, side: kind === 'strong' ? 1 - from : from, ts: TS_MIN };      // side: where Q ends up
+        if (kind === 'marginal') { Object.assign(run, stall(RNG.b1)); run.ts = Math.min(run.ts, M.b1Max); run.n = B1.runs.filter(p => p.kind === 'marginal').length + 1; }
+        B1.runs.push(run);
+        const end = () => { B1.tNow = Infinity; drawBeat1(); };
+        if (instant) { end(); return; }
+        B1.tNow = 0.5; drawBeat1();
+        const tEnd = (kind === 'marginal' ? run.ts : TS_MIN) + 0.5;
+        startAnim(paceSegs(B1KIND[kind], run, 0.5, tEnd), tt => { B1.tNow = tt; drawBeat1(); }, end);
+    }
+
+    // ============ BEAT 2 ============
+    const G2 = { x0: 110, pp: 62, t0: -4, t1: 14, clk: [158, 100], d: [278, 220], q: [468, 338], band: [86, 484], axisY: 536, noteY: 516, tagY: 205, tcoY: 316 };
+    const X2 = t => G2.x0 + (t - G2.t0) * G2.pp, Y2 = u => G2.q[0] - u * (G2.q[0] - G2.q[1]);
+    function drawBeat2() {
+        const g = G2, x = B2.x, cls = classify(x), cap = B2.cap, t = B2.tNow, bad = cls === 'unknown';
+        const shown = cap || (cls === 'new' ? { outcome: 'clean' } : cls === 'old' ? { outcome: 'none' } : null);   // what Q does, when it is known
+        let s = defs('td2');
+        [0, P.T].forEach(e => { s += band(X2(e - P.tsu), X2(e + P.th), g.band[0], g.band[1], e); });
+        s += tx(X2(-0.25), 34, 'decision window', { fs: 22, w: 700, fill: C.win, a: 'middle' });
+        s += tx(X2(-0.5), 70, tsub('su', 20), { fs: 20, w: 700, fill: C.win, a: 'middle' }) + tx(X2(0.25) + 6, 70, tsub('h', 20), { fs: 20, w: 700, fill: C.win, a: 'middle' });
+        s += tx(X2(P.T - 0.25), 34, 'next clock edge', { fs: 22, w: 700, fill: C.clk, a: 'middle' });
+        s += tx(X2(P.T - 0.25), 70, 'T = 10 ns later', { fs: 20, fill: C.clk, a: 'middle' });
+        [0, P.T].forEach(e => { s += `<line x1="${X2(e)}" y1="${g.band[0]}" x2="${X2(e)}" y2="${g.band[1] + 8}" stroke="${C.clk}" stroke-width="2" stroke-dasharray="7 7" opacity="0.8"/>`; });
+        s += tx(g.x0 - 18, 139, 'CLK', { fs: 28, w: 700, fill: C.clk, a: 'end' }) + tx(g.x0 - 18, 259, 'D', { fs: 28, w: 700, fill: C.data, a: 'end' }) + tx(g.x0 - 18, 413, 'Q', { fs: 28, w: 700, fill: C.data, a: 'end' });
+        s += wave(X2, g.clk[0], g.clk[1], 0, [-5, 0, 5, 10], g.t0, g.t1, C.clk, 'data-wave="CLK"');
+        s += wave(X2, g.d[0], g.d[1], 0, [x], g.t0, g.t1, C.data, 'data-wave="D"');
+        // D's change, tagged with its time
+        const hc = bad ? C.bad : C.data;
+        s += `<rect data-tagbg="1" x="${r(X2(x) - 48)}" y="${g.tagY - 21}" width="96" height="27" rx="6" fill="${C.navy}" opacity="0.92"/>` + tx(X2(x), g.tagY, sgn(x) + ' ns', { fs: 22, w: 700, fill: hc, a: 'middle', mono: true, attr: 'data-xtag="1"' });
+        // Q
+        if (shown) s += `<line x1="${X2(g.t0)}" y1="${Y2(0.5)}" x2="${X2(g.t1)}" y2="${Y2(0.5)}" stroke="${C.dim}" stroke-width="1.5" stroke-dasharray="6 7"/>` + tx(X2(g.t0) + 6, Y2(0.5) - 9, 'halfway', { fs: 20, fill: C.slate });
+        if (shown) {
+            const f = tt => q2(shown, tt), te = Math.min(t, g.t1);
+            if (shown.outcome === 'meta') {
+                s += curve(X2, Y2, f, g.t0, Math.min(te, P.tco), C.data, WSTROKE, 'data-q="1"');
+                s += curve(X2, Y2, f, P.tco, Math.min(te, shown.ts), C.bad, WSTROKE, 'data-q="1" data-hover="1"');
+                s += curve(X2, Y2, f, shown.ts, te, C.data, WSTROKE, 'data-q="1"');
+            } else s += curve(X2, Y2, f, g.t0, te, C.data, WSTROKE, 'data-q="1"');
+            if (t < g.t1) s += `<line data-cursor="1" x1="${r(X2(te))}" y1="${g.band[0] - 6}" x2="${r(X2(te))}" y2="${g.axisY}" stroke="${C.white}" stroke-width="2"/>` +
+                `<circle cx="${r(X2(te))}" cy="${r(Y2(f(te)))}" r="7" fill="${C.white}" stroke="${C.navy}" stroke-width="2"/>`;
+            if (finalOf(shown) === 1 && shown.outcome !== 'meta' && t >= TS_MIN)        // t_co, from the edge to Q's response
+                s += dimArrow(X2(0), X2(P.tco), g.tcoY, C.data) + tx(X2(P.tco) + 14, g.tcoY + 7, tsub('co', 22) + ' = 1 ns', { fs: 22, w: 700, fill: C.data, attr: 'data-tco="1"' });
+        } else {             // inside the window, before a capture is run: not guaranteed (drawn as in graphic 47)
+            s += `<path d="M${X2(g.t0)} ${g.q[0]} L${X2(P.tco)} ${g.q[0]}" fill="none" stroke="${C.data}" stroke-width="${WSTROKE}" stroke-linecap="round" data-q="1"/>`;
+            s += `<rect data-unknown="1" x="${X2(P.tco)}" y="${g.q[1]}" width="${r(X2(2.6) - X2(P.tco))}" height="${g.q[0] - g.q[1]}" fill="url(#hatch-td2)" stroke="${C.bad}" stroke-width="2.5"/>`;
+            g.q.forEach(yy => { s += `<line x1="${r(X2(2.6))}" y1="${yy}" x2="${X2(P.T + P.tco)}" y2="${yy}" stroke="${C.bad}" stroke-width="${WSTROKE}" stroke-dasharray="12 9" stroke-linecap="round"/>`; });
+            s += `<path d="M${X2(P.T + P.tco)} ${g.q[1]} L${X2(g.t1)} ${g.q[1]}" fill="none" stroke="${C.data}" stroke-width="${WSTROKE}" stroke-linecap="round"/>`;
+            s += tx(X2(2.6) + 22, Y2(0.5) + 9, '1 or 0 ?', { fs: 26, w: 700, fill: C.bad });
+        }
+        // one line under Q saying what happened
+        const done = t === Infinity, dimt = (str) => `<tspan fill="${C.slate}" font-weight="400">${str}</tspan>`;
+        let note, ncol = C.ok;
+        if (!cap) note = cls === 'new' ? 'Q takes the new value' + dimt(' · one clock-to-output delay after the edge')
+                 : cls === 'old' ? 'Q keeps the old value' + dimt(' · the new one is caught at the next edge')
+                 : (ncol = C.bad, 'Q is not guaranteed' + dimt(' · press Clock to see one capture'));
+        else if (!done) { note = 'capturing…'; ncol = C.slate; }
+        else if (cap.outcome === 'clean') note = 'Q took the new value' + dimt(' · a clean push');
+        else if (cap.outcome === 'none') note = 'Q kept the old value' + dimt(' · no push; caught at the next edge');
+        else if (cap.outcome === 'new') { note = 'this time: Q took the new value' + dimt(' · the ball made it over'); ncol = C.white; }
+        else if (cap.outcome === 'old') { note = 'this time: Q kept the old value' + dimt(' · the ball fell back; caught one clock late'); ncol = C.white; }
+        else { note = `this time: metastable, settled to ${cap.side} after ${f1(cap.ts)} ns` + dimt(cap.side ? ' · the new value, late' : ' · the old value; caught one clock late'); ncol = C.bad; }
+        s += tx(X2(g.t0), g.noteY, note, { fs: 22, w: 700, fill: ncol, attr: 'data-note="1"' });
+        // axis: tick every 1 ns, label every 2 ns
+        s += `<line x1="${X2(g.t0)}" y1="${g.axisY}" x2="${X2(g.t1)}" y2="${g.axisY}" stroke="${C.dim}" stroke-width="2"/>`;
+        for (let k = g.t0; k <= g.t1; k++) { const big = k % 2 === 0;
+            s += `<line x1="${X2(k)}" y1="${g.axisY}" x2="${X2(k)}" y2="${g.axisY + (big ? 11 : 7)}" stroke="${C.dim}" stroke-width="2"/>`;
+            if (big) s += tx(X2(k), g.axisY + 32, String(k).replace('-', '−'), { fs: 20, fill: C.slate, a: 'middle', mono: true }); }
+        s += tx(X2(5), g.axisY + 62, 'time relative to the clock edge (ns)', { fs: 20, fill: C.slate, a: 'middle' });
+        const el = $('td2'); el.innerHTML = s;
+        const tag = el.querySelector('[data-xtag]'), bg = el.querySelector('[data-tagbg]');
+        try { const bb = tag.getBBox(); if (bb.width) { bg.setAttribute('x', r(bb.x - 8)); bg.setAttribute('width', r(bb.width + 16)); bg.setAttribute('y', r(bb.y - 1)); bg.setAttribute('height', r(bb.height + 2)); } } catch (e) {}
+        // the same event on the hill
+        const u = cap ? ballU(KIND[cap.outcome], t, cap, q2(cap, Math.min(t, 1e6))) : 0;
+        drawHill(H2, u, !!cap && cap.outcome === 'meta' && t >= P.tco - 0.08 && t < cap.ts - M.roll + 0.04, !cap);
+        // html
+        $('v2x').textContent = sgn(x) + ' ns';
+        const chip = $('chip2'); chip.className = 'chip ' + (bad ? 'bad' : 'ok'); chip.dataset.verdict = cls;
+        chip.textContent = { new: 'OK — Q takes the new value', unknown: 'Violation — Q not guaranteed', old: 'OK — Q keeps the old value' }[cls];
+        document.querySelectorAll('#p2 .case').forEach(c => { const on = c.dataset.case === cls; c.className = 'case' + (c.dataset.case === 'unknown' ? ' wide' : '') + (on ? ' on ' + (bad ? 'bad' : 'ok') : ''); });
+        const n = B2.tally.new + B2.tally.old + B2.tally.meta;
+        $('t2n').textContent = n; $('t2new').textContent = B2.tally.new; $('t2old').textContent = B2.tally.old; $('t2meta').textContent = B2.tally.meta;
+        // histogram of outcomes at this setting: bar = share of the captures so far, tick = the chance at this setting
+        const od = cls === 'unknown' ? odds(B2.x) : { new: +(cls === 'new'), old: +(cls === 'old'), meta: 0 };
+        ['new', 'old', 'meta'].forEach(k => { $('h2' + k).style.width = (n ? B2.tally[k] / n * 100 : 0) + '%'; $('k2' + k).style.left = (od[k] * 100) + '%'; });
+        $('v2push').textContent = pushName(B2.x); $('m2push').style.width = (pushLevel(B2.x) * 100) + '%';
+        $('hint2').innerHTML = cls === 'new' ? `D is steady before the window opens. <b>Every capture is the same:</b> the ball goes straight over.`
+            : cls === 'old' ? `D moves after the flip-flop has decided. <b>Every capture is the same:</b> nothing happens on this edge.`
+            : `The later D moves, the weaker the push. <b>Press Clock a few times, or &times;100</b> for the histogram, then move D.`;
+    }
+    function fire(instant) {
+        if (defsOpen() || S.page !== 2) return;
+        finishAnim();
+        const cls = classify(B2.x); let cap;
+        if (cls === 'new') cap = { outcome: 'clean' };
+        else if (cls === 'old') cap = { outcome: 'none' };
+        else { const v = RNG.b2(), o = odds(B2.x); cap = v < o.new ? { outcome: 'new' } : v < o.new + o.old ? { outcome: 'old' } : Object.assign({ outcome: 'meta' }, stall(RNG.b2)); }
+        B2.cap = cap;
+        const fin = finalOf(cap);
+        const end = () => { B2.tally[cap.outcome === 'meta' ? 'meta' : fin ? 'new' : 'old']++; B2.tNow = Infinity; drawBeat2(); };
+        if (instant) { end(); return; }
+        const tA = (cap.outcome === 'meta' ? cap.ts : TS_MIN) + 0.6, segs = paceSegs(KIND[cap.outcome], cap, -0.6, tA);
+        if (!fin) segs.push({ a: tA, b: P.T + 0.4, ms: 700 }, { a: P.T + 0.4, b: P.T + 1.9, ms: 1500 });
+        B2.tNow = -0.6; drawBeat2();
+        startAnim(segs, tt => { B2.tNow = tt; drawBeat2(); }, end);
+    }
+    // the histogram button: many captures at the current setting, without the animation
+    function fireMany(k = 100) { if (defsOpen() || S.page !== 2) return; finishAnim(); for (let i = 0; i < k; i++) fire(true); }
+    function setX(v, fromInput) {
+        v = Math.max(-3, Math.min(3, Math.round(v * 10) / 10));
+        if (v === B2.x) return;
+        cancelAnim(); B2.x = v; B2.cap = null; B2.tNow = Infinity; B2.tally = { new: 0, old: 0, meta: 0 };
+        if (!fromInput) $('s2x').value = v;
+        if (S.page === 2) drawBeat2();
+    }
+
+    // ============ BEAT 3 ============
+    const G3 = { x0: 64, pp: 108, t0: 0, t1: 10.5, base: 424, top: 64, pitch: 10.8 };
+    const X3 = t => G3.x0 + (t - G3.t0) * G3.pp;
+    const leftAfter = (arr, t) => arr.filter(c => Math.round(c.ts * 10) > Math.round(t * 10)).length;
+    function drawBeat3() {
+        const g = G3, a = B3.last;
+        let s = '';
+        if (a.length) [2, 4, 6].forEach(k => { s += `<line x1="${X3(k)}" y1="${g.top}" x2="${X3(k)}" y2="${g.base}" stroke="${C.line}" stroke-width="1.5" stroke-dasharray="5 6"/>`; });
+        // The deadline is not the next clock edge but the moment the next decision window opens, t_su before it:
+        // whatever reads Q next needs it steady from then on.
+        const num = v => Number.isInteger(v) ? String(v) : f1(v);
+        const T = B3.T, DL = T - P.tsu, tT = num(T), tD = num(DL), late = T < 5.5;
+        s += `<rect data-late="1" x="${X3(DL)}" y="${g.top - 14}" width="${r(X3(g.t1) - X3(DL))}" height="${g.base - g.top + 14}" fill="${C.bad}" opacity="0.07"/>`;
+        s += band(X3(DL), X3(Math.min(T + P.th, g.t1)), g.top - 14, g.base, 'next');
+        [0, T].forEach(e => { s += `<line ${e ? 'data-edge="1" ' : ''}x1="${X3(e)}" y1="${g.top - 14}" x2="${X3(e)}" y2="${g.base}" stroke="${C.clk}" stroke-width="2" stroke-dasharray="7 7" opacity="0.8"/>`; });
+        s += tx(X3(0) + 10, 36, 'clock edge', { fs: 22, w: 700, fill: C.clk });
+        s += tx(late ? X3(T + P.th) + 12 : X3(DL) - 12, 36, `next clock edge, T = ${tT} ns`, { fs: 22, w: 700, fill: C.clk, a: late ? 'start' : 'end' });
+        s += tx(late ? X3(T + P.th) + 12 : X3(DL) - 12, 64, `its decision window opens at T − ${tsub('su', 22)} = ${tD} ns`, { fs: 22, w: 700, fill: C.win, a: late ? 'start' : 'end', attr: 'data-deadline="1"' });
+        s += `<line x1="${X3(g.t0)}" y1="${g.base}" x2="${X3(g.t1)}" y2="${g.base}" stroke="${C.dim}" stroke-width="2"/>`;
+        for (let k = 0; k <= 10; k++) {
+            s += `<line x1="${X3(k)}" y1="${g.base}" x2="${X3(k)}" y2="${g.base + 11}" stroke="${C.dim}" stroke-width="2"/>`;
+            s += tx(X3(k), g.base + 34, k, { fs: 20, fill: C.slate, a: 'middle', mono: true });
+        }
+        s += tx(X3(5.25), g.base + 64, 'settling time (ns): from the clock edge until Q is a clean 0 or 1 · illustrative numbers, not a real device', { fs: 20, fill: C.slate, a: 'middle' });
+        if (!a.length) s += tx(X3(4), 250, 'Press Space to run 200 captures', { fs: 26, w: 700, fill: C.dim, a: 'middle', attr: 'data-empty="1"' });
+        else {
+            const cols = {}; a.forEach(c => { const k = Math.round(Math.min(c.ts, g.t1) * 10); (cols[k] = cols[k] || []).push(c); });
+            const tall = Math.max(...Object.values(cols).map(v => v.length)), pitch = Math.min(g.pitch, (g.base - g.top - 4) / tall);
+            Object.keys(cols).forEach(k => { cols[k].sort((p, q) => q.side - p.side).forEach((c, i) => {
+                s += `<circle data-dot="${k}" cx="${r(X3(k / 10))}" cy="${r(g.base - 4 - pitch / 2 - i * pitch)}" r="${r(Math.min(4.7, pitch * 0.44))}" fill="${Math.round(c.ts * 10) > Math.round(DL * 10) ? C.bad : c.side ? C.data : C.zero}"/>`; }); });
+        }
+        $('dp3').innerHTML = s;
+        drawHill(H3, 0.5, true, false);
+        const n = a.length;
+        document.querySelectorAll('#left3 .lv').forEach(e => { const edge = e.dataset.left === 'T', v = leftAfter(a, edge ? DL : +e.dataset.left);
+            e.innerHTML = n ? `${v} <small>of ${n}</small>` : '–'; e.style.color = !n ? '' : edge ? (v ? C.bad : C.ok) : ''; });
+        $('l3edge').textContent = `at the next window, ${tD} ns`; $('v3t').textContent = f1(T) + ' ns';
+        const totalLeft = leftAfter(B3.all, DL);
+        $('r3sides').innerHTML = n ? `${a.filter(c => c.side).length} <small>/</small> ${a.filter(c => !c.side).length}` : '–';
+        $('r3max').innerHTML = n ? `${f1(Math.max(...a.map(c => c.ts)))} <small>ns</small>` : '–';
+        $('r3all').innerHTML = B3.total ? `<b>${B3.total.toLocaleString('en-US')}</b> captures, longest wait <b>${f1(B3.longest)} ns</b>.<br>Still unsettled when the next window opens: <b class="${totalLeft ? 'c-bad' : 'c-ok'}">${totalLeft}</b>`
+            : 'No captures yet.';
+    }
+    function setT(v, fromInput) {          // beat 3: move the next clock edge; the captures already run are kept and recounted
+        v = Math.max(3, Math.min(10, Math.round(v * 2) / 2));
+        if (v === B3.T) return;
+        B3.T = v; if (!fromInput) $('s3t').value = v;
+        if (S.page === 3) drawBeat3();
+    }
+    function runTrials() {
+        if (defsOpen() || S.page !== 3) return;
+        const a = []; for (let i = 0; i < M.nRun; i++) a.push(stall(RNG.b3));
+        B3.last = a; B3.all.push(...a); B3.runs++; B3.total += a.length; B3.longest = Math.max(B3.longest, ...a.map(c => c.ts));
+        drawBeat3();
+    }
+
+    // ============ RENDER / CONTROL ============
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const PAGES = ['p1', 'p2', 'p3'];
+    function drawPage() { if (S.page === 1) drawBeat1(); else if (S.page === 2) drawBeat2(); else drawBeat3(); }
+    function render() {
+        PAGES.forEach(id => $(id).classList.toggle('active', id === 'p' + S.page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === S.page));
+        document.querySelectorAll('[data-dot]').forEach(d => { if (d.classList.contains('dot')) d.classList.toggle('on', +d.dataset.dot <= S.page); });
+        $('pcNum').textContent = S.page;
+        drawPage();
+    }
+    const defsEl = $('defs'), defsBtn = $('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) {
+        closeDefs(); finishAnim();
+        S.page = Math.max(1, Math.min(3, n)); render();
+        const f = S.page === 2 ? $('s2x') : S.page === 3 ? $('s3t') : null;
+        if (f) f.focus({ preventScroll: true }); else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    }
+    // ↺ / R restarts only what the beat on screen animates, re-seeds its generator, and stays on the beat
+    function resetBeat(p) {
+        if (p === 1) { RNG.b1 = makeRng(SEEDS.b1); B1.runs = []; B1.tNow = Infinity; }
+        else if (p === 2) { RNG.b2 = makeRng(SEEDS.b2); B2.x = X_DEF; B2.cap = null; B2.tNow = Infinity; B2.tally = { new: 0, old: 0, meta: 0 }; $('s2x').value = X_DEF; }
+        else { RNG.b3 = makeRng(SEEDS.b3); B3.runs = 0; B3.last = []; B3.all = []; B3.total = 0; B3.longest = 0; B3.T = P.T; $('s3t').value = P.T; }
+    }
+    function doReset() { if (defsOpen()) return; cancelAnim(); resetBeat(S.page); drawPage(); }
+    function doSpace() { if (S.page === 1) push('marginal'); else if (S.page === 2) fire(); else runTrials(); }
+
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-push]').forEach(b => b.addEventListener('click', () => { push(b.dataset.push); b.blur(); }));
+    document.querySelectorAll('[data-fire]').forEach(b => b.addEventListener('click', () => { fire(); b.blur(); }));
+    document.querySelectorAll('[data-many]').forEach(b => b.addEventListener('click', () => { fireMany(); b.blur(); }));
+    document.querySelectorAll('[data-run]').forEach(b => b.addEventListener('click', () => { runTrials(); b.blur(); }));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    $('s2x').addEventListener('input', e => setX(+e.target.value, true));
+    $('s3t').addEventListener('input', e => setT(+e.target.value, true));
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '3') { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) {      // panel open: Esc closes it; every other control key does nothing
+            if (k === 'Escape') closeDefs();
+            if (k === ' ' || k.startsWith('Arrow') || 'cCrRwWsSmM'.includes(k)) e.preventDefault();
+            return;
+        }
+        switch (k) {
+            case ' ': case 'c': case 'C': doSpace(); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+            case 'h': case 'H': fireMany(); e.preventDefault(); break;
+            case 'w': case 'W': push('weak'); e.preventDefault(); break;
+            case 's': case 'S': push('strong'); e.preventDefault(); break;
+            case 'm': case 'M': push('marginal'); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowRight': case 'ArrowUp': case 'ArrowDown':
+                // arrows nudge D's change on beat 2 by 0.1 ns, whether or not the slider has focus
+                if (S.page === 2) { setX(B2.x + ((k === 'ArrowRight' || k === 'ArrowUp') ? 0.1 : -0.1)); e.preventDefault(); }
+                else if (S.page === 3) { setT(B3.T + ((k === 'ArrowRight' || k === 'ArrowUp') ? 0.5 : -0.5)); e.preventDefault(); }
+                break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    function drawnQ(svgId) {      // (t, level) points read back from the DRAWN Q path(s)
+        const cfg = svgId === 'tr1' ? { X0: G1.x0, pp: G1.pp, t0: G1.t0, y0: G1.y0, y1: G1.y1 } : { X0: G2.x0, pp: G2.pp, t0: G2.t0, y0: G2.q[0], y1: G2.q[1] };
+        const out = [];
+        document.querySelectorAll(`#${svgId} path[data-q]`).forEach(p => { const n = p.getAttribute('d').match(/-?\d+(\.\d+)?/g).map(Number);
+            for (let i = 0; i + 1 < n.length; i += 2) out.push([(n[i] - cfg.X0) / cfg.pp + cfg.t0, (cfg.y0 - n[i + 1]) / (cfg.y0 - cfg.y1)]); });
+        return out.sort((a, b) => a[0] - b[0]);
+    }
+    function seek(t) {            // freeze the beat on screen at time t (ns) of its current capture
+        if (anim) { paused = anim; anim = null; }
+        if (S.page === 1) { B1.tNow = t; drawBeat1(); } else if (S.page === 2) { B2.tNow = t; drawBeat2(); }
+    }
+    window.__api = {
+        setPage, reset: doReset, openDefs, closeDefs, defsOpen, seek,
+        finish: finishAnim, animating: () => !!(anim || paused),
+        key: (k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })),
+        push: (kind) => push(kind, true), pushAnimated: (kind) => push(kind),
+        fire: () => fire(true), fireAnimated: () => fire(), fireMany,
+        run: runTrials, setX: (v) => setX(v), setT: (v) => setT(v),
+        seeds: () => ({ ...SEEDS }),
+        setSeed: (beat, v) => { cancelAnim(); const k = 'b' + beat; SEEDS[k] = v | 0; resetBeat(beat); if (S.page === beat) drawPage(); },
+        params: P, model: { M, TS_MIN, prof, q2, classify, stall, makeRng, finalOf, leftAfter, odds, pushName, pushLevel },
+        getState: () => ({ page: S.page, b1: { runs: B1.runs.map(p => ({ ...p })), tNow: B1.tNow },
+            b2: { x: B2.x, cap: B2.cap ? { ...B2.cap } : null, tNow: B2.tNow, tally: { ...B2.tally } },
+            b3: { runs: B3.runs, last: B3.last.map(c => ({ ...c })), total: B3.total, totalLeft: leftAfter(B3.all, B3.T - P.tsu), longest: B3.longest, T: B3.T, deadline: B3.T - P.tsu } }),
+        drawnQ, verdict2: () => $('chip2').dataset.verdict,
+        bands2: () => Array.from(document.querySelectorAll('#td2 [data-band]')).map(e => ({ a: (+e.getAttribute('x') - G2.x0) / G2.pp + G2.t0, w: +e.getAttribute('width') / G2.pp })),
+        ball: (svgId) => { const e = document.querySelector('#' + svgId + ' [data-ball]'); return { cx: +e.getAttribute('cx'), cy: +e.getAttribute('cy'), fill: e.getAttribute('fill') }; },
+        ballAt: (svgId, u) => ballPos(svgId === 'hill1' ? H1 : H2, u),
+        dots3: () => Array.from(document.querySelectorAll('#dp3 circle[data-dot]')).map(e => ({ t: +e.dataset.dot / 10, x: +e.getAttribute('cx'), fill: e.getAttribute('fill') })),
+        geom: { G1, G2, G3, H1, H2, H3 },
+    };
+
+    $('s2x').value = B2.x; setPage(1);
+</script>
+</body>
+</html>
