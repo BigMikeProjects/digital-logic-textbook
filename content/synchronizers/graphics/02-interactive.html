@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synchronizers — Two Flip-Flops and a Clock Period of Waiting</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens (shared with graphics 47 and 48): amber #ffb74d = clock · cyan #4fc3f7 = data (A, Q1, Q2) ·
+       violet #b388ff = the decision window · green #81c784 = OK · red #ef5350 = failure / hovering · slate = secondary */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #4fc3f7; border-radius: 12px;
+        background: rgba(79,195,247,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #e8eef2; font-size: 40px; font-weight: 700; line-height: 1.15; }
+    .titles h1 .sub { color: #90a4ae; font-size: 26px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 20px; margin-top: 4px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #e8eef2; font-size: 26px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; }
+    .defs-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 20px; font-weight: 600;
+        color: #cfd8dc; background: transparent; border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k { border: 1px solid #37506a; border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: #90a4ae; line-height: 26px; }
+    .defs-btn.on { border-color: #b388ff; color: #e8eef2; background: rgba(179,136,255,0.10); }
+
+    /* Definitions overlay — same design as graphics 47 and 48 */
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(8,13,24,0.78); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1320px; background: #0d1b2a; border: 2px solid #b388ff; border-radius: 16px; padding: 16px 38px 20px; box-shadow: 0 18px 60px rgba(0,0,0,0.55); }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    .defs-title { font-size: 34px; font-weight: 700; color: #e8eef2; }
+    .defs-close { font-size: 20px; color: #607d8b; }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 9px; align-items: baseline; }
+    .defs-list .ds { font-size: 27px; font-weight: 700; white-space: nowrap; }
+    .defs-list .dd { font-size: 23px; line-height: 1.24; color: #b0bec5; }
+    .defs-list .dd b { color: #e8eef2; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 21px; font-weight: 700; white-space: nowrap; }
+    .tab.on { color: #e8eef2; border-color: #cfd8dc; background: rgba(207,216,220,0.07); }
+    .tab.on .tnum { background: #cfd8dc; color: #0d1b2a; border-color: #cfd8dc; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 24px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    sub { font-size: 0.7em; line-height: 0; }
+    .ov { text-decoration: overline; }
+
+    .lcol { flex: 0 0 540px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .rcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+    .panel svg { display: block; }
+    .pad { padding: 14px 22px; }
+    .phead { white-space: nowrap; font-size: 22px; font-weight: 700; color: #cfd8dc; padding: 10px 22px 0; }
+    .phead .dimtxt { color: #90a4ae; font-weight: 500; }
+
+    .c-clk { color: #ffb74d; } .c-data { color: #4fc3f7; } .c-win { color: #b388ff; }
+    .c-ok { color: #81c784; } .c-bad { color: #ef5350; } .c-dim { color: #90a4ae; }
+
+    .caption { font-size: 21px; line-height: 1.36; color: #b0bec5; }
+    .caption b { color: #e8eef2; }
+    .face { display: flex; align-items: center; gap: 18px; }
+    .face svg { flex-shrink: 0; }
+
+    /* sliders */
+    .sl { padding: 12px 22px 12px; }
+    .sl-top { display: flex; align-items: baseline; justify-content: space-between; }
+    .sl-name { font-size: 26px; font-weight: 700; }
+    .sl-desc { font-size: 20px; font-weight: 500; color: #90a4ae; margin-left: 10px; }
+    .sl-val { font-size: 30px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; color: #e8eef2; }
+    .sl input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 10px; border-radius: 5px;
+        background: #24384c; outline: none; margin: 16px 0 14px; display: block; }
+    .sl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; border-radius: 50%;
+        background: var(--tc, #cfd8dc); border: 4px solid #0d1b2a; box-shadow: 0 0 0 2px var(--tc, #cfd8dc); cursor: pointer; }
+    .sl input[type=range]:focus::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--tc, #cfd8dc), 0 0 0 7px rgba(255,255,255,0.20); }
+    .sl.data { --tc: #4fc3f7; }
+    .sl-ends { display: flex; justify-content: space-between; font-size: 20px; color: #607d8b; font-family: 'Menlo','Consolas',monospace; }
+    .sl-ends .w { color: #b388ff; }
+
+    /* readouts */
+    .tiles { display: flex; gap: 12px; }
+    .tile { flex: 1; background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; padding: 10px 14px; }
+    .tile .tl { font-size: 20px; color: #90a4ae; white-space: nowrap; }
+    .tile .tv { font-size: 34px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; margin-top: 2px; white-space: nowrap; color: #e8eef2; }
+    .tile .tv small { font-size: 21px; font-weight: 500; color: #90a4ae; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .tile .ts { font-size: 20px; color: #90a4ae; white-space: nowrap; }
+    .chiprow { display: flex; align-items: center; gap: 16px; }
+    .chip { display: inline-block; font-size: 24px; font-weight: 700; border-radius: 999px; padding: 9px 24px;
+        border: 3px solid currentColor; white-space: nowrap; }
+    .chip.ok { color: #81c784; background: rgba(129,199,132,0.12); }
+    .chip.bad { color: #ef5350; background: rgba(239,83,80,0.13); }
+    .hint { font-size: 21px; color: #b0bec5; line-height: 1.35; }
+    .hint b { color: #e8eef2; }
+    .honest { font-size: 20px; line-height: 1.36; color: #b0bec5; border-left: 4px solid #ef5350; padding-left: 14px; }
+    .honest b { color: #e8eef2; }
+    .closing { font-size: 20px; line-height: 1.4; color: #90a4ae; margin-top: auto; }
+    .closing b { color: #cfd8dc; }
+
+    .stat { display: flex; align-items: center; gap: 20px; }
+    .stat .big { font-size: 46px; font-weight: 700; color: #b388ff; font-family: 'Menlo','Consolas',monospace; }
+    .stat .txt { font-size: 21px; line-height: 1.32; color: #b0bec5; }
+    .stat .txt b { color: #e8eef2; }
+
+    .steprow { display: flex; align-items: center; gap: 14px; }
+    .btn { font: inherit; font-size: 22px; font-weight: 700; color: #cfd8dc; background: transparent;
+        border: 3px solid #607d8b; border-radius: 12px; padding: 7px 18px; cursor: pointer; white-space: nowrap; }
+    .btn .kk { font-weight: 500; font-size: 20px; }
+    .steprow .note { font-size: 20px; color: #90a4ae; }
+
+    /* settle picker (beat 2) */
+    .pick { padding: 12px 22px 14px; }
+    .pick .q { font-size: 21px; font-weight: 700; color: #cfd8dc; margin-bottom: 8px; }
+    .pick .q + .segs { margin-bottom: 12px; }
+    .segs { display: flex; gap: 8px; }
+    .sb { flex: 1; font: inherit; font-size: 20px; font-weight: 700; border: 2px solid #37506a; border-radius: 10px; padding: 7px 2px;
+        color: #90a4ae; background: transparent; cursor: pointer; text-align: center; white-space: nowrap; }
+    .sb.on { border-color: #4fc3f7; color: #e8eef2; background: rgba(79,195,247,0.13); }
+    .pick.off .segs { opacity: .38; }
+    .pick .pnote { font-size: 20px; color: #90a4ae; margin-top: 10px; min-height: 27px; }
+
+    /* beat 1 lower panel */
+    .fsmrow { display: flex; align-items: flex-start; }
+    .otab { flex: 1; padding: 6px 20px 0 6px; }
+    .otab table { border-collapse: collapse; margin: 0 auto; font-variant-numeric: tabular-nums; }
+    .otab th { font-size: 20px; font-weight: 600; color: #90a4ae; padding: 4px 12px 8px; text-align: center; line-height: 1.15; border-bottom: 2px solid #37506a; }
+    .otab td { font-family: 'Menlo','Consolas',monospace; font-size: 26px; font-weight: 700; text-align: center; padding: 9px 12px;
+        border-bottom: 1px solid #24384c; color: #e8eef2; white-space: nowrap; }
+    .otab tr:nth-child(odd) td { background: rgba(207,216,220,0.035); }
+    .otab td.vd { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 21px; text-align: left; }
+    .otab tr.good td.vd, .otab tr.good td.nx { color: #81c784; }
+    .otab tr.wrong td.vd, .otab tr.wrong td.nx { color: #ef5350; }
+    .otab tr.dimrow td { color: #3d5266 !important; }
+    .otab .onote { font-size: 20px; line-height: 1.34; color: #b0bec5; margin-top: 12px; }
+    .otab .onote b { color: #e8eef2; }
+
+    /* beat 3 */
+    .rules { display: flex; flex-direction: column; gap: 14px; flex: 1; justify-content: space-between; }
+    .rule { padding: 18px 22px 22px; }
+    .rule .rt { font-size: 25px; font-weight: 700; color: #e8eef2; }
+    .rule .rt .n { display: inline-block; width: 34px; height: 34px; line-height: 30px; text-align: center; border: 2px solid #cfd8dc; border-radius: 8px; font-size: 20px; margin-right: 10px; vertical-align: 2px; }
+    .rule .rr { font-size: 20px; line-height: 1.32; color: #b0bec5; margin: 4px 0 12px; }
+    .rule .rr b { color: #e8eef2; }
+    .pics { display: flex; gap: 16px; }
+    .pic { flex: 1; border: 2px solid #24384c; border-radius: 10px; display: flex; align-items: center; }
+    .pic .mk { flex: 0 0 52px; text-align: center; font-size: 30px; font-weight: 700; }
+    .pic.no { border-color: rgba(239,83,80,0.55); } .pic.no .mk { color: #ef5350; }
+    .pic.yes { border-color: rgba(129,199,132,0.55); } .pic.yes .mk { color: #81c784; }
+    .lat3 { padding: 2px 22px 12px; font-size: 21px; line-height: 1.36; color: #b0bec5; }
+    .lat3 b { color: #e8eef2; }
+    .back { font-size: 20px; line-height: 1.38; color: #b0bec5; }
+    .back b { color: #e8eef2; }
+    .back p + p { margin-top: 8px; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #37506a; }
+    .dot.on { background: #cfd8dc; border-color: #cfd8dc; }
+    .controls { font-size: 20px; color: #607d8b; }
+    .controls .k { border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        font-family: 'Menlo','Consolas',monospace; color: #90a4ae; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 22 H30 M70 22 H88 M128 22 H146" stroke="#4fc3f7" stroke-width="3"/>
+                <rect x="30" y="8" width="40" height="46" rx="4" stroke="#cfd8dc" stroke-width="2.5"/>
+                <rect x="88" y="8" width="40" height="46" rx="4" stroke="#cfd8dc" stroke-width="2.5"/>
+                <path d="M30 36 L39 43 L30 50 M88 36 L97 43 L88 50" stroke="#ffb74d" stroke-width="2.5"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Synchronizers <span class="sub">&mdash; two flip-flops and a clock period of waiting</span></h1>
+            <div class="subtitle">An outside input can land in the decision window. A synchronizer gives it a clock period to settle before anything else looks.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 3</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">An Input That Ignores the Clock</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Two Flip-Flops and a Clock Period of Waiting</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">The Cost and the Rules</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 -->
+        <div class="page" id="p1">
+            <div class="lcol">
+                <div class="panel pad face">
+                    <svg width="92" height="78" viewBox="0 0 92 78" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="6" y="46" width="80" height="24" rx="5" stroke="#cfd8dc" stroke-width="2.5"/>
+                        <rect x="26" y="24" width="40" height="22" rx="5" stroke="#4fc3f7" stroke-width="2.5" fill="rgba(79,195,247,0.12)"/>
+                        <path d="M46 4 V16 M40 11 L46 17 L52 11" stroke="#90a4ae" stroke-width="2.5"/>
+                    </svg>
+                    <div class="caption"><b>A is a push button.</b> A finger does not wait for a 100 MHz clock, so A can change at any instant. A is an <b>asynchronous input</b>.</div>
+                </div>
+                <div class="panel">
+                    <div class="sl data">
+                        <div class="sl-top"><span class="sl-name c-data">A changes<span class="sl-desc">from the clock edge</span></span><span class="sl-val" id="v1a"></span></div>
+                        <input type="range" id="s1a" min="-4" max="4" step="0.25" value="-3">
+                        <div class="sl-ends"><span>&minus;4</span><span class="w">window &minus;1 &hellip; +0.5</span><span>+4 ns</span></div>
+                    </div>
+                </div>
+                <div class="chiprow"><span class="chip" id="chip1"></span></div>
+                <div class="hint" id="hint1"></div>
+                <div class="panel pad">
+                    <div class="stat"><span class="big">15%</span><span class="txt">of every period is <b class="c-win">decision window</b>: 1.5 ns out of 10 ns. About <b>one change in seven</b> lands inside it.</span></div>
+                </div>
+                <div class="steprow">
+                    <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                    <span class="note">puts A back before the window</span>
+                </div>
+                <div class="closing">Rarely, a flip-flop caught this way also hovers between 0 and 1 before it settles. That is the subject of <b data-topic="metastable-states">Metastable States</b>.</div>
+            </div>
+            <div class="rcol">
+                <div class="panel"><svg id="td1" width="1248" height="330" viewBox="0 0 1248 330"></svg></div>
+                <div class="panel">
+                    <div class="phead"><span>The danger: A wired straight into a state machine</span> <span class="dimtxt">&mdash; it steps 00 &rarr; 01 &rarr; 10 &rarr; 00 while A = 1, holds while A = 0</span></div>
+                    <div class="fsmrow">
+                        <svg id="ckt1" width="372" height="400" viewBox="0 0 372 400"></svg>
+                        <svg id="sd1" width="456" height="400" viewBox="0 0 456 400"></svg>
+                        <div class="otab"><div id="otab1"></div><div class="onote" id="onote1"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 -->
+        <div class="page" id="p2">
+            <div class="lcol">
+                <div class="panel">
+                    <div class="sl data">
+                        <div class="sl-top"><span class="sl-name c-data">A changes<span class="sl-desc">from the first edge</span></span><span class="sl-val" id="v2a"></span></div>
+                        <input type="range" id="s2a" min="-4" max="4" step="0.25" value="-0.5">
+                        <div class="sl-ends"><span>&minus;4</span><span class="w">window &minus;1 &hellip; +0.5</span><span>+4 ns</span></div>
+                    </div>
+                </div>
+                <div class="panel pick" id="pick2">
+                    <div class="q">A lands in the window. Q1 settles</div>
+                    <div class="segs" id="segMode">
+                        <button class="sb" data-mode="none">at once</button>
+                        <button class="sb" data-mode="short">short</button>
+                        <button class="sb" data-mode="long">long</button>
+                        <button class="sb" data-mode="random">random</button>
+                    </div>
+                    <div class="q">and it settles to</div>
+                    <div class="segs" id="segVal">
+                        <button class="sb" data-val="1">1 &middot; the new A</button>
+                        <button class="sb" data-val="0">0 &middot; the old A</button>
+                    </div>
+                    <div class="pnote" id="pnote2"></div>
+                </div>
+                <div class="tiles">
+                    <div class="tile"><div class="tl">Q1 settled at</div><div class="tv" id="r2settle"></div></div>
+                    <div class="tile"><div class="tl">it has until</div><div class="tv c-win" id="r2dead"></div></div>
+                    <div class="tile"><div class="tl">A to Q2</div><div class="tv" id="r2lat"></div></div>
+                </div>
+                <div class="hint" id="note9">Both are counted from the clock edge. <b class="c-win">9 ns</b> = T &minus; t<sub>su</sub>. No t<sub>co</sub> comes off it, because no logic follows FF1.</div>
+                <div class="chiprow"><span class="chip ok" id="chip2"></span><button class="btn" data-reset style="margin-left:auto">&#8634; <span class="kk">R</span></button></div>
+                <div class="hint" id="hint2"></div>
+                <div class="honest">The honest limit: a hover that lasted past <b>9 ns</b> would still reach FF2 unsettled. That is extremely rare. A synchronizer makes the risk <b>negligible, not zero</b>.</div>
+            </div>
+            <div class="rcol">
+                <div class="panel"><svg id="ckt2" width="1248" height="244" viewBox="0 0 1248 244"></svg></div>
+                <div class="panel"><svg id="td2" width="1248" height="530" viewBox="0 0 1248 530"></svg></div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 -->
+        <div class="page" id="p3">
+            <div class="lcol" style="flex-basis:716px">
+                <div class="panel">
+                    <div class="phead"><span>The cost: latency</span> <span class="dimtxt">&mdash; Q2 follows A one to two clocks late</span></div>
+                    <svg id="td3" width="712" height="424" viewBox="0 0 712 424"></svg>
+                    <div class="lat3">Move the change by <b>2.5 ns</b> and the answer arrives <b>a whole clock later</b>: 12.5 ns against 20 ns. You cannot choose which. For buttons and sensors the wait does not matter: a press lasts millions of clock periods.</div>
+                </div>
+                <div class="panel pad back">
+                    <p>The coin sensor L in <b data-topic="level-to-pulse-fsm">Level-to-Pulse FSM</b> is exactly this kind of input. The rule in <b data-topic="mealy-versus-moore">Mealy versus Moore</b>, Moore unless the inputs are known to be synchronized, is this topic applied.</p>
+                    <p>When the clock is very fast, a third flip-flop adds one more full period of settling time.</p>
+                </div>
+            </div>
+            <div class="rcol">
+                <div class="rules">
+                    <div class="panel rule">
+                        <div class="rt"><span class="n">1</span>Synchronize every asynchronous input</div>
+                        <div class="rr">Buttons, switches, sensors, signals from another clock: none of them goes straight into a state machine.</div>
+                        <div class="pics">
+                            <div class="pic no"><span class="mk">&#10007;</span><svg id="r1no" width="440" height="112" viewBox="0 0 440 112"></svg></div>
+                            <div class="pic yes"><span class="mk">&#10003;</span><svg id="r1yes" width="440" height="112" viewBox="0 0 440 112"></svg></div>
+                        </div>
+                    </div>
+                    <div class="panel rule">
+                        <div class="rt"><span class="n">2</span>Synchronize it once, then fan out the synchronized copy</div>
+                        <div class="rr">Two synchronizers on one signal can disagree for a clock, and that is <b>beat 1&rsquo;s failure again</b>.</div>
+                        <div class="pics">
+                            <div class="pic no"><span class="mk">&#10007;</span><svg id="r2no" width="440" height="150" viewBox="0 0 440 150"></svg></div>
+                            <div class="pic yes"><span class="mk">&#10003;</span><svg id="r2yes" width="440" height="150" viewBox="0 0 440 150"></svg></div>
+                        </div>
+                    </div>
+                    <div class="panel rule">
+                        <div class="rt"><span class="n">3</span>Back to back: no logic between the two flip-flops</div>
+                        <div class="rr">Logic between them would spend part of the period, and Q1 needs <b>all of it</b> to settle.</div>
+                        <div class="pics">
+                            <div class="pic no"><span class="mk">&#10007;</span><svg id="r3no" width="440" height="84" viewBox="0 0 440 84"></svg></div>
+                            <div class="pic yes"><span class="mk">&#10003;</span><svg id="r3yes" width="440" height="84" viewBox="0 0 440 84"></svg></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="defs" id="defs">
+            <div class="defs-card" id="defsCard">
+                <div class="defs-head"><span class="defs-title">Definitions</span><span class="defs-close">Esc or D to close</span></div>
+                <div class="defs-list">
+                    <span class="ds c-data" data-def="async">asynchronous input</span><span class="dd">an input that does not come from this circuit&rsquo;s clock, so it can change at any moment: a push button, a sensor, a signal from another system.</span>
+                    <span class="ds c-win" data-def="window">decision window</span><span class="dd">from t<sub>su</sub> before the clock edge to t<sub>h</sub> after it. D must not change inside it. Here it is 1.5 ns wide.</span>
+                    <span class="ds c-win" data-def="tsu">t<sub>su</sub></span><span class="dd"><b>setup time</b> &mdash; how long D must be steady before the clock edge. 1 ns here.</span>
+                    <span class="ds c-win" data-def="th">t<sub>h</sub></span><span class="dd"><b>hold time</b> &mdash; how long D must stay steady after the clock edge. 0.5 ns here.</span>
+                    <span class="ds c-bad" data-def="metastable">metastable state</span><span class="dd">Q hovering between 0 and 1 for a while before it settles to one of them. It can follow a change inside the decision window. See <b data-topic="metastable-states">Metastable States</b>.</span>
+                    <span class="ds c-data" data-def="synchronizer">synchronizer</span><span class="dd">two flip-flops back to back on the circuit&rsquo;s clock. The first takes the asynchronous input; the second hands the rest of the circuit a copy that changes only at clock edges.</span>
+                    <span class="ds c-ok" data-def="latency">latency</span><span class="dd">the delay from a change on the input to the same change on the synchronized output: one to two clock periods.</span>
+                    <span class="ds c-clk" data-def="T">T</span><span class="dd"><b>clock period</b> &mdash; from one rising clock edge to the next. 10 ns here.</span>
+                    <span class="ds c-data" data-def="tco">t<sub>co</sub></span><span class="dd"><b>clock-to-output delay</b> &mdash; from the clock edge until Q shows the new value. 1 ns here.</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div><div class="dot" data-dot="3"></div>
+        </div>
+        <div class="controls">
+            <span><span class="k">1</span>&ndash;<span class="k">3</span> beat
+            &middot; <span class="k">&larr;</span> <span class="k">&rarr;</span> move A
+            &middot; <span class="k">S</span> settle time &middot; <span class="k">V</span> settles to 0 or 1 &middot; <span class="k">N</span> new random draw (beat 2)
+            &middot; <span class="k">R</span> &#8634; reset this beat
+            &middot; <span class="k">D</span> definitions</span>
+        </div>
+    </div>
+
+</div>
+</div>
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ MODEL ============
+    const P = { T: 10, tco: 1, tsu: 1, th: 0.5 };            // ns — shared with graphics 47 and 48
+    const DEADLINE = P.T - P.tsu;                             // 9 ns: clock edge → FF2's decision window opens
+    const SETTLE = { none: P.tco, short: 3, long: 8 };        // ns after the edge at which Q1 is at a valid level
+    const MODES = ['none', 'short', 'long', 'random'];
+    const DEF = { a1: -3, a2: -0.5, mode: 'short', v2: 1, seed: 1 };
+    const S = { page: 1, ...DEF, ts: SETTLE.short };
+
+    // where a change at time a falls relative to the decision window of the edge at time e
+    const zone = (a, e = 0) => a <= e - P.tsu + 1e-9 ? 'before' : a >= e + P.th - 1e-9 ? 'after' : 'inside';
+
+    // Beat 1's machine: 00 → 01 → 10 → 00 while A = 1, holds while A = 0; state 11 is unused.
+    // D1 = S1·A' + S0·A      D0 = S0·A' + S1'·S0'·A     (a1 / a0: the A that each flip-flop's logic read)
+    const fsmNext = (s1, s0, a1, a0) => [ (s1 & (1 - a1)) | (s0 & a1), (s0 & (1 - a0)) | ((1 - s1) & (1 - s0) & a0) ];
+    function outcomes(s1, s0) {          // A going 0 → 1; each flip-flop reads the new (1) or the old (0) A
+        const legal = [fsmNext(s1, s0, 0, 0).join(''), fsmNext(s1, s0, 1, 1).join('')];
+        return [[1, 1], [0, 0], [1, 0], [0, 1]].map(([r1, r0]) => {
+            const nx = fsmNext(s1, s0, r1, r0).join('');
+            return { r1, r0, next: nx, ok: legal.includes(nx) };
+        });
+    }
+
+    // seeded draw for "random": mostly short, never past 8.5 ns
+    function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+    function randomDraw(seed) { const g = mulberry(seed * 7919 + 13), u = g(), w = g(); return { ts: Math.round((1.5 + 7 * u * u) * 4) / 4, v: w < 0.5 ? 1 : 0 }; }
+
+    // The synchronizer. A rises at time a (edge 0 is FF1's first edge). ts: when Q1 is settled, measured from the edge.
+    // Returns Q1's events [{t, to}] (to = 0, 0.5 = hovering, 1), the time Q2 rises, and the bookkeeping.
+    function syncModel(a, ts, v) {
+        const z = zone(a), T = P.T, co = P.tco;
+        if (z === 'before') return { z, q1: [{ t: co, to: 1 }], q2: T + co, settled: co, hover: false, took: 1 };
+        if (z === 'after')  return { z, q1: [{ t: T + co, to: 1 }], q2: 2 * T + co, settled: co, hover: false, took: 0 };
+        const q1 = [], hover = ts > co + 1e-9;
+        if (hover) { q1.push({ t: co, to: 0.5 }); q1.push({ t: ts, to: v }); }
+        else if (v) q1.push({ t: co, to: 1 });
+        if (!v) q1.push({ t: T + co, to: 1 });               // the next edge reads A = 1 cleanly
+        return { z, q1, q2: (v ? T : 2 * T) + co, settled: hover ? ts : co, hover, took: v };
+    }
+    const curSync = () => syncModel(S.a2, S.ts, S.v2);
+
+    // ============ SVG HELPERS ============
+    const C = { clk: '#ffb74d', data: '#4fc3f7', win: '#b388ff', ok: '#81c784', bad: '#ef5350',
+        slate: '#90a4ae', dim: '#607d8b', line: '#37506a', faint: '#1b2c3d', navy: '#0d1b2a', text: '#cfd8dc', white: '#e8eef2', wire: '#7d9bb5' };
+    const SANS = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", MONO = "'Menlo','Consolas','Courier New',monospace";
+    const r = v => Math.round(v * 100) / 100;
+    const num = v => String(r(v)).replace('-', '−');
+    const sgn = v => (v > 0 ? '+' : '') + num(v);
+    function tx(x, y, s, o = {}) {
+        const fs = o.fs || 20;
+        return `<text x="${r(x)}" y="${r(y)}" font-size="${fs}" fill="${o.fill || C.text}" text-anchor="${o.a || 'start'}" font-weight="${o.w || 400}" font-family="${o.mono ? MONO : SANS}"${o.halo ? ` stroke="${C.navy}" stroke-width="6" paint-order="stroke" stroke-linejoin="round"` : ''}${o.attr ? ' ' + o.attr : ''}>${s}</text>`;
+    }
+    const tsub = (sub, fs) => `t<tspan dy="${r(fs*0.22)}" font-size="${r(fs*0.7)}">${sub}</tspan><tspan dy="${r(-fs*0.22)}">​</tspan>`;
+    function defs(id) {
+        const mk = (n, col) => `<marker id="ah-${n}-${id}" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0.8 L10 5 L0 9.2 z" fill="${col}"/></marker>`;
+        const big = (n, col) => `<marker id="arc-${n}-${id}" viewBox="0 0 16 13" refX="15" refY="6.5" markerWidth="16" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L16 6.5 L0 13 z" fill="${col}"/></marker>`;
+        return `<defs>${mk('clk', C.clk)}${mk('ok', C.ok)}${mk('bad', C.bad)}${mk('data', C.data)}${mk('win', C.win)}${mk('slate', C.slate)}${big('wire', C.wire)}${big('ok', C.ok)}${big('bad', C.bad)}
+            <pattern id="hatch-${id}" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="11" height="11" fill="rgba(239,83,80,0.14)"/><line x1="2" y1="0" x2="2" y2="11" stroke="${C.bad}" stroke-width="3.5"/></pattern></defs>`;
+    }
+    function dim(id, xa, xb, y, col, name) {
+        const a = Math.min(xa, xb), b = Math.max(xa, xb), w = b - a;
+        let s = `<g data-dim="${name || ''}" data-x1="${r(a)}" data-x2="${r(b)}"><path d="M${r(a)} ${y-9} V${y+9} M${r(b)} ${y-9} V${y+9}" stroke="${C[col]}" stroke-width="2"/>`;
+        if (w >= 26) s += `<line x1="${r(a+1)}" y1="${y}" x2="${r(b-1)}" y2="${y}" stroke="${C[col]}" stroke-width="2.5" marker-start="url(#ah-${col}-${id})" marker-end="url(#ah-${col}-${id})"/>`;
+        else if (w > 0.5) s += `<line x1="${r(a)}" y1="${y}" x2="${r(b)}" y2="${y}" stroke="${C[col]}" stroke-width="2.5"/>`;
+        return s + '</g>';
+    }
+
+    // ---- timing diagram frame (same construction as graphic 48) ----
+    const SLOPE = 0.15, TDS = {};
+    function TD(o) {
+        const td = { ...o };
+        td.X = t => o.x0 + (t - o.tMin) * o.pp;
+        td.st = i => o.top + i * o.rowH;  td.sb = i => o.top + (i + 1) * o.rowH;
+        td.hi = i => td.st(i) + (o.hiOff || 20);  td.lo = i => td.sb(i) - (o.loOff || 28);  td.mid = i => (td.hi(i) + td.lo(i)) / 2;
+        td.bottom = td.sb(o.n - 1);       td.axisY = td.bottom + 30;
+        TDS[o.id] = td;
+        return td;
+    }
+    function frame(td, rows) {
+        let s = defs(td.id) + `<defs><clipPath id="clip-${td.id}"><rect x="${td.X(td.tMin) + 5}" y="${td.top - 60}" width="${td.X(td.tMax) - td.X(td.tMin) - 5}" height="${td.bottom - td.top + 120}"/></clipPath></defs>`;
+        for (let t = Math.ceil(td.tMin); t <= td.tMax; t++) if (t % 2 === 0)
+            s += `<line x1="${td.X(t)}" y1="${td.top}" x2="${td.X(t)}" y2="${td.bottom}" stroke="${C.faint}" stroke-width="1.5"/>`;
+        rows.forEach((rw, i) => {
+            s += `<line x1="${td.X(td.tMin)}" y1="${td.sb(i)}" x2="${td.X(td.tMax)}" y2="${td.sb(i)}" stroke="${C.faint}" stroke-width="1.5"/>`;
+            if (!rw) return;
+            const yb = rw.sub ? td.mid(i) - 2 : td.mid(i) + 9;
+            s += tx(td.x0 - 18, yb, rw.label, { fs: 26, w: 700, fill: C[rw.col], a: 'end' });
+            if (rw.sub) s += tx(td.x0 - 18, yb + 24, rw.sub, { fs: 20, fill: C.slate, a: 'end' });
+        });
+        const ay = td.axisY, every = td.labEvery || 2;
+        s += `<line x1="${td.X(td.tMin)}" y1="${ay}" x2="${td.X(td.tMax)}" y2="${ay}" stroke="${C.dim}" stroke-width="2"/>`;
+        for (let t = Math.ceil(td.tMin); t <= td.tMax; t++) {
+            const big = t % every === 0;
+            s += `<line x1="${td.X(t)}" y1="${ay}" x2="${td.X(t)}" y2="${ay + (big ? 11 : 7)}" stroke="${C.dim}" stroke-width="2"/>`;
+            if (big) s += tx(td.X(t), ay + 32, num(t), { fs: 20, fill: C.slate, a: 'middle', mono: true });
+        }
+        s += tx(td.x0 - 18, ay + 32, 'time (ns)', { fs: 20, fill: C.slate, a: 'end' });
+        return s;
+    }
+    // a waveform with three possible levels: 0, 1 and 0.5 (hovering, drawn red and FLAT). events: [{t, to}]
+    function wave(td, slot, init, events, col, name) {
+        const y = v => r(td.lo(slot) - v * (td.lo(slot) - td.hi(slot)));
+        const ev = events.slice().sort((a, b) => a.t - b.t);
+        let lv = init, d = `M${r(td.X(td.tMin - 1))} ${y(lv)}`, red = '';
+        ev.forEach((e, i) => {
+            d += ` L${r(td.X(e.t - SLOPE/2))} ${y(lv)} L${r(td.X(e.t + SLOPE/2))} ${y(e.to)}`;
+            if (e.to === 0.5) { const end = ev[i + 1];
+                red += `<path data-hover="${name}" data-t1="${e.t}" data-t2="${end.t}" d="M${r(td.X(e.t - SLOPE/2))} ${y(lv)} L${r(td.X(e.t + SLOPE/2))} ${y(0.5)} L${r(td.X(end.t - SLOPE/2))} ${y(0.5)} L${r(td.X(end.t + SLOPE/2))} ${y(end.to)}" fill="none" stroke="${C.bad}" stroke-width="4.5" stroke-linejoin="round"/>`; }
+            lv = e.to;
+        });
+        d += ` L${r(td.X(td.tMax + 1))} ${y(lv)}`;
+        return `<g clip-path="url(#clip-${td.id})"><path d="${d}" fill="none" stroke="${C[col]}" stroke-width="3.5" stroke-linejoin="round" data-wave="${name}" data-slot="${slot}"/>${red}</g>`;
+    }
+    const rise = (ts) => ts.map(t => ({ t, to: 1 }));
+    function clockWave(td, slot, T, name) {
+        const ev = []; let lv = 0;
+        for (let k = Math.floor((td.tMin - 1) / T) - 1; k * T <= td.tMax + 1; k++) {
+            [[k * T, 1], [k * T + T/2, 0]].forEach(([t, to]) => { if (t > td.tMin - 1 && t <= td.tMax + 1) ev.push({ t, to }); else if (t <= td.tMin - 1) lv = to; });
+        }
+        return wave(td, slot, lv, ev, 'clk', name);
+    }
+    // the decision window: violet band, 22% fill, 2px outline — drawn exactly as in graphics 47 and 48
+    function windowBand(td, edge, s0, s1, labelY) {
+        const xa = td.X(edge - P.tsu), xb = td.X(edge + P.th), xe = td.X(edge);
+        let s = `<g clip-path="url(#clip-${td.id})"><rect data-window="${edge}" x="${r(xa)}" y="${td.st(s0) + 2}" width="${r(xb - xa)}" height="${td.sb(s1) - td.st(s0) - 4}" fill="${C.win}" fill-opacity="0.22" stroke="${C.win}" stroke-width="2"/></g>`;
+        if (labelY != null) {
+            s += tx((xa + xe) / 2 - (td.pp < 30 ? 9 : 0), labelY, tsub('su', 20), { fs: 20, w: 700, fill: C.win, a: 'middle' });
+            s += tx((xe + xb) / 2 + (td.pp < 60 ? 8 : 0) + (td.pp < 30 ? 6 : 0), labelY, tsub('h', 20), { fs: 20, w: 700, fill: C.win, a: 'middle' });
+        }
+        return s;
+    }
+    const guide = (x, y1, y2, col, op) => `<line x1="${r(x)}" y1="${r(y1)}" x2="${r(x)}" y2="${r(y2)}" stroke="${C[col]}" stroke-width="1.5" stroke-dasharray="5 5" opacity="${op || 0.55}"/>`;
+
+    // ---- flip-flop symbol: D, ▷, Q and Q̄ pins ----
+    function ff(x, y, w, h, name, fs = 20) {
+        const dq = r(y + h*0.3), qb = r(y + h*0.7), ck = r(y + h*0.74), p = Math.round(fs * 0.55);
+        let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#0b1622" stroke="${C.text}" stroke-width="2.5"/>`;
+        s += tx(x + p, dq + fs*0.35, 'D', { fs, mono: true, fill: C.text });
+        s += tx(x + w - p, dq + fs*0.35, 'Q', { fs, mono: true, fill: C.text, a: 'end' });
+        s += tx(x + w - p, qb + fs*0.35, 'Q', { fs, mono: true, fill: C.text, a: 'end', attr: 'data-ovt="1"' });
+        s += `<line data-ov="1" x1="${x + w - p - fs*0.6}" y1="${r(qb + fs*0.35 - 0.88*fs)}" x2="${x + w - p}" y2="${r(qb + fs*0.35 - 0.88*fs)}" stroke="${C.text}" stroke-width="2"/>`;
+        s += `<path d="M${x} ${ck - fs/2} L${x + fs*0.75} ${ck} L${x} ${ck + fs/2}" fill="none" stroke="${C.clk}" stroke-width="2.5"/>`;
+        s += `<path d="M${x + w} ${qb} h14" stroke="${C.wire}" stroke-width="2.5"/>`;      // Q̄ stub, unused here
+        if (name) s += tx(x + w/2, y + h/2 + fs*0.4, name, { fs: fs + 2, w: 700, fill: C.white, a: 'middle' });
+        return { s, dq, qb, ck };
+    }
+    function fixOverbars(svg) {       // overbars are placed from the measured glyph box on the ACTIVE page
+        svg.querySelectorAll('line[data-ov]').forEach(ln => {
+            const t = ln.previousElementSibling; if (!t || !t.getBBox) return;
+            const bb = t.getBBox(); if (!bb.width) return;
+            const y = +t.getAttribute('y') - 0.88 * +t.getAttribute('font-size');
+            ln.setAttribute('x1', r(bb.x + 0.5)); ln.setAttribute('x2', r(bb.x + bb.width - 0.5));
+            ln.setAttribute('y1', r(y)); ln.setAttribute('y2', r(y));
+        });
+    }
+    const dot = (x, y, col) => `<circle cx="${x}" cy="${y}" r="5" fill="${C[col]}"/>`;
+    const wire = (d, col, extra) => `<path d="${d}" fill="none" stroke="${C[col]}" stroke-width="2.5" stroke-linejoin="round"${extra || ''}/>`;
+    const put = (id, s) => { const el = document.getElementById(id); el.innerHTML = s; fixOverbars(el); return el; };
+
+    // ============ BEAT 1 ============
+    const TD1 = { x0: 186, pp: 44, tMin: -5, tMax: 19, top: 62, rowH: 66, hiOff: 14, loOff: 16 };
+    function drawBeat1() {
+        const a = S.a1, z = zone(a), T = P.T, co = P.tco;
+        const td = TD({ ...TD1, n: 3, id: 'td1' });
+        let s = frame(td, [{ label: 'CLK', col: 'clk' }, { label: 'A', sub: 'push button', col: 'data' }, { label: 'Q', sub: 'a flip-flop on A', col: z === 'inside' ? 'bad' : 'data' }]);
+        [0, T].forEach((e, i) => {
+            s += guide(td.X(e), td.top - 24, td.bottom, 'clk', 0.7) + windowBand(td, e, 0, 1, td.top - 6);
+            const rd = i === 0 ? (z === 'before' ? '1' : z === 'after' ? '0' : '?') : '1';
+            s += tx(td.X(e), td.top - 34, (i === 0 ? 'this edge reads A = ' : 'the next edge reads A = ') + rd,
+                { fs: 20, w: 700, fill: rd === '?' ? C.bad : C.clk, a: 'middle', attr: `data-read="${e}" data-val="${rd}"` });
+        });
+        s += clockWave(td, 0, T, 'clk');
+        s += guide(td.X(a), td.lo(1), td.axisY, 'data', 0.75) + `<path data-amark="1" d="M${r(td.X(a))} ${td.axisY - 2} l-8 -12 h16 z" fill="${C.data}"/>`;
+        s += wave(td, 1, 0, rise([a]), 'data', 'a');
+        if (z === 'before') s += wave(td, 2, 0, rise([co]), 'data', 'q');
+        else if (z === 'after') s += wave(td, 2, 0, rise([T + co]), 'data', 'q');
+        else {      // 0 until t_co, then either value until the next edge has read A cleanly
+            const x1 = td.X(co), x2 = td.X(T + co), yh = td.hi(2), yl = td.lo(2);
+            s += `<g clip-path="url(#clip-td1)"><path d="M${td.X(td.tMin - 1)} ${yl} H${r(x1)}" fill="none" stroke="${C.data}" stroke-width="3.5"/>` +
+                 `<rect data-unknown="1" x="${r(x1)}" y="${yh}" width="${r(x2 - x1)}" height="${yl - yh}" fill="url(#hatch-td1)" stroke="${C.bad}" stroke-width="2"/>` +
+                 `<path d="M${r(x2)} ${yh} H${td.X(td.tMax + 1)}" fill="none" stroke="${C.data}" stroke-width="3.5"/></g>`;
+            s += tx((x1 + x2) / 2, (yh + yl) / 2 + 7, '0 or 1, and no way to say which', { fs: 20, w: 700, fill: C.white, a: 'middle', halo: true });
+        }
+        put('td1', s);
+
+        document.getElementById('v1a').textContent = sgn(a) + ' ns';
+        const chip = document.getElementById('chip1');
+        chip.textContent = z === 'before' ? 'clean: read on this edge' : z === 'after' ? 'clean: read on the next edge' : 'in the window: not guaranteed';
+        chip.className = 'chip ' + (z === 'inside' ? 'bad' : 'ok');
+        document.getElementById('hint1').innerHTML = z === 'before'
+            ? `A was steady at least t<sub>su</sub> = 1 ns before the edge. Every flip-flop that looks at A reads the <b>new</b> value.`
+            : z === 'after' ? `A changed t<sub>h</sub> = 0.5 ns or more after the edge. Every flip-flop keeps the <b>old</b> value and reads the new one on the next edge.`
+            : `A flip-flop may read the old value or the new one. <b>Two flip-flops need not agree.</b>`;
+        drawCkt1(z); drawSd1(z); drawOutcomes(z);
+    }
+    function drawCkt1(z) {
+        const w = 96, h = 104, fx = 222, y1 = 58, y0 = 198, lx = 58, lw = 92, cx = 196;
+        const f1 = ff(fx, y1, w, h, 'S1'), f0 = ff(fx, y0, w, h, 'S0');
+        const hot = z === 'inside';
+        let s = defs('ckt1');
+        s += `<rect x="${lx}" y="${y1}" width="${lw}" height="${y0 + h - y1}" rx="10" fill="rgba(79,195,247,0.07)" stroke="${C.data}" stroke-width="2.5"/>`;
+        ['next-', 'state', 'logic'].forEach((t, i) => s += tx(lx + lw/2, 172 + i * 25, t, { fs: 20, fill: C.text, a: 'middle' }));
+        s += wire(`M8 122 H${lx}`, 'data') + tx(8, 110, 'A', { fs: 24, w: 700, fill: C.data });
+        s += wire(`M${lx + lw} ${f1.dq} H${fx}`, hot ? 'bad' : 'data') + tx(cx - 10, f1.dq - 10, 'D1', { fs: 20, mono: true, fill: hot ? C.bad : C.data, a: 'middle' });
+        s += wire(`M${lx + lw} ${f0.dq} H${fx}`, hot ? 'bad' : 'data') + tx(cx - 26, f0.dq - 10, 'D0', { fs: 20, mono: true, fill: hot ? C.bad : C.data, a: 'middle' });
+        // state feedback, both over the top
+        s += wire(`M${fx + w} ${f1.dq} H340 V34 H126 V${y1}`, 'wire') + wire(`M${fx + w} ${f0.dq} H358 V14 H86 V${y1}`, 'wire');
+        // clock from below; it hops D0 on its way to S1
+        const hy = f0.dq;
+        s += wire(`M${cx} 348 V${f0.ck} H${fx} M${cx} ${f0.ck} V${hy + 8} a8 8 0 0 0 0 -16 V${f1.ck} H${fx}`, 'clk') + dot(cx, f0.ck, 'clk');
+        s += tx(cx, 374, 'CLK', { fs: 20, w: 700, fill: C.clk, mono: true, a: 'middle' });
+        s += f1.s + f0.s;
+        put('ckt1', s);
+    }
+    // ---- state diagram: arcs generated from node geometry (rim to rim) ----
+    const ND = { '01': { x: 150, y: 128 }, '10': { x: 366, y: 128 }, '00': { x: 258, y: 280 }, '11': { x: 54, y: 280 } }, NR = 38;
+    function sdArc(a, b, bow, col, lab, id, dash, name, side) {
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+        const nx = -dy / len, ny = dx / len, cx = mx + nx * bow, cy = my + ny * bow;
+        const ua = Math.hypot(cx - a.x, cy - a.y), ub = Math.hypot(cx - b.x, cy - b.y);
+        const sx = a.x + (cx - a.x) / ua * NR, sy = a.y + (cy - a.y) / ua * NR, ex = b.x + (cx - b.x) / ub * (NR + 3), ey = b.y + (cy - b.y) / ub * (NR + 3);
+        const off = (12 + 0.5 * (58 * Math.abs(nx) + 20 * Math.abs(ny))) * (side || Math.sign(bow || 1));      // clear of the line whatever its angle
+        const lxp = 0.25 * sx + 0.5 * cx + 0.25 * ex + nx * off, lyp = 0.25 * sy + 0.5 * cy + 0.25 * ey + ny * off;
+        return { p: `<path data-arc="${name}" d="M${r(sx)} ${r(sy)} Q${r(cx)} ${r(cy)} ${r(ex)} ${r(ey)}" fill="none" stroke="${C[col]}" stroke-width="${col === 'wire' ? 2.5 : 3.5}"${dash ? ' stroke-dasharray="9 7"' : ''} marker-end="url(#arc-${col}-${id})"/>`,
+                 l: lab ? tx(lxp, lyp + 7, lab, { fs: 20, w: 700, fill: col === 'wire' ? C.text : C[col], a: 'middle', halo: true, attr: `data-arclabel="${name}"` }) : '' };
+    }
+    function sdLoop(n, ang, col, lab, id, name) {
+        const pt = (t, d) => [n.x + d * Math.cos(t), n.y + d * Math.sin(t)];
+        const p1 = pt(ang - 0.5, NR), p2 = pt(ang + 0.5, NR + 3), c1 = pt(ang - 0.62, NR + 60), c2 = pt(ang + 0.62, NR + 60), lp = pt(ang, NR + 60);
+        return { p: `<path data-arc="${name}" d="M${r(p1[0])} ${r(p1[1])} C${r(c1[0])} ${r(c1[1])} ${r(c2[0])} ${r(c2[1])} ${r(p2[0])} ${r(p2[1])}" fill="none" stroke="${C[col]}" stroke-width="${col === 'wire' ? 2.5 : 3.5}" marker-end="url(#arc-${col}-${id})"/>`,
+                 l: tx(lp[0], lp[1] + 7, lab, { fs: 20, w: 700, fill: col === 'wire' ? C.text : C[col], a: 'middle', halo: true, attr: `data-arclabel="${name}"` }) };
+    }
+    function drawSd1(z) {
+        const id = 'sd1', inside = z === 'inside', UP = -Math.PI / 2, DOWN = Math.PI / 2;
+        const lit = { go: z !== 'after', stay: z !== 'before' };
+        const arcs = [
+            sdArc(ND['01'], ND['10'], 0, lit.go ? 'ok' : 'wire', 'A = 1', id, false, '01-10', -1),
+            sdLoop(ND['01'], UP, lit.stay ? 'ok' : 'wire', 'A = 0', id, '01-01'),
+            sdLoop(ND['10'], UP, 'wire', 'A = 0', id, '10-10'),
+            sdArc(ND['10'], ND['00'], 0, 'wire', 'A = 1', id, false, '10-00', -1),
+            sdLoop(ND['00'], DOWN, 'wire', 'A = 0', id, '00-00'),
+            sdArc(ND['00'], ND['01'], 34, 'wire', 'A = 1', id, false, '00-01', 1),
+        ];
+        if (inside) arcs.push(sdArc(ND['01'], ND['00'], 34, 'bad', '', id, true, 'x-01-00'), sdArc(ND['01'], ND['11'], 0, 'bad', '', id, true, 'x-01-11'));
+        let s = defs(id) + arcs.map(a => a.p).join('');
+        Object.entries(ND).forEach(([k, n]) => {
+            const ghost = k === '11', bad = inside && (k === '11' || k === '00'), good = (k === '10' && lit.go) || (k === '01' && lit.stay);
+            const col = bad ? C.bad : good ? C.ok : ghost ? C.dim : C.text;
+            s += `<circle data-node="${k}" cx="${n.x}" cy="${n.y}" r="${NR}" fill="${bad ? 'rgba(239,83,80,0.14)' : good ? 'rgba(129,199,132,0.12)' : '#0b1622'}" stroke="${col}" stroke-width="${k === '01' ? 4.5 : 2.5}"${ghost ? ' stroke-dasharray="7 6"' : ''}/>`;
+            s += tx(n.x, n.y + 9, k, { fs: 26, w: 700, mono: true, fill: ghost && !bad ? C.slate : C.white, a: 'middle' });
+        });
+        s += arcs.map(a => a.l).join('');
+        s += tx(ND['01'].x - NR - 10, ND['01'].y + 7, 'now', { fs: 20, w: 700, fill: C.white, a: 'end' });
+        s += tx(6, ND['11'].y + NR + 28, 'unused', { fs: 20, fill: inside ? C.bad : C.slate });
+        put(id, s);
+    }
+    function drawOutcomes(z) {
+        const rows = outcomes(0, 1), inside = z === 'inside';
+        const why = { '10': 'the A = 1 arc', '01': 'the A = 0 arc', '11': 'not a state', '00': 'no such arc' };
+        let h = `<table><tr><th>S1 reads<br>A as</th><th>S0 reads<br>A as</th><th>next<br>state</th><th></th></tr>`;
+        rows.forEach(o => {
+            const on = inside || (z === 'before' && o.r1 && o.r0) || (z === 'after' && !o.r1 && !o.r0);
+            h += `<tr class="${on ? (o.ok ? 'good' : 'wrong') : 'dimrow'}" data-out="${o.r1}${o.r0}" data-next="${o.next}" data-on="${on ? 1 : 0}"><td>${o.r1}</td><td>${o.r0}</td><td class="nx">${o.next}</td><td class="vd">${o.ok ? '✓' : '✗'} ${why[o.next]}</td></tr>`;
+        });
+        document.getElementById('otab1').innerHTML = h + '</table>';
+        document.getElementById('onote1').innerHTML = inside
+            ? `In state 01, D1 = A and D0 = <span class="ov">A</span>. The two flip-flops decide separately, so <b>four</b> next states are possible and <b>two are wrong</b>.`
+            : `In state 01, D1 = A and D0 = <span class="ov">A</span>. Outside the window both flip-flops read the <b>same</b> A, so the machine follows its diagram.`;
+    }
+
+    // ============ BEAT 2 ============
+    function drawCkt2() {
+        const id = 'ckt2', y = 60, w = 150, h = 140, x1 = 300, x2 = 690, bus = 224, fs = 26;
+        const f1 = ff(x1, y, w, h, 'FF1', fs), f2 = ff(x2, y, w, h, 'FF2', fs), dq = f1.dq, ck = f1.ck, m = curSync();
+        let s = defs(id);
+        // the push button
+        s += `<rect x="20" y="${dq - 2}" width="76" height="24" rx="5" fill="none" stroke="${C.text}" stroke-width="2.5"/><rect x="39" y="${dq - 22}" width="38" height="20" rx="5" fill="rgba(79,195,247,0.12)" stroke="${C.data}" stroke-width="2.5"/>`;
+        s += tx(58, dq + 50, 'push button', { fs: 20, fill: C.slate, a: 'middle' });
+        s += wire(`M96 ${dq} H${x1}`, 'data') + tx(198, dq - 14, 'A', { fs: 28, w: 700, fill: C.data, a: 'middle' }) + tx(198, dq + 30, 'asynchronous', { fs: 20, fill: C.slate, a: 'middle' });
+        const hov = m.hover;
+        s += wire(`M${x1 + w} ${dq} H${x2}`, hov ? 'bad' : 'data') + tx((x1 + w + x2) / 2, dq - 14, 'Q1', { fs: 28, w: 700, fill: hov ? C.bad : C.data, a: 'middle', mono: true });
+        s += tx((x1 + w + x2) / 2, dq + 30, hov ? 'hovers, then settles' : 'may hover', { fs: 20, fill: hov ? C.bad : C.slate, a: 'middle', attr: 'data-q1note="1"' });
+        s += wire(`M${x2 + w} ${dq} H1040`, 'data') + tx(940, dq - 14, 'Q2', { fs: 28, w: 700, fill: C.data, a: 'middle', mono: true }) + tx(940, dq + 30, 'synchronized A', { fs: 20, fill: C.slate, a: 'middle' });
+        // the rest of the circuit
+        s += `<rect x="1040" y="${y}" width="190" height="${h}" rx="18" fill="rgba(79,195,247,0.07)" stroke="${C.data}" stroke-width="2.5"/>`;
+        s += tx(1135, y + h/2 - 6, 'the rest of', { fs: 22, fill: C.text, a: 'middle' }) + tx(1135, y + h/2 + 22, 'the circuit', { fs: 22, fill: C.text, a: 'middle' });
+        // one clock for both
+        const b1 = x1 - 40, b2 = x2 - 40;
+        s += tx(150, bus + 8, 'CLK', { fs: 22, w: 700, fill: C.clk, mono: true, a: 'end' });
+        s += wire(`M160 ${bus} H${b2} V${ck} H${x2}`, 'clk') + wire(`M${b1} ${bus} V${ck} H${x1}`, 'clk') + dot(b1, bus, 'clk');
+        s += tx(b2 + 22, bus + 8, 'the circuit’s own clock, to both', { fs: 20, fill: C.slate });
+        // bracket
+        s += `<path d="M${x1} 48 V36 H${x2 + w} V48" fill="none" stroke="${C.slate}" stroke-width="2"/>`;
+        s += tx((x1 + x2 + w) / 2, 43, 'synchronizer', { fs: 22, w: 700, fill: C.white, a: 'middle', halo: true });
+        s += f1.s + f2.s;
+        put(id, s);
+    }
+    const TD2 = { x0: 186, pp: 35, tMin: -5, tMax: 25, top: 56, rowH: 80, hiOff: 14, loOff: 16 };
+    function drawBeat2() {
+        const a = S.a2, m = curSync(), T = P.T, inside = m.z === 'inside';
+        const td = TD({ ...TD2, n: 5, id: 'td2' });
+        let s = frame(td, [{ label: 'CLK', col: 'clk' }, { label: 'A', sub: 'asynchronous', col: 'data' }, { label: 'Q1', sub: 'FF1’s output', col: 'data' }, null, { label: 'Q2', sub: 'synchronized', col: 'data' }]);
+        [0, T, 2 * T].forEach((e, i) => { s += guide(td.X(e), i === 0 ? td.top - 24 : td.top + 2, td.sb(2), 'clk', 0.7) + windowBand(td, e, 0, 2, i === 0 ? td.top - 6 : null); });
+        s += tx(td.X(T), td.top - 8, 'every edge: FF1 reads A, FF2 reads Q1', { fs: 20, fill: C.win, a: 'middle', attr: 'data-winnote="1"' });
+        s += clockWave(td, 0, T, 'clk');
+        s += guide(td.X(a), td.lo(1), td.axisY, 'data', 0.75) + `<path data-amark="1" d="M${r(td.X(a))} ${td.axisY - 2} l-8 -12 h16 z" fill="${C.data}"/>`;
+        s += wave(td, 1, 0, rise([a]), 'data', 'a');
+        s += wave(td, 2, 0, m.q1, 'data', 'q1');
+        s += wave(td, 4, 0, rise([m.q2]), 'data', 'q2');
+        s += guide(td.X(m.q2), td.sb(3), td.axisY, 'data', 0.75);
+        // lane between Q1 and Q2: what FF1 did, and how long it has
+        const ly = td.st(3);
+        const note = !inside ? (m.z === 'before' ? 'A missed the window: FF1 reads the new A cleanly on this edge' : 'A missed the window: FF1 reads the new A cleanly on the next edge')
+            : m.hover ? `Q1 hovers, then settles to ${m.took} at ${num(m.settled)} ns after the edge`
+            : `FF1 decided at once: it ${m.took ? 'took the new A' : 'kept the old A'}`;
+        s += tx(td.X(P.tco) + 8, ly + 27, note, { fs: 20, w: 700, fill: m.hover ? C.bad : C.text, attr: 'data-lanenote="1"' });
+        s += dim('td2', td.X(0), td.X(DEADLINE), ly + 56, 'win', 'deadline');
+        s += tx(td.X(DEADLINE) + 14, ly + 63, `${num(DEADLINE)} ns for Q1 to settle  =  T − ${tsub('su', 22)} = ${num(P.T)} − ${num(P.tsu)}`, { fs: 22, w: 700, fill: C.win, attr: 'data-deadlabel="1"' });
+        // latency arrow in the Q2 row
+        s += dim('td2', td.X(a), td.X(m.q2), td.mid(4), 'data', 'latency');
+        s += tx(td.X(m.q2) + 14, td.mid(4) + 8, num(m.q2 - a) + ' ns', { fs: 22, w: 700, fill: C.data, mono: true, attr: 'data-latlabel="1"' });
+        put('td2', s);
+        drawCkt2();
+
+        document.getElementById('v2a').textContent = sgn(a) + ' ns';
+        document.querySelectorAll('#segMode .sb').forEach(b => b.classList.toggle('on', inside && b.dataset.mode === S.mode));
+        document.querySelectorAll('#segVal .sb').forEach(b => b.classList.toggle('on', inside && +b.dataset.val === S.v2));
+        document.getElementById('pick2').classList.toggle('off', !inside);
+        document.getElementById('pnote2').textContent = !inside ? 'A missed the window: nothing to settle.'
+            : S.mode === 'random' ? `Draw ${S.seed}: settled at ${num(S.ts)} ns, to ${S.v2}. N draws again.`
+            : S.mode === 'none' ? 'The usual case: FF1 simply picks one, with no hover.' : 'A hover is rare, and it is usually short.';
+        document.getElementById('r2settle').innerHTML = num(m.settled) + ' <small>ns</small>';
+        document.getElementById('r2dead').innerHTML = num(DEADLINE) + ' <small>ns</small>';
+        document.getElementById('r2lat').innerHTML = num(m.q2 - a) + ' <small>ns</small>';
+        document.getElementById('chip2').textContent = 'Q2 is clean: edges only';
+        document.getElementById('hint2').innerHTML = m.hover
+            ? `Q1 was settled <b>${num(DEADLINE - m.settled)} ns</b> before FF2&rsquo;s window opened, so FF2 read a steady ${m.took}. The hover stayed inside.`
+            : inside ? `FF1 picked the ${m.took ? 'new' : 'old'} value. Either is fine: Q2 gets a steady value, one clock ${m.took ? 'sooner' : 'later'}.`
+            : `Nothing unusual happens. The synchronizer passes A along, and Q2 changes on the second edge that follows.`;
+    }
+
+    // ============ BEAT 3 ============
+    const LAT = { early: -1.5, late: 1 };       // just before / just after the window of edge 0
+    function drawBeat3() {
+        const T = P.T, co = P.tco;
+        const td = TD({ x0: 132, pp: 19, tMin: -4, tMax: 26, top: 44, rowH: 62, hiOff: 14, loOff: 16, n: 5, id: 'td3', labEvery: 4 });
+        let s = frame(td, [{ label: 'CLK', col: 'clk' }, { label: 'A', sub: 'just before', col: 'data' }, { label: 'Q2', col: 'data' }, { label: 'A', sub: 'just after', col: 'data' }, { label: 'Q2', col: 'data' }]);
+        [0, T, 2 * T].forEach((e, i) => { s += guide(td.X(e), td.top - 10, td.bottom, 'clk', 0.6) + windowBand(td, e, 0, 4, null); });
+        s += tx(td.X(0), td.top - 16, 'decision window', { fs: 20, w: 700, fill: C.win, a: 'middle' });
+        s += clockWave(td, 0, T, 'clk');
+        [['early', 1, 2], ['late', 3, 4]].forEach(([k, ra, rq]) => {
+            const a = LAT[k], m = syncModel(a, co, 1);
+            s += wave(td, ra, 0, rise([a]), 'data', 'a-' + k) + wave(td, rq, 0, rise([m.q2]), 'data', 'q2-' + k);
+            s += dim('td3', td.X(a), td.X(m.q2), td.mid(rq), 'data', 'lat-' + k);
+            s += tx(td.X(m.q2) + 12, td.mid(rq) + 8, num(m.q2 - a) + ' ns', { fs: 22, w: 700, fill: C.data, mono: true, halo: true, attr: `data-lat="${k}"` });
+        });
+        put('td3', s);
+        drawRules();
+    }
+    // small right / wrong pictures. A mini flip-flop is a box with a clock triangle; a synchronizer is two of them in a frame.
+    function mff(x, y) { return `<rect x="${x}" y="${y}" width="40" height="44" rx="4" fill="#0b1622" stroke="${C.text}" stroke-width="2.5"/><path d="M${x} ${y + 24} L${x + 10} ${y + 31} L${x} ${y + 38}" fill="none" stroke="${C.clk}" stroke-width="2.5"/>`; }
+    function msync(x, y, label) {       // occupies x … x+124, y … y+60; wire level y+22
+        let s = `<rect x="${x}" y="${y}" width="124" height="60" rx="9" fill="rgba(79,195,247,0.06)" stroke="${C.data}" stroke-width="2" stroke-dasharray="6 5"/>`;
+        s += wire(`M${x + 50} ${y + 22} H${x + 74}`, 'data') + mff(x + 10, y + 8) + mff(x + 74, y + 8);
+        if (label) s += tx(x + 62, y + 84, 'synchronizer', { fs: 20, fill: C.slate, a: 'middle' });
+        return s;
+    }
+    const mbox = (x, y, w, h, label, col) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#0b1622" stroke="${C[col || 'text']}" stroke-width="2.5"/>` + tx(x + w/2, y + h/2 + 7, label, { fs: 20, w: 700, fill: C.white, a: 'middle' });
+    const mA = (y) => tx(8, y + 8, 'A', { fs: 24, w: 700, fill: C.data });
+    function drawRules() {
+        // rule 1
+        put('r1no', defs('r1no') + mA(40) + wire(`M34 40 H250`, 'bad') + mbox(250, 14, 170, 52, 'state machine'));
+        put('r1yes', defs('r1yes') + mA(40) + wire(`M34 40 H70`, 'data') + msync(70, 18, true) + wire(`M194 40 H250`, 'data') + mbox(250, 14, 170, 52, 'state machine'));
+        // rule 2
+        put('r2no', defs('r2no') + mA(67) + wire(`M34 67 H54 V28 H80 M54 67 V106 H80`, 'data') + dot(54, 67, 'data') + msync(80, 6, false) + msync(80, 84, false) +
+            wire(`M204 28 H336`, 'bad') + wire(`M204 106 H336`, 'bad') + mbox(336, 4, 64, 48, 'S1') + mbox(336, 82, 64, 48, 'S0') +
+            tx(270, 74, 'can differ', { fs: 20, w: 700, fill: C.bad, a: 'middle' }));
+        put('r2yes', defs('r2yes') + mA(75) + wire(`M34 75 H80`, 'data') + msync(80, 53, false) + wire(`M204 75 H252 V32 H300 M252 75 V118 H300`, 'data') + dot(252, 75, 'data') +
+            mbox(300, 8, 64, 48, 'S1') + mbox(300, 94, 64, 48, 'S0') + tx(376, 82, 'same', { fs: 20, w: 700, fill: C.ok }));
+        // rule 3
+        put('r3no', defs('r3no') + mA(42) + wire(`M34 42 H80`, 'data') + mff(80, 20) + wire(`M120 42 H170`, 'bad') + mbox(170, 16, 90, 52, 'logic', 'bad') + wire(`M260 42 H310`, 'bad') + mff(310, 20) + wire(`M350 42 H420`, 'data'));
+        put('r3yes', defs('r3yes') + mA(42) + wire(`M34 42 H80`, 'data') + mff(80, 20) + wire(`M120 42 H170`, 'data') + mff(170, 20) + wire(`M210 42 H420`, 'data'));
+    }
+
+    // ============ RENDER / CONTROL ============
+    const NPAGES = 3, tabs = Array.from(document.querySelectorAll('.tab'));
+    function drawPage() { if (S.page === 1) drawBeat1(); else if (S.page === 2) drawBeat2(); else drawBeat3(); }
+    function render() {
+        for (let i = 1; i <= NPAGES; i++) document.getElementById('p' + i).classList.toggle('active', i === S.page);
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === S.page));
+        document.querySelectorAll('[data-dot]').forEach(d => d.classList.toggle('on', +d.dataset.dot <= S.page));
+        document.getElementById('pcNum').textContent = S.page;
+        drawPage();
+    }
+    const SLIDERS = { s1a: 'a1', s2a: 'a2' };
+    function syncSliders() { Object.entries(SLIDERS).forEach(([id, key]) => { document.getElementById(id).value = S[key]; }); }
+    function setVal(key, v, fromInput) { S[key] = v; if (!fromInput) syncSliders(); drawPage(); }
+    Object.entries(SLIDERS).forEach(([id, key]) => document.getElementById(id).addEventListener('input', e => setVal(key, +e.target.value, true)));
+    function firstSlider() { return document.querySelector('#p' + S.page + ' input[type=range]'); }
+
+    function setMode(mode) {
+        if (!MODES.includes(mode)) return;
+        if (mode === 'random') { if (S.mode === 'random') S.seed++; const d = randomDraw(S.seed); S.ts = d.ts; S.v2 = d.v; }
+        else S.ts = SETTLE[mode];
+        S.mode = mode; drawPage();
+    }
+    function setSettleValue(v) { S.v2 = v ? 1 : 0; drawPage(); }
+    const inWindow2 = () => zone(S.a2) === 'inside';
+
+    const defsEl = document.getElementById('defs'), defsBtn = document.getElementById('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) {
+        closeDefs();
+        S.page = Math.max(1, Math.min(NPAGES, n)); render();
+        const f = firstSlider(); if (f) f.focus({ preventScroll: true }); else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    }
+    // ↺ / R resets only the beat on screen and stays on it
+    function doReset() {
+        if (defsOpen()) return;
+        if (S.page === 1) S.a1 = DEF.a1;
+        else if (S.page === 2) { S.a2 = DEF.a2; S.mode = DEF.mode; S.v2 = DEF.v2; S.seed = DEF.seed; S.ts = SETTLE[DEF.mode]; }
+        syncSliders(); drawPage();
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    document.querySelectorAll('#segMode .sb').forEach(b => b.addEventListener('click', () => { if (inWindow2()) setMode(b.dataset.mode); b.blur(); }));
+    document.querySelectorAll('#segVal .sb').forEach(b => b.addEventListener('click', () => { if (inWindow2()) setSettleValue(+b.dataset.val); b.blur(); }));
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) {      // panel open: Esc closes it; every other key does nothing
+            if (k === 'Escape') closeDefs();
+            if (k === ' ' || k.startsWith('Arrow') || 'rRsSvVnN'.includes(k)) e.preventDefault();
+            return;
+        }
+        const isRange = document.activeElement && document.activeElement.type === 'range';
+        const p2 = S.page === 2 && inWindow2();
+        switch (k) {
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+            case 's': case 'S': if (p2) setMode(S.mode === 'random' ? MODES[0] : MODES[MODES.indexOf(S.mode) + 1]); e.preventDefault(); break;
+            case 'v': case 'V': if (p2) setSettleValue(1 - S.v2); e.preventDefault(); break;
+            case 'n': case 'N': if (p2) { if (S.mode !== 'random') S.seed--; S.mode = 'random'; S.seed++; const d = randomDraw(S.seed); S.ts = d.ts; S.v2 = d.v; drawPage(); } e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowRight': case 'ArrowUp': case 'ArrowDown':
+                if (!isRange) { const f = firstSlider(); if (f) { f.focus({ preventScroll: true });
+                    const d = (k === 'ArrowRight' || k === 'ArrowUp') ? 1 : -1;
+                    const v = Math.max(+f.min, Math.min(+f.max, +f.value + d * +f.step)); f.value = v; setVal(SLIDERS[f.id], v, true); }
+                    e.preventDefault(); }
+                break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    // transitions read back from the DRAWN path: [{t, to}] with t at the middle of each slope and to ∈ {0, 0.5, 1}
+    function drawnEvents(svgId, name) {
+        const p = document.querySelector(`#${svgId} [data-wave="${name}"]`), td = TDS[svgId]; if (!p || !td) return null;
+        const slot = +p.dataset.slot, hi = td.hi(slot), lo = td.lo(slot);
+        const pts = p.getAttribute('d').match(/-?\d+(\.\d+)?/g).map(Number), out = [];
+        for (let i = 2; i + 1 < pts.length; i += 2) {
+            if (Math.abs(pts[i + 1] - pts[i - 1]) > 0.5) {
+                const t = ((pts[i] + pts[i - 2]) / 2 - td.x0) / td.pp + td.tMin;
+                out.push({ t: Math.round(t * 1000) / 1000, to: Math.round((lo - pts[i + 1]) / (lo - hi) * 2) / 2 });
+            }
+        }
+        return out;
+    }
+    window.__api = {
+        setPage, reset: doReset, openDefs, closeDefs, defsOpen,
+        key: (k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })),
+        setA: (v, p) => setVal('a' + (p || S.page), v),
+        setMode, setSettleValue,
+        getState: () => ({ ...S }),
+        params: P, deadline: DEADLINE, settle: SETTLE, defaults: DEF, latCases: LAT,
+        zone, fsmNext, outcomes, syncModel, randomDraw, curSync,
+        drawnEvents,
+        shownOutcomes: () => Array.from(document.querySelectorAll('#otab1 tr[data-out]')).map(tr => ({ out: tr.dataset.out, next: tr.dataset.next, on: tr.dataset.on === '1', cls: tr.className, cells: Array.from(tr.children).map(td => td.textContent) })),
+        shownReads: () => Array.from(document.querySelectorAll('#td1 [data-read]')).map(t => t.dataset.val).join(''),
+        shownArcs: () => Array.from(document.querySelectorAll('#sd1 [data-arc]')).map(p => p.dataset.arc + ':' + p.getAttribute('stroke')),
+        windowBoxes: (svgId) => Array.from(document.querySelectorAll('#' + svgId + ' [data-window]')).map(e => ({ edge: +e.dataset.window, x: +e.getAttribute('x'), w: +e.getAttribute('width') })),
+        dimSpan: (svgId, name) => { const g = document.querySelector(`#${svgId} [data-dim="${name}"]`), td = TDS[svgId]; return g ? [(+g.dataset.x1 - td.x0) / td.pp + td.tMin, (+g.dataset.x2 - td.x0) / td.pp + td.tMin] : null; },
+        pxPerNs: (svgId) => TDS[svgId].pp,
+        chip: (n) => document.getElementById('chip' + n).textContent,
+        tile: (id) => document.getElementById(id).textContent,
+    };
+
+    syncSliders(); setPage(1);
+</script>
+</body>
+</html>

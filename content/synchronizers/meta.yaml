@@ -1,5 +1,11 @@
 title: "Synchronizers"
-description: ""
+description: "An asynchronous input such as a push button can change inside a decision window and send a state machine to a state its diagram never allowed. A two-flip-flop synchronizer gives any metastable output a clock period to settle, at a cost of one to two clock periods of latency."
 chapter: sequential-logic
 section: practical-considerations
 order: 40403
+
+graphics:
+  01-video.youtube:
+    caption: "Video: why a push button wired straight into a state machine can send it along an arc its diagram never allowed, how two flip-flops back to back give a metastable output a clock period to settle, the latency a synchronizer costs, and adding a third flip-flop for a faster clock"
+  02-interactive.html:
+    caption: "Interactive: move the instant a push-button input changes against the flip-flop's decision window and see how an unsynchronized input can put a state machine in a state its diagram never allowed, then add the two-flip-flop synchronizer and watch its first output settle before the second flip-flop looks, and finish with the latency it costs and the three rules for using one"
