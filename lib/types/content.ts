@@ -17,6 +17,8 @@ export interface TopicMeta {
   // back to deriving them from the folder path.
   chapter?: string;
   section?: string;
+  // Only practice-set topics carry a type ("practice"); they get a full-width page.
+  type?: string;
   graphics?: Record<string, { caption?: string }>;
 }
 
@@ -30,6 +32,7 @@ export interface Topic {
   graphics: GraphicItem[];
   chapter: string;
   section: string;
+  type?: string;             // "practice" for practice-set topics; absent otherwise
   isSectionIntro?: boolean;  // True if this is section-level content (not a subtopic)
 }
 
@@ -38,6 +41,7 @@ export interface NavigationItem {
   title: string;
   chapter: string;
   section: string;
+  type?: string;
 }
 
 export interface NavigationContext {

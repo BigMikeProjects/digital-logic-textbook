@@ -5,7 +5,7 @@ import { loadSchedule, lectureForSlug, nextInLectureOrder, prevInLectureOrder, p
 import { renderMarkdown } from '@/lib/markdown';
 import TwoPanel from '@/components/Layout/TwoPanel';
 import { TopNav } from '@/components/Navigation';
-import { GraphicsPanel } from '@/components/Graphics';
+import { GraphicsPanel, PracticePanel } from '@/components/Graphics';
 import { TextPanel } from '@/components/Text';
 
 interface PageProps {
@@ -74,11 +74,13 @@ export default async function TopicPage({ params }: PageProps) {
     : null;
   const lectureNext = nextInLectureOrder(schedule, slug);
   const lecturePrev = prevInLectureOrder(schedule, slug);
+  const practice = topic.type === 'practice';
 
   return (
     <TwoPanel
+      layout={practice ? 'stacked' : 'split'}
       topNav={<TopNav navigation={navContext} lectureBadge={lectureBadge} lectureNext={lectureNext} lecturePrev={lecturePrev} />}
-      graphicsPanel={<GraphicsPanel graphics={topic.graphics} />}
+      graphicsPanel={practice ? <PracticePanel graphics={topic.graphics} title={topic.title} /> : <GraphicsPanel graphics={topic.graphics} />}
       textPanel={<TextPanel html={html} />}
       chapters={chapters}
       currentSlug={slug}

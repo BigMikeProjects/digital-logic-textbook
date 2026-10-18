@@ -2,7 +2,7 @@ title: "One Hot State Assignment"
 description: "One flip-flop per state, exactly one of them holding a 1: how to read every D input straight off the state diagram, why loop-backs must be drawn, how one-hot compares with a binary assignment, and how to handle reset."
 chapter: sequential-logic
 section: fsm
-order: 40202
+order: 40203
 
 graphics:
   01-video.youtube:

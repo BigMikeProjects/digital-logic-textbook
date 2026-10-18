@@ -1,0 +1,10 @@
+title: "Binary State Assignment Practice"
+description: "Five state machines with their codes given: work the coded state table, K-maps and minimal equations on paper, with a hint and a worked solution for every step."
+chapter: sequential-logic
+section: fsm
+order: 40202
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: five state machines with binary codes given, from an up/down counter to a two-input arbiter. Each problem has five empty step cards, each with a hint and the worked step on demand"

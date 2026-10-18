@@ -101,7 +101,12 @@ export default function TableOfContents({ chapters, currentSlug }: TableOfConten
                                   : 'text-gray-600 hover:bg-gray-100'
                               }`}
                             >
-                              {topic.title}
+                              {topic.type === 'practice' ? (
+                                <span className="flex items-center min-w-0">
+                                  <span className="truncate">{topic.title}</span>
+                                  <span className="practice-tag shrink-0">Practice</span>
+                                </span>
+                              ) : topic.title}
                             </Link>
                           </li>
                         ))}

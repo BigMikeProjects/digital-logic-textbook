@@ -99,7 +99,8 @@ export function buildChapterStructure(topics: Topic[]): ChapterGroup[] {
       slug: topic.slug,
       title: topic.title,
       chapter: topic.chapter,
-      section: topic.section
+      section: topic.section,
+      type: topic.type
     });
   }
 

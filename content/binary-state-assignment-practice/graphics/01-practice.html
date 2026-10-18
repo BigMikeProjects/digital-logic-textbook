@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binary State Assignment — Practice Set</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 24px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 logic-1 / revealed answer · amber #ffb74d inputs + hints · violet #b388ff don't-care X + K-map loop
+       · navy #0d1b2a panels · logic-0 #7d9bb5 · right #66bb6a · wrong #ef5350 */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 72px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 12px; margin: 12px 0 2px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 11px; position: relative;
+        border: 2px solid #24384c; border-radius: 12px; padding: 9px 16px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 36px; height: 36px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 19px; font-weight: 700; }
+    .tab .tlabel { font-size: 18px; font-weight: 700; line-height: 1.15; }
+    .tab .tlabel small { display: block; font-size: 13px; font-weight: 500; color: #607d8b; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+    .tab .tdone { position: absolute; bottom: 5px; right: 12px; font-size: 13px; font-weight: 700; color: #66bb6a; display: none; }
+    .tab.done .tdone { display: block; }
+    .tab.seen .tdone { display: block; color: #607d8b; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 10px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 10px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .ov { text-decoration: overline; text-decoration-thickness: 2px; text-underline-offset: 2px; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: center; gap: 12px; padding: 7px 14px 7px 18px;
+        border-bottom: 2px solid #24384c; white-space: nowrap; min-height: 46px; }
+    .panel-head .ph { font-size: 19px; font-weight: 700; color: #4fc3f7; }
+    .panel-head .ph .sn { color: #607d8b; margin-right: 6px; }
+    .panel-head .role { font-size: 15px; color: #607d8b; overflow: hidden; text-overflow: ellipsis; }
+    .panel-head .spacer { flex: 1; }
+
+    /* ---- buttons ---- */
+    .btn { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px; padding: 4px 15px;
+        color: #90a4ae; font-size: 15.5px; font-weight: 700; background: #0b1622; white-space: nowrap; transition: all .12s; }
+    .btn:hover { border-color: #90a4ae; color: #cfd8dc; }
+    .btn .k { font-family: 'Menlo','Consolas',monospace; color: #607d8b; font-size: 13px; margin-left: 7px; font-weight: 400; }
+    .btn.hint { border-color: #ffb74d; color: #ffb74d; background: rgba(255,183,77,0.08); }
+    .btn.hint .k { color: #8a6a3a; }
+    .btn.check { border-color: #66bb6a; color: #66bb6a; background: rgba(102,187,106,0.08); }
+    .btn.check .k { color: #3f7a42; }
+    .btn.show { border-color: #4a6274; color: #90a4ae; }
+    .btn.final { border-color: #4fc3f7; color: #0d1b2a; background: #4fc3f7; }
+    .btn.final .k { color: #1d5f7d; }
+    .btn.used { opacity: 0.55; }
+    .btn.big { font-size: 17px; padding: 6px 18px; }
+
+    /* ---- page 0: the method ---- */
+    .leadwrap { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .steps { display: flex; align-items: stretch; gap: 8px; }
+    .step { flex: 1; border: 2px solid #37506a; border-radius: 14px; background: #0b1622; padding: 12px 15px;
+        display: flex; flex-direction: column; gap: 7px; }
+    .step .sn { width: 34px; height: 34px; border: 2px solid #4fc3f7; border-radius: 9px; color: #4fc3f7;
+        font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step .st { font-size: 19px; font-weight: 700; color: #cfd8dc; }
+    .step .sd { font-size: 15.5px; color: #90a4ae; line-height: 1.45; flex: 1; }
+    .step .sd b { color: #cfd8dc; } .step .sd .mono { color: #4fc3f7; }
+    .step .sd .x { color: #b388ff; font-family: 'Menlo','Consolas',monospace; font-weight: 700; }
+    .step.given { border-style: dashed; }
+    .step.given .sn { border-color: #607d8b; color: #607d8b; }
+    .step .tag { align-self: flex-start; font-size: 12.5px; color: #607d8b; border: 1px solid #37506a; border-radius: 999px; padding: 1px 10px; }
+    .arrowcell { align-self: center; color: #4a6274; font-size: 24px; flex: 0 0 auto; }
+    .leadrow { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .conv { flex: 1.15; }
+    .convbody { padding: 12px 22px; display: flex; flex-direction: column; gap: 9px; font-size: 16.5px; color: #b0bec5; line-height: 1.42; }
+    .convbody b { color: #cfd8dc; } .convbody .cy { color: #4fc3f7; } .convbody .x { color: #b388ff; font-weight: 700; }
+    .convbody .mono { color: #4fc3f7; }
+    .convbody li { margin-left: 20px; }
+    .helpkey { flex: 1; }
+    .helpbody { padding: 12px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .hrow { display: flex; align-items: center; gap: 14px; font-size: 16px; color: #b0bec5; line-height: 1.35; }
+    .hrow .btn { flex: 0 0 196px; text-align: center; cursor: default; }
+    .hrow b { color: #cfd8dc; }
+    .cards { display: flex; gap: 12px; }
+    .card { flex: 1; cursor: pointer; border: 2px solid #37506a; border-radius: 14px; background: #0b1622; padding: 10px 16px;
+        display: flex; flex-direction: column; gap: 3px; transition: all .12s; }
+    .card:hover { border-color: #4fc3f7; background: rgba(79,195,247,0.06); }
+    .card .cn { font-size: 14px; color: #607d8b; font-weight: 700; letter-spacing: .5px; }
+    .card .ct { font-size: 19px; color: #cfd8dc; font-weight: 700; }
+    .card .cf { font-size: 14.5px; color: #90a4ae; }
+    .card .cg { align-self: flex-start; margin-top: 4px; font-size: 13px; color: #ffb74d; border: 1px solid #6a5324; border-radius: 999px; padding: 1px 10px; }
+
+    /* ---- problem pages ---- */
+    .main { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .probpanel { flex: 0 0 560px; }
+    .probbody { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 18px 12px; gap: 8px; }
+    .story { font-size: 16.5px; color: #cfd8dc; line-height: 1.45; }
+    .story b { color: #ffb74d; } .story .cy { color: #4fc3f7; font-weight: 700; }
+    .sdbox { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+    .sdbox svg { width: 100%; height: 100%; display: block; }
+    .codes { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .codes .cl { font-size: 14px; color: #607d8b; margin-right: 2px; }
+    .codechip { border: 2px solid #37506a; border-radius: 9px; padding: 2px 11px; font-size: 16px; color: #cfd8dc; background: #0b1622; }
+    .codechip .mono { color: #4fc3f7; font-weight: 700; }
+    .find { font-size: 15.5px; color: #90a4ae; border-top: 2px solid #24384c; padding-top: 8px; line-height: 1.4; }
+    .find b { color: #cfd8dc; }
+
+    .sd-node .sdc { fill: #0d1b2a; stroke: #4a6274; stroke-width: 3; }
+    .sd-node .sdname { fill: #cfd8dc; font-family: 'Segoe UI',sans-serif; font-weight: 700; text-anchor: middle; font-size: 22px; }
+    .sd-node .sdenc { fill: #4fc3f7; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 19px; font-weight: 700; }
+    .sd-node .sdz { fill: #607d8b; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 14px; }
+    .sd-node.z1 .sdz { fill: #4fc3f7; }
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 2.6; }
+    .arc-l { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; font-size: 18px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #0d1b2a; stroke-width: 7px; stroke-linejoin: round; }
+    .arc-l .zl { fill: #4fc3f7; }
+    .resetarrow { fill: none; stroke: #607d8b; stroke-width: 2.4; }
+    .resetlab { fill: #607d8b; font-family: 'Segoe UI',sans-serif; font-size: 14px; }
+
+    .work { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+    .workgrid { flex: 1; display: flex; gap: 10px; min-height: 0; }
+    .leftcol { flex: 0 0 500px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .stt { border-collapse: collapse; font-family: 'Menlo','Consolas',monospace; font-size: 18px; }
+    .stt th, .stt td { border: 2px solid #37506a; padding: 0; text-align: center; color: #e0e0e0; height: 29px; }
+    .stt th { background: rgba(79,195,247,0.10); color: #4fc3f7; font-size: 14px; padding: 0 6px; font-weight: 700; }
+    .stt th.in { color: #ffb74d; }
+    .stt th.g, .stt td.g { border-left-width: 4px; }
+    .stt td.q { color: #90a4ae; width: 30px; }
+    .stt td.st { color: #cfd8dc; font-family: 'Segoe UI',sans-serif; font-size: 15px; font-weight: 700; padding: 0 9px; }
+    .stt tr.unused td.st { color: #b388ff; font-weight: 500; font-style: italic; }
+    .stt tr.unused td.q { color: #6a5a8a; }
+
+    .eqrow { display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
+    .eqrow .eqn { font-family: 'Menlo','Consolas',monospace; font-size: 20px; color: #cfd8dc; }
+    .eqrow .eqn .lhs { color: #4fc3f7; font-weight: 700; } .eqrow .eqn .op { color: #ffb74d; }
+    .eqrow .eqn .blank { color: #37506a; letter-spacing: 2px; }
+    .eqrow .eql { margin-left: auto; font-size: 13.5px; color: #607d8b; }
+    .tally { margin-top: 2px; align-self: flex-start; border: 2px solid #4fc3f7; border-radius: 999px; padding: 3px 15px; font-size: 16px; color: #4fc3f7; font-weight: 700; background: rgba(79,195,247,0.08); }
+    .tally small { font-size: 13px; font-weight: 400; color: #90a4ae; margin-left: 6px; }
+    .ansnote { font-size: 14.5px; color: #b0bec5; line-height: 1.65; border-left: 3px solid #37506a; padding-left: 12px; white-space: normal; }
+    .ansnote b { color: #cfd8dc; }
+
+    .kmap { display: flex; flex-direction: column; align-items: center; gap: 0; }
+    .kmap .kt { font-size: 19px; font-weight: 700; color: #4fc3f7; }
+    .kmap .kt small { font-size: 13px; font-weight: 400; color: #607d8b; margin-left: 6px; }
+    .kmap svg { display: block; }
+    .kmap .kterm { font-family: 'Menlo','Consolas',monospace; font-size: 17px; color: #90a4ae; text-align: center; min-height: 24px; }
+    .kmap .kterm .op { color: #607d8b; }
+
+
+    /* step cards: start empty; Show fills them */
+    .toprow { flex: 0 0 auto; display: flex; gap: 10px; }
+    .toprow .c0 { flex: 1.45; } .toprow .c1 { flex: 1; }
+    .toprow .scard { height: 122px; }
+    .scard .panel-head { padding: 6px 10px 6px 16px; min-height: 44px; gap: 8px; }
+    .scard .ph { font-size: 18px; }
+    .btn.sm { font-size: 14px; padding: 2px 12px; }
+    .sbody { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .blank { flex: 1; display: flex; align-items: center; justify-content: center; color: #37506a; font-size: 16px; font-style: italic;
+        margin: 8px; border: 2px dashed #24384c; border-radius: 10px; }
+    .scard.open { border-color: #2c6a88; }
+    .facts { padding: 8px 16px; display: grid; grid-template-columns: auto 1fr; gap: 4px 22px; align-content: center; flex: 1; font-size: 15.5px; color: #cfd8dc; line-height: 1.35; }
+    .facts .fk { display: inline-block; min-width: 72px; color: #607d8b; font-size: 13.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+    .facts .am { color: #ffb74d; } .facts .cyb { color: #4fc3f7; } .facts .vl { color: #b388ff; } .facts .mono { color: #4fc3f7; }
+    .facts .big1 { font-size: 19px; }
+    .c1 .facts { grid-template-columns: 1fr; }
+    .tblwrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px 10px; }
+    .stt td.vc { width: 34px; }
+    .stt td.v0 { color: #5c7189; } .stt td.v1 { color: #4fc3f7; font-weight: 700; } .stt td.vX { color: #b388ff; font-weight: 700; }
+    .eqwrap { flex: 1; min-height: 0; padding: 8px 16px; display: flex; flex-direction: column; gap: 3px; }
+    .tallyrow { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+    .tallyrow .tally { flex: 0 0 auto; margin: 0; }
+    .tallyrow .ansnote { font-size: 13.5px; line-height: 1.6; }
+    .kgrid { flex: 1; min-height: 0; padding: 6px 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; align-content: center; justify-items: center; }
+    .kv { font-family: 'Menlo','Consolas',monospace; }
+    .kv.v0 { fill: #5c7189; } .kv.v1 { fill: #4fc3f7; font-weight: 700; } .kv.vX { fill: #b388ff; font-weight: 700; }
+    .c4 { flex: 1; } .c3 { flex: 1; min-width: 0; }
+
+    .helpbar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; padding: 8px 14px; min-height: 58px; }
+    .hintbox { flex: 1; min-width: 0; font-size: 16px; color: #cfd8dc; line-height: 1.35; border-left: 3px solid #6a5324; padding-left: 12px; }
+    .hintbox .hl { color: #ffb74d; font-weight: 700; margin-right: 6px; }
+    .hintbox .dim { color: #607d8b; }
+    .hintbox .mono { color: #4fc3f7; }
+    .hintbox .x { color: #b388ff; font-weight: 700; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 8px; height: 30px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 15px; white-space: nowrap; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        margin: 0 2px; font-size: 14px; font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.green { color: #66bb6a; border-color: #3f7a42; }
+    .controls .k.cy { color: #4fc3f7; border-color: #2c6a88; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <defs><marker id="ah-top" markerWidth="20" markerHeight="16" refX="14" refY="6.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L16,6.5 L0,13 Z" fill="#8fa8bd"/></marker></defs>
+                <circle cx="46" cy="52" r="30" fill="#0d1b2a" stroke="#4a6274" stroke-width="3"/>
+                <text x="46" y="59" font-family="'Segoe UI',sans-serif" font-size="20" font-weight="700" fill="#cfd8dc" text-anchor="middle">S2</text>
+                <path d="M 84 52 L 122 52" stroke="#8fa8bd" stroke-width="2.6" marker-end="url(#ah-top)"/>
+                <g font-family="Menlo,monospace" font-size="17" font-weight="700" text-anchor="middle">
+                    <text x="166" y="34" fill="#4fc3f7">00</text><text x="214" y="34" fill="#4fc3f7">01</text>
+                    <text x="166" y="76" fill="#4fc3f7">10</text><text x="214" y="76" fill="#4fc3f7">11</text>
+                </g>
+                <text x="240" y="60" font-family="'Segoe UI',sans-serif" font-size="26" font-weight="700" fill="#ffb74d">?</text>
+                <text x="190" y="99" font-family="Menlo,monospace" font-size="14" fill="#90a4ae" text-anchor="middle">Q1 Q0</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Binary State Assignment <span class="sub">&mdash; practice set</span></h1>
+            <div class="subtitle">Five machines, each with its codes given &middot; build the coded state table, fill the K-maps, find the minimal next-state and output equations</div>
+        </div>
+        <div class="page-count">Page <b id="pcNum">0</b> of 0&ndash;5</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip"></div>
+    <div class="stage" id="stage"></div>
+
+    <div class="footer">
+        <div class="progress" id="progress"></div>
+        <div class="controls">
+            <span class="k">0</span>&ndash;<span class="k">5</span> page
+            &middot; each step card: <span class="k amber">Hint</span> a nudge &middot; <span class="k">Show</span> the worked step
+            &middot; <span class="k amber">H</span> next hint, in order
+            &middot; <span class="k cy">F</span> final answer
+            &middot; <span class="k">R</span> &#8634; clear this problem
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+    const SVGNS = 'http://www.w3.org/2000/svg';
+
+    // ============ THE FIVE MACHINES (source of truth) ============
+    // ns[s][ic] = next state for input combination ic (inputs read as a binary number, first input = MSB).
+    // Moore: out[s] = [output values]. Mealy: out[s][ic] = [output values].
+    // codes[s] = the given code of state s, as a number (Q(k-1)..Q0).
+    // sol = minimal SOP for every function, from python3 (exact minimization over all prime-implicant covers, every
+    //   unused code a don't-care); for each problem every function's minimal cover was checked to be UNIQUE, so the
+    //   final answer is not one of several. '~' = complemented. The page re-checks these against its own tables (__api).
+    // Diagram: nodes in a 640x470 box; bend = control-point offset from the chord midpoint (+ = right of travel);
+    //   loop = direction (radians) the self-loop points.
+    const PROBS = [
+        {
+            title: 'Up/Down Counter', tag: 'Warm-up', short: '4 states · no unused codes',
+            story: 'A two-bit counter steps <b>forward</b> S0 &rarr; S1 &rarr; S2 &rarr; S3 &rarr; S0 while <b>U = 1</b> and steps <b>backward</b> while <b>U = 0</b>. The output <span class="cy">Z = 1</span> in S3. The codes are handed out in Gray order.',
+            type: 'moore', inputs: ['U'], outputs: ['Z'], states: ['S0','S1','S2','S3'], codes: [0,1,3,2],
+            ns: [[3,1],[0,2],[1,3],[2,0]], out: [[0],[0],[0],[1]],
+            nodes: [{x:150,y:120},{x:490,y:120},{x:490,y:380},{x:150,y:380}],
+            edges: [{f:0,t:1,c:1,bend:-40},{f:1,t:0,c:0,bend:-40},{f:1,t:2,c:1,bend:-40},{f:2,t:1,c:0,bend:-40},
+                    {f:2,t:3,c:1,bend:-40},{f:3,t:2,c:0,bend:-40},{f:3,t:0,c:1,bend:-40},{f:0,t:3,c:0,bend:-40}],
+            reset: 0, resetDir: Math.PI,
+            sol: {"D1": [["U~", "Q0~"], ["U", "Q0"]], "D0": [["U~", "Q1"], ["U", "Q1~"]], "Z": [["Q1", "Q0~"]]},
+            hints: [
+                'Four states fit in <span class="mono">&lceil;log&#8322; 4&rceil; = 2</span> flip-flops exactly, so all four codes are used and this problem has no don&rsquo;t-cares.',
+                'Work one row at a time. S1 = <span class="mono">01</span>: U = 0 steps back to S0 = <span class="mono">00</span>, U = 1 steps forward to S2 = <span class="mono">11</span>.',
+                'Each D map has one pair of 1s in each row. In D1 the U = 0 pair wraps around the edge (columns <span class="mono">00</span> and <span class="mono">10</span> are neighbors).',
+            ],
+            note: 'D1 = <span class="ov">U</span>&middot;<span class="ov">Q0</span> + U&middot;Q0 is <b>U XNOR Q0</b>, and D0 is <b>U XOR Q1</b>. A Gray-coded counter changes one bit per step, which is why each map is a pair in each row and nothing larger.',
+        },
+        {
+            title: 'Two 1s in a Row', tag: 'Unused code', short: '3 states · 1 unused code',
+            story: 'A Moore machine watches a serial input <b>x</b>. The output <span class="cy">Z = 1</span> while the last two inputs have both been 1. Any 0 sends the machine back to S0.',
+            type: 'moore', inputs: ['x'], outputs: ['Z'], states: ['S0','S1','S2'], codes: [0,1,2],
+            ns: [[0,1],[0,2],[0,2]], out: [[0],[0],[1]],
+            nodes: [{x:185,y:330},{x:320,y:140},{x:455,y:330}],
+            edges: [{f:0,t:1,c:1,bend:-30},{f:1,t:0,c:0,bend:-30},{f:1,t:2,c:1,bend:30},{f:2,t:0,c:0,bend:-50},
+                    {f:0,t:0,c:0,loop:Math.PI},{f:2,t:2,c:1,loop:0}],
+            reset: 0,
+            sol: {"D1": [["x", "Q0"], ["x", "Q1"]], "D0": [["x", "Q1~", "Q0~"]], "Z": [["Q1"]]},
+            hints: [
+                'Three states need <span class="mono">&lceil;log&#8322; 3&rceil; = 2</span> flip-flops, which gives four codes. Code <span class="mono">11</span> is left over, so its whole row of the table is <span class="x">X</span>.',
+                'Every arc labeled 0 goes to S0 = <span class="mono">00</span>, so the whole x = 0 next-state column is <span class="mono">00</span> (except the unused row).',
+                'Use the don&rsquo;t-cares. In the D1 map, each of the two 1s in the x = 1 row can pair with the <span class="x">X</span> at column <span class="mono">11</span>.',
+            ],
+            note: 'Z = Q1 leans on the don&rsquo;t-care at <span class="mono">11</span>: if the flip-flops ever powered up holding 11, Z would read 1. <b data-topic="level-to-pulse-fsm">Level-to-Pulse FSM</b> shows when a designer refuses a don&rsquo;t-care like that; in this set every don&rsquo;t-care is used.',
+        },
+        {
+            title: '0 1 1 Detector', tag: 'Mealy', short: '3 states · Mealy output',
+            story: 'A <b>Mealy</b> machine raises <span class="cy">Z = 1</span> during the clock in which the last bit of the pattern <b>0 1 1</b> arrives on <b>x</b>. Arcs are labeled <span class="mono">x/Z</span>: the output depends on the state <i>and</i> the input.',
+            type: 'mealy', inputs: ['x'], outputs: ['Z'], states: ['S0','S1','S2'], codes: [0,1,2],
+            ns: [[1,0],[1,2],[1,0]], out: [[[0],[0]],[[0],[0]],[[0],[1]]],
+            nodes: [{x:185,y:330},{x:320,y:150},{x:455,y:330}],
+            edges: [{f:0,t:1,c:0,bend:-30},{f:1,t:2,c:1,bend:-30},{f:2,t:1,c:0,bend:-30},{f:2,t:0,c:1,bend:-40},
+                    {f:0,t:0,c:1,loop:Math.PI},{f:1,t:1,c:0,loop:-Math.PI/2}],
+            reset: 0,
+            sol: {"D1": [["x", "Q0"]], "D0": [["x~"]], "Z": [["x", "Q1"]]},
+            hints: [
+                'A Mealy output gets one table column per value of x, and its K-map has x as a variable &mdash; a three-variable map, the same shape as the D maps.',
+                'The only arc with Z = 1 is S2 &rarr; S0 on x = 1. So the Z map has a single 1, plus the <span class="x">X</span>s from the unused code <span class="mono">11</span>.',
+                'Every arc with x = 0 goes to S1 = <span class="mono">01</span>. That makes the whole x = 0 row of D0 a row of 1s.',
+            ],
+            note: 'Z = x&middot;Q1 reads the input directly, which is what makes the machine Mealy. In Problem 2 the output read only the flip-flops, and its map had no x in it.',
+        },
+        {
+            title: '1 0 0 1 Detector', tag: 'Three flip-flops', short: '5 states · 3 unused codes',
+            story: 'A Moore machine raises <span class="cy">Z = 1</span> for one clock after the input <b>x</b> has delivered <b>1 0 0 1</b>. Overlaps are allowed: the final 1 of one match can be the first 1 of the next.',
+            type: 'moore', inputs: ['x'], outputs: ['Z'], states: ['S0','S1','S2','S3','S4'], codes: [0,1,2,3,4],
+            ns: [[0,1],[2,1],[3,1],[0,4],[2,1]], out: [[0],[0],[0],[0],[1]],
+            nodes: [{x:200,y:350},{x:200,y:120},{x:560,y:120},{x:560,y:350},{x:380,y:235}],
+            edges: [{f:0,t:1,c:1,bend:0},{f:1,t:2,c:0,bend:-26},{f:2,t:1,c:1,bend:-26},{f:2,t:3,c:0,bend:0},
+                    {f:3,t:0,c:0,bend:0},{f:3,t:4,c:1,bend:0},{f:4,t:2,c:0,bend:0},{f:4,t:1,c:1,bend:0},
+                    {f:0,t:0,c:0,loop:Math.PI},{f:1,t:1,c:1,loop:Math.PI}],
+            reset: 0,
+            sol: {"D2": [["x", "Q1", "Q0"]], "D1": [["x~", "Q1~", "Q0"], ["x~", "Q1", "Q0~"], ["x~", "Q2"]], "D0": [["Q1", "Q0~"], ["x", "Q1~"]], "Z": [["Q2"]]},
+            hints: [
+                'Five states need <span class="mono">&lceil;log&#8322; 5&rceil; = 3</span> flip-flops. Codes <span class="mono">101</span>, <span class="mono">110</span> and <span class="mono">111</span> are unused: three rows of <span class="x">X</span>.',
+                'The D maps have four variables: rows x Q2, columns Q1 Q0. The unused codes are the cells with Q2 = 1 outside column <span class="mono">00</span>.',
+                'Z is 1 only in S4 = <span class="mono">100</span>, and every other code with Q2 = 1 is a don&rsquo;t-care. One literal is enough. In D1, the x = 0 cells with Q2 = 1 form a group with no other 1s.',
+            ],
+            note: 'Z = Q2 and <span class="ov">x</span>&middot;Q2 in D1 are this small only because they cover unused codes.',
+        },
+        {
+            title: 'Two-Request Arbiter', tag: 'Two inputs', short: '3 states · 2 inputs · 2 outputs',
+            story: 'Two devices share one resource. <b>a</b> and <b>b</b> are their requests and <span class="cy">ga</span>, <span class="cy">gb</span> the grants. From IDLE, a wins when both ask. A grant is held as long as its request stays 1; then the machine returns to IDLE.',
+            type: 'moore', inputs: ['a','b'], outputs: ['ga','gb'], states: ['IDLE','GA','GB'], codes: [0,1,2],
+            ns: [[0,2,1,1],[0,0,1,1],[0,2,0,2]], out: [[0,0],[1,0],[0,1]],
+            nodes: [{x:320,y:165},{x:190,y:385},{x:450,y:385}],
+            elabel: true,
+            edges: [{f:0,t:1,lab:'a=1',bend:-30},{f:1,t:0,lab:'a=0',bend:-30},{f:0,t:2,lab:'ab=01',bend:30},{f:2,t:0,lab:'b=0',bend:30},
+                    {f:0,t:0,lab:'ab=00',loop:-Math.PI/2},{f:1,t:1,lab:'a=1',loop:Math.PI*0.85},{f:2,t:2,lab:'b=1',loop:Math.PI*0.15}],
+            reset: 0, resetDir: Math.PI,
+            sol: {"D1": [["b", "Q1"], ["a~", "b", "Q0~"]], "D0": [["a", "Q1~"]], "ga": [["Q0"]], "gb": [["Q1"]]},
+            hints: [
+                'Two inputs give four input combinations, so each table row has four next states, and each D map has four variables: rows a b, columns Q1 Q0.',
+                'Read each arc label as a set of combinations: <span class="mono">a=1</span> means ab = <span class="mono">10</span> and <span class="mono">11</span>; <span class="mono">b=0</span> means ab = <span class="mono">00</span> and <span class="mono">10</span>.',
+                'The outputs are Moore, so ga and gb get two-variable maps over Q1 Q0. With these codes and the don&rsquo;t-care at <span class="mono">11</span>, each output is a single flip-flop.',
+            ],
+            note: 'D0 = a&middot;<span class="ov">Q1</span>: the machine is in GA next exactly when a = 1 and it is not already holding b&rsquo;s grant. In D1, b&middot;Q1 holds GB and <span class="ov">a</span>&middot;b&middot;<span class="ov">Q0</span> starts it.',
+        },
+    ];
+    const NPROB = PROBS.length;
+
+    // ============ DERIVED FACTS (computed, never typed) ============
+    const GRAY = { 1: [0, 1], 2: [0, 1, 3, 2] };
+    const bits = (v, n) => v.toString(2).padStart(n, '0');
+    function setup(P) {
+        P.n = P.states.length;
+        P.k = Math.ceil(Math.log2(P.n));
+        P.ni = P.inputs.length; P.nc = 1 << P.ni;
+        P.qn = []; for (let j = P.k - 1; j >= 0; j--) P.qn.push('Q' + j);
+        P.funcs = P.qn.map(q => 'D' + q.slice(1)).concat(P.outputs);
+        P.fvars = f => (P.type === 'moore' && P.outputs.includes(f)) ? P.qn.slice() : P.inputs.concat(P.qn);
+        P.comboLabel = ic => P.ni === 1 ? `${P.inputs[0]} = ${ic}` : `${P.inputs.join('')} = ${bits(ic, P.ni)}`;
+    }
+    PROBS.forEach(setup);
+    // value of function f at minterm m over P.fvars(f): 0, 1, or 'X' (unused code)
+    function truth(P, f, m) {
+        const vars = P.fvars(f), n = vars.length, val = {};
+        vars.forEach((v, i) => val[v] = (m >> (n - 1 - i)) & 1);
+        let c = 0; P.qn.forEach(q => c = (c << 1) | val[q]);
+        const s = P.codes.indexOf(c); if (s < 0) return 'X';
+        let ic = 0; if (vars.length > P.k) P.inputs.forEach(v => ic = (ic << 1) | val[v]);
+        if (f[0] === 'D' && !P.outputs.includes(f)) { const j = +f.slice(1); return (P.codes[P.ns[s][ic]] >> j) & 1; }
+        const oi = P.outputs.indexOf(f);
+        return P.type === 'moore' ? P.out[s][oi] : P.out[s][ic][oi];
+    }
+    // table columns: next-state bits for every input combination, then the outputs
+    function tableCols(P) {
+        const cols = [];
+        for (let ic = 0; ic < P.nc; ic++) for (let j = P.k - 1; j >= 0; j--) cols.push({ kind: 'n', ic, j });
+        if (P.type === 'moore') P.outputs.forEach((o, oi) => cols.push({ kind: 'o', ic: -1, oi }));
+        else P.outputs.forEach((o, oi) => { for (let ic = 0; ic < P.nc; ic++) cols.push({ kind: 'o', ic, oi }); });
+        return cols;
+    }
+    function tableTruth(P, c, col) {
+        const s = P.codes.indexOf(c); if (s < 0) return 'X';
+        if (col.kind === 'n') return (P.codes[P.ns[s][col.ic]] >> col.j) & 1;
+        return P.type === 'moore' ? P.out[s][col.oi] : P.out[s][col.ic][col.oi];
+    }
+    // K-map geometry: rows = first floor(n/2) variables, columns = the rest, both in Gray order
+    function mapShape(P, f) {
+        const vars = P.fvars(f), n = vars.length, nr = Math.floor(n / 2), ncv = n - nr;
+        return { vars, rowVars: vars.slice(0, nr), colVars: vars.slice(nr), R: 1 << nr, C: 1 << ncv, nr, ncv };
+    }
+    const cellMinterm = (sh, r, c) => (GRAY[sh.nr][r] << sh.ncv) | GRAY[sh.ncv][c];
+    function termCovers(vars, term, m) {
+        const n = vars.length;
+        return term.every(l => { const neg = l.endsWith('~'), v = neg ? l.slice(0, -1) : l, b = (m >> (n - 1 - vars.indexOf(v))) & 1; return neg ? b === 0 : b === 1; });
+    }
+    const sopValue = (vars, terms, m) => terms.some(t => termCovers(vars, t, m)) ? 1 : 0;
+    const litCount = terms => terms.reduce((a, t) => a + t.length, 0);
+    const gateCount = terms => terms.filter(t => t.length > 1).length + (terms.length > 1 ? 1 : 0);
+
+    // ============ HTML / SVG HELPERS ============
+    const litHTML = l => l.endsWith('~') ? `<span class="ov">${l.slice(0, -1)}</span>` : l;
+    const termHTML = t => t.map(litHTML).join('<span class="op">·</span>');
+    const LOOPCOL = ['#b388ff', '#ffb74d', '#4fc3f7', '#66bb6a'];
+    const sopHTML = (terms, colored) => terms.map((t, i) => colored ? `<span style="color:${LOOPCOL[i % 4]}">${termHTML(t)}</span>` : termHTML(t)).join(' <span class="op">+</span> ');
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+    // ============ STATE DIAGRAM (generated from node geometry) ============
+    const R = 54;
+    function buildDiagram(svg, P, pid) {
+        // per-SVG markers: Chrome drops markers whose <defs> live in a display:none subtree
+        const defs = el('defs', {}, svg);
+        const mk = el('marker', { id: 'ah' + pid, markerWidth: 20, markerHeight: 16, refX: 14, refY: 6.5, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+        el('path', { d: 'M0,0 L16,6.5 L0,13 Z', fill: '#8fa8bd' }, mk);
+        const mk2 = el('marker', { id: 'ahr' + pid, markerWidth: 16, markerHeight: 14, refX: 11, refY: 5.5, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+        el('path', { d: 'M0,0 L13,5.5 L0,11 Z', fill: '#607d8b' }, mk2);
+        const labels = [];
+        for (const ed of P.edges) {
+            const A = P.nodes[ed.f], B = P.nodes[ed.t];
+            let d, lx, ly;
+            if (ed.loop !== undefined) {
+                const th = ed.loop, a1 = th + 0.45, a2 = th - 0.45, ro = R + 88;
+                const p1 = { x: A.x + R * Math.cos(a1), y: A.y + R * Math.sin(a1) }, p2 = { x: A.x + (R - 1) * Math.cos(a2), y: A.y + (R - 1) * Math.sin(a2) };
+                const c1 = { x: A.x + ro * Math.cos(th + 0.55), y: A.y + ro * Math.sin(th + 0.55) }, c2 = { x: A.x + ro * Math.cos(th - 0.55), y: A.y + ro * Math.sin(th - 0.55) };
+                d = `M${p1.x.toFixed(1)},${p1.y.toFixed(1)} C${c1.x.toFixed(1)},${c1.y.toFixed(1)} ${c2.x.toFixed(1)},${c2.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+                lx = A.x + (R + 84) * Math.cos(th); ly = A.y + (R + 84) * Math.sin(th) + 6;
+                if (Math.abs(Math.cos(th)) > 0.5) lx += Math.sign(Math.cos(th)) * 14;
+            } else {
+                const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+                const C = { x: (A.x + B.x) / 2 + nx * ed.bend, y: (A.y + B.y) / 2 + ny * ed.bend };
+                const sa = Math.atan2(C.y - A.y, C.x - A.x), ea = Math.atan2(C.y - B.y, C.x - B.x);
+                const P0 = { x: A.x + R * Math.cos(sa), y: A.y + R * Math.sin(sa) }, P2 = { x: B.x + (R + 1) * Math.cos(ea), y: B.y + (R + 1) * Math.sin(ea) };
+                d = `M${P0.x.toFixed(1)},${P0.y.toFixed(1)} Q${C.x.toFixed(1)},${C.y.toFixed(1)} ${P2.x.toFixed(1)},${P2.y.toFixed(1)}`;
+                const mx = 0.25 * P0.x + 0.5 * C.x + 0.25 * P2.x, my = 0.25 * P0.y + 0.5 * C.y + 0.25 * P2.y, sg = Math.sign(ed.bend) || -1;
+                lx = mx + nx * sg * 20; ly = my + ny * sg * 20 + 6;
+            }
+            el('path', { class: 'arc', d, 'marker-end': `url(#ah${pid})` }, svg);
+            labels.push({ lx, ly, ed });
+        }
+        // reset arrow into the reset state, from outside the diagram
+        const rs = P.nodes[P.reset], rdir = P.resetDir !== undefined ? P.resetDir : Math.PI / 2;
+        const rx0 = rs.x + (R + 46) * Math.cos(rdir), ry0 = rs.y + (R + 46) * Math.sin(rdir);
+        el('path', { class: 'resetarrow', d: `M${rx0.toFixed(1)},${ry0.toFixed(1)} L${(rs.x + (R + 2) * Math.cos(rdir)).toFixed(1)},${(rs.y + (R + 2) * Math.sin(rdir)).toFixed(1)}`, 'marker-end': `url(#ahr${pid})` }, svg);
+        const left = Math.cos(rdir) < -0.5;
+        const rl = el('text', { class: 'resetlab', x: (rx0 + (left ? -2 : 8)).toFixed(1), y: (ry0 + (left ? -8 : -2)).toFixed(1) }, svg); rl.textContent = 'reset';
+        P.nodes.forEach((nd, s) => {
+            const g = el('g', { class: 'sd-node' + (P.type === 'moore' && P.out[s].some(v => v) ? ' z1' : '') }, svg);
+            el('circle', { class: 'sdc', cx: nd.x, cy: nd.y, r: R }, g);
+            const t1 = el('text', { class: 'sdname', x: nd.x, y: nd.y - (P.type === 'moore' ? 10 : 2) }, g); t1.textContent = P.states[s];
+            const t2 = el('text', { class: 'sdenc', x: nd.x, y: nd.y + (P.type === 'moore' ? 14 : 22) }, g); t2.textContent = bits(P.codes[s], P.k);
+            if (P.type === 'moore') {
+                const t3 = el('text', { class: 'sdz', x: nd.x, y: nd.y + 35 }, g);
+                t3.textContent = P.outputs.map((o, oi) => `${o}=${P.out[s][oi]}`).join(' ');
+            }
+        });
+        // labels last, so their halo sits over every arc
+        for (const { lx, ly, ed } of labels) {
+            const t = el('text', { class: 'arc-l', x: lx.toFixed(1), y: ly.toFixed(1) }, svg);
+            if (ed.lab) t.textContent = ed.lab;
+            else if (P.type === 'mealy') {
+                const z = P.out[ed.f][ed.c][0];
+                el('tspan', {}, t).textContent = `${ed.c}/`;
+                el('tspan', { class: z ? 'zl' : '' }, t).textContent = `${z}`;
+            } else t.textContent = `${P.inputs[0]}=${ed.c}`;
+        }
+    }
+
+    // ============ STEP CARDS ============
+    // Every problem page shows five step cards, 0-4, that start EMPTY: the student works on paper. Each card
+    // has a Hint (a nudge, shown in the help bar) and a Show (the worked step). P.hints[0..2] are the nudges for
+    // steps 1-3; steps 0 and 4 use the generic nudges below.
+    const STEPS = [
+        { n: 0, title: 'Understand the problem' },
+        { n: 1, title: 'Count flip-flops' },
+        { n: 2, title: 'Coded state table' },
+        { n: 3, title: 'K-maps' },
+        { n: 4, title: 'Minimal equations' },
+    ];
+    function stepHint(P, n) {
+        if (n === 0) return P.type === 'moore'
+            ? 'List the states, the inputs and the outputs. The outputs are written in the bubbles, so this is a <b>Moore</b> machine: they depend on the state alone. The codes are given in each bubble.'
+            : 'List the states, the inputs and the outputs. The output rides on the arcs as <span class="mono">x/Z</span>, so this is a <b>Mealy</b> machine: it depends on the state and the input. The codes are given in each bubble.';
+        if (n === 4) return 'Read one product term off each group: a variable that keeps the same value across the whole group stays in the term, one that changes drops out. Fewest literals wins.';
+        return P.hints[n - 1];
+    }
+    const blankST = () => ({ hint: [false, false, false, false, false], shown: [false, false, false, false, false], lastHint: -1 });
+    const ST = PROBS.map(blankST);
+    let page = 0;
+    // the order "Next hint" walks: hint 0, show 0, hint 1, show 1, ... show 4
+    function nextHelp(pi) {
+        const s = ST[pi];
+        for (let n = 0; n < 5; n++) { if (!s.hint[n] && !s.shown[n]) return { kind: 'hint', n }; if (!s.shown[n]) return { kind: 'show', n }; }
+        return null;
+    }
+
+    // ============ PAGE BUILD ============
+    const stage = document.getElementById('stage');
+    const tabstrip = document.getElementById('tabstrip'), progress = document.getElementById('progress');
+    const TABS = [{ n: 0, label: 'How to Work a Problem', small: 'the steps + the buttons' }].concat(PROBS.map((P, i) => ({ n: i + 1, label: P.title, small: P.tag })));
+    TABS.forEach(t => {
+        const d = document.createElement('div'); d.className = 'tab'; d.dataset.page = t.n;
+        d.innerHTML = `<div class="tnum">${t.n}</div><div class="tlabel">${t.label}<small>${t.small}</small></div><div class="tdone"></div>`;
+        tabstrip.appendChild(d);
+        const dot = document.createElement('div'); dot.className = 'dot'; dot.dataset.dot = t.n; progress.appendChild(dot);
+    });
+    const pages = [];
+    function mkPage(id, inner) { const p = document.createElement('div'); p.className = 'page'; p.id = 'p' + id; p.innerHTML = inner; stage.appendChild(p); pages.push(p); return p; }
+
+    // ---- page 0: review the process, numbered exactly like the step cards ----
+    mkPage(0, `
+      <div class="leadwrap">
+        <div class="steps">
+          <div class="step"><div class="sn">0</div><div class="st">Understand the problem</div>
+            <div class="sd">Read the diagram: the states, the inputs and the outputs. <b>Moore</b>: outputs sit in the bubbles. <b>Mealy</b>: outputs ride on the arcs as <span class="mono">input/output</span>. The <b>codes are given</b> in each bubble, so everyone reaches the same equations.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">1</div><div class="st">Count flip-flops</div>
+            <div class="sd"><span class="mono">k = &lceil;log&#8322; n&rceil;</span> for <b>n</b> states. That gives <span class="mono">2<sup>k</sup></span> codes; any code no state uses is <b>unused</b>.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">2</div><div class="st">Coded state table</div>
+            <div class="sd">One row per code. For each input value, write the <b>next state&rsquo;s code</b>, then the outputs. An unused row is all <span class="x">X</span>.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">3</div><div class="st">K-maps</div>
+            <div class="sd">With D flip-flops, <span class="mono">D<sub>j</sub></span> is next-state bit <b>j</b>. Draw one map per D input and one per output, then <b>group</b> the 1s, using the <span class="x">X</span>s where they help.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">4</div><div class="st">Minimal equations</div>
+            <div class="sd">Read one product term off each group and write every function as a <b>minimal sum of products</b>: the fewest literals.</div></div>
+        </div>
+        <div class="leadrow">
+          <div class="panel conv"><div class="panel-head"><div class="ph">Conventions used in every problem</div></div>
+            <div class="convbody">
+              <ul>
+                <li><b>D flip-flops</b>, named Q<sub>k&minus;1</sub> &hellip; Q0 with Q0 the rightmost bit of the code. Every flip-flop also has a <span class="ov">Q</span> pin, so a complemented state variable costs nothing.</li>
+                <li><b>Unused codes are don&rsquo;t-cares</b> (<span class="x">X</span>) in every map, and you should use them wherever they make a group larger.</li>
+                <li><b>Moore outputs</b> depend on the flip-flops only, so their maps have just the state variables. <b>Mealy outputs</b> depend on the inputs too, so they get the same map as the D inputs.</li>
+                <li><b>K-map layout:</b> inputs first, then state bits; the first half of the variables label the rows and the rest label the columns, both in Gray order <span class="mono">00 01 11 10</span>. The two end columns are neighbors.</li>
+                <li>&ldquo;Minimal&rdquo; means fewest literals. Every answer in this set is the <b>only</b> minimal one, so yours should match term for term.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel helpkey"><div class="panel-head"><div class="ph">Getting help</div><div class="role">every step card starts empty &mdash; work it on paper first</div></div>
+            <div class="helpbody">
+              <div class="hrow"><span class="btn hint">Hint</span><div>On each step card: a nudge for that step, shown in the bar at the bottom. Nothing is filled in.</div></div>
+              <div class="hrow"><span class="btn show">Show</span><div>On each step card: the worked step &mdash; the count, the table, the grouped K-maps or the equations &mdash; to compare with yours.</div></div>
+              <div class="hrow"><span class="btn hint">Next hint<span class="k">H</span></span><div>Walks through every hint and step in order, one press at a time, from step 0 to step 4.</div></div>
+              <div class="hrow"><span class="btn final">Final answer<span class="k">F</span></span><div>Shows every step at once, ending with the minimal equations and their literal counts.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="cards">${PROBS.map((P, i) => `<div class="card" data-goto="${i + 1}"><div class="cn">PROBLEM ${i + 1}</div><div class="ct">${P.title}</div><div class="cf">${P.short} · ${P.type === 'moore' ? 'Moore' : 'Mealy'}</div><div class="cg">${P.tag}</div></div>`).join('')}</div>
+      </div>`);
+
+    // ---- problem pages ----
+    const cardHTML = (id, n, extraClass) => `
+        <div class="panel scard ${extraClass}" data-step="${n}">
+          <div class="panel-head"><div class="ph"><span class="sn">Step ${n}</span>${STEPS[n].title}</div><div class="spacer"></div>
+            <span class="btn hint sm" data-act="hint" data-n="${n}">Hint</span><span class="btn show sm" data-act="show" data-n="${n}">Show</span></div>
+          <div class="sbody" id="s${id}-${n}"></div>
+        </div>`;
+    function probPage(pi) {
+        const P = PROBS[pi], id = pi + 1;
+        const codesHTML = P.states.map((s, i) => `<span class="codechip">${s} = <span class="mono">${bits(P.codes[i], P.k)}</span></span>`).join('');
+        const p = mkPage(id, `
+          <div class="main">
+            <div class="panel probpanel">
+              <div class="panel-head"><div class="ph"><span class="sn">Problem ${id}</span>${P.title}</div><div class="spacer"></div><div class="role">${P.type === 'moore' ? 'Moore' : 'Mealy'} · ${P.n} states · input${P.ni > 1 ? 's' : ''} ${P.inputs.join(', ')}</div></div>
+              <div class="probbody">
+                <div class="story">${P.story}</div>
+                <div class="sdbox"><svg viewBox="0 0 640 470" id="sd${id}"></svg></div>
+                <div class="codes"><span class="cl">Given codes:</span>${codesHTML}</div>
+                <div class="find">Find the minimal sum-of-products equations for ${P.funcs.map(f => `<b>${f}</b>`).join(', ')}.</div>
+              </div>
+            </div>
+            <div class="work">
+              <div class="toprow">${cardHTML(id, 0, 'c0')}${cardHTML(id, 1, 'c1')}</div>
+              <div class="workgrid">
+                <div class="leftcol">${cardHTML(id, 2, 'c2')}${cardHTML(id, 4, 'c4')}</div>
+                ${cardHTML(id, 3, 'c3')}
+              </div>
+            </div>
+          </div>
+          <div class="helpbar">
+            <span class="btn hint big" data-act="next">Next hint<span class="k">H</span></span>
+            <div class="hintbox" id="hint${id}"></div>
+            <span class="btn final big" data-act="final">Final answer<span class="k">F</span></span>
+            <span class="btn big" data-act="reset">&#8634; Clear<span class="k">R</span></span>
+          </div>`);
+        buildDiagram(p.querySelector('#sd' + id), P, id);
+        // card 2 is sized for its table from the start, so the empty card has the table's footprint and nothing jumps on Show
+        p.querySelector('.c2').style.flex = `0 0 ${46 + 24 + (2 + (1 << P.k)) * 29}px`;
+        p.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => act(pi, b.dataset.act, b.dataset.n === undefined ? undefined : +b.dataset.n)));
+    }
+    PROBS.forEach((P, i) => probPage(i));
+
+    // ============ WORKED STEPS (revealed by Show) ============
+    function step0HTML(P) {
+        const outs = P.type === 'moore'
+            ? `<b>${P.outputs.join(', ')}</b> in the bubbles (Moore: state only)`
+            : `<b>${P.outputs.join(', ')}</b> on the arcs (Mealy: state and input)`;
+        return `<div class="facts">
+            <div><span class="fk">States</span>${P.n}: ${P.states.join(', ')}</div>
+            <div><span class="fk">Input${P.ni > 1 ? 's' : ''}</span><b class="am">${P.inputs.join(', ')}</b> &nbsp;(${P.nc} combinations)</div>
+            <div><span class="fk">Output${P.outputs.length > 1 ? 's' : ''}</span>${outs}</div>
+            <div><span class="fk">Find</span>${P.funcs.map(f => `<b class="cyb">${f}</b>`).join(', ')}</div></div>`;
+    }
+    function step1HTML(P) {
+        const unused = []; for (let c = 0; c < (1 << P.k); c++) if (!P.codes.includes(c)) unused.push(bits(c, P.k));
+        return `<div class="facts">
+            <div class="big1"><span class="mono">k = &lceil;log&#8322; ${P.n}&rceil; = ${P.k}</span> flip-flops: <b class="cyb">${P.qn.join(' ')}</b></div>
+            <div>${1 << P.k} codes for ${P.n} states &rarr; ${unused.length ? `<b class="vl">${unused.length} unused</b>: <span class="mono vl">${unused.join(' ')}</span> (rows of X)` : '<b>none unused</b> (no don&rsquo;t-cares)'}</div></div>`;
+    }
+    function tableHTML(P) {
+        const cols = tableCols(P), k = P.k;
+        let h = `<table class="stt"><tr><th colspan="${k}">state code</th><th rowspan="2">state</th>`;
+        for (let ic = 0; ic < P.nc; ic++) h += `<th colspan="${k}" class="g in">${P.comboLabel(ic)}</th>`;
+        if (P.type === 'moore') h += `<th colspan="${P.outputs.length}" class="g">output${P.outputs.length > 1 ? 's' : ''}</th>`;
+        else h += `<th colspan="${P.nc}" class="g">${P.outputs[0]}</th>`;
+        h += `</tr><tr>${P.qn.map(q => `<th>${q}</th>`).join('')}`;
+        for (let ic = 0; ic < P.nc; ic++) P.qn.forEach((q, i) => h += `<th class="${i === 0 ? 'g' : ''}">${q}<sup>+</sup></th>`);
+        if (P.type === 'moore') P.outputs.forEach((o, i) => h += `<th class="${i === 0 ? 'g' : ''}">${o}</th>`);
+        else for (let ic = 0; ic < P.nc; ic++) h += `<th class="${ic === 0 ? 'g in' : 'in'}">${P.inputs[0]}=${ic}</th>`;
+        h += `</tr>`;
+        for (let c = 0; c < (1 << k); c++) {
+            const s = P.codes.indexOf(c);
+            h += `<tr class="${s < 0 ? 'unused' : ''}">${bits(c, k).split('').map(b => `<td class="q">${b}</td>`).join('')}<td class="st">${s < 0 ? 'unused' : P.states[s]}</td>`;
+            cols.forEach(col => {
+                const v = tableTruth(P, c, col);
+                const g = (col.kind === 'n' && col.j === k - 1) || (col.kind === 'o' && (col.ic <= 0) && (col.oi === 0 || P.type === 'mealy'));
+                h += `<td class="vc v${v}${g ? ' g' : ''}">${v}</td>`;
+            });
+            h += `</tr>`;
+        }
+        return h + `</table>`;
+    }
+    function kmapHTML(P, f, pi) {
+        const sh = mapShape(P, f);
+        const CELL = sh.vars.length === 4 ? 38 : 48, GX = 74, GY = 50;
+        const W = GX + sh.C * CELL + 22, H = GY + sh.R * CELL + 14, clipId = `clip${pi}${f}`;
+        let o = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Menlo,Consolas,monospace">`;
+        o += `<defs><clipPath id="${clipId}"><rect x="${GX - 8}" y="${GY - 8}" width="${sh.C * CELL + 16}" height="${sh.R * CELL + 16}"/></clipPath></defs>`;
+        o += `<line x1="${GX - 46}" y1="${GY - 40}" x2="${GX}" y2="${GY}" stroke="#37506a" stroke-width="1.5"/>`;
+        o += `<text x="${GX - 4}" y="${GY - 34}" fill="#90a4ae" font-size="14" text-anchor="start">${sh.colVars.join(' ')}</text>`;
+        o += `<text x="${GX - 30}" y="${GY - 4}" fill="#ffb74d" font-size="14" text-anchor="end">${sh.rowVars.join(' ')}</text>`;
+        const isIn = v => P.inputs.includes(v);
+        for (let c = 0; c < sh.C; c++) o += `<text x="${GX + c * CELL + CELL / 2}" y="${GY - 9}" fill="${sh.colVars.every(isIn) ? '#ffb74d' : '#90a4ae'}" font-size="16" text-anchor="middle">${bits(GRAY[sh.ncv][c], sh.ncv)}</text>`;
+        for (let r = 0; r < sh.R; r++) o += `<text x="${GX - 10}" y="${GY + r * CELL + CELL / 2 + 6}" fill="${sh.rowVars.every(isIn) ? '#ffb74d' : '#90a4ae'}" font-size="16" text-anchor="end">${bits(GRAY[sh.nr][r], sh.nr)}</text>`;
+        for (let r = 0; r < sh.R; r++) for (let c = 0; c < sh.C; c++) {
+            const v = truth(P, f, cellMinterm(sh, r, c)), x = GX + c * CELL, y = GY + r * CELL;
+            o += `<rect x="${x}" y="${y}" width="${CELL}" height="${CELL}" fill="none" stroke="#37506a" stroke-width="2"/>`;
+            o += `<text class="kv v${v}" x="${x + CELL / 2}" y="${y + CELL / 2 + 8}" text-anchor="middle" font-size="22">${v}</text>`;
+        }
+        // grouping loops: each term's rows x columns, split into runs that wrap at the map edges
+        o += `<g clip-path="url(#${clipId})">`;
+        P.sol[f].forEach((t, gi) => {
+            const rows = [], cols = [];
+            for (let r = 0; r < sh.R; r++) for (let c = 0; c < sh.C; c++) if (termCovers(sh.vars, t, cellMinterm(sh, r, c))) { if (!rows.includes(r)) rows.push(r); if (!cols.includes(c)) cols.push(c); }
+            const runs = (idx, N) => { idx.sort((a, b) => a - b); if (idx.length < N && idx.includes(0) && idx.includes(N - 1)) { const lo = idx.filter(i => i < N / 2), hi = idx.filter(i => i >= N / 2); return [{ a: lo[0], b: lo[lo.length - 1], openLo: true }, { a: hi[0], b: hi[hi.length - 1], openHi: true }]; } return [{ a: idx[0], b: idx[idx.length - 1] }]; };
+            const pad = 4 + gi * 3, col = LOOPCOL[gi % 4], ext = 26;
+            for (const rr of runs(rows, sh.R)) for (const cr of runs(cols, sh.C)) {
+                let x0 = GX + cr.a * CELL + pad, x1 = GX + (cr.b + 1) * CELL - pad, y0 = GY + rr.a * CELL + pad, y1 = GY + (rr.b + 1) * CELL - pad;
+                if (cr.openLo) x0 -= ext; if (cr.openHi) x1 += ext; if (rr.openLo) y0 -= ext; if (rr.openHi) y1 += ext;
+                o += `<rect class="loop" x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="12" fill="none" stroke="${col}" stroke-width="3"/>`;
+            }
+        });
+        o += `</g></svg>`;
+        const kind = P.outputs.includes(f) ? (P.type === 'moore' ? 'Moore output' : 'Mealy output') : `next ${'Q' + f.slice(1)}`;
+        return `<div class="kmap"><div class="kt">${f}<small>${kind}</small></div>${o}<div class="kterm">${sopHTML(P.sol[f], true)}</div></div>`;
+    }
+    function eqHTML(P) {
+        let h = '';
+        P.funcs.forEach(f => {
+            const t = P.sol[f], lits = litCount(t);
+            const lab = t.length === 1 && t[0].length === 1 ? `1 literal · a wire, no gate` : `${t.length} term${t.length > 1 ? 's' : ''} · ${lits} literals`;
+            h += `<div class="eqrow"><div class="eqn"><span class="lhs">${f}</span> <span class="op">=</span> ${sopHTML(t, false)}</div><div class="eql">${lab}</div></div>`;
+        });
+        const tot = P.funcs.reduce((a, f) => a + litCount(P.sol[f]), 0), gates = P.funcs.reduce((a, f) => a + gateCount(P.sol[f]), 0);
+        return h + `<div class="tallyrow"><div class="tally">${tot} literals<small>${gates} gates</small></div><div class="ansnote">${P.note}</div></div>`;
+    }
+    const STEP_HTML = [
+        (P) => step0HTML(P), (P) => step1HTML(P), (P) => `<div class="tblwrap">${tableHTML(P)}</div>`,
+        (P, pi) => `<div class="kgrid">${P.funcs.map(f => kmapHTML(P, f, pi)).join('')}</div>`, (P) => `<div class="eqwrap">${eqHTML(P)}</div>`,
+    ];
+
+    // ============ RENDER ONE PROBLEM ============
+    function renderProblem(pi) {
+        const P = PROBS[pi], s = ST[pi], id = pi + 1, p = document.getElementById('p' + id);
+        for (let n = 0; n < 5; n++) {
+            const body = document.getElementById(`s${id}-${n}`), card = body.closest('.scard');
+            card.classList.toggle('open', s.shown[n]);
+            body.innerHTML = s.shown[n] ? STEP_HTML[n](P, pi) : `<div class="blank">Work step ${n} on paper.</div>`;
+            card.querySelector('[data-act="hint"]').classList.toggle('used', s.hint[n]);
+            card.querySelector('[data-act="show"]').classList.toggle('used', s.shown[n]);
+        }
+        const hb = document.getElementById('hint' + id), nx = nextHelp(pi);
+        const upNext = nx ? `<span class="dim">Next hint: ${nx.kind === 'hint' ? 'a nudge for' : 'the worked'} step ${nx.n}.</span>` : `<span class="dim">Every step is showing.</span>`;
+        hb.innerHTML = s.lastHint >= 0 ? `<span class="hl">Step ${s.lastHint} hint</span>${stepHint(P, s.lastHint)}` :
+            `<span class="dim">Every step card starts empty. Work each step on paper, then use a card&rsquo;s <b style="color:#ffb74d">Hint</b> or <b style="color:#90a4ae">Show</b>.</span> ${upNext}`;
+        p.querySelector('[data-act="next"]').classList.toggle('used', !nx);
+        p.querySelector('[data-act="final"]').classList.toggle('used', s.shown[4]);
+        renderTabs();
+    }
+    function renderTabs() {
+        document.querySelectorAll('.tab').forEach(t => {
+            const n = +t.dataset.page; t.classList.toggle('on', n === page);
+            if (n > 0) { const s = ST[n - 1]; t.classList.toggle('seen', s.shown[4]); t.querySelector('.tdone').textContent = s.shown[4] ? 'answer shown' : ''; }
+        });
+    }
+
+    // ============ ACTIONS ============
+    function act(pi, a, n) {
+        const s = ST[pi];
+        if (a === 'hint') { s.hint[n] = true; s.lastHint = n; }
+        else if (a === 'show') { s.shown[n] = true; }
+        else if (a === 'next') { const nx = nextHelp(pi); if (nx) { if (nx.kind === 'hint') { s.hint[nx.n] = true; s.lastHint = nx.n; } else s.shown[nx.n] = true; } }
+        else if (a === 'final') { s.shown = [true, true, true, true, true]; }
+        else if (a === 'reset') { ST[pi] = blankST(); }
+        renderProblem(pi);
+    }
+
+    // ============ NAVIGATION ============
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p' + page));
+        document.querySelectorAll('.dot').forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        document.getElementById('pcNum').textContent = page;
+        if (page > 0) renderProblem(page - 1); else renderTabs();
+    }
+    function setPage(n) { page = Math.max(0, Math.min(NPROB, n)); render(); }
+    tabstrip.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-goto]').forEach(c => c.addEventListener('click', () => setPage(+c.dataset.goto)));
+
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '0' && k <= String(NPROB)) { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); return;
+            case 'ArrowLeft': setPage(page - 1); e.preventDefault(); return;
+        }
+        if (page === 0) return;
+        const pi = page - 1;
+        switch (k.toLowerCase()) {
+            case 'h': act(pi, 'next'); break;
+            case 'f': act(pi, 'final'); break;
+            case 'r': act(pi, 'reset'); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, act, getState: () => ({ page, ST }), nextHelp, stepHint, STEPS,
+        PROBS, truth, tableCols, tableTruth, mapShape, cellMinterm, termCovers, sopValue, litCount, gateCount,
+    };
+
+    render();
+</script>
+</body>
+</html>

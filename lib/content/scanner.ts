@@ -110,6 +110,7 @@ export async function loadAllTopics(): Promise<Topic[]> {
         graphics,
         chapter,
         section,
+        type: meta.type,
         isSectionIntro: folder.isSectionIntro
       });
     } catch (error) {

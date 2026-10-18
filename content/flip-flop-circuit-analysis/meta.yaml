@@ -2,7 +2,7 @@ title: "Flip-Flop Circuit Analysis"
 description: "Analysis is synthesis run backwards: from a flip-flop circuit, recover the excitation and output equations, the state table and the state diagram. Worked on a two-flip-flop circuit that turns out to be a Gray-code up/down counter."
 chapter: sequential-logic
 section: fsm
-order: 40204
+order: 40205
 
 graphics:
   01-video.youtube:

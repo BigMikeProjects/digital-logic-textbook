@@ -63,6 +63,7 @@ export default function SchedulePage() {
                             <Link href={`/${item.slug}/`} className="schedule-link text-blue-700 hover:underline">
                               {item.title}
                             </Link>
+                            {item.type === 'practice' && <span className="practice-tag">Practice</span>}
                           </>
                         ) : (
                           <>

@@ -10,6 +10,8 @@ interface TwoPanelProps {
   topNav?: React.ReactNode;
   chapters?: ChapterGroup[];
   currentSlug?: string;
+  // 'stacked' puts the graphics above the text at full width (practice-set topics)
+  layout?: 'split' | 'stacked';
 }
 
 const STORAGE_KEY = 'textbook-panel-width';
@@ -22,7 +24,8 @@ export default function TwoPanel({
   textPanel,
   topNav,
   chapters,
-  currentSlug
+  currentSlug,
+  layout = 'split'
 }: TwoPanelProps) {
   const [activeTab, setActiveTab] = useState<'graphics' | 'text'>('graphics');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -165,6 +168,12 @@ export default function TwoPanel({
           </header>
         )}
 
+        {layout === 'stacked' ? (
+          <div className="flex-1">
+            {graphicsPanel}
+            <div className="practice-text">{textPanel}</div>
+          </div>
+        ) : (<>
         {/* Mobile Tab Bar */}
         <div className="lg:hidden flex border-b border-gray-200 bg-white">
           <button
@@ -218,6 +227,7 @@ export default function TwoPanel({
             {textPanel}
           </div>
         </div>
+        </>)}
       </div>
     </div>
   );
