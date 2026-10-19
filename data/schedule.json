@@ -744,6 +744,13 @@
       "weekday": "Wed",
       "items": [
         {
+          "num": "4.1.5",
+          "title": "Flip-Flop versus Latch Practice",
+          "slug": "flip-flop-versus-latch-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
           "num": "4.2.2",
           "title": "Binary State Assignment Practice",
           "slug": "binary-state-assignment-practice",

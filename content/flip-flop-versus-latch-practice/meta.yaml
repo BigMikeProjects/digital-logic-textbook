@@ -1,0 +1,10 @@
+title: "Flip-Flop versus Latch Practice"
+description: "Five timing diagrams: draw a D latch's output and a D flip-flop's output from the same clock and data, check your drawing, and see where the two part ways."
+chapter: sequential-logic
+section: memory-elements
+order: 40105
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: five timing diagrams, each four clock periods long. Draw the latch output and the flip-flop output segment by segment, check your work, and step through hints and worked steps on demand"
