@@ -1,0 +1,10 @@
+title: "One Hot State Assignment Practice"
+description: "The binary practice set's five state machines, built one-hot: find every loop-back, then read each D input off the arcs, with a hint and a worked solution for every step."
+chapter: sequential-logic
+section: fsm
+order: 40204
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: the same five state machines as the binary set, built one-hot. Each problem has five empty step cards, each with a hint and the worked step on demand"
