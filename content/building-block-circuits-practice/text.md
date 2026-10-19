@@ -6,7 +6,7 @@ Work the problems in order with paper and pencil. Try every step yourself before
 
 ## About the Set
 
-In practice you often meet a building block as code before you meet it as a schematic: a module in someone else's design, with port names that may or may not help. Every module here has deliberately neutral names, such as `a`, `k` and `r`, so the only way to identify it is to read what the code does. Several of them are also written in a different style from the one their own topic used, which is the point. A decoder is still a decoder when it is written with a shift instead of a `case` statement.
+In practice you often meet a building block as code before you meet it as a schematic: a module in someone else's design, with port names that may or may not help. Every module here has deliberately neutral names, such as `a`, `k` and `r`, so the only way to identify it is to read what the code does. The code itself is kept simple: each part is written the most obvious way, usually with a `case` statement, so the set tests whether you know what each part does rather than how much Verilog you know.
 
 Five of the six modules are combinational, and each was simulated for every combination of its inputs. The sixth is clocked, so it has memory and no truth table; it was simulated over a long sequence of clock edges instead. The answer tables come from those simulations, so each module has exactly one correct rule.
 
@@ -16,12 +16,12 @@ Each problem adds one new thing to read.
 
 | Problem | Module | What it adds |
 |:-:|---|---|
-| 1 | `m1` | Warm-up: one assignment with the conditional operator |
-| 2 | `m2` | A shift operator doing the work of a `case` statement |
+| 1 | `m1` | Warm-up: a `case` that copies one input to the output |
+| 2 | `m2` | An enable in front of a `case` |
 | 3 | `m3` | The high-impedance value `z` |
-| 4 | `m4` | An if–else chain, where the order of the tests matters |
+| 4 | `m4` | A `casez` with `?` bits, where the first match wins |
 | 5 | `m5` | A clock: the only module with memory |
-| 6 | `m6` | Arithmetic: an answer hidden in the borrow bit of a subtraction |
+| 6 | `m6` | Three outputs answering three questions about two numbers |
 
 ## Working a Problem
 

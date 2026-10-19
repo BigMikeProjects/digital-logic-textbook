@@ -318,30 +318,32 @@
     // selftest.js compares it, and every rule row below, against the iverilog truth tables).
     // ins / outs: [name, width]. rules: the answer table for Step 3 — pred(x) picks the inputs a row covers,
     // f(x) gives the outputs; the rows partition the input space (self-tested). probes: Step 2's chosen inputs.
-    const VERILOG = {"m1": "module m1 (input a, b, c, output y);\n  assign y = c ? b : a;\nendmodule", "m2": "module m2 (input  [1:0] k,\n           input        g,\n           output [3:0] z);\n  assign z = g ? (4'b0001 << k) : 4'b0000;\nendmodule", "m3": "module m3 (input  [3:0] a,\n           input        t,\n           output [3:0] y);\n  assign y = t ? 4'bzzzz : a;\nendmodule", "m4": "module m4 (input      [3:0] r,\n           output reg [1:0] n,\n           output reg       v);\n  always @* begin\n    v = 1'b1;\n    if      (r[3]) n = 2'd3;\n    else if (r[2]) n = 2'd2;\n    else if (r[1]) n = 2'd1;\n    else begin\n      n = 2'd0;\n      v = r[0];\n    end\n  end\nendmodule", "m5": "module m5 (input            clk,\n           input            w,\n           input      [3:0] d,\n           output reg [3:0] q);\n  always @(posedge clk)\n    if (w) q <= d;\nendmodule", "m6": "module m6 (input [3:0] a, b, output f, g);\n  wire [4:0] t = {1'b0, a} - {1'b0, b};\n  assign f = t[4];\n  assign g = (t[3:0] == 4'd0);\nendmodule"};
+    const VERILOG = {"m1": "module m1 (input      [1:0] s,\n           input            a, b, c, d,\n           output reg       y);\n  always @*\n    case (s)\n      2'b00: y = a;\n      2'b01: y = b;\n      2'b10: y = c;\n      2'b11: y = d;\n    endcase\nendmodule", "m2": "module m2 (input      [1:0] k,\n           input            g,\n           output reg [3:0] z);\n  always @* begin\n    z = 4'b0000;\n    if (g)\n      case (k)\n        2'b00: z = 4'b0001;\n        2'b01: z = 4'b0010;\n        2'b10: z = 4'b0100;\n        2'b11: z = 4'b1000;\n      endcase\n  end\nendmodule", "m3": "module m3 (input  [3:0] a,\n           input        t,\n           output [3:0] y);\n  assign y = t ? a : 4'bzzzz;\nendmodule", "m4": "module m4 (input      [3:0] r,\n           output reg [1:0] n,\n           output reg       v);\n  always @*\n    casez (r)\n      4'b1???: begin n = 2'd3; v = 1'b1; end\n      4'b01??: begin n = 2'd2; v = 1'b1; end\n      4'b001?: begin n = 2'd1; v = 1'b1; end\n      4'b0001: begin n = 2'd0; v = 1'b1; end\n      default: begin n = 2'd0; v = 1'b0; end\n    endcase\nendmodule", "m5": "module m5 (input            clk,\n           input            w,\n           input      [3:0] d,\n           output reg [3:0] q);\n  always @(posedge clk)\n    if (w) q <= d;\nendmodule", "m6": "module m6 (input      [3:0] a, b,\n           output reg       f, g, h);\n  always @* begin\n    f = 1'b0;  g = 1'b0;  h = 1'b0;\n    if      (a > b)  f = 1'b1;\n    else if (a == b) g = 1'b1;\n    else             h = 1'b1;\n  end\nendmodule"};
     const PROBS = [
         {
-            mod: 'm1', title: 'Module m1', tag: 'Warm-up', short: '3 inputs · 1 output',
-            ins: [['a', 1], ['b', 1], ['c', 1]], outs: [['y', 1]],
-            read: 'One continuous assignment. <span class="mono">c ? b : a</span> is the conditional operator: when c is 1 the result is b, otherwise a.',
-            probes: [{ a: 0, b: 1, c: 0 }, { a: 0, b: 1, c: 1 }, { a: 1, b: 0, c: 0 }, { a: 1, b: 0, c: 1 }],
+            mod: 'm1', title: 'Module m1', tag: 'Warm-up', short: '6 inputs · 1 output',
+            ins: [['s', 2], ['a', 1], ['b', 1], ['c', 1], ['d', 1]], outs: [['y', 1]],
+            read: 'A <span class="mono">case</span> on s. Each value of s copies one of the inputs a, b, c or d to y.',
+            probes: [{ s: 0, a: 1, b: 0, c: 0, d: 0 }, { s: 1, a: 1, b: 0, c: 0, d: 0 }, { s: 1, a: 0, b: 1, c: 0, d: 0 }, { s: 3, a: 0, b: 0, c: 0, d: 1 }],
             rules: [
-                { when: 'c = 0', out: 'y = a', pred: x => x.c === 0, f: x => ({ y: x.a }) },
-                { when: 'c = 1', out: 'y = b', pred: x => x.c === 1, f: x => ({ y: x.b }) },
+                { when: 's = 00', out: 'y = a', pred: x => x.s === 0, f: x => ({ y: x.a }) },
+                { when: 's = 01', out: 'y = b', pred: x => x.s === 1, f: x => ({ y: x.b }) },
+                { when: 's = 10', out: 'y = c', pred: x => x.s === 2, f: x => ({ y: x.c }) },
+                { when: 's = 11', out: 'y = d', pred: x => x.s === 3, f: x => ({ y: x.d }) },
             ],
             hints: [
-                '<span class="mono">c ? b : a</span> reads &ldquo;if c then b, else a&rdquo;. It is the conditional operator, not a comparison.',
-                'Hold a = 0 and b = 1 and flip c. Then swap a and b and flip c again.',
-                'y always equals one of the data inputs. Which input decides which one?',
+                'Each line of the <span class="mono">case</span> says &ldquo;when s has this value, y equals this input&rdquo;.',
+                'Set a = 1 and the others 0, then change only s. Then put the 1 on b instead.',
+                'y always equals one of four inputs. Which input decides which one?',
             ],
-            name: '2-to-1 multiplexer',
-            detail: 'c is the select line: c = 0 passes a, c = 1 passes b.',
-            note: 'The port names give nothing away. The select input is whichever one does the choosing.',
+            name: '4-to-1 multiplexer',
+            detail: 's is the 2-bit select; a, b, c, d are the data inputs.',
+            note: 'A <span class="mono">case</span> with one data input per line is the signature of a multiplexer.',
         },
         {
-            mod: 'm2', title: 'Module m2', tag: 'Shift', short: '3 input bits · 4 outputs',
+            mod: 'm2', title: 'Module m2', tag: 'Enable', short: '3 input bits · 4 outputs',
             ins: [['k', 2], ['g', 1]], outs: [['z', 4]],
-            read: 'One assignment. When g is 1, z gets <span class="mono">0001</span> shifted left by k places; when g is 0, z is all zeros.',
+            read: 'z starts at <span class="mono">0000</span>. Only when g is 1 does the <span class="mono">case</span> run, setting exactly one bit of z, chosen by k.',
             probes: [{ k: 0, g: 1 }, { k: 2, g: 1 }, { k: 3, g: 1 }, { k: 2, g: 0 }],
             rules: [
                 { when: 'g = 0', out: 'z = 0000', pred: x => x.g === 0, f: () => ({ z: 0 }) },
@@ -351,36 +353,36 @@
                 { when: 'g = 1, k = 11', out: 'z = 1000', pred: x => x.g === 1 && x.k === 3, f: () => ({ z: 8 }) },
             ],
             hints: [
-                '<span class="mono">4\'b0001 &lt;&lt; k</span> slides the single 1 left by k places: k = 2 gives <span class="mono">0100</span>.',
+                'Every output pattern in the <span class="mono">case</span> has exactly one 1. What does the <span class="mono">if (g)</span> in front of it do?',
                 'Try g = 1 with k = 0, 1, 2 and 3, then try g = 0.',
-                'With g = 1 exactly one output is 1, and k says which one. With g = 0, none is.',
+                'With g = 1, k picks which single output is 1. With g = 0, none is.',
             ],
             name: '2-to-4 decoder with an active-high enable',
             detail: 'k selects which output is 1; g is the enable.',
-            note: 'The Decoders topic wrote this with a <span class="mono">case</span> statement. The shift is the same truth table in one line.',
+            note: 'Two inputs in, four outputs out, exactly one of them 1: a decoder. The <span class="mono">if (g)</span> is its enable.',
         },
         {
             mod: 'm3', title: 'Module m3', tag: 'High-Z', short: '5 input bits · 4 outputs',
             ins: [['a', 4], ['t', 1]], outs: [['y', 4]],
-            read: 'One assignment. When t is 1, y gets <span class="mono">4\'bzzzz</span>, the high-impedance value: the outputs let go of the wires. When t is 0, y gets a.',
+            read: 'One assignment. When t is 1, y gets a. When t is 0, y gets <span class="mono">4\'bzzzz</span>, the high-impedance value: the outputs let go of the wires.',
             probes: [{ a: 10, t: 0 }, { a: 10, t: 1 }, { a: 6, t: 0 }, { a: 6, t: 1 }],
             rules: [
-                { when: 't = 0', out: 'y = a', pred: x => x.t === 0, f: x => ({ y: x.a }) },
-                { when: 't = 1', out: 'y = zzzz (high impedance)', pred: x => x.t === 1, f: () => ({ y: 'zzzz' }) },
+                { when: 't = 0', out: 'y = zzzz (high impedance)', pred: x => x.t === 0, f: () => ({ y: 'zzzz' }) },
+                { when: 't = 1', out: 'y = a', pred: x => x.t === 1, f: x => ({ y: x.a }) },
             ],
             hints: [
                 '<span class="mono">z</span> is not 0 or 1. It means &ldquo;not driving&rdquo;: the output is disconnected from the wire.',
                 'Try a = 1010 with t = 0, then with t = 1.',
                 'One value of t passes a through; the other disconnects the output. Which value drives?',
             ],
-            name: '4-bit tri-state buffer with an active-low enable',
-            detail: 't = 0 drives y with a; t = 1 puts all four outputs in high impedance (z).',
-            note: 'The Tri-State Buffers topic wrote <span class="mono">en ? a : 1\'bz</span>, enabled by a 1. Here the condition is reversed, so the enable is active-low.',
+            name: '4-bit tri-state buffer with an enable',
+            detail: 't = 1 drives y with a; t = 0 puts all four outputs in high impedance (z).',
+            note: 'Any part that can output <span class="mono">z</span> is a tri-state buffer. t is its enable: the outputs are driven only while t is 1.',
         },
         {
-            mod: 'm4', title: 'Module m4', tag: 'If–else', short: '4 inputs · 3 output bits',
+            mod: 'm4', title: 'Module m4', tag: 'Wildcards', short: '4 inputs · 3 output bits',
             ins: [['r', 4]], outs: [['n', 2], ['v', 1]],
-            read: 'v starts at 1. The if–else chain tests r[3], then r[2], then r[1]; the first 1 it finds sets n. Only when all three are 0 does n become 0 and v copy r[0].',
+            read: 'A <span class="mono">casez</span> on r, where <span class="mono">?</span> means &ldquo;either value&rdquo;. The lines are checked from the top and the first match wins; <span class="mono">default</span> catches r = 0000.',
             probes: [{ r: 6 }, { r: 2 }, { r: 9 }, { r: 1 }, { r: 0 }],
             rules: [
                 { when: 'r = 1???', out: 'n = 11, v = 1', pred: x => (x.r & 8) !== 0, f: () => ({ n: 3, v: 1 }) },
@@ -390,18 +392,18 @@
                 { when: 'r = 0000', out: 'n = 00, v = 0', pred: x => x.r === 0, f: () => ({ n: 0, v: 0 }) },
             ],
             hints: [
-                'An if–else chain is tested from the top. The first true condition wins, and the later ones are never looked at.',
+                'In <span class="mono">4\'b01??</span> the <span class="mono">?</span> bits can be anything. Read each line as &ldquo;the highest 1 is in this position&rdquo;.',
                 'Try r = 0110 and r = 0010. Then try r = 0001 and r = 0000: n is 00 for both, so look at v.',
                 'n is the index of the highest-numbered 1 in r. v says whether r had any 1 at all.',
             ],
             name: '4-to-2 priority encoder with a valid output',
             detail: 'n is the index of the highest-numbered 1 in r; v = 1 when any input is 1.',
-            note: 'The order of the if–else chain is the priority. v is the only thing that tells r = 0001 apart from r = 0000.',
+            note: 'Ignoring every bit below the highest 1 is what makes it a priority encoder. v is the only thing that tells r = 0001 apart from r = 0000.',
         },
         {
             mod: 'm5', title: 'Module m5', tag: 'Clocked', short: 'clock + 5 input bits · 4 outputs', seq: true,
             clk: 'clk', ins: [['w', 1], ['d', 4]], outs: [['q', 4]],
-            read: '<span class="mono">always @(posedge clk)</span> runs only at a rising edge of clk. There is no <span class="mono">else</span>: when w is 0, q is not assigned, so it keeps the value it already holds.',
+            read: '<span class="mono">always @(posedge clk)</span> runs only at a rising edge of clk. If w is 1, q takes d. There is no <span class="mono">else</span>: when w is 0, q is not assigned, so it keeps its value.',
             seqProbes: [{ w: 1, d: 5 }, { w: 0, d: 15 }, { w: 1, d: 12 }, { w: 0, d: 3 }],
             rules: [
                 { when: 'rising edge of clk, w = 1', out: 'q &larr; d' },
@@ -410,32 +412,32 @@
             ],
             step: (q, x) => x.w ? bits(x.d, 4) : q,
             hints: [
-                '<span class="mono">posedge clk</span> means the block acts only at a rising clock edge. What happens to q when w is 0 and nothing assigns it?',
+                '<span class="mono">posedge clk</span> means the block acts only at a rising clock edge. Between edges, q cannot change.',
                 'Step through four rising edges: w = 1 with d = 0101, then w = 0 with d = 1111, then w = 1 with d = 1100, then w = 0.',
-                'There are two cases at each rising edge, depending on w. Between edges, nothing changes.',
+                'At each rising edge there are two cases, depending on w. What happens to q when nothing assigns it?',
             ],
             name: '4-bit register with a load enable',
             detail: 'At each rising edge of clk, w = 1 loads d into q and w = 0 holds q. q changes only at clock edges.',
-            note: 'The only module here with memory: four D flip-flops on one clock, plus a load enable. The giveaways are <span class="mono">posedge</span> and the nonblocking <span class="mono">&lt;=</span>.',
+            note: 'The only module here with memory: four D flip-flops on one clock, plus a load enable. The giveaway is <span class="mono">posedge</span>.',
         },
         {
-            mod: 'm6', title: 'Module m6', tag: 'Arithmetic', short: '8 input bits · 2 outputs',
-            ins: [['a', 4], ['b', 4]], outs: [['f', 1], ['g', 1]], dec: true,
-            read: 't is a &minus; b, both padded to 5 bits so a borrow has somewhere to go. f is that borrow bit, t[4]; g tests whether the 4-bit difference is zero.',
+            mod: 'm6', title: 'Module m6', tag: 'Relational', short: '8 input bits · 3 outputs',
+            ins: [['a', 4], ['b', 4]], outs: [['f', 1], ['g', 1], ['h', 1]], dec: true,
+            read: 'All three outputs start at 0. The if&ndash;else chain then sets exactly one of them: f when a &gt; b, g when a = b, and h otherwise.',
             probes: [{ a: 5, b: 3 }, { a: 3, b: 5 }, { a: 4, b: 4 }, { a: 0, b: 15 }],
             rules: [
-                { when: 'a &lt; b', out: 'f = 1, g = 0', pred: x => x.a < x.b, f: () => ({ f: 1, g: 0 }) },
-                { when: 'a = b', out: 'f = 0, g = 1', pred: x => x.a === x.b, f: () => ({ f: 0, g: 1 }) },
-                { when: 'a &gt; b', out: 'f = 0, g = 0', pred: x => x.a > x.b, f: () => ({ f: 0, g: 0 }) },
+                { when: 'a &gt; b', out: 'f = 1, g = 0, h = 0', pred: x => x.a > x.b, f: () => ({ f: 1, g: 0, h: 0 }) },
+                { when: 'a = b', out: 'f = 0, g = 1, h = 0', pred: x => x.a === x.b, f: () => ({ f: 0, g: 1, h: 0 }) },
+                { when: 'a &lt; b', out: 'f = 0, g = 0, h = 1', pred: x => x.a < x.b, f: () => ({ f: 0, g: 0, h: 1 }) },
             ],
             hints: [
-                't is a &minus; b in 5 bits. When b is bigger, the subtraction borrows and t[4] comes out 1.',
+                'The tests compare a and b as whole 4-bit numbers. What is left for the final <span class="mono">else</span>?',
                 'Try a = 5, b = 3; then a = 3, b = 5; then a = 4, b = 4.',
-                'Each output answers a yes-or-no question about a and b. Both 0 is an answer too.',
+                'Exactly one output is 1 for every input. Each one answers a different question about a and b.',
             ],
             name: '4-bit magnitude comparator (unsigned)',
-            detail: 'f = 1 when a &lt; b; g = 1 when a = b; both 0 means a &gt; b.',
-            note: 'No relational operator appears anywhere. The comparison comes from the borrow out of a subtraction, which is how hardware often compares.',
+            detail: 'f = 1 when a &gt; b, g = 1 when a = b, h = 1 when a &lt; b.',
+            note: 'Two numbers in and three one-hot outputs reporting greater, equal or less: a magnitude comparator.',
         },
     ];
     const NPROB = PROBS.length;
@@ -450,7 +452,7 @@
     const evalRules = (P, x) => { const r = P.rules.find(r => r.pred && r.pred(x)); return r ? r.f(x) : null; };
 
     // ============ VERILOG DISPLAY ============
-    const KW = /\b(module|endmodule|input|output|reg|wire|assign|always|begin|end|if|else|case|endcase|casez|posedge|negedge)\b/g;
+    const KW = /\b(module|endmodule|input|output|reg|wire|assign|always|begin|end|if|else|case|endcase|casez|default|posedge|negedge)\b/g;
     function hiVerilog(src) {
         const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         return src.split('\n').map(line => {
@@ -504,7 +506,7 @@
             <div class="sd">List the <b>ports</b>: name, direction, width. The names are deliberately neutral, so the port list tells you <b>sizes</b>, not roles. Count the input bits.</div></div>
           <div class="arrowcell">&rarr;</div>
           <div class="step"><div class="sn">1</div><div class="st">Read the body</div>
-            <div class="sd">Say in words what each statement does: an <span class="mono">assign</span>, an <span class="mono">always @*</span> block, a <span class="mono">case</span> or an if&ndash;else chain, and any operator such as <span class="mono">?:</span>, <span class="mono">&lt;&lt;</span> or <span class="mono">&minus;</span>.</div></div>
+            <div class="sd">Say in words what each statement does: a <span class="mono">case</span> line, an if&ndash;else, an <span class="mono">always @*</span> block or one triggered by <span class="mono">posedge</span>. Watch for <span class="mono">?</span> and <span class="mono">z</span> in constants and for the conditional operator <span class="mono">?:</span>.</div></div>
           <div class="arrowcell">&rarr;</div>
           <div class="step"><div class="sn">2</div><div class="st">Try some inputs</div>
             <div class="sd">Pick a few input values and work out the outputs by hand, changing <b>one</b> input at a time. For a clocked module, step through a few clock edges instead.</div></div>
@@ -519,7 +521,7 @@
           <div class="panel conv"><div class="panel-head"><div class="ph">Conventions used in every problem</div></div>
             <div class="convbody">
               <ul>
-                <li>Each module is a building block from <b data-topic="building-block-circuits">Building Block Circuits</b>, or a register built from the <b data-topic="d-flip-flop">D Flip-Flop</b>, often written in a different style from the one its topic used. <b>Five are combinational; one is clocked.</b></li>
+                <li>Each module is a building block from <b data-topic="building-block-circuits">Building Block Circuits</b>, or a register built from the <b data-topic="d-flip-flop">D Flip-Flop</b>, written in its most obvious Verilog form, often a <span class="mono">case</span> statement but not always. The point is the part&rsquo;s function, not Verilog tricks. <b>Five are combinational; one is clocked.</b></li>
                 <li><b>Port names are neutral</b> (<span class="mono">a</span>, <span class="mono">k</span>, <span class="mono">r</span> &hellip;) so they can&rsquo;t give the answer away. Work from what the code does.</li>
                 <li>Vectors are written <b>high bit first</b>: if <span class="mono">z</span> is <span class="mono">[3:0]</span>, then <span class="mono">z = 0100</span> means z[2] = 1.</li>
                 <li>Each module&rsquo;s behavior is unique, so there is one right rule. Where a block has two common names, Step 4 gives both.</li>
@@ -576,8 +578,10 @@
     // ============ WORKED STEPS ============
     function step0HTML(P) {
         const ins = P.seq ? [[P.clk, 1, 'clock']].concat(P.ins) : P.ins;
-        const row = (p, dir) => `<tr><td class="st mono2">${p[0]}</td><td>${dir}</td><td>${p[1] === 1 ? '1 bit' : `${p[1]} bits <span class="mono2">[${p[1] - 1}:0]</span>`}</td></tr>`;
-        return `<div class="tblwrap"><table class="ltab"><tr><th>port</th><th>direction</th><th>width</th></tr>${ins.map(p => row(p, p[2] ? 'input (clock)' : 'input')).join('')}${P.outs.map(p => row(p, '<span class="cyb">output</span>')).join('')}</table>
+        // ports with the same width share a row, as they do in the declaration ("input a, b, c, d")
+        const group = ps => ps.reduce((g, p) => { const l = g[g.length - 1]; if (l && l[1] === p[1] && !l[2] && !p[2]) l[0] += ', ' + p[0]; else g.push(p.slice()); return g; }, []);
+        const row = (p, dir) => `<tr><td class="st mono2">${p[0]}</td><td>${dir}</td><td>${p[1] === 1 ? (p[0].includes(',') ? '1 bit each' : '1 bit') : `${p[1]} bits <span class="mono2">[${p[1] - 1}:0]</span>`}</td></tr>`;
+        return `<div class="tblwrap"><table class="ltab"><tr><th>port</th><th>direction</th><th>width</th></tr>${group(ins).map(p => row(p, p[2] ? 'input (clock)' : 'input')).join('')}${group(P.outs).map(p => row(p, '<span class="cyb">output</span>')).join('')}</table>
             <div class="cnote">${P.seq ? `clocked by <span class="mono2">${P.clk}</span>: q also depends on what it already holds` : `${P.nin} input bits &rarr; ${1 << P.nin} input combinations`}</div></div>`;
     }
     const step1HTML = P => `<div class="ctext big">${P.read}</div>`;
