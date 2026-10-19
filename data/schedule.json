@@ -744,6 +744,13 @@
       "weekday": "Wed",
       "items": [
         {
+          "num": "3.5.8",
+          "title": "Building Block Circuits Practice",
+          "slug": "building-block-circuits-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
           "num": "4.1.5",
           "title": "Flip-Flop versus Latch Practice",
           "slug": "flip-flop-versus-latch-practice",

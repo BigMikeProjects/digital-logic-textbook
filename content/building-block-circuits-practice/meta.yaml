@@ -1,0 +1,10 @@
+title: "Building Block Circuits Practice"
+description: "Five mystery Verilog modules with neutral port names: read the code, try some inputs, state the rule, and name the combinational building block."
+chapter: combinational-logic
+section: building-block-circuits
+order: 30508
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: five short Verilog modules with neutral port names. Identify each combinational building block, with five empty step cards per problem, each with a hint and the worked step on demand"
