@@ -256,6 +256,7 @@
     .namebox .ansnote { font-size: 14.5px; }
     .toprow .scard { height: 236px; }
     .midrow { flex: 0 0 290px; }
+    .zv { color: #b388ff; font-weight: 700; } .xv { color: #ef9a9a; }
 </style>
 </head>
 <body>
@@ -273,9 +274,9 @@
         </div>
         <div class="titles">
             <h1>Building Blocks from Verilog <span class="sub">&mdash; practice set</span></h1>
-            <div class="subtitle">Five mystery modules with neutral port names &middot; read the code, try some inputs, state the rule, name the block</div>
+            <div class="subtitle">Six mystery modules with neutral port names &middot; read the code, try some inputs, state the rule, name the block</div>
         </div>
-        <div class="page-count">Page <b id="pcNum">0</b> of 0&ndash;5</div>
+        <div class="page-count">Page <b id="pcNum">0</b> of 0&ndash;6</div>
     </div>
 
     <div class="tabstrip" id="tabstrip"></div>
@@ -284,7 +285,7 @@
     <div class="footer">
         <div class="progress" id="progress"></div>
         <div class="controls">
-            <span class="k">0</span>&ndash;<span class="k">5</span> page
+            <span class="k">0</span>&ndash;<span class="k">6</span> page
             &middot; each step card: <span class="k amber">Hint</span> a nudge &middot; <span class="k">Show</span> the worked step
             &middot; <span class="k amber">H</span> next hint, in order
             &middot; <span class="k cy">F</span> final answer
@@ -312,12 +313,12 @@
     window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
     const SVGNS = 'http://www.w3.org/2000/svg';
 
-    // ============ THE FIVE MODULES (source of truth) ============
+    // ============ THE SIX MODULES (source of truth) ============
     // VERILOG[name] is the exact text that was simulated exhaustively in iverilog (spliced in at build time;
     // selftest.js compares it, and every rule row below, against the iverilog truth tables).
     // ins / outs: [name, width]. rules: the answer table for Step 3 — pred(x) picks the inputs a row covers,
     // f(x) gives the outputs; the rows partition the input space (self-tested). probes: Step 2's chosen inputs.
-    const VERILOG = {"m1": "module m1 (input a, b, c, output y);\n  assign y = c ? b : a;\nendmodule", "m2": "module m2 (input  [1:0] k,\n           input        g,\n           output [3:0] z);\n  assign z = g ? (4'b0001 << k) : 4'b0000;\nendmodule", "m3": "module m3 (input      [3:0] r,\n           output reg [1:0] n,\n           output reg       v);\n  always @* begin\n    v = 1'b1;\n    if      (r[3]) n = 2'd3;\n    else if (r[2]) n = 2'd2;\n    else if (r[1]) n = 2'd1;\n    else begin\n      n = 2'd0;\n      v = r[0];\n    end\n  end\nendmodule", "m4": "module m4 (input [3:0] a, b, output f, g);\n  wire [4:0] t = {1'b0, a} - {1'b0, b};\n  assign f = t[4];\n  assign g = (t[3:0] == 4'd0);\nendmodule", "m5": "module m5 (input            d,\n           input      [1:0] s,\n           output reg [3:0] y);\n  always @* begin\n    y    = 4'b1111;\n    y[s] = d;\n  end\nendmodule"};
+    const VERILOG = {"m1": "module m1 (input a, b, c, output y);\n  assign y = c ? b : a;\nendmodule", "m2": "module m2 (input  [1:0] k,\n           input        g,\n           output [3:0] z);\n  assign z = g ? (4'b0001 << k) : 4'b0000;\nendmodule", "m3": "module m3 (input  [3:0] a,\n           input        t,\n           output [3:0] y);\n  assign y = t ? 4'bzzzz : a;\nendmodule", "m4": "module m4 (input      [3:0] r,\n           output reg [1:0] n,\n           output reg       v);\n  always @* begin\n    v = 1'b1;\n    if      (r[3]) n = 2'd3;\n    else if (r[2]) n = 2'd2;\n    else if (r[1]) n = 2'd1;\n    else begin\n      n = 2'd0;\n      v = r[0];\n    end\n  end\nendmodule", "m5": "module m5 (input            clk,\n           input            w,\n           input      [3:0] d,\n           output reg [3:0] q);\n  always @(posedge clk)\n    if (w) q <= d;\nendmodule", "m6": "module m6 (input [3:0] a, b, output f, g);\n  wire [4:0] t = {1'b0, a} - {1'b0, b};\n  assign f = t[4];\n  assign g = (t[3:0] == 4'd0);\nendmodule"};
     const PROBS = [
         {
             mod: 'm1', title: 'Module m1', tag: 'Warm-up', short: '3 inputs · 1 output',
@@ -359,7 +360,25 @@
             note: 'The Decoders topic wrote this with a <span class="mono">case</span> statement. The shift is the same truth table in one line.',
         },
         {
-            mod: 'm3', title: 'Module m3', tag: 'If–else', short: '4 inputs · 3 output bits',
+            mod: 'm3', title: 'Module m3', tag: 'High-Z', short: '5 input bits · 4 outputs',
+            ins: [['a', 4], ['t', 1]], outs: [['y', 4]],
+            read: 'One assignment. When t is 1, y gets <span class="mono">4\'bzzzz</span>, the high-impedance value: the outputs let go of the wires. When t is 0, y gets a.',
+            probes: [{ a: 10, t: 0 }, { a: 10, t: 1 }, { a: 6, t: 0 }, { a: 6, t: 1 }],
+            rules: [
+                { when: 't = 0', out: 'y = a', pred: x => x.t === 0, f: x => ({ y: x.a }) },
+                { when: 't = 1', out: 'y = zzzz (high impedance)', pred: x => x.t === 1, f: () => ({ y: 'zzzz' }) },
+            ],
+            hints: [
+                '<span class="mono">z</span> is not 0 or 1. It means &ldquo;not driving&rdquo;: the output is disconnected from the wire.',
+                'Try a = 1010 with t = 0, then with t = 1.',
+                'One value of t passes a through; the other disconnects the output. Which value drives?',
+            ],
+            name: '4-bit tri-state buffer with an active-low enable',
+            detail: 't = 0 drives y with a; t = 1 puts all four outputs in high impedance (z).',
+            note: 'The Tri-State Buffers topic wrote <span class="mono">en ? a : 1\'bz</span>, enabled by a 1. Here the condition is reversed, so the enable is active-low.',
+        },
+        {
+            mod: 'm4', title: 'Module m4', tag: 'If–else', short: '4 inputs · 3 output bits',
             ins: [['r', 4]], outs: [['n', 2], ['v', 1]],
             read: 'v starts at 1. The if–else chain tests r[3], then r[2], then r[1]; the first 1 it finds sets n. Only when all three are 0 does n become 0 and v copy r[0].',
             probes: [{ r: 6 }, { r: 2 }, { r: 9 }, { r: 1 }, { r: 0 }],
@@ -380,7 +399,27 @@
             note: 'The order of the if–else chain is the priority. v is the only thing that tells r = 0001 apart from r = 0000.',
         },
         {
-            mod: 'm4', title: 'Module m4', tag: 'Arithmetic', short: '8 input bits · 2 outputs',
+            mod: 'm5', title: 'Module m5', tag: 'Clocked', short: 'clock + 5 input bits · 4 outputs', seq: true,
+            clk: 'clk', ins: [['w', 1], ['d', 4]], outs: [['q', 4]],
+            read: '<span class="mono">always @(posedge clk)</span> runs only at a rising edge of clk. There is no <span class="mono">else</span>: when w is 0, q is not assigned, so it keeps the value it already holds.',
+            seqProbes: [{ w: 1, d: 5 }, { w: 0, d: 15 }, { w: 1, d: 12 }, { w: 0, d: 3 }],
+            rules: [
+                { when: 'rising edge of clk, w = 1', out: 'q &larr; d' },
+                { when: 'rising edge of clk, w = 0', out: 'q keeps its value' },
+                { when: 'between edges', out: 'q keeps its value' },
+            ],
+            step: (q, x) => x.w ? bits(x.d, 4) : q,
+            hints: [
+                '<span class="mono">posedge clk</span> means the block acts only at a rising clock edge. What happens to q when w is 0 and nothing assigns it?',
+                'Step through four rising edges: w = 1 with d = 0101, then w = 0 with d = 1111, then w = 1 with d = 1100, then w = 0.',
+                'There are two cases at each rising edge, depending on w. Between edges, nothing changes.',
+            ],
+            name: '4-bit register with a load enable',
+            detail: 'At each rising edge of clk, w = 1 loads d into q and w = 0 holds q. q changes only at clock edges.',
+            note: 'The only module here with memory: four D flip-flops on one clock, plus a load enable. The giveaways are <span class="mono">posedge</span> and the nonblocking <span class="mono">&lt;=</span>.',
+        },
+        {
+            mod: 'm6', title: 'Module m6', tag: 'Arithmetic', short: '8 input bits · 2 outputs',
             ins: [['a', 4], ['b', 4]], outs: [['f', 1], ['g', 1]], dec: true,
             read: 't is a &minus; b, both padded to 5 bits so a borrow has somewhere to go. f is that borrow bit, t[4]; g tests whether the 4-bit difference is zero.',
             probes: [{ a: 5, b: 3 }, { a: 3, b: 5 }, { a: 4, b: 4 }, { a: 0, b: 15 }],
@@ -398,37 +437,20 @@
             detail: 'f = 1 when a &lt; b; g = 1 when a = b; both 0 means a &gt; b.',
             note: 'No relational operator appears anywhere. The comparison comes from the borrow out of a subtraction, which is how hardware often compares.',
         },
-        {
-            mod: 'm5', title: 'Module m5', tag: 'Overwrite', short: '3 input bits · 4 outputs',
-            ins: [['d', 1], ['s', 2]], outs: [['y', 4]],
-            read: 'The block first sets all four outputs to 1, then overwrites the one output selected by s with d. In an <span class="mono">always @*</span> block the later assignment wins.',
-            probes: [{ d: 0, s: 2 }, { d: 1, s: 2 }, { d: 0, s: 0 }, { d: 0, s: 3 }],
-            rules: [
-                { when: 's = 00', out: 'y = 1 1 1 d', pred: x => x.s === 0, f: x => ({ y: 14 | x.d }) },
-                { when: 's = 01', out: 'y = 1 1 d 1', pred: x => x.s === 1, f: x => ({ y: 13 | (x.d << 1) }) },
-                { when: 's = 10', out: 'y = 1 d 1 1', pred: x => x.s === 2, f: x => ({ y: 11 | (x.d << 2) }) },
-                { when: 's = 11', out: 'y = d 1 1 1', pred: x => x.s === 3, f: x => ({ y: 7 | (x.d << 3) }) },
-            ],
-            hints: [
-                'Line by line: every output is set to 1, and then just one of them, y[s], is overwritten with d.',
-                'Try s = 10 with d = 0 and with d = 1. Which output moves?',
-                'Output number s copies d. The other three stay at 1.',
-            ],
-            name: '1-to-4 demultiplexer with idle outputs at 1',
-            detail: 'Read d as a low-true enable and it is a 2-to-4 decoder with active-low outputs and an active-low enable.',
-            note: 'One truth table, two names. Treat d as data and it is a demultiplexer; treat it as an enable and it is an active-low decoder, like the 74HC139 decoder/demultiplexer.',
-        },
     ];
     const NPROB = PROBS.length;
 
     // ============ DERIVED FACTS ============
     const bits = (v, n) => v.toString(2).padStart(n, '0');
     PROBS.forEach(P => { P.v = VERILOG[P.mod]; P.nin = P.ins.reduce((a, p) => a + p[1], 0); });
-    const fmt = (P, name, w, val) => w === 1 ? String(val) : bits(val, w) + (P.dec ? ` <span class="dec">(${val})</span>` : '');
-    const evalRules = (P, x) => { const r = P.rules.find(r => r.pred(x)); return r ? r.f(x) : null; };
+    const toBits = (v, w) => typeof v === 'string' ? v : bits(v, w);
+    const fmt = (P, name, w, val) => { const t = toBits(val, w); const cls = /z/.test(t) ? 'zv' : /x/.test(t) ? 'xv' : '';
+        return `<span class="${cls}">${t}</span>` + (P.dec && typeof val === 'number' ? ` <span class="dec">(${val})</span>` : ''); };
+    function trace(P, seq) { let q = 'xxxx'; const t = [q]; seq.forEach(x => { q = P.step(q, x); t.push(q); }); return t; }
+    const evalRules = (P, x) => { const r = P.rules.find(r => r.pred && r.pred(x)); return r ? r.f(x) : null; };
 
     // ============ VERILOG DISPLAY ============
-    const KW = /\b(module|endmodule|input|output|reg|wire|assign|always|begin|end|if|else|case|endcase|casez)\b/g;
+    const KW = /\b(module|endmodule|input|output|reg|wire|assign|always|begin|end|if|else|case|endcase|casez|posedge|negedge)\b/g;
     function hiVerilog(src) {
         const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         return src.split('\n').map(line => {
@@ -450,7 +472,7 @@
     ];
     function stepHint(P, n) {
         if (n === 0) return 'List every port with its direction and width, and count the input bits: that tells you how many rows a full truth table would need.';
-        if (n === 4) return 'Match your rule to a block from Building Block Circuits: multiplexer, demultiplexer, decoder, encoder, priority encoder, comparator or parity circuit. Give its size and say what each port does.';
+        if (n === 4) return 'Match your rule to a building block: multiplexer, decoder, priority encoder, tri-state buffer, comparator, or a register built from D flip-flops. Give its size and say what each port does.';
         return P.hints[n - 1];
     }
     const blankST = () => ({ hint: [false, false, false, false, false], shown: [false, false, false, false, false], lastHint: -1 });
@@ -485,23 +507,23 @@
             <div class="sd">Say in words what each statement does: an <span class="mono">assign</span>, an <span class="mono">always @*</span> block, a <span class="mono">case</span> or an if&ndash;else chain, and any operator such as <span class="mono">?:</span>, <span class="mono">&lt;&lt;</span> or <span class="mono">&minus;</span>.</div></div>
           <div class="arrowcell">&rarr;</div>
           <div class="step"><div class="sn">2</div><div class="st">Try some inputs</div>
-            <div class="sd">Pick a few input values and work out the outputs by hand. Choose inputs that differ in <b>one</b> place, so you can see what that input controls.</div></div>
+            <div class="sd">Pick a few input values and work out the outputs by hand, changing <b>one</b> input at a time. For a clocked module, step through a few clock edges instead.</div></div>
           <div class="arrowcell">&rarr;</div>
           <div class="step"><div class="sn">3</div><div class="st">State the rule</div>
-            <div class="sd">Turn the examples into a rule that covers <b>every</b> input: a short table, using <span class="mono">?</span> for &ldquo;either value&rdquo; where an input doesn&rsquo;t matter.</div></div>
+            <div class="sd">Turn the examples into a rule that covers <b>every</b> input: a short table, with <span class="mono">?</span> for &ldquo;either value&rdquo;. For a clocked module, say what happens at an edge and between edges.</div></div>
           <div class="arrowcell">&rarr;</div>
           <div class="step"><div class="sn">4</div><div class="st">Name the block</div>
-            <div class="sd">Match the rule to a building block and say what each port <b>does</b>: which input selects, which enables, what each output reports.</div></div>
+            <div class="sd">Match the rule to a building block and say what each port <b>does</b>: which input selects, which enables, which is the clock, what each output reports.</div></div>
         </div>
         <div class="leadrow">
           <div class="panel conv"><div class="panel-head"><div class="ph">Conventions used in every problem</div></div>
             <div class="convbody">
               <ul>
-                <li><b>Every module is combinational</b> and is one of the blocks from <b data-topic="building-block-circuits">Building Block Circuits</b>, sometimes written in a different style from the one its topic used.</li>
+                <li>Each module is a building block from <b data-topic="building-block-circuits">Building Block Circuits</b>, or a register built from the <b data-topic="d-flip-flop">D Flip-Flop</b>, often written in a different style from the one its topic used. <b>Five are combinational; one is clocked.</b></li>
                 <li><b>Port names are neutral</b> (<span class="mono">a</span>, <span class="mono">k</span>, <span class="mono">r</span> &hellip;) so they can&rsquo;t give the answer away. Work from what the code does.</li>
                 <li>Vectors are written <b>high bit first</b>: if <span class="mono">z</span> is <span class="mono">[3:0]</span>, then <span class="mono">z = 0100</span> means z[2] = 1.</li>
                 <li>Each module&rsquo;s behavior is unique, so there is one right rule. Where a block has two common names, Step 4 gives both.</li>
-                <li>Every listing was simulated for every input combination; the tables in the answers come from those simulations.</li>
+                <li>Every listing was simulated: the combinational ones for every input combination, the clocked one over a long sequence of clock edges. The answers come from those simulations.</li>
               </ul>
             </div>
           </div>
@@ -528,7 +550,7 @@
         const p = mkPage(id, `
           <div class="main">
             <div class="panel probpanel vpanel">
-              <div class="panel-head"><div class="ph"><span class="sn">Problem ${id}</span>${P.title}</div><div class="spacer"></div><div class="role">combinational · ${P.nin} input bits</div></div>
+              <div class="panel-head"><div class="ph"><span class="sn">Problem ${id}</span>${P.title}</div><div class="spacer"></div><div class="role">${P.seq ? 'clocked' : 'combinational'} · ${P.nin} ${P.seq ? 'data ' : ''}input bits</div></div>
               <div class="probbody">
                 <div class="story">Which building block is this? Work out what each input does and what each output reports.</div>
                 <pre class="vcode" id="vc${id}">${hiVerilog(P.v)}</pre>
@@ -553,12 +575,20 @@
 
     // ============ WORKED STEPS ============
     function step0HTML(P) {
+        const ins = P.seq ? [[P.clk, 1, 'clock']].concat(P.ins) : P.ins;
         const row = (p, dir) => `<tr><td class="st mono2">${p[0]}</td><td>${dir}</td><td>${p[1] === 1 ? '1 bit' : `${p[1]} bits <span class="mono2">[${p[1] - 1}:0]</span>`}</td></tr>`;
-        return `<div class="tblwrap"><table class="ltab"><tr><th>port</th><th>direction</th><th>width</th></tr>${P.ins.map(p => row(p, 'input')).join('')}${P.outs.map(p => row(p, '<span class="cyb">output</span>')).join('')}</table>
-            <div class="cnote">${P.nin} input bits &rarr; ${1 << P.nin} input combinations</div></div>`;
+        return `<div class="tblwrap"><table class="ltab"><tr><th>port</th><th>direction</th><th>width</th></tr>${ins.map(p => row(p, p[2] ? 'input (clock)' : 'input')).join('')}${P.outs.map(p => row(p, '<span class="cyb">output</span>')).join('')}</table>
+            <div class="cnote">${P.seq ? `clocked by <span class="mono2">${P.clk}</span>: q also depends on what it already holds` : `${P.nin} input bits &rarr; ${1 << P.nin} input combinations`}</div></div>`;
     }
     const step1HTML = P => `<div class="ctext big">${P.read}</div>`;
     function step2HTML(P) {
+        if (P.seq) {
+            const t = trace(P, P.seqProbes);
+            let h = `<table class="ltab"><tr><th>rising edge</th>${P.ins.map(p => `<th>${p[0]}</th>`).join('')}<th class="gap"></th><th class="cyb">q after</th></tr>`;
+            h += `<tr><td class="mono2">start</td>${P.ins.map(() => '<td></td>').join('')}<td class="gap"></td><td class="mono2"><span class="xv">xxxx</span> <span class="dec">unknown</span></td></tr>`;
+            P.seqProbes.forEach((x, i) => h += `<tr><td class="mono2">${i + 1}</td>${P.ins.map(p => `<td class="mono2">${fmt(P, p[0], p[1], x[p[0]])}</td>`).join('')}<td class="gap">&rarr;</td><td class="mono2 cyv">${t[i + 1]}</td></tr>`);
+            return `<div class="tblwrap">${h}</table></div>`;
+        }
         let h = `<table class="ltab"><tr>${P.ins.map(p => `<th>${p[0]}</th>`).join('')}<th class="gap"></th>${P.outs.map(p => `<th class="cyb">${p[0]}</th>`).join('')}</tr>`;
         P.probes.forEach(x => { const o = evalRules(P, x); h += `<tr>${P.ins.map(p => `<td class="mono2">${fmt(P, p[0], p[1], x[p[0]])}</td>`).join('')}<td class="gap">&rarr;</td>${P.outs.map(p => `<td class="mono2 cyv">${fmt(P, p[0], p[1], o[p[0]])}</td>`).join('')}</tr>`; });
         return `<div class="tblwrap">${h}</table></div>`;
@@ -630,7 +660,7 @@
     });
 
     // ============ SELF-TEST API ============
-    window.__api = { setPage, act, getState: () => ({ page, ST }), nextHelp, stepHint, STEPS, PROBS, VERILOG, evalRules };
+    window.__api = { setPage, act, getState: () => ({ page, ST }), nextHelp, stepHint, STEPS, PROBS, VERILOG, evalRules, trace, toBits };
 
     render();
 </script>
