@@ -6,6 +6,6 @@ order: 70401
 
 graphics:
   01-video.youtube:
-    caption: "Video: Blocking vs non-blocking assignments — shift register demonstration"
+    caption: "Video: blocking versus non-blocking, narrated over the interactive: a shift register needs <=, a gate chain needs =, and the rules that follow"
   02-interactive.html:
-    caption: "Interactive: Step through blocking and non-blocking execution side by side"
+    caption: "Interactive: clock a shift register written with = and with <= side by side, step a gate chain through input changes, and compare the two rules"
