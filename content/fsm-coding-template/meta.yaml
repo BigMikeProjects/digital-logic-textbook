@@ -1,0 +1,11 @@
+title: "FSM Coding Template"
+description: ""
+chapter: verilog
+section: verilog-basics
+order: 70404
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the FSM coding template, narrated over the interactive: the level-to-pulse machine written as three blocks, state register, next-state logic and output logic"
+  02-interactive.html:
+    caption: "Interactive: click a line of the template to light its hardware, step the machine through L = 001111001100, and compare the two-block variant and the common pitfalls"

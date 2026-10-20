@@ -825,7 +825,7 @@
           "title": "FSM Coding Template",
           "slug": "fsm-coding-template",
           "type": "full",
-          "published": false
+          "published": true
         }
       ]
     },

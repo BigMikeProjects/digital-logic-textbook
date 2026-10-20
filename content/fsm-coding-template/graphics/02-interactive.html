@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSM Coding Template — Three Blocks, Two Kinds of Hardware</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: block 1 / state register / flip-flops = cyan #4fc3f7 · block 2 / next-state gates = amber #ffb74d ·
+       block 3 / output gate = violet #b388ff · logic-1 wires #e8eef2 · logic-0 wires #4d6a82 · neutral wires #8fa8bd */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #4fc3f7; border-radius: 12px;
+        background: rgba(79,195,247,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #e8eef2; font-size: 40px; font-weight: 700; line-height: 1.15; }
+    .titles h1 .sub { color: #90a4ae; font-size: 26px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 20px; margin-top: 4px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #e8eef2; font-size: 26px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; }
+    .defs-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 20px; font-weight: 600;
+        color: #cfd8dc; background: transparent; border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k { border: 1px solid #37506a; border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: #90a4ae; line-height: 26px; }
+    .defs-btn.on { border-color: #b388ff; color: #e8eef2; background: rgba(179,136,255,0.10); }
+
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(8,13,24,0.78); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1400px; background: #0d1b2a; border: 2px solid #b388ff; border-radius: 16px; padding: 16px 38px 20px; box-shadow: 0 18px 60px rgba(0,0,0,0.55); }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    .defs-title { font-size: 34px; font-weight: 700; color: #e8eef2; }
+    .defs-close { font-size: 20px; color: #607d8b; }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 9px; align-items: baseline; }
+    .defs-list .ds { font-size: 25px; font-weight: 700; white-space: nowrap; }
+    .defs-list .ds.mono { font-family: 'Menlo','Consolas',monospace; font-size: 23px; font-variant-ligatures: none; }
+    .defs-list .dd { font-size: 22px; line-height: 1.24; color: #b0bec5; }
+    .defs-list .dd b { color: #e8eef2; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 21px; font-weight: 700; white-space: nowrap; }
+    .tab.on { color: #e8eef2; border-color: #cfd8dc; background: rgba(207,216,220,0.07); }
+    .tab.on .tnum { background: #cfd8dc; color: #0d1b2a; border-color: #cfd8dc; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 24px; }
+    .page.active { display: flex; }
+    .col { display: flex; flex-direction: column; gap: 14px; min-height: 0; min-width: 0; }
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+    .panel svg { display: block; }
+    .pad { padding: 14px 22px; }
+    .phead { white-space: nowrap; font-size: 22px; font-weight: 700; color: #cfd8dc; padding: 10px 22px 6px; }
+    .phead .dimtxt { color: #90a4ae; font-weight: 500; }
+    .phead .fn { font-family: 'Menlo','Consolas',monospace; color: #4fc3f7; font-size: 21px; }
+    .ov { display: inline-block; border-top: 2px solid currentColor; line-height: 1; padding-top: 1px; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; font-variant-ligatures: none; }
+    .c1 { color: #4fc3f7; } .c2 { color: #ffb74d; } .c3 { color: #b388ff; }
+    .cdim { color: #90a4ae; } .cok { color: #81c784; } .cbad { color: #ef5350; }
+
+    /* code panes — ligatures off so <= never draws as ≤ */
+    .code { padding: 8px 0; font-family: 'Menlo','Consolas','Courier New',monospace; font-size: 20px; line-height: 23px;
+        font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; color: #cfd8dc; }
+    .cl { display: flex; padding: 0 14px 0 8px; white-space: pre; }
+    .cl .ln { width: 30px; flex-shrink: 0; text-align: right; margin-right: 12px; color: #34495c; user-select: none; }
+    .cl .gut { width: 8px; flex-shrink: 0; margin-right: 12px; border-radius: 2px; }
+    .cl.b1 .gut { background: #4fc3f7; } .cl.b2 .gut { background: #ffb74d; } .cl.b3 .gut { background: #b388ff; }
+    .cl.new .gut { background: #b388ff; }
+    .cl .src { white-space: pre; }
+    .cl.hw { cursor: pointer; }
+    .cl.hw:hover { background: rgba(207,216,220,0.06); }
+    .cl.nohw { cursor: pointer; }
+    .cl.hl { background: rgba(207,216,220,0.14); box-shadow: inset 4px 0 0 #e8eef2; }
+    .cl.arm { background: rgba(255,183,77,0.20); box-shadow: inset 4px 0 0 #ffb74d; }
+    .cl.diff { background: rgba(179,136,255,0.16); }
+    .kw { color: #f48fb1; } .cm { color: #6f8799; font-style: italic; } .num { color: #a5d6a7; }
+    .op1 { color: #4fc3f7; font-weight: 700; } .op2 { color: #ffb74d; font-weight: 700; } .op3 { color: #b388ff; font-weight: 700; }
+
+    .console { font-family: 'Menlo','Consolas',monospace; font-size: 20px; line-height: 23px; white-space: pre; color: #ffb74d;
+        padding: 8px 18px; background: #0b1622; font-variant-ligatures: none; }
+    .console .h { color: #90a4ae; }
+    .console .p1 { color: #4fc3f7; font-weight: 700; }
+    .console .cur { background: rgba(79,195,247,0.16); }
+
+    .codenote { border-top: 2px solid #24384c; padding: 10px 20px; font-size: 21px; color: #b0bec5; line-height: 1.36; min-height: 96px; }
+    .codenote b { color: #e8eef2; }
+    .codenote .mono { color: #e8eef2; }
+
+    .chips { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+    .chips .chip { position: absolute; left: 600px; white-space: nowrap; font-family: 'Segoe UI', Tahoma, sans-serif; line-height: 1.2; }
+    .chip { display: inline-block; font-size: 21px; font-weight: 700; border-radius: 999px; padding: 6px 18px;
+        border: 3px solid currentColor; white-space: nowrap; }
+    .chip .mono { font-size: 20px; }
+    .chip.k1 { color: #4fc3f7; background: rgba(79,195,247,0.10); }
+    .chip.k2 { color: #ffb74d; background: rgba(255,183,77,0.10); }
+    .chip.k3 { color: #b388ff; background: rgba(179,136,255,0.10); }
+
+    .eqs { display: flex; gap: 18px; padding: 14px 22px; font-size: 27px; font-weight: 700; font-family: 'Menlo','Consolas',monospace; }
+    .eqs .eq { flex: 1; border: 2px solid currentColor; border-radius: 12px; padding: 8px 14px; text-align: center; white-space: nowrap; }
+    .eqs .eq .bn { display: block; font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+    .caption { font-size: 22px; line-height: 1.38; color: #b0bec5; }
+    .caption b { color: #e8eef2; }
+
+    /* circuit */
+    .wire { fill: none; stroke: #8fa8bd; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+    .wire.v1 { stroke: #e8eef2; stroke-width: 3.6; }
+    .wire.v0 { stroke: #4d6a82; }
+    .gbody { fill: #0d1b2a; stroke-width: 3; }
+    .lab { font-family: Menlo, Consolas, monospace; font-size: 20px; fill: #cfd8dc; }
+    .rtag { font-family: 'Segoe UI', Tahoma, sans-serif; font-size: 20px; font-weight: 700; }
+    .val { font-family: Menlo, Consolas, monospace; font-size: 20px; font-weight: 700; }
+    .hwg { cursor: pointer; transition: opacity .12s; }
+    svg.hashl .hwg:not(.lit) { opacity: .28; }
+    .hwg.lit { filter: drop-shadow(0 0 5px rgba(232,238,242,0.85)); }
+
+    /* state diagram */
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 2.6; }
+    .arc.on { stroke: #4fc3f7; stroke-width: 4.5; }
+    .arc-l { fill: #b0bec5; font-family: Menlo, Consolas, monospace; font-size: 20px; font-weight: 700; text-anchor: middle; }
+    .arc-l.on { fill: #4fc3f7; }
+    .sdc { fill: #0d1b2a; stroke: #cfd8dc; stroke-width: 3; }
+    .sd-node.on .sdc { stroke: #4fc3f7; stroke-width: 5; fill: rgba(79,195,247,0.12); }
+    .sdname { fill: #e8eef2; font-weight: 700; text-anchor: middle; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .sdenc { fill: #90a4ae; text-anchor: middle; font-family: Menlo, Consolas, monospace; }
+    .sdp { fill: #b388ff; text-anchor: middle; font-family: Menlo, Consolas, monospace; font-weight: 700; }
+
+    /* beat 3 readout */
+    .runrow { display: flex; align-items: center; gap: 16px; padding: 10px 18px; }
+    .btn { font: inherit; font-size: 22px; font-weight: 700; color: #cfd8dc; background: transparent;
+        border: 3px solid #607d8b; border-radius: 12px; padding: 6px 18px; cursor: pointer; white-space: nowrap; }
+    .btn .kk { font-weight: 500; font-size: 20px; color: #90a4ae; }
+    .btn.go { border-color: #4fc3f7; color: #4fc3f7; }
+    .readout { flex: 1; font-size: 22px; color: #b0bec5; white-space: nowrap; }
+    .readout b { color: #e8eef2; font-family: 'Menlo','Consolas',monospace; }
+    .done { font-size: 22px; font-weight: 700; color: #81c784; }
+
+    /* beat 4 */
+    .gcard { padding: 12px 20px 14px; }
+    .gcard .gt { font-size: 24px; font-weight: 700; color: #e8eef2; }
+    .gcard .gt .n { display: inline-block; width: 32px; height: 32px; line-height: 28px; text-align: center; border: 2px solid #cfd8dc; border-radius: 8px; font-size: 20px; margin-right: 10px; vertical-align: 2px; }
+    .gcard .gc { font-family: 'Menlo','Consolas',monospace; font-size: 20px; color: #cfd8dc; background: #0b1622; border-radius: 8px; padding: 5px 12px; margin: 8px 0 6px; white-space: pre; font-variant-ligatures: none; }
+    .gcard .gr { font-size: 20px; line-height: 1.34; color: #b0bec5; }
+    .gcard .gr b { color: #e8eef2; }
+    .gcard.bad { border-color: rgba(239,83,80,0.55); }
+    .gcard.alt { border-color: rgba(179,136,255,0.55); }
+    .closeline { border: 2px solid #4fc3f7; border-radius: 12px; background: rgba(79,195,247,0.07); padding: 12px 22px;
+        font-size: 25px; font-weight: 700; color: #e8eef2; text-align: center; }
+    .closeline .mono.c1 { color: #4fc3f7; } .closeline .mono.c2 { color: #ffb74d; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #37506a; }
+    .dot.on { background: #cfd8dc; border-color: #cfd8dc; }
+    .controls { font-size: 20px; color: #607d8b; }
+    .controls .k { border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        font-family: 'Menlo','Consolas',monospace; color: #90a4ae; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="8" width="40" height="46" rx="4" stroke="#4fc3f7" stroke-width="2.5"/>
+                <path d="M4 36 L12 42 L4 48" stroke="#4fc3f7" stroke-width="2.5"/>
+                <path d="M56 12 Q76 12 84 31 Q76 50 56 50 Q64 31 56 12 Z" stroke="#ffb74d" stroke-width="2.5"/>
+                <path d="M104 12 H118 A19 19 0 0 1 118 50 H104 Z" stroke="#b388ff" stroke-width="2.5"/>
+                <path d="M44 22 H58 M84 31 H104 M137 31 H148" stroke="#8fa8bd" stroke-width="2.5"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>FSM Coding Template <span class="sub">&mdash; three blocks, two kinds of hardware</span></h1>
+            <div class="subtitle">The machine you designed by hand, written in Verilog. Each block of code is one block of the circuit.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">The Machine You Already Designed</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">The Template</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Run It</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Variants and Gotchas</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 -->
+        <div class="page" id="p1">
+            <div class="col" style="flex:0 0 700px">
+                <div class="panel">
+                    <div class="phead">The state diagram <span class="dimtxt">&mdash; from <b data-topic="level-to-pulse-fsm">Level-to-Pulse FSM</b></span></div>
+                    <svg id="sd1" width="696" height="560" viewBox="0 0 760 612"></svg>
+                </div>
+                <div class="caption"><b>L</b> is a level; <b>P</b> is one clock wide for each rising edge of L. Moore: P lives inside the bubbles. The encoding LOW = 00, PULSE = 01, HIGH = 10 leaves 11 unused.</div>
+            </div>
+            <div class="col" style="flex:1">
+                <div class="panel">
+                    <div class="phead">The circuit <span class="dimtxt">&mdash; two D flip-flops and their gates, in three hardware blocks</span></div>
+                    <svg id="ck1b" width="1088" height="500" viewBox="-10 0 680 478"></svg>
+                </div>
+                <div class="panel">
+                    <div class="eqs">
+                        <div class="eq c2"><span class="bn">next-state logic</span>D1 = L&middot;(Q1 + Q0)</div>
+                        <div class="eq c2"><span class="bn">next-state logic</span>D0 = L&middot;<span class="ov">Q</span>1&middot;<span class="ov">Q</span>0</div>
+                        <div class="eq c3"><span class="bn">output logic</span>P = <span class="ov">Q</span>1&middot;Q0</div>
+                    </div>
+                </div>
+                <div class="caption"><b>Three hardware blocks; the code will have three blocks.</b> The colors carry over: <span class="c1">state register</span>, <span class="c2">next-state logic</span>, <span class="c3">output logic</span>.</div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 -->
+        <div class="page" id="p2">
+            <div class="col" style="flex:0 0 990px">
+                <div class="panel">
+                    <div class="phead"><span class="fn">level_to_pulse.v</span> <span class="dimtxt">&mdash; click a line to light its hardware</span></div>
+                    <div class="code" id="code2" style="position:relative">
+                        <div class="chips" id="chips2">
+                            <span class="chip k1" data-at="13"><span class="mono">posedge</span> makes memory, not <span class="mono">reg</span></span>
+                            <span class="chip k1" data-at="15"><span class="mono">&lt;=</span> here only</span>
+                            <span class="chip k2" data-at="18"><span class="mono">=</span> here only</span>
+                            <span class="chip k2" data-at="20">every arm assigns <span class="mono">next</span></span>
+                            <span class="chip k2" data-at="24"><span class="mono">default</span> covers the unused 11</span>
+                            <span class="chip k3" data-at="28">Moore: state only</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col" style="flex:1">
+                <div class="panel">
+                    <div class="phead">What the synthesizer builds <span class="dimtxt">&mdash; click a part</span></div>
+                    <svg id="ck2" width="798" height="561" viewBox="-10 0 680 478"></svg>
+                    <div class="codenote" id="note2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 -->
+        <div class="page" id="p3">
+            <div class="col" style="flex:0 0 760px">
+                <div class="panel">
+                    <div class="phead">Blocks 2 and 3 <span class="dimtxt">&mdash; the active <span class="mono">case</span> arm is lit</span></div>
+                    <div class="code" id="code3"></div>
+                </div>
+                <div class="panel" style="flex:1; display:flex; flex-direction:column">
+                    <div class="phead"><span class="fn">vvp</span> <span class="dimtxt">&mdash; the bench&rsquo;s real output, one line per clock</span></div>
+                    <div class="console" id="console3" style="flex:1"></div>
+                </div>
+            </div>
+            <div class="col" style="flex:1">
+                <div class="panel"><svg id="strip3" width="1032" height="196" viewBox="0 0 1032 196"></svg></div>
+                <div style="display:flex; gap:14px">
+                    <div class="panel"><svg id="ck3" width="672" height="478" viewBox="-6 0 672 478"></svg></div>
+                    <div class="panel" style="flex:1"><svg id="sd3" width="342" height="478" viewBox="0 0 348 478"></svg></div>
+                </div>
+                <div class="panel">
+                    <div class="runrow">
+                        <button class="btn go" id="stepBtn">CLK &#9654; <span class="kk">S</span></button>
+                        <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        <div class="readout" id="readout3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 -->
+        <div class="page" id="p4">
+            <div class="col" style="flex:0 0 820px">
+                <div class="panel">
+                    <div class="phead"><span class="fn">level_to_pulse_2blk.v</span> <span class="dimtxt">&mdash; the two-block variant</span></div>
+                    <div class="code" id="code4"></div>
+                </div>
+                <div class="caption"><b>Same hardware, one fewer block:</b> next-state and output logic share one <span class="mono">always @(*)</span> (shaded). The <b>defaults at its top</b> give <span class="mono">next</span> and <span class="mono">P</span> a value on every path, so no latch. Both forms are fine; teach three blocks first, because each block is one drawing.</div>
+            </div>
+            <div class="col" style="flex:1">
+                <div class="panel gcard bad">
+                    <div class="gt"><span class="n">1</span><span class="mono">=</span> in the state register</div>
+                    <div class="gc">else       state = next;   <span class="cbad">// ✗</span></div>
+                    <div class="gr">With one register it happens to work. Once another clocked block reads <span class="mono">state</span> on the same edge, which value it sees depends on which block the simulator runs first. Use <span class="mono c1">&lt;=</span>, as in <b data-topic="blocking-versus-nonblocking">Blocking versus NonBlocking</b>.</div>
+                </div>
+                <div class="panel gcard bad">
+                    <div class="gt"><span class="n">2</span>A missing arm or <span class="mono">default</span> &rarr; a latch</div>
+                    <div class="gc">case (state) LOW: &hellip; PULSE: &hellip; HIGH: &hellip; endcase</div>
+                    <div class="gr">State 11 has no arm, so <span class="mono">next</span> keeps its old value there: memory without a clock. The synthesizer builds a <b>latch</b>. Cover every case, or assign a default first.</div>
+                </div>
+                <div class="panel gcard alt">
+                    <div class="gt"><span class="n">3</span>A Mealy output</div>
+                    <div class="gc">P = (state == LOW) &amp; L;</div>
+                    <div class="gr">L on the right of block 3&rsquo;s <span class="mono c3">=</span> makes P a Mealy output: the pulse comes <b>one clock earlier</b> (P = 001000001000). An alternative, not the default: <b data-topic="mealy-versus-moore">Mealy versus Moore</b>.</div>
+                </div>
+                <div class="panel gcard alt">
+                    <div class="gt"><span class="n">4</span>A registered output</div>
+                    <div class="gc">P &lt;= &hellip;;   <span class="cm">// moved into block 1</span></div>
+                    <div class="gr">Move an output&rsquo;s line into block 1 with <span class="mono c1">&lt;=</span> and it comes straight off a flip-flop, glitch-free: <b data-topic="registered-outputs">Registered Outputs</b>.</div>
+                </div>
+                <div class="closeline">Register with <span class="mono c1">&lt;=</span>, gates with <span class="mono c2">=</span>, and the file is the schematic.</div>
+            </div>
+        </div>
+
+        <div class="defs" id="defs">
+            <div class="defs-card">
+                <div class="defs-head"><span class="defs-title">Definitions</span><span class="defs-close">Esc or D to close</span></div>
+                <div class="defs-list">
+                    <span class="ds c1">state register</span><span class="dd">the flip-flops that hold the state; here two D flip-flops, Q1 and Q0. Block 1.</span>
+                    <span class="ds c2">next-state logic</span><span class="dd">gates that compute the D inputs from the input L and the state bits. Block 2.</span>
+                    <span class="ds c3">output logic</span><span class="dd">gates that compute the output P. In a <b>Moore</b> machine they read only the state bits. Block 3.</span>
+                    <span class="ds mono c1">always @(posedge clk)</span><span class="dd">runs only on the rising clock edge, so what it assigns <b>becomes flip-flops</b>.</span>
+                    <span class="ds mono c2">always @(*)</span><span class="dd">runs whenever anything it reads changes, with no clock, so what it assigns <b>becomes gates</b>.</span>
+                    <span class="ds mono c1">&lt;=</span><span class="dd"><b>non-blocking</b> assignment: every line reads the values from before the edge; use it in the clocked block.</span>
+                    <span class="ds mono c2">=</span><span class="dd"><b>blocking</b> assignment: each line sees the line above; use it in the <span class="mono">@(*)</span> blocks.</span>
+                    <span class="ds mono">localparam</span><span class="dd">a name for a constant. <span class="mono">LOW = 2'b00</span> is the state assignment written down; it builds nothing.</span>
+                    <span class="ds mono">case &hellip; default</span><span class="dd">one arm per state; <span class="mono">default</span> catches every pattern not listed (here the unused 11).</span>
+                    <span class="ds">inferred latch</span><span class="dd">memory the synthesizer adds when a <span class="mono">@(*)</span> block leaves a variable unassigned on some path. Almost always a bug.</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div><div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span><span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; click a line or a gate (beat 2)
+            &middot; <span class="k">S</span> CLK step (beat 3)
+            &middot; <span class="k">R</span> &#8634; reset this beat
+            &middot; <span class="k">D</span> definitions</span>
+        </div>
+    </div>
+
+</div>
+</div>
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ MODEL ============
+    // States as integers = their 2-bit code: LOW 0 (00), PULSE 1 (01), HIGH 2 (10); 3 (11) unused.
+    const LOW = 0, PULSE = 1, HIGH = 2;
+    const NAME = ['LOW', 'PULSE', 'HIGH', '11'], ENC = ['00', '01', '10', '11'];
+    const SEQ = [0,0,1,1,1,1,0,0,1,1,0,0];                 // L = 001111001100, t0 first
+    const N = SEQ.length;
+    // Block 2 as written: the case statement with default: next = LOW
+    function nextCase(s, L) { switch (s) { case LOW: return L ? PULSE : LOW; case PULSE: return L ? HIGH : LOW; case HIGH: return L ? HIGH : LOW; default: return LOW; } }
+    // Block 3: P = (state == PULSE)
+    const outCase = s => s === PULSE ? 1 : 0;
+    // The hand equations from graphic 05
+    function nextEq(s, L) { const q1 = s >> 1, q0 = s & 1; return ((L & (q1 | q0)) << 1) | (L & (1 - q1) & (1 - q0)); }
+    const outEq = s => (1 - (s >> 1)) & (s & 1);
+    // Three-block model: one register step per edge
+    function run3(Ls, Rs) { let st = LOW; const out = []; for (let k = 0; k < Ls.length; k++) { out.push({ st, P: outCase(st) }); st = Rs && Rs[k] ? LOW : nextCase(st, Ls[k]); } return out; }
+    // Two-block model, written separately: defaults first, then the arms assign next and P together
+    function comb2(s, L) { let next = LOW, P = 0; if (s === LOW) next = L ? PULSE : LOW; else if (s === PULSE) { next = L ? HIGH : LOW; P = 1; } else if (s === HIGH) next = L ? HIGH : LOW; else next = LOW; return { next, P }; }
+    function run2(Ls, Rs) { let st = LOW; const out = []; for (let k = 0; k < Ls.length; k++) { const c = comb2(st, Ls[k]); out.push({ st, P: c.P }); st = Rs && Rs[k] ? LOW : c.next; } return out; }
+    const TRACE = run3(SEQ);
+    // vvp output of level_to_pulse_tb.v under iverilog 12 (2026-10-20), verbatim
+    const VVP = ['clk  L  state  P', 't0   0    00   0', 't1   0    00   0', 't2   1    00   0', 't3   1    01   1', 't4   1    10   0',
+        't5   1    10   0', 't6   0    10   0', 't7   0    00   0', 't8   1    00   0', 't9   1    01   1', 't10  0    10   0', 't11  0    00   0'];
+    const fmtLine = (k, L, st, P) => 't' + String(k).padEnd(2) + '  ' + L + '    ' + ENC[st] + '   ' + P;
+
+    // ============ CODE LISTINGS ============
+    // hw ids: ff (both flip-flops) · rand (reset ANDs) · ns (next-state gates) · pand (output AND) · clkw · rstw · Lw · Pw
+    const NS_NOTE = '<b>Block 2</b> has no clock: it re-runs whenever <span class="mono">state</span> or <span class="mono">L</span> changes, so it becomes <b class="c2">gates</b> &mdash; D1 = L&middot;(Q1 + Q0), D0 = L&middot;<span class="ov">Q</span>1&middot;<span class="ov">Q</span>0.';
+    const TPL = [
+        { t: '// level_to_pulse.v — Moore FSM, three always-style blocks' },
+        { t: 'module level_to_pulse (' },
+        { t: '  input      clk,', hw: ['clkw'], note: '<span class="mono">clk</span> is the &#9655; input of both flip-flops.' },
+        { t: '  input      reset,    // synchronous, active high', hw: ['rstw'], note: '<span class="mono">reset</span> goes only into the state register: an AND in front of each D input.' },
+        { t: '  input      L,        // the level', hw: ['Lw'], note: '<span class="mono">L</span> feeds the <b class="c2">next-state gates</b> only. Moore: it never reaches P directly.' },
+        { t: '  output reg P         // one-clock pulse per rising edge of L', hw: ['Pw'], note: '<span class="mono">P</span> is the output wire, driven by block 3&rsquo;s one gate.' },
+        { t: ');' },
+        { t: '  // state encoding — same as the hand design: LOW=00, PULSE=01, HIGH=10' },
+        { t: "  localparam [1:0] LOW = 2'b00, PULSE = 2'b01, HIGH = 2'b10;", why: '<span class="mono">localparam</span> only <b>names bit patterns</b>: the state assignment, written down. It builds nothing, so nothing lights.' },
+        { t: '' },
+        { t: '  reg [1:0] state, next;', why: '<span class="mono">state</span> is the two Q outputs and <span class="mono">next</span> the two D inputs: wires, not parts. Both are <span class="mono">reg</span>, but only <span class="mono">state</span> is memory. <b><span class="mono">posedge</span> makes memory, not <span class="mono">reg</span>.</b>' },
+        { t: '' },
+        { t: '  // Block 1 — state register: the two flip-flops', b: 1 },
+        { t: '  always @(posedge clk)', b: 1, hw: ['ff', 'clkw'], note: '<span class="mono">posedge clk</span>: this block runs only on the rising edge, so what it assigns <b class="c1">becomes flip-flops</b>.' },
+        { t: '    if (reset) state <= LOW;', b: 1, hw: ['rand', 'rstw'], note: 'Synchronous reset: an <b class="c1">AND in front of each D</b> (reset through a bubble), so the next edge loads LOW = 00 &mdash; the register from <b data-topic="state-memory">Defining State Memory in Verilog</b>.' },
+        { t: '    else       state <= next;', b: 1, hw: ['ff'], note: '<span class="mono">state &lt;= next</span>: <b class="c1">two D flip-flops</b>, D = next, Q = state. Non-blocking, so both bits update together on the edge.' },
+        { t: '' },
+        { t: '  // Block 2 — next-state logic: gates only', b: 2 },
+        { t: '  always @(*) begin', b: 2, hw: ['ns'], note: NS_NOTE },
+        { t: '    case (state)', b: 2, hw: ['ns'], note: NS_NOTE, arm: 'case' },
+        { t: '      LOW:     next = L ? PULSE : LOW;', b: 2, hw: ['ns'], note: 'From LOW: L = 1 goes to PULSE. Every arm assigns <span class="mono">next</span>, so the block stays pure gates.', arm: LOW },
+        { t: '      PULSE:   next = L ? HIGH  : LOW;', b: 2, hw: ['ns'], note: 'From PULSE: L still 1 goes to HIGH; L back to 0 goes to LOW.', arm: PULSE },
+        { t: '      HIGH:    next = L ? HIGH  : LOW;', b: 2, hw: ['ns'], note: 'From HIGH: stay while L = 1; back to LOW when L = 0.', arm: HIGH },
+        { t: '      default: next = LOW;          // unused 11 recovers', b: 2, hw: ['ns'], note: '<span class="mono">default</span> sends the unused state 11 to LOW. It also means every path assigns <span class="mono">next</span>, so <b>no latch</b>.', arm: 3 },
+        { t: '    endcase', b: 2, hw: ['ns'], note: NS_NOTE },
+        { t: '  end', b: 2, hw: ['ns'], note: NS_NOTE },
+        { t: '' },
+        { t: '  // Block 3 — output logic (Moore: state only): one gate', b: 3 },
+        { t: '  always @(*)', b: 3, hw: ['pand'], note: '<b>Block 3</b>, no clock: <b class="c3">one AND gate</b>, P = <span class="ov">Q</span>1&middot;Q0.' },
+        { t: '    P = (state == PULSE);', b: 3, hw: ['pand', 'Pw'], note: 'P = 1 only in PULSE = 01, so P = <span class="ov">Q</span>1&middot;Q0. Moore: <b class="c3">only state bits</b> on the right of <span class="mono c3">=</span>.' },
+        { t: 'endmodule' },
+    ];
+    const TWO = [
+        { t: 'module level_to_pulse_2blk (' }, { t: '  input      clk,' }, { t: '  input      reset,' }, { t: '  input      L,' }, { t: '  output reg P' }, { t: ');' },
+        { t: "  localparam [1:0] LOW = 2'b00, PULSE = 2'b01, HIGH = 2'b10;" }, { t: '  reg [1:0] state, next;' }, { t: '' },
+        { t: '  always @(posedge clk)', b: 1 }, { t: '    if (reset) state <= LOW;', b: 1 }, { t: '    else       state <= next;', b: 1 }, { t: '' },
+        { t: '  always @(*) begin', d: 1 }, { t: "    next = LOW; P = 1'b0;           // defaults: no latches", d: 2 }, { t: '    case (state)', d: 1 },
+        { t: '      LOW:   begin next = L ? PULSE : LOW; end', d: 1 }, { t: "      PULSE: begin next = L ? HIGH  : LOW; P = 1'b1; end", d: 1 },
+        { t: '      HIGH:  begin next = L ? HIGH  : LOW; end', d: 1 }, { t: '      default: next = LOW;', d: 1 }, { t: '    endcase', d: 1 }, { t: '  end', d: 1 }, { t: 'endmodule' },
+    ];
+    const KW = /^(module|endmodule|input|output|reg|localparam|always|posedge|if|else|case|endcase|begin|end|default)$/;
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    function hlSrc(src, blk) {
+        const re = /(\/\/.*$)|(\d+'b[01]+)|(<=|==|=)|([A-Za-z_]\w*)|([^A-Za-z_\d<=\/]+|\/|\d+)/g;
+        let out = '', m;
+        while ((m = re.exec(src))) {
+            if (m[1]) out += `<span class="cm">${esc(m[1])}</span>`;
+            else if (m[2]) out += `<span class="num">${m[2]}</span>`;
+            else if (m[3]) out += m[3] === '==' ? '==' : (blk ? `<span class="op${blk}">${esc(m[3])}</span>` : esc(m[3]));
+            else if (m[4]) out += KW.test(m[4]) ? `<span class="kw">${m[4]}</span>` : m[4];
+            else out += esc(m[0]);
+        }
+        return out;
+    }
+    function buildCode(el, lines, opts = {}) {
+        el.innerHTML = lines.map((l, i) => {
+            const cls = ['cl']; if (l.b) cls.push('b' + l.b); if (l.d) cls.push('new'); if (l.d === 2) cls.push('diff');
+            if (opts.click) cls.push(l.hw ? 'hw' : 'nohw');
+            const blk = l.b || (l.d ? 2 : 0);
+            return `<div class="${cls.join(' ')}" data-i="${i}"${l.arm !== undefined ? ` data-arm="${l.arm}"` : ''}><span class="ln">${(opts.first || 1) + i}</span><span class="gut"></span><span class="src">${hlSrc(l.t, blk)}</span></div>`;
+        }).join('');
+    }
+
+    // ============ CIRCUIT (viewBox 0 0 660 470) ============
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const COL = { 1: '#4fc3f7', 2: '#ffb74d', 3: '#b388ff' };
+    const ADV = 0.602;                                       // Menlo advance, em
+    const wcls = v => v === undefined || v === null ? 'wire' : 'wire ' + (v ? 'v1' : 'v0');
+    const W = (d, v, extra = '') => `<path class="${wcls(v)}" d="${d}" ${extra}/>`;
+    const jdot = (x, y, v) => `<circle cx="${x}" cy="${y}" r="5" fill="${v === undefined || v === null ? '#8fa8bd' : (v ? '#e8eef2' : '#4d6a82')}"/>`;
+    // text with an optional overbar over the first character, drawn as a line 0.88 em above the baseline
+    function T(x, y, s, o = {}) {
+        const size = o.size || 20, anchor = o.anchor || 'start', fill = o.fill || '#cfd8dc', cls = o.cls || 'lab';
+        let r = `<text class="${cls}" x="${x}" y="${y}" text-anchor="${anchor}" fill="${fill}"${o.attr ? ' ' + o.attr : ''}>${s}</text>`;
+        if (o.bar) {
+            const adv = ADV * size, w = s.length * adv, x0 = anchor === 'end' ? x - w : anchor === 'middle' ? x - w / 2 : x;
+            r += `<line class="ovbar" x1="${(x0 + 1).toFixed(1)}" y1="${(y - 0.88 * size).toFixed(1)}" x2="${(x0 + adv - 1).toFixed(1)}" y2="${(y - 0.88 * size).toFixed(1)}" stroke="${fill}" stroke-width="2"/>`;
+        }
+        return r;
+    }
+    function andG(x, ys, w, col, bubbleLast) {
+        const top = Math.min(...ys) - 14, bot = Math.max(...ys) + 14, h = bot - top, r = h / 2;
+        let s = `<path class="gbody" stroke="${col}" d="M${x} ${top} L${x + w - r} ${top} A${r} ${r} 0 0 1 ${x + w - r} ${bot} L${x} ${bot} Z"/>`;
+        const pins = ys.map(y => [x, y]);
+        if (bubbleLast) { const y = ys[ys.length - 1]; s += `<circle class="gbody" stroke="${col}" cx="${x - 7}" cy="${y}" r="7"/>`; pins[pins.length - 1] = [x - 14, y]; }
+        return { s, pins, out: [x + w, top + r], box: [x, top, w, h] };
+    }
+    function orG(x, ys, w, col) {
+        const top = Math.min(...ys) - 14, bot = Math.max(...ys) + 14, h = bot - top, mid = top + h / 2;
+        const s = `<path class="gbody" stroke="${col}" d="M${x} ${top} Q${x + w * 0.55} ${top} ${x + w} ${mid} Q${x + w * 0.55} ${bot} ${x} ${bot} Q${x + w * 0.3} ${mid} ${x} ${top} Z"/>`;
+        const pins = ys.map(y => { const t = (y - top) / h; return [x + 0.6 * w * t * (1 - t), y]; });
+        return { s, pins, out: [x + w, mid], box: [x, top, w, h] };
+    }
+    function ffG(x, top, col) {
+        const w = 80, h = 130, Dy = top + 36, Cy = top + 100;
+        let s = `<rect class="gbody" stroke="${col}" x="${x}" y="${top}" width="${w}" height="${h}" rx="6"/>`;
+        s += `<path d="M${x} ${Cy - 10} L${x + 16} ${Cy} L${x} ${Cy + 10}" fill="none" stroke="${col}" stroke-width="3"/>`;
+        s += T(x + 8, Dy + 7, 'D') + T(x + w - 8, Dy + 7, 'Q', { anchor: 'end' }) + T(x + w - 8, Cy + 7, 'Q', { anchor: 'end', bar: true });
+        return { s, D: [x, Dy], C: [x, Cy], Q: [x + w, Dy], QB: [x + w, Cy], box: [x, top, w, h] };
+    }
+    const grp = (hw, inner, title) => `<g class="hwg" data-hw="${hw}"><title>${title}</title>${inner}</g>`;
+    // v: null (neutral) or { L, rst, q1, q0 } — every other net is computed from them
+    function circuitSVG(v, showVals) {
+        const has = !!v;
+        const L = has ? v.L : null, rst = has ? v.rst : null, q1 = has ? v.q1 : null, q0 = has ? v.q0 : null;
+        const nq1 = has ? 1 - q1 : null, nq0 = has ? 1 - q0 : null;
+        const orv = has ? (q1 | q0) : null, n1 = has ? (L & orv) : null, n0 = has ? (L & nq1 & nq0) : null;
+        const d1 = has ? (n1 & (1 - rst)) : null, d0 = has ? (n0 & (1 - rst)) : null, P = has ? (nq1 & q0) : null;
+        let s = '';
+        // regions (tinted) and their tags
+        s += `<rect data-region="2" x="104" y="4" width="190" height="304" rx="12" fill="rgba(255,183,77,0.07)" stroke="rgba(255,183,77,0.55)" stroke-width="2" stroke-dasharray="7 5"/>`;
+        s += `<rect data-region="1" x="298" y="4" width="216" height="374" rx="12" fill="rgba(79,195,247,0.07)" stroke="rgba(79,195,247,0.55)" stroke-width="2" stroke-dasharray="7 5"/>`;
+        s += `<rect data-region="3" x="518" y="374" width="146" height="94" rx="12" fill="rgba(179,136,255,0.08)" stroke="rgba(179,136,255,0.6)" stroke-width="2" stroke-dasharray="7 5"/>`;
+        s += T(106, 334, '2 next-state logic', { cls: 'rtag', fill: COL[2] }) + T(306, 26, '1 state register', { cls: 'rtag', fill: COL[1] }) + T(526, 396, '3 output', { cls: 'rtag', fill: COL[3] });
+        // gates
+        const or1 = orG(160, [63, 89], 50, COL[2]);
+        const a2 = andG(230, [50, 76], 48, COL[2]);
+        const a3 = andG(230, [230, 256, 282], 48, COL[2]);
+        const r1 = andG(330, [63, 89], 48, COL[1], true);
+        const r0 = andG(330, [256, 282], 48, COL[1], true);
+        const f1 = ffG(410, 40, COL[1]), f0 = ffG(410, 233, COL[1]);
+        const pa = andG(560, [418, 444], 48, COL[3]);
+        // L
+        let Lw = T(6, 57, 'L', { fill: '#e8eef2' }) + W(`M24 50 H${a2.pins[0][0]}`, L) + W(`M100 50 V230 H${a3.pins[0][0]}`, L) + jdot(100, 50, L);
+        // next-state gates and their named inputs
+        let ns = or1.s + a2.s + a3.s;
+        ns += T(142, 70, 'Q1', { anchor: 'end' }) + W(`M146 63 H${or1.pins[0][0].toFixed(1)}`, q1);
+        ns += T(142, 96, 'Q0', { anchor: 'end' }) + W(`M146 89 H${or1.pins[1][0].toFixed(1)}`, q0);
+        ns += W(`M${or1.out[0]} ${or1.out[1]} H${a2.pins[1][0]}`, orv);
+        ns += T(212, 263, 'Q1', { anchor: 'end', bar: true }) + W(`M216 256 H230`, nq1);
+        ns += T(212, 289, 'Q0', { anchor: 'end', bar: true }) + W(`M216 282 H230`, nq0);
+        // next1 / next0 into the reset ANDs (next0 hops over the reset line at x = 305)
+        ns += W(`M${a2.out[0]} 63 H${r1.pins[0][0]}`, n1);
+        ns += W(`M${a3.out[0]} 256 H296 A9 9 0 0 1 314 256 H${r0.pins[0][0]}`, n0);
+        // reset
+        let rw = T(6, 417, 'reset', { fill: '#e8eef2' }) + W(`M74 410 H305 V89 H${r1.pins[1][0]}`, rst) + W(`M305 282 H${r0.pins[1][0]}`, rst) + jdot(305, 282, rst);
+        // reset ANDs → D pins (D0 hops over the clock line at x = 395)
+        let rd = r1.s + r0.s + W(`M${r1.out[0]} 76 H${f1.D[0]}`, d1) + W(`M${r0.out[0]} 269 H386 A9 9 0 0 1 404 269 H${f0.D[0]}`, d0);
+        // clock
+        let cw = T(6, 455, 'clk', { fill: '#e8eef2' }) + W(`M54 448 H395 V140 H${f1.C[0]}`, null) + W(`M395 333 H${f0.C[0]}`, null) + jdot(395, 333, null);
+        // flip-flops and their named outputs
+        let ff = f1.s + f0.s;
+        ff += W(`M490 76 H522`, q1) + T(526, 83, 'Q1') + W(`M490 140 H522`, nq1) + T(526, 147, 'Q1', { bar: true });
+        ff += W(`M490 269 H522`, q0) + T(526, 276, 'Q0') + W(`M490 333 H522`, nq0) + T(526, 340, 'Q0', { bar: true });
+        // output gate
+        let po = pa.s + T(550, 425, 'Q1', { anchor: 'end', bar: true }) + W(`M552 418 H560`, nq1) + T(550, 451, 'Q0', { anchor: 'end' }) + W(`M552 444 H560`, q0);
+        let pw = W(`M${pa.out[0]} ${pa.out[1]} H634`, P) + T(640, 438, 'P', { fill: '#e8eef2' });
+        s += grp('Lw', Lw, 'input L') + grp('ns', ns, 'next-state logic — block 2') + grp('rstw', rw, 'input reset') + grp('rand', rd, 'reset ANDs — block 1')
+            + grp('clkw', cw, 'input clk') + grp('ff', ff, 'two D flip-flops — block 1') + grp('pand', po, 'output AND — block 3') + grp('Pw', pw, 'output P');
+        if (has && showVals) {
+            const vc = x => x ? '#e8eef2' : '#6f8aa3';
+            s += T(48, 40, String(L), { cls: 'val', fill: vc(L), attr: 'data-val="L"' }) + T(92, 402, String(rst), { cls: 'val', fill: vc(rst), attr: 'data-val="reset"' });
+            s += T(566, 83, '= ' + q1, { cls: 'val', fill: vc(q1), attr: 'data-val="Q1"' }) + T(566, 276, '= ' + q0, { cls: 'val', fill: vc(q0), attr: 'data-val="Q0"' });
+            s += T(640, 412, String(P), { cls: 'val', fill: vc(P), attr: 'data-val="P"' });
+        }
+        return s;
+    }
+    const CK_GATES = { ff: 2, rand: 2, ns: 3, pand: 1 };      // drawn parts per hw id (for the self-test)
+
+    // ============ STATE DIAGRAM (arcs from node geometry) ============
+    function drawSD(svg, G) {
+        const R = G.R;
+        let s = `<defs><marker id="ah_${svg.id}" viewBox="0 0 16 13" refX="15" refY="6.5" markerWidth="16" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L16 6.5 L0 13 Z" fill="context-stroke"/></marker>`
+            + `<marker id="ahon_${svg.id}" viewBox="0 0 16 13" refX="15" refY="6.5" markerWidth="16" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L16 6.5 L0 13 Z" fill="#4fc3f7"/></marker>`
+            + `<marker id="ahoff_${svg.id}" viewBox="0 0 16 13" refX="15" refY="6.5" markerWidth="16" markerHeight="13" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L16 6.5 L0 13 Z" fill="#8fa8bd"/></marker></defs>`;
+        for (const ed of G.edges) {
+            const A = G.nodes[ed.from], B = G.nodes[ed.to];
+            let d, lx, ly;
+            if (ed.loop !== undefined) {
+                const th = ed.loop, ro = R + G.loopR;
+                const p1 = { x: A.x + R * Math.cos(th + 0.45), y: A.y + R * Math.sin(th + 0.45) }, p2 = { x: A.x + (R - 1) * Math.cos(th - 0.45), y: A.y + (R - 1) * Math.sin(th - 0.45) };
+                const c1 = { x: A.x + ro * Math.cos(th + 0.55), y: A.y + ro * Math.sin(th + 0.55) }, c2 = { x: A.x + ro * Math.cos(th - 0.55), y: A.y + ro * Math.sin(th - 0.55) };
+                d = `M${p1.x.toFixed(1)},${p1.y.toFixed(1)} C${c1.x.toFixed(1)},${c1.y.toFixed(1)} ${c2.x.toFixed(1)},${c2.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+                lx = A.x + (R + G.loopLab) * Math.cos(th); ly = A.y + (R + G.loopLab) * Math.sin(th) + (G.loopLabDy || 0) + 7;
+            } else {
+                const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len;
+                const C = { x: (A.x + B.x) / 2 + nx * ed.bend, y: (A.y + B.y) / 2 + ny * ed.bend };
+                const sa = Math.atan2(C.y - A.y, C.x - A.x), ea = Math.atan2(C.y - B.y, C.x - B.x);
+                const P0 = { x: A.x + R * Math.cos(sa), y: A.y + R * Math.sin(sa) }, P2 = { x: B.x + (R + 1) * Math.cos(ea), y: B.y + (R + 1) * Math.sin(ea) };
+                d = `M${P0.x.toFixed(1)},${P0.y.toFixed(1)} Q${C.x.toFixed(1)},${C.y.toFixed(1)} ${P2.x.toFixed(1)},${P2.y.toFixed(1)}`;
+                const mx = 0.25 * P0.x + 0.5 * C.x + 0.25 * P2.x, my = 0.25 * P0.y + 0.5 * C.y + 0.25 * P2.y, sg = Math.sign(ed.bend) || 1;
+                lx = mx + nx * sg * G.lab; ly = my + ny * sg * G.lab + 7;
+            }
+            s += `<path class="arc" data-from="${ed.from}" data-l="${ed.l}" d="${d}" marker-end="url(#ahoff_${svg.id})"/>`;
+            if (ed.lx !== undefined) { lx = ed.lx; ly = ed.ly; }
+            s += `<text class="arc-l" style="font-size:${G.fsArc}px" data-from="${ed.from}" data-l="${ed.l}" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}">L=${ed.l}</text>`;
+        }
+        for (const k in G.nodes) {
+            const n = G.nodes[k];
+            s += `<g class="sd-node" data-state="${k}"><circle class="sdc" cx="${n.x}" cy="${n.y}" r="${R}"/>`;
+            if (G.three) {
+                s += `<text class="sdname" x="${n.x}" y="${n.y - 12}" style="font-size:27px">${NAME[k]}</text><text class="sdenc" x="${n.x}" y="${n.y + 15}" style="font-size:${G.fs}px">${ENC[k]}</text><text class="sdp" x="${n.x}" y="${n.y + 42}" style="font-size:${G.fs}px">P=${outCase(+k)}</text>`;
+            } else {
+                s += `<text class="sdname" x="${n.x}" y="${n.y - 4}" style="font-size:22px">${NAME[k]}</text><text class="sdenc" x="${n.x}" y="${n.y + 22}" style="font-size:${G.fs}px">${ENC[k]} <tspan fill="#b388ff" font-weight="700">P=${outCase(+k)}</tspan></text>`;
+            }
+            s += `</g>`;
+        }
+        if (G.hint) s += `<text x="${G.W / 2}" y="${G.H - 14}" text-anchor="middle" style="font-size:${G.fs}px" fill="#90a4ae" font-family="'Segoe UI',sans-serif">${G.hint}</text>`;
+        svg.innerHTML = s;
+    }
+    function setSD(svg, st, L) {
+        svg.querySelectorAll('.sd-node').forEach(g => g.classList.toggle('on', st !== null && +g.dataset.state === st));
+        svg.querySelectorAll('.arc').forEach(p => { const on = st !== null && +p.dataset.from === st && +p.dataset.l === L; p.classList.toggle('on', on); p.setAttribute('marker-end', `url(#${on ? 'ahon' : 'ahoff'}_${svg.id})`); });
+        svg.querySelectorAll('.arc-l').forEach(t => t.classList.toggle('on', st !== null && +t.dataset.from === st && +t.dataset.l === L));
+    }
+    const EDGES = [
+        { from: 0, to: 1, l: 1, bend: -60 }, { from: 1, to: 0, l: 0, bend: -60 }, { from: 1, to: 2, l: 1, bend: -60 },
+        { from: 2, to: 0, l: 0, bend: -70 }, { from: 0, to: 0, l: 0, loop: Math.PI }, { from: 2, to: 2, l: 1, loop: 0 },
+    ];
+    const SD_BIG = { W: 760, H: 612, R: 64, three: true, fs: 24, fsArc: 24, loopR: 95, loopLab: 80, lab: 20, hint: 'arcs are labeled with L at the clock edge',
+        nodes: { 0: { x: 200, y: 420 }, 1: { x: 380, y: 150 }, 2: { x: 560, y: 420 } }, edges: EDGES };
+    const SD_SMALL = { W: 348, H: 474, R: 46, three: false, fs: 21, fsArc: 21, loopR: 56, loopLab: 0, lab: 22,
+        nodes: { 0: { x: 106, y: 320 }, 1: { x: 174, y: 104 }, 2: { x: 242, y: 320 } },
+        edges: [ { from: 0, to: 1, l: 1, bend: -44, lx: 66, ly: 196 }, { from: 1, to: 0, l: 0, bend: -34, lx: 210, ly: 232 }, { from: 1, to: 2, l: 1, bend: -44, lx: 282, ly: 196 },
+                 { from: 2, to: 0, l: 0, bend: -70, lx: 174, ly: 392 }, { from: 0, to: 0, l: 0, loop: Math.PI * 0.82, lx: 40, ly: 404 }, { from: 2, to: 2, l: 1, loop: Math.PI * 0.18, lx: 308, ly: 404 } ] };
+
+    // ============ STRIP (beat 3) ============
+    function drawStrip(k) {
+        const x0 = 150, cw = 72, svg = document.getElementById('strip3');
+        const rowY = { t: 30, L: 60, st: 128, P: 150 }, hi = 30;
+        let s = T(14, 37, 'clock', { cls: 'rtag', fill: '#90a4ae' }) + T(14, 88, 'L', { cls: 'rtag', fill: '#e8eef2' }) + T(14, 135, 'state', { cls: 'rtag', fill: '#90a4ae' }) + T(14, 178, 'P', { cls: 'rtag', fill: '#4fc3f7' });
+        for (let i = 0; i < N; i++) {
+            const x = x0 + i * cw, fut = i > k, op = fut ? 0.28 : 1;
+            s += `<g opacity="${op}" data-col="${i}">`;
+            s += T(x + cw / 2, 37, 't' + i, { anchor: 'middle', fill: '#90a4ae' });
+            const Lh = SEQ[i] ? rowY.L : rowY.L + hi, Ph = TRACE[i].P ? rowY.P : rowY.P + hi;
+            s += `<path class="wire" style="stroke:#e8eef2;stroke-width:3" d="M${x} ${Lh} H${x + cw}"/>` + T(x + cw / 2, rowY.L + 25, String(SEQ[i]), { anchor: 'middle', fill: SEQ[i] ? '#e8eef2' : '#6f8aa3', cls: 'val', attr: `data-strip="L"` });
+            s += T(x + cw / 2, 135, ENC[TRACE[i].st], { anchor: 'middle', fill: '#cfd8dc', attr: 'data-strip="st"' });
+            s += `<path class="wire" style="stroke:#4fc3f7;stroke-width:3" d="M${x} ${Ph} H${x + cw}"/>` + T(x + cw / 2, rowY.P + 25, String(TRACE[i].P), { anchor: 'middle', fill: TRACE[i].P ? '#4fc3f7' : '#6f8aa3', cls: 'val', attr: 'data-strip="P"' });
+            if (i > 0) {
+                if (SEQ[i] !== SEQ[i - 1]) s += `<path class="wire" style="stroke:#e8eef2;stroke-width:3" d="M${x} ${rowY.L} V${rowY.L + hi}"/>`;
+                if (TRACE[i].P !== TRACE[i - 1].P) s += `<path class="wire" style="stroke:#4fc3f7;stroke-width:3" d="M${x} ${rowY.P} V${rowY.P + hi}"/>`;
+            }
+            s += `</g>`;
+        }
+        s += `<rect data-cur="${k}" x="${x0 + k * cw + 2}" y="10" width="${cw - 4}" height="180" rx="8" fill="rgba(79,195,247,0.10)" stroke="#4fc3f7" stroke-width="3"/>`;
+        svg.innerHTML = s;
+    }
+
+    // ============ PAGES ============
+    const NPAGES = 4;
+    const S = { page: 1, sel: null, k: 0 };
+    const DEF_SEL = { type: 'line', i: 15 };                   // `else state <= next;` lit on load
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    const code2 = document.getElementById('code2'), code3 = document.getElementById('code3'), code4 = document.getElementById('code4');
+    const chipsEl = document.getElementById('chips2');
+    buildCode(code2, TPL, { click: true });
+    { const ch = chipsEl; code2.appendChild(ch);
+      ch.querySelectorAll('.chip').forEach(c => { const ln = code2.querySelector(`.cl[data-i="${c.dataset.at}"]`); c.dataset.top = 1; c._ln = ln; }); }
+    // each chip sits at x = 600 beside two short lines of its own block (anchors chosen so no covered line reaches x = 600)
+    function placeChips() { document.querySelectorAll('#chips2 .chip').forEach(c => { c.style.top = (c._ln.offsetTop + 2) + 'px'; c.style.left = '600px'; }); }
+    const EXC0 = 17;                                            // beat 3 shows lines 18–31
+    buildCode(code3, TPL.slice(EXC0), { first: EXC0 + 1 });
+    buildCode(code4, TWO);
+    drawSD(document.getElementById('sd1'), SD_BIG);
+    drawSD(document.getElementById('sd3'), SD_SMALL);
+    document.getElementById('ck1b').innerHTML = circuitSVG(null);
+
+    function linesFor(hw) { return TPL.map((l, i) => (l.hw && l.hw.includes(hw)) ? i : -1).filter(i => i >= 0); }
+    const HW_NOTE = { ff: 'The <b class="c1">two flip-flops</b> come from block 1: <span class="mono">always @(posedge clk)</span> and <span class="mono">state &lt;= next</span>.',
+        rand: 'The <b class="c1">reset ANDs</b> come from <span class="mono">if (reset) state &lt;= LOW;</span> &mdash; synchronous reset, part of block 1.',
+        ns: 'The <b class="c2">next-state gates</b> come from block 2, the whole <span class="mono">case</span> statement.',
+        pand: 'The <b class="c3">output AND</b> comes from block 3, <span class="mono">P = (state == PULSE);</span>',
+        clkw: '<span class="mono">clk</span>: the port, and the <span class="mono">posedge</span> that uses it.', rstw: '<span class="mono">reset</span>: the port, and the <span class="mono">if</span> that uses it.',
+        Lw: '<span class="mono">L</span>: the port. Its uses inside the <span class="mono">case</span> are part of the next-state gates.', Pw: '<span class="mono">P</span>: the port, and the line that drives it.' };
+    function render2() {
+        const svg = document.getElementById('ck2');
+        svg.innerHTML = circuitSVG(null);
+        const sel = S.sel || DEF_SEL;
+        let lit = [], hws = [], note = '';
+        if (sel.type === 'line') {
+            const l = TPL[sel.i]; lit = [sel.i]; hws = l.hw || [];
+            note = l.hw ? l.note : (l.why || (l.t.trim().startsWith('//') ? 'A comment: <b>no hardware</b>.' : l.t.trim() === '' ? 'A blank line: <b>no hardware</b>.' : 'Module boundary and port punctuation: <b>no hardware</b>.'));
+        } else { hws = [sel.hw]; lit = linesFor(sel.hw); note = HW_NOTE[sel.hw]; }
+        code2.querySelectorAll('.cl').forEach(e => e.classList.toggle('hl', lit.includes(+e.dataset.i)));
+        svg.classList.toggle('hashl', true);
+        svg.querySelectorAll('.hwg').forEach(g => g.classList.toggle('lit', hws.includes(g.dataset.hw)));
+        document.getElementById('note2').innerHTML = note;
+        svg.querySelectorAll('.hwg').forEach(g => g.addEventListener('click', () => { S.sel = { type: 'hw', hw: g.dataset.hw }; render2(); }));
+    }
+    code2.querySelectorAll('.cl').forEach(e => e.addEventListener('click', () => { S.sel = { type: 'line', i: +e.dataset.i }; render2(); }));
+
+    function render3() {
+        const k = S.k, st = TRACE[k].st, L = SEQ[k], P = TRACE[k].P, nx = nextCase(st, L);
+        drawStrip(k);
+        document.getElementById('ck3').innerHTML = circuitSVG({ L, rst: 0, q1: st >> 1, q0: st & 1 }, true);
+        setSD(document.getElementById('sd3'), st, L);
+        code3.querySelectorAll('.cl').forEach(e => { const a = e.dataset.arm; e.classList.toggle('arm', a !== undefined && a !== 'case' && +a === st); });
+        const lines = [`<span class="h">${VVP[0]}</span>`];
+        for (let i = 0; i <= k; i++) { const ln = fmtLine(i, SEQ[i], TRACE[i].st, TRACE[i].P); lines.push(`<span class="${i === k ? 'cur' : ''}${TRACE[i].P ? ' p1' : ''}" data-cline="${i}">${ln}</span>`); }
+        const con = document.getElementById('console3');
+        con.innerHTML = lines.join('\n') + (k === N - 1 ? `\n\n<span class="done" style="font-family:'Segoe UI',sans-serif">One pulse per rising edge of L.</span>` : '');
+        document.getElementById('readout3').innerHTML = `t${k}: state <b>${NAME[st]}</b> &middot; L = <b>${L}</b> &middot; on CLK &rarr; <b>${NAME[nx]}</b> &middot; P = <b class="${P ? 'c1' : ''}">${P}</b>`;
+        document.getElementById('stepBtn').disabled = k >= N - 1;
+        document.getElementById('stepBtn').style.opacity = k >= N - 1 ? 0.4 : 1;
+    }
+
+    function render() {
+        document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'p' + S.page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === S.page));
+        document.querySelectorAll('.dot').forEach(d => d.classList.toggle('on', +d.dataset.dot === S.page));
+        document.getElementById('pcNum').textContent = S.page;
+        if (S.page === 2) { render2(); placeChips(); }
+        if (S.page === 3) render3();
+    }
+    const defsEl = document.getElementById('defs'), defsBtn = document.getElementById('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) { closeDefs(); S.page = Math.max(1, Math.min(NPAGES, n)); render(); }
+    function step() { if (S.page !== 3 || defsOpen()) return; if (S.k < N - 1) { S.k++; render3(); } }
+    // ↺ / R resets only the beat on screen and stays on it
+    function doReset() { if (defsOpen()) return; if (S.page === 3) { S.k = 0; render3(); } else if (S.page === 2) { S.sel = null; render2(); } }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.getElementById('stepBtn').addEventListener('click', e => { step(); e.currentTarget.blur(); });
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) { if (k === 'Escape') closeDefs(); e.preventDefault(); return; }
+        if (k === 's' || k === 'S') { step(); e.preventDefault(); }
+        if (k === 'r' || k === 'R') { doReset(); e.preventDefault(); }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, step, reset: doReset, openDefs, closeDefs, defsOpen,
+        key: (k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })),
+        getState: () => ({ ...S }),
+        selectLine: (i) => { S.sel = { type: 'line', i }; render2(); }, selectHw: (hw) => { S.sel = { type: 'hw', hw }; render2(); },
+        SEQ, TRACE, VVP, TPL, TWO, CK_GATES, nextCase, outCase, nextEq, outEq, run3, run2, fmtLine, linesFor, EXC0,
+    };
+
+    setPage(1);
+</script>
+</body>
+</html>
