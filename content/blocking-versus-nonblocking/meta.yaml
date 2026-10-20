@@ -3,3 +3,9 @@ description: ""
 chapter: verilog
 section: verilog-basics
 order: 70401
+
+graphics:
+  01-video.youtube:
+    caption: "Video: Blocking vs non-blocking assignments — shift register demonstration"
+  02-interactive.html:
+    caption: "Interactive: Step through blocking and non-blocking execution side by side"

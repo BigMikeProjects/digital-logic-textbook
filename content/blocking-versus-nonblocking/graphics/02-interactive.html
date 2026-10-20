@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blocking vs Non-Blocking Assignments</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: #1a1a2e;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .viewport-container {
+            width: 100%;
+            max-width: 100vw;
+            aspect-ratio: 16 / 9;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        .design-surface {
+            width: 1920px;
+            height: 1080px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 50px 20px;
+        }
+
+        h1 {
+            color: #e8e8e8;
+            font-size: 34px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        h1 span {
+            background: linear-gradient(90deg, #4fc3f7, #ce93d8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #8899aa;
+            font-size: 17px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle em {
+            color: #ff9800;
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        .input-queue-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .queue-label {
+            font-size: 14px;
+            color: #ff9800;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .queue-bits {
+            display: flex;
+            gap: 6px;
+        }
+
+        .queue-bit {
+            width: 44px;
+            height: 44px;
+            border: 2px solid rgba(255, 152, 0, 0.4);
+            border-radius: 8px;
+            background: rgba(255, 152, 0, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+            color: #ff9800;
+            font-family: 'Consolas', monospace;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .queue-bit.consumed-bl {
+            opacity: 0.25;
+            border-color: rgba(244, 67, 54, 0.3);
+        }
+
+        .queue-bit.consumed-nb {
+            opacity: 0.25;
+            border-color: rgba(76, 175, 80, 0.3);
+        }
+
+        .queue-bit.consumed-both {
+            opacity: 0.15;
+        }
+
+        .queue-bit.current-bl {
+            border-color: #f44336;
+            box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+        }
+
+        .queue-bit.current-nb {
+            border-color: #4caf50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+        }
+
+        .queue-pointer {
+            position: absolute;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .queue-pointer.bl-ptr {
+            top: -14px;
+            color: #f44336;
+        }
+
+        .queue-pointer.nb-ptr {
+            bottom: -14px;
+            color: #4caf50;
+        }
+
+        .btn {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-random {
+            background: rgba(255, 152, 0, 0.15);
+            color: #ff9800;
+            border: 1px solid rgba(255, 152, 0, 0.3);
+            font-size: 14px;
+            padding: 8px 20px;
+        }
+
+        .btn-random:hover {
+            background: rgba(255, 152, 0, 0.25);
+            box-shadow: 0 2px 12px rgba(255, 152, 0, 0.2);
+        }
+
+        .main-layout {
+            display: flex;
+            gap: 24px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .panel {
+            background: rgba(13, 27, 42, 0.9);
+            border: 2px solid #2d3a5a;
+            border-radius: 14px;
+            padding: 14px 18px;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4fc3f7;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .column-header {
+            text-align: center;
+            padding: 8px 20px;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .blocking-header {
+            background: rgba(244, 67, 54, 0.15);
+            border: 2px solid #f44336;
+            color: #ff8a80;
+        }
+
+        .nonblocking-header {
+            background: rgba(76, 175, 80, 0.15);
+            border: 2px solid #4caf50;
+            color: #a5d6a7;
+        }
+
+        .header-cycle {
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.7;
+            font-family: 'Consolas', monospace;
+        }
+
+        .btn-clock {
+            padding: 8px 18px;
+            font-size: 14px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-clock:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-clock:active {
+            transform: translateY(1px);
+        }
+
+        .btn-clock-bl {
+            background: linear-gradient(135deg, #f44336, #c62828);
+            color: #fff;
+        }
+
+        .btn-clock-bl:hover {
+            box-shadow: 0 3px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        .btn-clock-bl:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-clock-nb {
+            background: linear-gradient(135deg, #4caf50, #2e7d32);
+            color: #fff;
+        }
+
+        .btn-clock-nb:hover {
+            box-shadow: 0 3px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .btn-clock-nb:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .code-block {
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #c8d0d8;
+            white-space: pre;
+        }
+
+        .code-block .keyword {
+            color: #c792ea;
+        }
+
+        .code-block .signal {
+            color: #82aaff;
+        }
+
+        .code-block .comment {
+            color: #546e7a;
+            font-style: italic;
+        }
+
+        .code-block .operator-b {
+            color: #f44336;
+            font-weight: 700;
+        }
+
+        .code-block .operator-nb {
+            color: #4caf50;
+            font-weight: 700;
+        }
+
+        .code-highlight {
+            background: rgba(255, 255, 0, 0.12);
+            border-left: 3px solid #ffeb3b;
+            margin: 0 -8px;
+            padding: 0 5px;
+            display: inline-block;
+            width: calc(100% + 16px);
+            transition: background 0.3s, border-color 0.3s;
+        }
+
+        /* Schematic-style register diagram */
+        .register-diagram {
+            position: relative;
+            height: 90px;
+            padding: 8px 0;
+        }
+
+        .register-diagram svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .ff-box {
+            width: 90px;
+            height: 70px;
+            border: 2px solid #5c6bc0;
+            border-radius: 2px;
+            background: rgba(92, 107, 192, 0.12);
+            position: absolute;
+            top: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s ease;
+        }
+
+        .ff-box.active {
+            border-color: #ffeb3b;
+            box-shadow: 0 0 15px rgba(255, 235, 59, 0.3);
+        }
+
+        .ff-box.wrong {
+            border-color: #f44336;
+            box-shadow: 0 0 15px rgba(244, 67, 54, 0.3);
+            background: rgba(244, 67, 54, 0.1);
+        }
+
+        .ff-box.correct {
+            border-color: #4caf50;
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .ff-port-label {
+            position: absolute;
+            font-size: 11px;
+            font-weight: 600;
+            color: #8899aa;
+            font-family: 'Consolas', monospace;
+        }
+
+        .ff-port-label.port-d {
+            left: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .ff-port-label.port-q {
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .ff-value {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'Consolas', monospace;
+            transition: all 0.3s;
+            margin-top: -2px;
+        }
+
+        .ff-name {
+            font-size: 10px;
+            color: #4fc3f7;
+            margin-top: 1px;
+        }
+
+        /* Clock triangle on bottom edge of FF box */
+        .ff-clk-triangle {
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 8px solid #5c6bc0;
+        }
+
+        .ff-box.active .ff-clk-triangle {
+            border-bottom-color: #ffeb3b;
+        }
+
+        .ff-box.wrong .ff-clk-triangle {
+            border-bottom-color: #f44336;
+        }
+
+        .ff-box.correct .ff-clk-triangle {
+            border-bottom-color: #4caf50;
+        }
+
+        .input-box {
+            width: 62px;
+            height: 52px;
+            border: 2px dashed #ff9800;
+            border-radius: 3px;
+            background: rgba(255, 152, 0, 0.08);
+            position: absolute;
+            top: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .input-label {
+            font-size: 9px;
+            color: #ff9800;
+        }
+
+        .input-value {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ff9800;
+            font-family: 'Consolas', monospace;
+        }
+
+        .trace-panel {
+            flex: 1;
+            min-height: 0;
+        }
+
+        .trace-panel .panel {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .trace-steps {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            overflow: hidden;
+        }
+
+        .trace-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid transparent;
+            opacity: 0.3;
+            transition: all 0.4s ease;
+            font-size: 13px;
+        }
+
+        .trace-step.active {
+            opacity: 1;
+            background: rgba(255, 235, 59, 0.08);
+            border-color: rgba(255, 235, 59, 0.3);
+        }
+
+        .trace-step.done {
+            opacity: 0.7;
+        }
+
+        .step-num {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #2d3a5a;
+            color: #8899aa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .trace-step.active .step-num {
+            background: #ffeb3b;
+            color: #1a1a2e;
+        }
+
+        .step-code {
+            font-family: 'Consolas', monospace;
+            color: #c8d0d8;
+            font-size: 13px;
+        }
+
+        .step-result {
+            margin-left: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            color: #8899aa;
+            flex-shrink: 0;
+        }
+
+        .step-result.wrong {
+            color: #f44336;
+            font-weight: 600;
+        }
+
+        .step-result.correct {
+            color: #4caf50;
+            font-weight: 600;
+        }
+
+        .center-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            width: 200px;
+            flex-shrink: 0;
+        }
+
+        .insight-box {
+            background: rgba(255, 152, 0, 0.08);
+            border: 1px solid rgba(255, 152, 0, 0.25);
+            border-radius: 10px;
+            padding: 12px 16px;
+            text-align: center;
+        }
+
+        .insight-box .insight-title {
+            color: #ff9800;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .insight-box .insight-text {
+            color: #b0bec5;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .insight-box .insight-text strong {
+            color: #e0e0e0;
+        }
+
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.08);
+            color: #8899aa;
+            border: 1px solid #2d3a5a;
+            width: 140px;
+        }
+
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #c8d0d8;
+        }
+
+        .verdict {
+            text-align: center;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            min-height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s;
+        }
+
+        .verdict-wrong {
+            background: rgba(244, 67, 54, 0.12);
+            border: 1px solid rgba(244, 67, 54, 0.4);
+            color: #ff8a80;
+        }
+
+        .verdict-correct {
+            background: rgba(76, 175, 80, 0.12);
+            border: 1px solid rgba(76, 175, 80, 0.4);
+            color: #a5d6a7;
+        }
+
+        .verdict-neutral {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid #2d3a5a;
+            color: #546e7a;
+        }
+
+        .expected-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 4px 0 0;
+            font-size: 12px;
+            color: #6a7a8a;
+        }
+
+        .expected-row span {
+            font-family: 'Consolas', monospace;
+        }
+
+        .expected-label {
+            color: #546e7a;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        .val-0 { color: #78909c; }
+        .val-1 { color: #4fc3f7; }
+
+        @keyframes pulse-value {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .value-changed {
+            animation: pulse-value 0.4s ease;
+        }
+
+        .code-highlight-nb {
+            background: rgba(76, 175, 80, 0.15);
+            border-left: 3px solid #4caf50;
+            margin: 0 -8px;
+            padding: 0 5px;
+            display: inline-block;
+            width: calc(100% + 16px);
+            transition: background 0.3s, border-color 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="viewport-container">
+        <div class="design-surface" id="surface">
+
+            <h1>Blocking <span>= </span> vs Non-Blocking <span>&lt;=</span> Assignments</h1>
+            <div class="subtitle">Why flip-flops need <em>&lt;=</em> &mdash; a shift register that proves it</div>
+
+            <div class="input-queue-bar">
+                <div class="queue-label">Input Queue:</div>
+                <div class="queue-bits" id="queue-bits"></div>
+                <button class="btn btn-random" onclick="randomizeInput()">Random</button>
+                <button class="btn btn-reset" style="width:auto; padding:8px 20px; font-size:14px;" onclick="resetAll()">Reset All</button>
+            </div>
+
+            <div class="main-layout">
+
+                <div class="column" id="col-blocking">
+                    <div class="column-header blocking-header">
+                        <span>Blocking&ensp;<code style="font-size:18px; color:#ff8a80">=</code></span>
+                        <button class="btn-clock btn-clock-bl" id="btn-clock-bl" onclick="clockBlocking()">Clock Edge</button>
+                        <span class="header-cycle" id="bl-cycle">Cycle 0</span>
+                    </div>
+
+                    <div class="panel" style="padding-bottom:8px">
+                        <div class="panel-title">Verilog Code</div>
+                        <div class="code-block" id="code-blocking">
+<span class="keyword">always</span> @(<span class="keyword">posedge</span> <span class="signal">clk</span>) <span class="keyword">begin</span>
+  <span id="bl-line1"><span class="signal">q1</span> <span class="operator-b">=</span> <span class="signal">d</span>;   <span class="comment">// executes FIRST</span></span>
+  <span id="bl-line2"><span class="signal">q2</span> <span class="operator-b">=</span> <span class="signal">q1</span>;  <span class="comment">// executes SECOND</span></span>
+  <span id="bl-line3"><span class="signal">q3</span> <span class="operator-b">=</span> <span class="signal">q2</span>;  <span class="comment">// executes THIRD</span></span>
+<span class="keyword">end</span></div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">Shift Register</div>
+                        <div class="register-diagram" id="bl-register">
+                            <!-- Input box -->
+                            <div class="input-box" id="bl-input-box" style="left: 16px;">
+                                <div class="input-label">Input d</div>
+                                <div class="input-value" id="bl-d">-</div>
+                            </div>
+                            <!-- FF1 -->
+                            <div class="ff-box" id="bl-ff1" style="left: 130px;">
+                                <span class="ff-port-label port-d">D</span>
+                                <span class="ff-port-label port-q">Q</span>
+                                <div class="ff-value val-0" id="bl-q1">0</div>
+                                <div class="ff-name">q1</div>
+                                <div class="ff-clk-triangle"></div>
+                            </div>
+                            <!-- FF2 -->
+                            <div class="ff-box" id="bl-ff2" style="left: 272px;">
+                                <span class="ff-port-label port-d">D</span>
+                                <span class="ff-port-label port-q">Q</span>
+                                <div class="ff-value val-0" id="bl-q2">0</div>
+                                <div class="ff-name">q2</div>
+                                <div class="ff-clk-triangle"></div>
+                            </div>
+                            <!-- FF3 -->
+                            <div class="ff-box" id="bl-ff3" style="left: 414px;">
+                                <span class="ff-port-label port-d">D</span>
+                                <span class="ff-port-label port-q">Q</span>
+                                <div class="ff-value val-0" id="bl-q3">0</div>
+                                <div class="ff-name">q3</div>
+                                <div class="ff-clk-triangle"></div>
+                            </div>
+                            <!-- SVG wires -->
+                            <svg id="bl-wires" viewBox="0 0 560 90" preserveAspectRatio="xMidYMid meet">
+                                <defs>
+                                    <marker id="bl-arrowhead" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                                        <polygon points="0,0 5,2.5 0,5" fill="#5c6bc0"/>
+                                    </marker>
+                                </defs>
+                                <!-- Input box to FF1: from right edge of input (78) to left edge of FF1 (130) -->
+                                <line x1="80" y1="40" x2="128" y2="40" stroke="#5c6bc0" stroke-width="2" marker-end="url(#bl-arrowhead)"/>
+                                <!-- FF1 Q to FF2 D: from right edge of FF1 (220) to left edge of FF2 (272) -->
+                                <line x1="222" y1="40" x2="270" y2="40" stroke="#5c6bc0" stroke-width="2" marker-end="url(#bl-arrowhead)"/>
+                                <!-- FF2 Q to FF3 D: from right edge of FF2 (362) to left edge of FF3 (414) -->
+                                <line x1="364" y1="40" x2="412" y2="40" stroke="#5c6bc0" stroke-width="2" marker-end="url(#bl-arrowhead)"/>
+                                <!-- FF3 Q trailing output -->
+                                <line x1="506" y1="40" x2="546" y2="40" stroke="#5c6bc0" stroke-width="2" marker-end="url(#bl-arrowhead)"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="trace-panel">
+                        <div class="panel">
+                            <div class="panel-title">Execution Trace</div>
+                            <div class="trace-steps" id="bl-trace">
+                                <div class="trace-step" id="bl-step0">
+                                    <div class="step-num">&uarr;</div>
+                                    <div class="step-code">posedge clk &mdash; begin block</div>
+                                    <div class="step-result" id="bl-res0"></div>
+                                </div>
+                                <div class="trace-step" id="bl-step1">
+                                    <div class="step-num">1</div>
+                                    <div class="step-code">q1 <span style="color:#f44336;font-weight:700">=</span> d</div>
+                                    <div class="step-result" id="bl-res1"></div>
+                                </div>
+                                <div class="trace-step" id="bl-step2">
+                                    <div class="step-num">2</div>
+                                    <div class="step-code">q2 <span style="color:#f44336;font-weight:700">=</span> q1</div>
+                                    <div class="step-result" id="bl-res2"></div>
+                                </div>
+                                <div class="trace-step" id="bl-step3">
+                                    <div class="step-num">3</div>
+                                    <div class="step-code">q3 <span style="color:#f44336;font-weight:700">=</span> q2</div>
+                                    <div class="step-result" id="bl-res3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="verdict verdict-neutral" id="bl-verdict">Click "Clock Edge" to begin</div>
+                </div>
+
+                <div class="center-column">
+                    <div class="insight-box">
+                        <div class="insight-title">Key Insight</div>
+                        <div class="insight-text" id="insight-text">
+                            Blocking <strong>=</strong> updates immediately.<br>
+                            Non-blocking <strong>&lt;=</strong> defers updates<br>
+                            until the end of the time step.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="column" id="col-nonblocking">
+                    <div class="column-header nonblocking-header">
+                        <span>Non-Blocking&ensp;<code style="font-size:18px; color:#a5d6a7">&lt;=</code></span>
+                        <button class="btn-clock btn-clock-nb" id="btn-clock-nb" onclick="clockNonBlocking()">Clock Edge</button>
+                        <span class="header-cycle" id="nb-cycle">Cycle 0</span>
+                    </div>
+
+                    <div class="panel" style="padding-bottom:8px">
+                        <div class="panel-title">Verilog Code</div>
+                        <div class="code-block" id="code-nonblocking">
+<span class="keyword">always</span> @(<span class="keyword">posedge</span> <span class="signal">clk</span>) <span class="keyword">begin</span>
+  <span id="nb-line1"><span class="signal">q1</span> <span class="operator-nb">&lt;=</span> <span class="signal">d</span>;   <span class="comment">// sample d</span></span>
+  <span id="nb-line2"><span class="signal">q2</span> <span class="operator-nb">&lt;=</span> <span class="signal">q1</span>;  <span class="comment">// sample old q1</span></span>
+  <span id="nb-line3"><span class="signal">q3</span> <span class="operator-nb">&lt;=</span> <span class="signal">q2</span>;  <span class="comment">// sample old q2</span></span>
+<span class="keyword">end</span></div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-title">Shift Register</div>
+                        <div class="register-diagram" id="nb-register">
+                            <!-- Input box -->
+                            <div class="input-box" id="nb-input-box" style="left: 16px;">
+                                <div class="input-label">Input d</div>
+                                <div class="input-value" id="nb-d">-</div>
+                            </div>
+                            <!-- FF1 -->
+                            <div class="ff-box" id="nb-ff1" style="left: 130px;">
+                                <span class="ff-port-label port-d">D</span>
+                                <span class="ff-port-label port-q">Q</span>
+                                <div class="ff-value val-0" id="nb-q1">0</div>
+                                <div class="ff-name">q1</div>
+                                <div class="ff-clk-triangle"></div>
+                            </div>
+                            <!-- FF2 -->
+                            <div class="ff-box" id="nb-ff2" style="left: 272px;">
+                                <span class="ff-port-label port-d">D</span>
+                                <span class="ff-port-label port-q">Q</span>
+                                <div class="ff-value val-0" id="nb-q2">0</div>
+                                <div class="ff-name">q2</div>
+                                <div class="ff-clk-triangle"></div>
+                            </div>
+                            <!-- FF3 -->
+                            <div class="ff-box" id="nb-ff3" style="left: 414px;">
+                                <span class="ff-port-label port-d">D</span>
+                                <span class="ff-port-label port-q">Q</span>
+                                <div class="ff-value val-0" id="nb-q3">0</div>
+                                <div class="ff-name">q3</div>
+                                <div class="ff-clk-triangle"></div>
+                            </div>
+                            <!-- SVG wires -->
+                            <svg id="nb-wires" viewBox="0 0 560 90" preserveAspectRatio="xMidYMid meet">
+                                <defs>
+                                    <marker id="nb-arrowhead" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+                                        <polygon points="0,0 5,2.5 0,5" fill="#5c6bc0"/>
+                                    </marker>
+                                </defs>
+                                <!-- Input box to FF1 -->
+                                <line x1="80" y1="40" x2="128" y2="40" stroke="#5c6bc0" stroke-width="2" marker-end="url(#nb-arrowhead)"/>
+                                <!-- FF1 Q to FF2 D -->
+                                <line x1="222" y1="40" x2="270" y2="40" stroke="#5c6bc0" stroke-width="2" marker-end="url(#nb-arrowhead)"/>
+                                <!-- FF2 Q to FF3 D -->
+                                <line x1="364" y1="40" x2="412" y2="40" stroke="#5c6bc0" stroke-width="2" marker-end="url(#nb-arrowhead)"/>
+                                <!-- FF3 Q trailing output -->
+                                <line x1="506" y1="40" x2="546" y2="40" stroke="#5c6bc0" stroke-width="2" marker-end="url(#nb-arrowhead)"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="trace-panel">
+                        <div class="panel">
+                            <div class="panel-title">Execution Trace</div>
+                            <div class="trace-steps" id="nb-trace">
+                                <div class="trace-step" id="nb-step0">
+                                    <div class="step-num">&uarr;</div>
+                                    <div class="step-code">posedge clk &mdash; sample all RHS</div>
+                                    <div class="step-result" id="nb-res0"></div>
+                                </div>
+                                <div class="trace-step" id="nb-step1">
+                                    <div class="step-num">&equiv;</div>
+                                    <div class="step-code">q1 <span style="color:#4caf50;font-weight:700">&lt;=</span> d</div>
+                                    <div class="step-result" id="nb-res1"></div>
+                                </div>
+                                <div class="trace-step" id="nb-step2">
+                                    <div class="step-num">&equiv;</div>
+                                    <div class="step-code">q2 <span style="color:#4caf50;font-weight:700">&lt;=</span> q1</div>
+                                    <div class="step-result" id="nb-res2"></div>
+                                </div>
+                                <div class="trace-step" id="nb-step3">
+                                    <div class="step-num">&equiv;</div>
+                                    <div class="step-code">q3 <span style="color:#4caf50;font-weight:700">&lt;=</span> q2</div>
+                                    <div class="step-result" id="nb-res3"></div>
+                                </div>
+                                <div class="trace-step" id="nb-step4">
+                                    <div class="step-num">&darr;</div>
+                                    <div class="step-code" style="color:#4caf50;">commit all updates at once</div>
+                                    <div class="step-result" id="nb-res4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="verdict verdict-neutral" id="nb-verdict">Click "Clock Edge" to begin</div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function autoResize() {
+            const container = document.querySelector('.viewport-container');
+            const surface = document.getElementById('surface');
+            const scaleX = container.clientWidth / 1920;
+            const scaleY = container.clientHeight / 1080;
+            const scale = Math.min(scaleX, scaleY);
+            surface.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', autoResize);
+        autoResize();
+
+        let inputBits = [1, 0, 1, 1];
+        let blCycle = 0;
+        let nbCycle = 0;
+        let blAnimating = false;
+        let nbAnimating = false;
+
+        let bl = { q1: 0, q2: 0, q3: 0 };
+        let nb = { q1: 0, q2: 0, q3: 0 };
+
+        function renderQueue() {
+            const container = document.getElementById('queue-bits');
+            container.innerHTML = '';
+            for (let i = 0; i < inputBits.length; i++) {
+                const bit = document.createElement('div');
+                bit.className = 'queue-bit';
+                bit.textContent = inputBits[i];
+
+                const blConsumed = i < blCycle;
+                const nbConsumed = i < nbCycle;
+
+                if (blConsumed && nbConsumed) {
+                    bit.classList.add('consumed-both');
+                } else if (blConsumed) {
+                    bit.classList.add('consumed-bl');
+                } else if (nbConsumed) {
+                    bit.classList.add('consumed-nb');
+                }
+
+                if (i === blCycle && blCycle < inputBits.length) {
+                    const ptr = document.createElement('div');
+                    ptr.className = 'queue-pointer bl-ptr';
+                    ptr.textContent = 'BLK';
+                    bit.appendChild(ptr);
+                    if (!nbConsumed && i !== nbCycle) bit.classList.add('current-bl');
+                }
+                if (i === nbCycle && nbCycle < inputBits.length) {
+                    const ptr = document.createElement('div');
+                    ptr.className = 'queue-pointer nb-ptr';
+                    ptr.textContent = 'NBA';
+                    bit.appendChild(ptr);
+                    if (!blConsumed && i !== blCycle) bit.classList.add('current-nb');
+                }
+                if (i === blCycle && i === nbCycle && blCycle < inputBits.length) {
+                    bit.style.borderColor = '#ff9800';
+                    bit.style.boxShadow = '0 0 10px rgba(255, 152, 0, 0.3)';
+                }
+
+                container.appendChild(bit);
+            }
+
+            document.getElementById('btn-clock-bl').disabled = blCycle >= inputBits.length || blAnimating;
+            document.getElementById('btn-clock-nb').disabled = nbCycle >= inputBits.length || nbAnimating;
+        }
+
+        function randomizeInput() {
+            inputBits = [];
+            for (let i = 0; i < 4; i++) {
+                inputBits.push(Math.round(Math.random()));
+            }
+            resetAll();
+        }
+
+        function valClass(v) {
+            return v === 0 ? 'val-0' : 'val-1';
+        }
+
+        function updateFF(prefix, name, val, status) {
+            const el = document.getElementById(`${prefix}-${name}`);
+            el.textContent = val;
+            el.className = 'ff-value ' + valClass(val);
+            el.classList.add('value-changed');
+            setTimeout(() => el.classList.remove('value-changed'), 400);
+
+            const box = document.getElementById(`${prefix}-ff${name.charAt(1)}`);
+            box.className = 'ff-box';
+            if (status) box.classList.add(status);
+        }
+
+        function setStepActive(prefix, idx) {
+            const max = prefix === 'nb' ? 4 : 3;
+            for (let i = 0; i <= max; i++) {
+                const step = document.getElementById(`${prefix}-step${i}`);
+                step.className = 'trace-step';
+                if (i < idx) step.classList.add('done');
+                if (i === idx) step.classList.add('active');
+            }
+        }
+
+        function setStepsActive(prefix, indices) {
+            const max = prefix === 'nb' ? 4 : 3;
+            const minActive = Math.min(...indices);
+            for (let i = 0; i <= max; i++) {
+                const step = document.getElementById(`${prefix}-step${i}`);
+                step.className = 'trace-step';
+                if (i < minActive) step.classList.add('done');
+                if (indices.includes(i)) step.classList.add('active');
+            }
+        }
+
+        function clearTrace(prefix) {
+            const max = prefix === 'nb' ? 4 : 3;
+            for (let i = 0; i <= max; i++) {
+                document.getElementById(`${prefix}-step${i}`).className = 'trace-step';
+                document.getElementById(`${prefix}-res${i}`).textContent = '';
+                document.getElementById(`${prefix}-res${i}`).className = 'step-result';
+            }
+        }
+
+        function highlightLine(prefix, num) {
+            for (let i = 1; i <= 3; i++) {
+                const line = document.getElementById(`${prefix}-line${i}`);
+                line.className = '';
+            }
+            if (num >= 1 && num <= 3) {
+                const cls = prefix === 'nb' ? 'code-highlight-nb' : 'code-highlight';
+                document.getElementById(`${prefix}-line${num}`).className = cls;
+            }
+        }
+
+        function highlightAllLines(prefix) {
+            const cls = prefix === 'nb' ? 'code-highlight-nb' : 'code-highlight';
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`${prefix}-line${i}`).className = cls;
+            }
+        }
+
+        function clearHighlights(prefix) {
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`${prefix}-line${i}`).className = '';
+            }
+        }
+
+        function updateInsight(html) {
+            document.getElementById('insight-text').innerHTML = html;
+        }
+
+        function clockBlocking() {
+            if (blAnimating || blCycle >= inputBits.length) return;
+            blAnimating = true;
+
+            const d = inputBits[blCycle];
+            blCycle++;
+            document.getElementById('bl-cycle').textContent = `Cycle ${blCycle}`;
+            document.getElementById('bl-d').textContent = d;
+            renderQueue();
+
+            const queue = [];
+
+            queue.push(() => {
+                clearTrace('bl');
+                setStepActive('bl', 0);
+                document.getElementById('bl-res0').textContent = `d=${d}`;
+                clearHighlights('bl');
+            });
+
+            queue.push(() => {
+                bl.q1 = d;
+                setStepActive('bl', 1);
+                highlightLine('bl', 1);
+                updateFF('bl', 'q1', bl.q1, 'active');
+                document.getElementById('bl-res1').textContent = `q1 := ${d} (immediately)`;
+                updateInsight(`Blocking: q1 is <strong>immediately</strong> set to ${d}. The next line will see this new value.`);
+            });
+
+            queue.push(() => {
+                bl.q2 = bl.q1;
+                setStepActive('bl', 2);
+                highlightLine('bl', 2);
+                updateFF('bl', 'q2', bl.q2, 'wrong');
+                document.getElementById('bl-res2').textContent = `q2 := q1 = ${bl.q1} !!`;
+                document.getElementById('bl-res2').className = 'step-result wrong';
+                updateInsight(`Blocking: q2 reads q1, but q1 was <strong>already overwritten</strong> to ${bl.q1}. It sees the new value, not the old one!`);
+            });
+
+            queue.push(() => {
+                bl.q3 = bl.q2;
+                setStepActive('bl', 3);
+                highlightLine('bl', 3);
+                updateFF('bl', 'q3', bl.q3, 'wrong');
+                document.getElementById('bl-res3').textContent = `q3 := q2 = ${bl.q2} !!`;
+                document.getElementById('bl-res3').className = 'step-result wrong';
+                clearHighlights('bl');
+
+                for (let i = 1; i <= 3; i++) {
+                    const box = document.getElementById(`bl-ff${i}`);
+                    if (box.classList.contains('active')) box.classList.remove('active');
+                }
+
+                const vb = document.getElementById('bl-verdict');
+                vb.className = 'verdict verdict-wrong';
+                vb.textContent = `Cycle ${blCycle}: q1=${bl.q1} q2=${bl.q2} q3=${bl.q3} \u2716 All set to ${d} \u2014 not a shift!`;
+
+                updateInsight(`All three registers got the <strong>same value</strong> (${d}). The data didn't shift \u2014 it was <strong>overwritten</strong> at each step.`);
+
+                blAnimating = false;
+                renderQueue();
+            });
+
+            let i = 0;
+            function runNext() {
+                if (i < queue.length) {
+                    queue[i]();
+                    i++;
+                    setTimeout(runNext, 550);
+                }
+            }
+            runNext();
+        }
+
+        function clockNonBlocking() {
+            if (nbAnimating || nbCycle >= inputBits.length) return;
+            nbAnimating = true;
+
+            const d = inputBits[nbCycle];
+            nbCycle++;
+            document.getElementById('nb-cycle').textContent = `Cycle ${nbCycle}`;
+            document.getElementById('nb-d').textContent = d;
+            renderQueue();
+
+            const old = { q1: nb.q1, q2: nb.q2, q3: nb.q3 };
+
+            const queue = [];
+
+            queue.push(() => {
+                clearTrace('nb');
+                setStepActive('nb', 0);
+                document.getElementById('nb-res0').textContent = `d=${d}, q1=${old.q1}, q2=${old.q2}`;
+                clearHighlights('nb');
+                updateInsight(`Non-blocking: all three RHS values are <strong>sampled simultaneously</strong>. No updates happen yet.`);
+            });
+
+            queue.push(() => {
+                setStepsActive('nb', [1, 2, 3]);
+                highlightAllLines('nb');
+                document.getElementById('nb-res1').textContent = `q1 \u2190 ${d}`;
+                document.getElementById('nb-res2').textContent = `q2 \u2190 ${old.q1}`;
+                document.getElementById('nb-res3').textContent = `q3 \u2190 ${old.q2}`;
+                updateInsight(`All three assignments <strong>execute at once</strong> using the old values. q2 sees the <strong>old</strong> q1 (${old.q1}), not the new one.`);
+            });
+
+            queue.push(() => {
+                nb.q1 = d;
+                nb.q2 = old.q1;
+                nb.q3 = old.q2;
+                setStepActive('nb', 4);
+                clearHighlights('nb');
+                updateFF('nb', 'q1', nb.q1, 'correct');
+                updateFF('nb', 'q2', nb.q2, 'correct');
+                updateFF('nb', 'q3', nb.q3, 'correct');
+                document.getElementById('nb-res4').textContent = `q1=${nb.q1} q2=${nb.q2} q3=${nb.q3}`;
+                document.getElementById('nb-res4').className = 'step-result correct';
+
+                const vnb = document.getElementById('nb-verdict');
+                vnb.className = 'verdict verdict-correct';
+                vnb.textContent = `Cycle ${nbCycle}: q1=${nb.q1} q2=${nb.q2} q3=${nb.q3} \u2714 Correct shift!`;
+
+                updateInsight(`Non-blocking defers all updates, so each flip-flop captures the <strong>previous</strong> value \u2014 exactly like real hardware.`);
+
+                nbAnimating = false;
+                renderQueue();
+            });
+
+            let i = 0;
+            function runNext() {
+                if (i < queue.length) {
+                    queue[i]();
+                    i++;
+                    setTimeout(runNext, 650);
+                }
+            }
+            runNext();
+        }
+
+        function resetAll() {
+            blCycle = 0;
+            nbCycle = 0;
+            blAnimating = false;
+            nbAnimating = false;
+            bl = { q1: 0, q2: 0, q3: 0 };
+            nb = { q1: 0, q2: 0, q3: 0 };
+
+            document.getElementById('bl-cycle').textContent = 'Cycle 0';
+            document.getElementById('nb-cycle').textContent = 'Cycle 0';
+
+            ['bl', 'nb'].forEach(prefix => {
+                clearTrace(prefix);
+                clearHighlights(prefix);
+                ['q1', 'q2', 'q3'].forEach(name => {
+                    updateFF(prefix, name, 0, null);
+                });
+                document.getElementById(`${prefix}-d`).textContent = '-';
+            });
+
+            document.getElementById('bl-verdict').className = 'verdict verdict-neutral';
+            document.getElementById('bl-verdict').textContent = 'Click "Clock Edge" to begin';
+            document.getElementById('nb-verdict').className = 'verdict verdict-neutral';
+            document.getElementById('nb-verdict').textContent = 'Click "Clock Edge" to begin';
+
+            updateInsight('Blocking <strong>=</strong> updates immediately.<br>Non-blocking <strong>&lt;=</strong> defers updates<br>until the end of the time step.');
+
+            renderQueue();
+        }
+
+        renderQueue();
+    </script>
+</body>
+</html>
