@@ -121,7 +121,7 @@ Some designers merge the next-state logic and the output logic into a single com
   end
 ```
 
-This builds the same hardware. In simulation it produces the identical trace, $P = 0\,0\,0\,1\,0\,0\,0\,0\,0\,1\,0\,0$. The line of defaults at the top of the block gives `next` and `P` a value before the `case` runs, so every path assigns both. It is still a Moore machine: $P$ is set only in the PULSE arm and does not depend on $L$. Combining the blocks is a matter of coding style. The three-block form is the better one to learn first, because each block is one drawing.
+This builds the same hardware. In simulation it produces the identical trace, $P = 0\,0\,0\,1\,0\,0\,0\,0\,0\,1\,0\,0$. The line of defaults at the top of the block gives `next` and `P` a value before the `case` runs, so every path assigns both. It is still a Moore machine: $P$ is set only in the PULSE arm and does not depend on $L$. The video misspeaks on this point: it describes the combined listing as the Mealy version. Combining the blocks does not change the kind of machine. It is a matter of coding style, and it works the same way for a Moore or a Mealy machine; the Mealy output is a separate change, described under the pitfalls below. The three-block form is the better one to learn first, because each block is one drawing.
 
 ## Pitfalls
 
