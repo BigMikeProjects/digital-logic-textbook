@@ -8,7 +8,13 @@
   --text-bg: #ffffff;
 }
 
-/* Code syntax highlighting overrides */
+/* JetBrains Mono ligatures turn Verilog's <= into a single ≤ glyph — show the
+   characters students actually type. */
+code, pre, kbd, samp, .font-mono {
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+}
+
 /* Code syntax highlighting overrides */
 .hljs {
   background: #f3f4f6 !important; /* gray-100 */
