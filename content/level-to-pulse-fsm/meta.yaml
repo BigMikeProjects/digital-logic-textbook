@@ -2,7 +2,7 @@ title: "Level-to-Pulse FSM"
 description: "A three-state Moore machine that turns a level into one clock-wide pulse per rising edge, worked from state diagram through K-maps to circuit, including why the minimal output equation is deliberately not used."
 chapter: sequential-logic
 section: fsm-applications
-order: 40302
+order: 40303
 
 graphics:
   01-video.youtube:

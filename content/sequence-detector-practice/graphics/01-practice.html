@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sequence Detector — Practice Set</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 24px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 logic-1 / revealed answer · amber #ffb74d inputs + hints · violet #b388ff fallback arcs
+       · navy #0d1b2a panels · logic-0 #7d9bb5 · right #66bb6a */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 72px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 12px; margin: 12px 0 2px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 11px; position: relative;
+        border: 2px solid #24384c; border-radius: 12px; padding: 9px 16px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 36px; height: 36px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 19px; font-weight: 700; }
+    .tab .tlabel { font-size: 18px; font-weight: 700; line-height: 1.15; }
+    .tab .tlabel small { display: block; font-size: 13px; font-weight: 500; color: #607d8b; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+    .tab .tdone { position: absolute; bottom: 5px; right: 12px; font-size: 13px; font-weight: 700; color: #607d8b; display: none; }
+    .tab.seen .tdone { display: block; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 10px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 10px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: center; gap: 12px; padding: 7px 14px 7px 18px;
+        border-bottom: 2px solid #24384c; white-space: nowrap; min-height: 46px; }
+    .panel-head .ph { font-size: 19px; font-weight: 700; color: #4fc3f7; }
+    .panel-head .ph .sn { color: #607d8b; margin-right: 6px; }
+    .panel-head .role { font-size: 15px; color: #607d8b; overflow: hidden; text-overflow: ellipsis; }
+    .panel-head .spacer { flex: 1; }
+
+    /* ---- buttons ---- */
+    .btn { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px; padding: 4px 15px;
+        color: #90a4ae; font-size: 15.5px; font-weight: 700; background: #0b1622; white-space: nowrap; transition: all .12s; }
+    .btn:hover { border-color: #90a4ae; color: #cfd8dc; }
+    .btn .k { font-family: 'Menlo','Consolas',monospace; color: #607d8b; font-size: 13px; margin-left: 7px; font-weight: 400; }
+    .btn.hint { border-color: #ffb74d; color: #ffb74d; background: rgba(255,183,77,0.08); }
+    .btn.hint .k { color: #8a6a3a; }
+    .btn.show { border-color: #4a6274; color: #90a4ae; }
+    .btn.final { border-color: #4fc3f7; color: #0d1b2a; background: #4fc3f7; }
+    .btn.final .k { color: #1d5f7d; }
+    .btn.used { opacity: 0.55; }
+    .btn.big { font-size: 17px; padding: 6px 18px; }
+    .btn.sm { font-size: 14px; padding: 2px 12px; }
+
+    /* ---- page 0: the method ---- */
+    .leadwrap { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .steps { display: flex; align-items: stretch; gap: 8px; }
+    .step { flex: 1; border: 2px solid #37506a; border-radius: 14px; background: #0b1622; padding: 12px 15px;
+        display: flex; flex-direction: column; gap: 7px; }
+    .step .sn { width: 34px; height: 34px; border: 2px solid #4fc3f7; border-radius: 9px; color: #4fc3f7;
+        font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step .st { font-size: 19px; font-weight: 700; color: #cfd8dc; }
+    .step .sd { font-size: 15.5px; color: #90a4ae; line-height: 1.45; flex: 1; }
+    .step .sd b { color: #cfd8dc; } .step .sd .mono { color: #4fc3f7; }
+    .arrowcell { align-self: center; color: #4a6274; font-size: 24px; flex: 0 0 auto; }
+    .leadrow { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .conv { flex: 1.15; }
+    .convbody { padding: 12px 22px; display: flex; flex-direction: column; gap: 9px; font-size: 16.5px; color: #b0bec5; line-height: 1.42; }
+    .convbody b { color: #cfd8dc; } .convbody .mono { color: #4fc3f7; }
+    .convbody li { margin-left: 20px; margin-bottom: 4px; }
+    .helpkey { flex: 1; }
+    .helpbody { padding: 12px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .hrow { display: flex; align-items: center; gap: 14px; font-size: 16px; color: #b0bec5; line-height: 1.35; }
+    .hrow .btn { flex: 0 0 196px; text-align: center; cursor: default; }
+    .hrow b { color: #cfd8dc; }
+    .cards { display: flex; gap: 12px; }
+    .card { flex: 1; cursor: pointer; border: 2px solid #37506a; border-radius: 14px; background: #0b1622; padding: 10px 16px;
+        display: flex; flex-direction: column; gap: 3px; transition: all .12s; }
+    .card:hover { border-color: #4fc3f7; background: rgba(79,195,247,0.06); }
+    .card .cn { font-size: 14px; color: #607d8b; font-weight: 700; letter-spacing: .5px; }
+    .card .ct { font-size: 19px; color: #cfd8dc; font-weight: 700; }
+    .card .cf { font-size: 14.5px; color: #90a4ae; }
+    .card .cg { align-self: flex-start; margin-top: 4px; font-size: 13px; color: #ffb74d; border: 1px solid #6a5324; border-radius: 999px; padding: 1px 10px; }
+
+    /* ---- problem pages ---- */
+    .main { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .probpanel { flex: 0 0 600px; }
+    .probbody { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 18px 12px; gap: 9px; }
+    .story { font-size: 16.5px; color: #cfd8dc; line-height: 1.45; }
+    .story b { color: #ffb74d; } .story .cy { color: #4fc3f7; font-weight: 700; }
+    .story .patt { font-family: 'Menlo','Consolas',monospace; color: #4fc3f7; font-weight: 700; font-size: 18px; }
+    .given { font-size: 14px; color: #607d8b; }
+    .strm { border-collapse: collapse; font-family: 'Menlo','Consolas',monospace; }
+    .strm td { border: 2px solid #24384c; width: 32px; height: 28px; text-align: center; font-size: 16px; color: #ffb74d; font-weight: 700; }
+    .strm td.lab { width: auto; padding: 0 8px; font-family: 'Segoe UI',sans-serif; font-size: 13px; color: #607d8b; font-weight: 700; border-color: #24384c; }
+    .strm tr.ck td { color: #607d8b; font-size: 12px; font-weight: 400; height: 22px; }
+    .sdbox { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+    .sdbox svg { width: 100%; height: 100%; display: block; }
+    .sdbox .ph0 { position: absolute; inset: 6px; display: flex; align-items: center; justify-content: center; text-align: center;
+        color: #37506a; font-size: 16px; font-style: italic; border: 2px dashed #24384c; border-radius: 10px; padding: 20px; }
+    .sdbox.drawn .ph0 { display: none; }
+    .sdbox:not(.drawn) svg { visibility: hidden; }
+    .find { font-size: 15.5px; color: #90a4ae; border-top: 2px solid #24384c; padding-top: 8px; line-height: 1.4; }
+    .find b { color: #cfd8dc; }
+
+    .sd-node .sdc { fill: #0d1b2a; stroke: #4a6274; stroke-width: 3; }
+    .sd-node.z1 .sdc { stroke: #4fc3f7; }
+    .sd-node .sdname { fill: #cfd8dc; font-family: 'Segoe UI',sans-serif; font-weight: 700; text-anchor: middle; font-size: 21px; }
+    .sd-node .sdz { fill: #607d8b; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 13px; }
+    .sd-node.z1 .sdz { fill: #4fc3f7; font-weight: 700; }
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 2.6; }
+    .arc.fb { stroke: #b388ff; }
+    .arc-l { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; font-size: 18px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #0d1b2a; stroke-width: 7px; stroke-linejoin: round; }
+    .resetarrow { fill: none; stroke: #607d8b; stroke-width: 2.4; }
+    .resetlab { fill: #607d8b; font-family: 'Segoe UI',sans-serif; font-size: 14px; }
+    .sdkey { fill: #607d8b; font-family: 'Segoe UI',sans-serif; font-size: 13.5px; }
+
+    .work { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+    .rowA { flex: 0 0 196px; display: flex; gap: 10px; min-height: 0; }
+    .rowA .c0 { flex: 1; } .rowA .c1 { flex: 1.5; }
+    .rowB { flex: 0 0 180px; display: flex; min-height: 0; }
+    .rowB .scard { flex: 1; }
+    .rowC { flex: 1; display: flex; gap: 10px; min-height: 0; }
+    .rowC .c3 { flex: 1.35; min-width: 0; } .rowC .c4 { flex: 1; min-width: 0; }
+    .scard .panel-head { padding: 6px 10px 6px 16px; min-height: 44px; gap: 8px; }
+    .scard .ph { font-size: 18px; }
+    .scard.open { border-color: #2c6a88; }
+    .sbody { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .blank { flex: 1; display: flex; align-items: center; justify-content: center; color: #37506a; font-size: 16px; font-style: italic;
+        margin: 8px; border: 2px dashed #24384c; border-radius: 10px; }
+    .facts { padding: 8px 16px; display: grid; grid-template-columns: 1fr; gap: 4px; align-content: center; flex: 1; font-size: 15.5px; color: #cfd8dc; line-height: 1.35; }
+    .facts .fk { display: inline-block; min-width: 82px; color: #607d8b; font-size: 13.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+    .facts .am { color: #ffb74d; } .facts .cyb { color: #4fc3f7; }
+    .tblwrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 6px 10px; }
+    .htab { border-collapse: collapse; font-family: 'Menlo','Consolas',monospace; font-size: 16px; }
+    .htab th { text-align: right; padding: 0 12px 0 4px; font-family: 'Segoe UI',sans-serif; font-size: 13px; color: #607d8b; font-weight: 700; white-space: nowrap; }
+    .htab td { border: 2px solid #24384c; min-width: 30px; height: 28px; text-align: center; padding: 0 6px; color: #cfd8dc; }
+    .htab td.st { font-family: 'Segoe UI',sans-serif; font-weight: 700; }
+    .htab td.v1 { color: #4fc3f7; font-weight: 700; } .htab td.v0 { color: #5c7189; }
+    .htab td.xin { color: #ffb74d; font-weight: 700; }
+    .htab td.cnt { color: #cfd8dc; }
+    .htab td.hit { color: #0d1b2a; background: #4fc3f7; font-weight: 700; }
+    .htab td.dash { color: #37506a; }
+    .htab tr.ck td { border: none; color: #607d8b; font-size: 12px; height: 18px; }
+    .ltab { border-collapse: collapse; font-size: 15px; }
+    .ltab th { border-bottom: 2px solid #37506a; padding: 3px 10px; color: #4fc3f7; font-size: 13.5px; text-align: left; }
+    .ltab td { border-bottom: 1px solid #24384c; padding: 2px 9px; color: #cfd8dc; height: 29px; white-space: nowrap; }
+    .ltab td.st { font-weight: 700; }
+    .ltab td.seen { font-family: 'Menlo','Consolas',monospace; color: #90a4ae; }
+    .ltab .fwd { color: #cfd8dc; } .ltab .fbk { color: #b388ff; }
+    .ltab .why { color: #607d8b; font-size: 13px; }
+    .stt { border-collapse: collapse; font-family: 'Menlo','Consolas',monospace; font-size: 17px; }
+    .stt th, .stt td { border: 2px solid #37506a; padding: 0 12px; text-align: center; color: #e0e0e0; height: 28px; }
+    .stt th { background: rgba(79,195,247,0.10); color: #4fc3f7; font-size: 13.5px; font-weight: 700; font-family: 'Segoe UI',sans-serif; }
+    .stt th.in { color: #ffb74d; }
+    .stt td.st { font-family: 'Segoe UI',sans-serif; font-weight: 700; color: #cfd8dc; }
+    .stt td.v1 { color: #4fc3f7; font-weight: 700; } .stt td.v0 { color: #5c7189; }
+    .stt td.ch { color: #b388ff; font-weight: 700; }
+    .c4wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 6px 12px; }
+    .ansnote { font-size: 14px; color: #b0bec5; line-height: 1.5; border-left: 3px solid #37506a; padding-left: 12px; align-self: stretch; }
+    .ansnote b { color: #cfd8dc; }
+
+    .helpbar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; padding: 8px 14px; min-height: 58px; }
+    .hintbox { flex: 1; min-width: 0; font-size: 16px; color: #cfd8dc; line-height: 1.35; border-left: 3px solid #6a5324; padding-left: 12px; }
+    .hintbox .hl { color: #ffb74d; font-weight: 700; margin-right: 6px; }
+    .hintbox .dim { color: #607d8b; }
+    .hintbox .mono { color: #4fc3f7; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 8px; height: 30px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 15px; white-space: nowrap; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        margin: 0 2px; font-size: 14px; font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.cy { color: #4fc3f7; border-color: #2c6a88; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <g font-family="Menlo,monospace" font-size="24" font-weight="700" text-anchor="middle">
+                    <text x="22" y="46" fill="#5c7189">0</text><text x="50" y="46" fill="#ffb74d">1</text><text x="78" y="46" fill="#ffb74d">0</text><text x="106" y="46" fill="#ffb74d">1</text>
+                </g>
+                <path d="M 36 58 L 120 58" stroke="#ffb74d" stroke-width="3"/>
+                <path d="M 136 40 L 170 40" stroke="#8fa8bd" stroke-width="2.6"/><path d="M 166 33 L 180 40 L 166 47 Z" fill="#8fa8bd"/>
+                <circle cx="216" cy="44" r="30" fill="#0d1b2a" stroke="#4fc3f7" stroke-width="3"/>
+                <text x="216" y="51" font-family="'Segoe UI',sans-serif" font-size="20" font-weight="700" fill="#cfd8dc" text-anchor="middle">S3</text>
+                <text x="216" y="95" font-family="Menlo,monospace" font-size="15" fill="#4fc3f7" text-anchor="middle">Z = 1</text>
+                <text x="78" y="88" font-family="'Segoe UI',sans-serif" font-size="14" fill="#90a4ae" text-anchor="middle">3 digits correct</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Sequence Detector <span class="sub">&mdash; practice set</span></h1>
+            <div class="subtitle">Five Moore detectors &middot; name each state by how many digits are correct, trace a stream, then draw the diagram and the state table</div>
+        </div>
+        <div class="page-count">Page <b id="pcNum">0</b> of 0&ndash;5</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip"></div>
+    <div class="stage" id="stage"></div>
+
+    <div class="footer">
+        <div class="progress" id="progress"></div>
+        <div class="controls">
+            <span class="k">0</span>&ndash;<span class="k">5</span> page
+            &middot; each step card: <span class="k amber">Hint</span> a nudge &middot; <span class="k">Show</span> the worked step
+            &middot; <span class="k amber">H</span> next hint, in order
+            &middot; <span class="k cy">F</span> final answer
+            &middot; <span class="k">R</span> &#8634; clear this problem
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+    const SVGNS = 'http://www.w3.org/2000/svg';
+
+    // ============ THE FIVE DETECTORS (source of truth) ============
+    // Each problem is a pattern, an overlap rule and an input stream. Everything else (the states, the next
+    // states, the trace, the diagram, the state table) is DERIVED below with the topic's rule: a state is the
+    // number of digits correct toward the sequence, and a wrong bit keeps the longest ending of the bits seen
+    // that is also a beginning of the pattern. Problems 1 and 2 share a stream so they can be compared.
+    const PROBS = [
+        {
+            title: '1 0 1, overlapping', tag: 'Warm-up', pat: '101', overlap: true,
+            stream: '01101111010110',
+            hints: [
+                'Three digits, so four states: S0 to S3, one for each count from 0 to 3. Z is 1 only in S3.',
+                'Write the count after each bit. Once 1 0 1 is complete, a 0 makes 1 0 1 0, which ends in 1 0: the count drops to 2, not 0.',
+                'From S3 (1 0 1), a 0 gives 1 0 1 0. Its longest ending that starts the pattern is 1 0, so that arc goes to S2.',
+            ],
+            claims: [[3, 0, 2]],
+        },
+        {
+            title: '1 0 1, no overlap', tag: 'No overlap', pat: '101', overlap: false,
+            stream: '01101111010110',
+            hints: [
+                'The same four states as Problem 1: S0 to S3, with Z = 1 only in S3.',
+                'After a detection the matched bits are used up, so the next count starts from the new bit alone.',
+                'Only S3&rsquo;s arcs can differ from Problem 1. After a match, a 0 starts nothing and a 1 is a fresh first digit.',
+            ],
+            claims: [[3, 0, 0], [3, 1, 1]],
+        },
+        {
+            title: '0 0 1 1', tag: 'Self-loop', pat: '0011', overlap: true,
+            stream: '0001111110011010',
+            hints: [
+                'Four digits, so five states: S0 to S4. Z is 1 only in S4.',
+                'A third 0 in a row still leaves 0 0 as the last two bits, so the count stays at 2.',
+                'From S2 (0 0), a 0 gives 0 0 0, which ends in 0 0: S2 loops back to itself. From S1 (0), a 1 gives 0 1, and no ending of that starts 0 0 1 1.',
+            ],
+            claims: [[2, 0, 2], [1, 1, 0]],
+        },
+        {
+            title: '1 1 0 1', tag: 'Partial match', pat: '1101', overlap: true,
+            stream: '1011110111011000',
+            hints: [
+                'Four digits, so five states: S0 to S4. Z is 1 only in S4.',
+                'A third 1 in a row still ends in 1 1, so the count stays at 2. After a match, the final 1 can start the next one.',
+                'From S4 (1 1 0 1), a 1 gives 1 1 0 1 1, which ends in 1 1, so that arc goes to S2. From S3 (1 1 0), a 0 breaks everything.',
+            ],
+            claims: [[2, 1, 2], [4, 1, 2], [3, 0, 0]],
+        },
+        {
+            title: '1 0 1 1 0', tag: 'Five bits', pat: '10110', overlap: true,
+            stream: '1011011011101001',
+            hints: [
+                'Five digits, so six states: S0 to S5. Z is 1 only in S5.',
+                'After 1 0 1 1 0 is complete, a 1 makes the last bits 1 0 1: three digits toward the next match.',
+                'Try the endings longest first. From S3 (1 0 1), a 0 gives 1 0 1 0, which ends in 1 0: go to S2. From S5 (1 0 1 1 0), a 1 gives an ending of 1 0 1: go to S3.',
+            ],
+            claims: [[3, 0, 2], [5, 1, 3], [4, 1, 1]],
+        },
+    ];
+    const NPROB = PROBS.length;
+
+    // ============ DERIVED FACTS (computed, never typed) ============
+    const spaced = s => s.split('').join(' ');
+    // next state from count k on bit b, and the bits it stands for
+    function nextOf(pat, overlap, k, b) {
+        const n = pat.length;
+        let seen = (k < n ? pat.slice(0, k) : pat) + b;
+        if (k === n && !overlap) seen = String(b);
+        for (let L = Math.min(seen.length, n); L >= 0; L--) if (seen.endsWith(pat.slice(0, L))) return { to: L, seen };
+        return { to: 0, seen };
+    }
+    function derive(P) {
+        const n = P.pat.length;
+        P.n = n; P.ns = []; P.why = [];
+        for (let k = 0; k <= n; k++) {
+            P.ns.push([]); P.why.push([]);
+            for (const b of [0, 1]) { const r = nextOf(P.pat, P.overlap, k, b); P.ns[k].push(r.to); P.why[k].push(r.seen); }
+        }
+        // trace: count after each bit, Z during each clock (1 in the clock after the count reaches n)
+        P.cnt = []; let s = 0;
+        for (const ch of P.stream) { s = P.ns[s][+ch]; P.cnt.push(s); }
+        P.z = [0].concat(P.cnt.map(c => c === n ? 1 : 0));
+        P.hits = P.cnt.map((c, t) => c === n ? t : -1).filter(t => t >= 0);
+        // what the other overlap rule would change (only S_n's row can differ)
+        const alt = [0, 1].map(b => nextOf(P.pat, !P.overlap, n, b).to);
+        P.altDiff = [0, 1].filter(b => alt[b] !== P.ns[n][b]).map(b => ({ b, was: P.ns[n][b], alt: alt[b] }));
+        P.altHits = (() => { let q = 0, h = 0; for (const ch of P.stream) { q = q === n ? nextOf(P.pat, !P.overlap, n, +ch).to : P.ns[q][+ch]; if (q === n) h++; } return h; })();
+    }
+    PROBS.forEach(derive);
+    const seenOf = (P, k) => k === 0 ? '—' : spaced(P.pat.slice(0, k));
+
+    // ============ STATE DIAGRAM (generated; drawn when Step 3 is shown) ============
+    // States sit on a line. A correct digit steps right (straight arc), a repeated count is a self-loop above,
+    // and every fallback curves underneath, deeper the farther back it goes.
+    const R = 38;
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+    function buildDiagram(svg, P, pid) {
+        const N = P.n + 1, W = 640, x0 = 104, x1 = W - 48, y = 140;
+        const X = k => x0 + (x1 - x0) * k / (N - 1);
+        const defs = el('defs', {}, svg);
+        const mk = (id, d, fill) => { const m = el('marker', { id, markerWidth: 18, markerHeight: 14, refX: 13, refY: 6, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs); el('path', { d, fill }, m); };
+        mk('ah' + pid, 'M0,0 L15,6 L0,12 Z', '#8fa8bd'); mk('ahv' + pid, 'M0,0 L15,6 L0,12 Z', '#b388ff'); mk('ahr' + pid, 'M0,0 L15,6 L0,12 Z', '#607d8b');
+        const labels = [];
+        // fallback arcs into the same target are spread along the bottom of its circle
+        const into = {};
+        for (let k = 0; k < N; k++) for (const b of [0, 1]) { const t = P.ns[k][b]; if (t < k) (into[t] = into[t] || []).push(k); }
+        Object.values(into).forEach(a => a.sort((p, q) => p - q));
+        for (let k = 0; k < N; k++) for (const b of [0, 1]) {
+            const t = P.ns[k][b], A = X(k), B = X(t);
+            let d, lx, ly, cls = 'arc', mid = 'ah';
+            if (t === k + 1) {
+                d = `M${A + R},${y} L${B - R - 1},${y}`; lx = (A + B) / 2; ly = y - 10;
+            } else if (t === k) {
+                const a1 = -Math.PI / 2 - 0.5, a2 = -Math.PI / 2 + 0.5;
+                d = `M${(A + R * Math.cos(a1)).toFixed(1)},${(y + R * Math.sin(a1)).toFixed(1)} C${(A - 46).toFixed(1)},${y - R - 82} ${(A + 46).toFixed(1)},${y - R - 82} ${(A + R * Math.cos(a2)).toFixed(1)},${(y + R * Math.sin(a2)).toFixed(1)}`;
+                lx = A; ly = y - R - 66;
+            } else {
+                cls = 'arc fb'; mid = 'ahv';
+                const span = k - t, depth = 40 + 58 * span;
+                // nest the fallbacks: into one target, the shorter arc lands farther right (inside the longer one);
+                // out of one source, the shorter arc leaves farther left
+                const list = into[t], idx = list.indexOf(k), m = list.length;
+                const ea = Math.PI / 2 - 1.05 + (m > 1 ? 0.8 * idx / (m - 1) : 0.45);
+                const outs = [0, 1].map(bb => P.ns[k][bb]).filter(tt => tt < k), longer = outs.length > 1 && t === Math.min(...outs);
+                const sa = Math.PI / 2 + (outs.length > 1 ? (longer ? 0.3 : 0.95) : 0.55);
+                const p0 = { x: A + R * Math.cos(sa), y: y + R * Math.sin(sa) }, p2 = { x: B + (R + 1) * Math.cos(ea), y: y + (R + 1) * Math.sin(ea) };
+                const c1 = { x: p0.x - 8, y: y + R + depth }, c2 = { x: p2.x + 8, y: y + R + depth };
+                d = `M${p0.x.toFixed(1)},${p0.y.toFixed(1)} C${c1.x.toFixed(1)},${c1.y.toFixed(1)} ${c2.x.toFixed(1)},${c2.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+                lx = 0.125 * p0.x + 0.375 * c1.x + 0.375 * c2.x + 0.125 * p2.x; ly = 0.125 * p0.y + 0.375 * c1.y + 0.375 * c2.y + 0.125 * p2.y + 6;
+            }
+            el('path', { class: cls, d, 'marker-end': `url(#${mid}${pid})`, 'data-from': k, 'data-to': t, 'data-x': b }, svg);
+            labels.push({ lx, ly, b });
+        }
+        const rx = X(0);
+        el('path', { class: 'resetarrow', d: `M${rx - R - 36},${y - 46} L${(rx - R * 0.72).toFixed(1)},${(y - R * 0.69).toFixed(1)}`, 'marker-end': `url(#ahr${pid})` }, svg);
+        el('text', { class: 'resetlab', x: rx - R - 40, y: y - 54 }, svg).textContent = 'reset';
+        for (let k = 0; k < N; k++) {
+            const g = el('g', { class: 'sd-node' + (k === P.n ? ' z1' : '') }, svg);
+            el('circle', { class: 'sdc', cx: X(k), cy: y, r: R }, g);
+            el('text', { class: 'sdname', x: X(k), y: y + 3 }, g).textContent = 'S' + k;
+            el('text', { class: 'sdz', x: X(k), y: y + 22 }, g).textContent = 'Z=' + (k === P.n ? 1 : 0);
+        }
+        for (const { lx, ly, b } of labels) el('text', { class: 'arc-l', x: lx.toFixed(1), y: ly.toFixed(1) }, svg).textContent = String(b);
+        el('text', { class: 'sdkey', x: 10, y: 455 }, svg).textContent = 'arc label = x · violet arcs fall back to an earlier count';
+    }
+
+    // ============ STEP CARDS ============
+    const STEPS = [
+        { n: 0, title: 'Understand the problem' },
+        { n: 1, title: 'Name the states' },
+        { n: 2, title: 'Trace the stream' },
+        { n: 3, title: 'Draw the state diagram' },
+        { n: 4, title: 'Write the state table' },
+    ];
+    function stepHint(P, n) {
+        if (n === 0) return `Note the pattern, its length, and whether overlaps are allowed. Z is a <b>Moore</b> output: it is 1 in the state for all ${P.n} digits correct, one clock after the last digit arrives.`;
+        if (n === 4) return 'Copy each state&rsquo;s two arcs into one row: the next state on x = 0, the next state on x = 1, and Z for that state.';
+        return P.hints[n - 1];
+    }
+    const blankST = () => ({ hint: [false, false, false, false, false], shown: [false, false, false, false, false], lastHint: -1 });
+    const ST = PROBS.map(blankST);
+    let page = 0;
+    function nextHelp(pi) {
+        const s = ST[pi];
+        for (let n = 0; n < 5; n++) { if (!s.hint[n] && !s.shown[n]) return { kind: 'hint', n }; if (!s.shown[n]) return { kind: 'show', n }; }
+        return null;
+    }
+
+    // ============ PAGE BUILD ============
+    const stage = document.getElementById('stage');
+    const tabstrip = document.getElementById('tabstrip'), progress = document.getElementById('progress');
+    const TABS = [{ n: 0, label: 'How to Work a Problem', small: 'the steps + the buttons' }].concat(PROBS.map((P, i) => ({ n: i + 1, label: P.title, small: P.tag })));
+    TABS.forEach(t => {
+        const d = document.createElement('div'); d.className = 'tab'; d.dataset.page = t.n;
+        d.innerHTML = `<div class="tnum">${t.n}</div><div class="tlabel">${t.label}<small>${t.small}</small></div><div class="tdone"></div>`;
+        tabstrip.appendChild(d);
+        const dot = document.createElement('div'); dot.className = 'dot'; dot.dataset.dot = t.n; progress.appendChild(dot);
+    });
+    const pages = [];
+    function mkPage(id, inner) { const p = document.createElement('div'); p.className = 'page'; p.id = 'p' + id; p.innerHTML = inner; stage.appendChild(p); pages.push(p); return p; }
+
+    mkPage(0, `
+      <div class="leadwrap">
+        <div class="steps">
+          <div class="step"><div class="sn">0</div><div class="st">Understand the problem</div>
+            <div class="sd">Read the <b>pattern</b> and its length <b>n</b>, and whether <b>overlaps</b> are allowed. Every detector here is <b>Moore</b>: Z belongs to a state, so it is 1 for the clock <b>after</b> the last digit arrives.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">1</div><div class="st">Name the states</div>
+            <div class="sd">A state is <b>how many digits are correct toward the sequence</b>. A pattern of n bits needs <b>n + 1</b> states, S0 to Sn. Write down the bits each one stands for. Z = 1 only in Sn.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">2</div><div class="st">Trace the stream</div>
+            <div class="sd">Under each bit write the <b>digits correct after it</b>. Z is 1 in the clock after the count reaches n. Tracing first shows you the arcs before you draw them.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">3</div><div class="st">Draw the state diagram</div>
+            <div class="sd">From each state ask what a <span class="mono">0</span> does and what a <span class="mono">1</span> does. The next digit moves one state right. A wrong bit goes to the <b>longest ending of the bits seen that is also a beginning of the pattern</b>.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">4</div><div class="st">Write the state table</div>
+            <div class="sd">One row per state: next state on x = 0, next state on x = 1, and Z. Every state has exactly two arcs out, so every row is full.</div></div>
+        </div>
+        <div class="leadrow">
+          <div class="panel conv"><div class="panel-head"><div class="ph">Conventions used in every problem</div></div>
+            <div class="convbody">
+              <ul>
+                <li><b>Serial input x</b>, one bit per clock, and a <b>Moore</b> output <b>Z</b>. The machine starts in <b>S0</b>.</li>
+                <li><b>States are named by the count</b>, so the answer is unique: S2 always means two digits correct. That is the method of <b data-topic="sequence-detector">Sequence Detector</b>.</li>
+                <li><b>The trace</b> lists the digits correct <b>after</b> each bit, as on the review slides, and Z one column later.</li>
+                <li><b>Overlapping</b>: the end of one match may start the next. <b>Non-overlapping</b>: after a detection the bits are used up and only the new bit counts. The two differ only in the arcs leaving Sn, and sometimes not even there.</li>
+                <li>From the state table, a <b data-topic="binary-state-assignment-practice">binary</b> or <b data-topic="one-hot-state-assignment-practice">one-hot</b> assignment finishes the design, as in those practice sets.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel helpkey"><div class="panel-head"><div class="ph">Getting help</div><div class="role">every step card starts empty &mdash; work it on paper first</div></div>
+            <div class="helpbody">
+              <div class="hrow"><span class="btn hint">Hint</span><div>On each step card: a nudge for that step, shown in the bar at the bottom. Nothing is filled in.</div></div>
+              <div class="hrow"><span class="btn show">Show</span><div>On each step card: the worked step &mdash; the states, the traced stream, every arc with its reason (and the diagram, drawn on the left), or the state table.</div></div>
+              <div class="hrow"><span class="btn hint">Next hint<span class="k">H</span></span><div>Walks through every hint and step in order, one press at a time, from step 0 to step 4.</div></div>
+              <div class="hrow"><span class="btn final">Final answer<span class="k">F</span></span><div>Shows every step at once, ending with the state table and what the other overlap rule would change.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="cards">${PROBS.map((P, i) => `<div class="card" data-goto="${i + 1}"><div class="cn">PROBLEM ${i + 1}</div><div class="ct">Detect ${spaced(P.pat)}</div><div class="cf">${P.overlap ? 'overlapping' : 'non-overlapping'} · ${P.n + 1} states</div><div class="cg">${P.tag}</div></div>`).join('')}</div>
+      </div>`);
+
+    const cardHTML = (id, n, cls) => `
+        <div class="panel scard ${cls}" data-step="${n}">
+          <div class="panel-head"><div class="ph"><span class="sn">Step ${n}</span>${STEPS[n].title}</div><div class="spacer"></div>
+            <span class="btn hint sm" data-act="hint" data-n="${n}">Hint</span><span class="btn show sm" data-act="show" data-n="${n}">Show</span></div>
+          <div class="sbody" id="s${id}-${n}"></div>
+        </div>`;
+    function streamHTML(P) {
+        const L = P.stream.length;
+        let ck = '<tr class="ck"><td class="lab">clock</td>', xr = '<tr><td class="lab">x</td>';
+        for (let t = 0; t < L; t++) { ck += `<td>${t + 1}</td>`; xr += `<td>${P.stream[t]}</td>`; }
+        return `<table class="strm">${ck}</tr>${xr}</tr></table>`;
+    }
+    function probPage(pi) {
+        const P = PROBS[pi], id = pi + 1;
+        const p = mkPage(id, `
+          <div class="main">
+            <div class="panel probpanel">
+              <div class="panel-head"><div class="ph"><span class="sn">Problem ${id}</span>Detect ${spaced(P.pat)}</div><div class="spacer"></div><div class="role">Moore · ${P.overlap ? 'overlapping' : 'non-overlapping'}</div></div>
+              <div class="probbody">
+                <div class="story">Design a <b>Moore</b> sequence detector with serial input <b>x</b> and output <span class="cy">Z</span>. Z = 1 for one clock after the sequence <span class="patt">${spaced(P.pat)}</span> has been received. Overlapping sequences are <b>${P.overlap ? 'allowed' : 'not allowed'}</b>. Name each state by how many digits are correct toward the sequence.</div>
+                <div class="given">Input stream to trace in Step 2:</div>
+                ${streamHTML(P)}
+                <div class="sdbox" id="sdb${id}"><div class="ph0">Draw the state diagram on paper.<br>It appears here when Step 3 is shown.</div><svg viewBox="0 0 640 470" id="sd${id}"></svg></div>
+                <div class="find">Find the <b>states</b>, the <b>trace</b> of the stream, the <b>state diagram</b> and the <b>state table</b>.</div>
+              </div>
+            </div>
+            <div class="work">
+              <div class="rowA">${cardHTML(id, 0, 'c0')}${cardHTML(id, 1, 'c1')}</div>
+              <div class="rowB">${cardHTML(id, 2, 'c2')}</div>
+              <div class="rowC">${cardHTML(id, 3, 'c3')}${cardHTML(id, 4, 'c4')}</div>
+            </div>
+          </div>
+          <div class="helpbar">
+            <span class="btn hint big" data-act="next">Next hint<span class="k">H</span></span>
+            <div class="hintbox" id="hint${id}"></div>
+            <span class="btn final big" data-act="final">Final answer<span class="k">F</span></span>
+            <span class="btn big" data-act="reset">&#8634; Clear<span class="k">R</span></span>
+          </div>`);
+        buildDiagram(p.querySelector('#sd' + id), P, id);
+        p.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => act(pi, b.dataset.act, b.dataset.n === undefined ? undefined : +b.dataset.n)));
+    }
+    PROBS.forEach((P, i) => probPage(i));
+
+    // ============ WORKED STEPS (revealed by Show) ============
+    function step0HTML(P) {
+        return `<div class="facts">
+            <div><span class="fk">Pattern</span><b class="cyb">${spaced(P.pat)}</b> &nbsp;(n = ${P.n} digits)</div>
+            <div><span class="fk">Overlap</span>${P.overlap ? 'allowed: the end of one match may start the next' : 'not allowed: after a match, start over from the new bit'}</div>
+            <div><span class="fk">Output</span><b class="cyb">Z</b>, Moore: 1 in S${P.n}, the clock after the last digit</div>
+            <div><span class="fk">Find</span>states · trace · diagram · state table</div></div>`;
+    }
+    function step1HTML(P) {
+        const ks = [...Array(P.n + 1).keys()];
+        return `<div class="tblwrap"><table class="htab">
+            <tr><th>state</th>${ks.map(k => `<td class="st">S${k}</td>`).join('')}</tr>
+            <tr><th>digits correct</th>${ks.map(k => `<td>${k}</td>`).join('')}</tr>
+            <tr><th>bits it stands for</th>${ks.map(k => `<td>${seenOf(P, k)}</td>`).join('')}</tr>
+            <tr><th>Z</th>${ks.map(k => `<td class="v${k === P.n ? 1 : 0}">${k === P.n ? 1 : 0}</td>`).join('')}</tr></table></div>`;
+    }
+    function step2HTML(P) {
+        const L = P.stream.length;
+        let ck = '<tr class="ck"><th></th>', xr = '<tr><th>x</th>', cr = '<tr><th>digits correct</th>', zr = '<tr><th>Z</th>';
+        for (let t = 0; t <= L; t++) {
+            ck += `<td>${t + 1}</td>`;
+            xr += t < L ? `<td class="xin">${P.stream[t]}</td>` : '<td class="dash">–</td>';
+            cr += t < L ? `<td class="${P.cnt[t] === P.n ? 'hit' : 'cnt'}">${P.cnt[t]}</td>` : '<td class="dash">–</td>';
+            zr += `<td class="v${P.z[t]}">${P.z[t]}</td>`;
+        }
+        return `<div class="tblwrap"><table class="htab">${ck}</tr>${xr}</tr>${cr}</tr>${zr}</tr></table></div>`;
+    }
+    function arcText(P, k, b) {
+        const t = P.ns[k][b], seen = P.why[k][b];
+        if (t === k + 1) return `<span class="fwd">${b} &rarr; S${t}</span> <span class="why">next digit</span>`;
+        const reason = (k === P.n && !P.overlap) ? `match used up${t ? ': a new first digit' : ''}`
+            : t === 0 ? (k === 0 ? 'starts nothing' : `${spaced(seen)}: no ending starts the pattern`) : `${spaced(seen)} ends in ${spaced(P.pat.slice(0, t))}`;
+        return `<span class="${t === k ? 'fwd' : 'fbk'}">${b} &rarr; S${t}</span> <span class="why">${reason}</span>`;
+    }
+    function step3HTML(P) {
+        let h = `<table class="ltab"><tr><th>state</th><th>seen</th><th>on x = 0</th><th>on x = 1</th></tr>`;
+        for (let k = 0; k <= P.n; k++) h += `<tr><td class="st">S${k}</td><td class="seen">${seenOf(P, k)}</td><td>${arcText(P, k, 0)}</td><td>${arcText(P, k, 1)}</td></tr>`;
+        return `<div class="tblwrap">${h}</table></div>`;
+    }
+    function altNote(P) {
+        const other = P.overlap ? 'non-overlapping' : 'overlapping';
+        if (!P.altDiff.length) return `<b>The ${other} version is identical.</b> No ending of ${spaced(P.pat)} is a beginning of it, so a finished match leaves nothing to reuse, and the overlap rule changes no arc.`;
+        const ch = P.altDiff.map(d => `S${P.n} on x = ${d.b} would go to <b>S${d.alt}</b> instead of S${d.was}`).join(', and ');
+        return `<b>The ${other} version</b> changes only S${P.n}&rsquo;s row: ${ch}. On this stream it detects <b>${P.altHits}</b> time${P.altHits === 1 ? '' : 's'} instead of ${P.hits.length}.`;
+    }
+    function step4HTML(P) {
+        let h = `<table class="stt"><tr><th>present state</th><th class="in">next, x = 0</th><th class="in">next, x = 1</th><th>Z</th></tr>`;
+        for (let k = 0; k <= P.n; k++) {
+            const c = b => (k === P.n && P.altDiff.some(d => d.b === b)) ? 'ch' : '';
+            h += `<tr><td class="st">S${k}</td><td class="${c(0)}">S${P.ns[k][0]}</td><td class="${c(1)}">S${P.ns[k][1]}</td><td class="v${k === P.n ? 1 : 0}">${k === P.n ? 1 : 0}</td></tr>`;
+        }
+        return `<div class="c4wrap">${h}</table><div class="ansnote">${altNote(P)}</div></div>`;
+    }
+    const STEP_HTML = [step0HTML, step1HTML, step2HTML, step3HTML, step4HTML];
+
+    // ============ RENDER ONE PROBLEM ============
+    function renderProblem(pi) {
+        const P = PROBS[pi], s = ST[pi], id = pi + 1, p = document.getElementById('p' + id);
+        for (let n = 0; n < 5; n++) {
+            const body = document.getElementById(`s${id}-${n}`), card = body.closest('.scard');
+            card.classList.toggle('open', s.shown[n]);
+            body.innerHTML = s.shown[n] ? STEP_HTML[n](P) : `<div class="blank">Work step ${n} on paper.</div>`;
+            card.querySelector('[data-act="hint"]').classList.toggle('used', s.hint[n]);
+            card.querySelector('[data-act="show"]').classList.toggle('used', s.shown[n]);
+        }
+        p.querySelector('#sdb' + id).classList.toggle('drawn', s.shown[3]);
+        const hb = document.getElementById('hint' + id), nx = nextHelp(pi);
+        const upNext = nx ? `<span class="dim">Next hint: ${nx.kind === 'hint' ? 'a nudge for' : 'the worked'} step ${nx.n}.</span>` : `<span class="dim">Every step is showing.</span>`;
+        hb.innerHTML = s.lastHint >= 0 ? `<span class="hl">Step ${s.lastHint} hint</span>${stepHint(P, s.lastHint)}` :
+            `<span class="dim">Every step card starts empty. Work each step on paper, then use a card&rsquo;s <b style="color:#ffb74d">Hint</b> or <b style="color:#90a4ae">Show</b>.</span> ${upNext}`;
+        p.querySelector('[data-act="next"]').classList.toggle('used', !nx);
+        p.querySelector('[data-act="final"]').classList.toggle('used', s.shown[4]);
+        renderTabs();
+    }
+    function renderTabs() {
+        document.querySelectorAll('.tab').forEach(t => {
+            const n = +t.dataset.page; t.classList.toggle('on', n === page);
+            if (n > 0) { const s = ST[n - 1]; t.classList.toggle('seen', s.shown[4]); t.querySelector('.tdone').textContent = s.shown[4] ? 'answer shown' : ''; }
+        });
+    }
+
+    // ============ ACTIONS ============
+    function act(pi, a, n) {
+        const s = ST[pi];
+        if (a === 'hint') { s.hint[n] = true; s.lastHint = n; }
+        else if (a === 'show') { s.shown[n] = true; }
+        else if (a === 'next') { const nx = nextHelp(pi); if (nx) { if (nx.kind === 'hint') { s.hint[nx.n] = true; s.lastHint = nx.n; } else s.shown[nx.n] = true; } }
+        else if (a === 'final') { s.shown = [true, true, true, true, true]; }
+        else if (a === 'reset') { ST[pi] = blankST(); }
+        renderProblem(pi);
+    }
+
+    // ============ NAVIGATION ============
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p' + page));
+        document.querySelectorAll('.dot').forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        document.getElementById('pcNum').textContent = page;
+        if (page > 0) renderProblem(page - 1); else renderTabs();
+    }
+    function setPage(n) { page = Math.max(0, Math.min(NPROB, n)); render(); }
+    tabstrip.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-goto]').forEach(c => c.addEventListener('click', () => setPage(+c.dataset.goto)));
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '0' && k <= String(NPROB)) { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); return;
+            case 'ArrowLeft': setPage(page - 1); e.preventDefault(); return;
+        }
+        if (page === 0) return;
+        const pi = page - 1;
+        switch (k.toLowerCase()) {
+            case 'h': act(pi, 'next'); break;
+            case 'f': act(pi, 'final'); break;
+            case 'r': act(pi, 'reset'); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = { setPage, act, getState: () => ({ page, ST }), nextHelp, stepHint, STEPS, PROBS, nextOf };
+
+    render();
+</script>
+</body>
+</html>

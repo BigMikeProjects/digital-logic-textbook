@@ -2,7 +2,7 @@ title: "Counters"
 description: "A 3-bit counter with count-enable designed as a state machine, from the eight-state ring and next-state table through three K-maps to equations that reduce to an XOR pattern you can extend to any number of bits."
 chapter: sequential-logic
 section: fsm-applications
-order: 40303
+order: 40304
 
 graphics:
   01-video.youtube:

@@ -2,7 +2,7 @@ title: "FSMs with Mux and Decoder Implementations"
 description: "The next-state logic of a finite state machine is combinational logic, so it can be built from building blocks instead of gates. The level-to-pulse converter is rebuilt with a multiplexer on each flip-flop input and again with a 3-to-8 decoder, both wired straight from the state table with no K-maps."
 chapter: sequential-logic
 section: fsm-applications
-order: 40304
+order: 40305
 
 graphics:
   01-video.youtube:

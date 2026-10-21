@@ -625,14 +625,14 @@
           "published": true
         },
         {
-          "num": "4.3.2",
+          "num": "4.3.3",
           "title": "Level-to-Pulse FSM",
           "slug": "level-to-pulse-fsm",
           "type": "full",
           "published": true
         },
         {
-          "num": "4.3.3",
+          "num": "4.3.4",
           "title": "Counters",
           "slug": "counters",
           "type": "full",
@@ -681,7 +681,7 @@
           "published": true
         },
         {
-          "num": "4.3.4",
+          "num": "4.3.5",
           "title": "FSMs with Mux and Decoder Implementations",
           "slug": "fsms-with-mux-and-decoder-implementations",
           "type": "full",
@@ -768,6 +768,13 @@
           "num": "4.2.4",
           "title": "One Hot State Assignment Practice",
           "slug": "one-hot-state-assignment-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
+          "num": "4.3.2",
+          "title": "Sequence Detector Practice",
+          "slug": "sequence-detector-practice",
           "type": "practice",
           "published": true
         },

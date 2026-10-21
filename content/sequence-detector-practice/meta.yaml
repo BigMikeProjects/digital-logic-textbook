@@ -1,0 +1,10 @@
+title: "Sequence Detector Practice"
+description: "Five Moore sequence detectors, from a three-bit warm-up to a five-bit pattern: name the states by digits correct, trace a stream, then draw the state diagram and write the state table, with hints and worked steps on demand."
+chapter: sequential-logic
+section: fsm-applications
+order: 40302
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: five sequence detectors. Name the states, trace the input stream, draw the state diagram and write the state table on paper, then step through hints and worked steps on demand"
