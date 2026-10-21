@@ -1,0 +1,11 @@
+title: "Registered Outputs"
+description: "Putting a flip-flop on an output so it changes only at clock edges: what it fixes in the Mealy level-to-pulse machine, what it costs, why the result is a Moore machine with no output logic, and why outputs that cross a clock domain are registered and then synchronized."
+chapter: sequential-logic
+section: fsm
+order: 40206
+
+graphics:
+  01-video.youtube:
+    caption: "Video: registered outputs — a flip-flop on the Mealy level-to-pulse output stops input glitches at the cost of one clock, and why outputs that cross a clock domain are registered and then synchronized"
+  02-interactive.html:
+    caption: "Interactive: put one flip-flop on a Mealy output and watch the glitch stop at its D input, compare the timing with Moore and Mealy, see why the result is a Moore machine whose output needs no logic, and why any output that crosses into another clock domain should be registered"
