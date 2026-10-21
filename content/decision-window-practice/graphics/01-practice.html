@@ -143,6 +143,7 @@
     .td .tr.given { stroke: #ffb74d; }
     .td .tr.rev { stroke: #4fc3f7; stroke-width: 4; }
     .td .edgeguide { stroke: #6a4fa0; stroke-width: 1.5; stroke-dasharray: 4 6; }
+    .td .elab { fill: #b388ff; font-family: 'Menlo','Consolas',monospace; font-size: 15px; font-weight: 700; text-anchor: end; }
     .td .chg { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; font-size: 14px; font-weight: 700; text-anchor: middle; }
     .td .cmk { stroke-width: 2.5; fill: #0d1b2a; } .td .cmk.in { stroke: #ef5350; } .td .cmk.out { stroke: #66bb6a; }
     .td .placeholder { stroke: #37506a; stroke-width: 2; stroke-dasharray: 3 7; }
@@ -357,7 +358,7 @@
             <div class="convbody">
               <ul>
                 <li>Time runs from <b>t = 0 to 80 ns</b>. The flip-flop is <b>positive-edge</b> triggered, t<sub>co</sub> = ${TCO} ns, and Q starts at 0. D starts at 0.</li>
-                <li>The grid is in <b>1 ns</b> steps, and every window starts and ends on a whole nanosecond.</li>
+                <li>The grid is in <b>1 ns</b> steps. Every rising edge is labeled with its time, and every window starts and ends on a whole nanosecond.</li>
                 <li><b>D never changes exactly at an edge or at a window boundary</b>, and no window holds more than one change, so every answer is unique.</li>
                 <li><b>To enter a window:</b> type its start and end, in ns, in the <span class="or">[ , ]</span> boxes under the edge. A window from 8 to 11 ns is entered as [8, 11], and it lights up on the diagram as soon as both numbers are in.</li>
                 <li><b>To call an edge:</b> click the box under it. Each click steps through <b>clean</b>, <b>setup</b> and <b>hold</b>.</li>
@@ -406,6 +407,8 @@
         // given traces
         o += `<path class="tr given" d="${wavePath('clk', clkChanges(P), 0)}"/><path class="tr given" d="${wavePath('d', P.ch, 0)}"/>`;
         P.ch.forEach(c => o += `<text class="chg" x="${tx(c)}" y="${hiY('d') - 10}">${fmt(c)}</text>`);
+        // rising-edge times are given: label each edge on the CLK row so nobody has to interpolate the grid
+        P.edges.forEach(e => o += `<text class="elab" x="${tx(e) - 6}" y="${hiY('clk') - 8}">${e}</text>`);
         // change markers (step 2)
         if (s.shown[2]) P.ch.forEach(c => { const inside = windows(P).some(([lo, hi]) => c > lo && c < hi);
             o += `<circle class="cmk ${inside ? 'in' : 'out'}" cx="${tx(c)}" cy="${ROWY.d}" r="7"/>`; });
