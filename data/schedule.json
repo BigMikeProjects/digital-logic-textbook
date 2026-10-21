@@ -779,6 +779,13 @@
           "published": true
         },
         {
+          "num": "4.4.2",
+          "title": "Slack and Maximum Frequency Practice",
+          "slug": "slack-and-maximum-frequency-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
           "num": null,
           "title": "Exam 2 Review",
           "slug": null,
