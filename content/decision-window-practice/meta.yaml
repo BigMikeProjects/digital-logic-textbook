@@ -1,0 +1,10 @@
+title: "Decision Window Practice"
+description: "Five timing diagrams: find the decision window around every clock edge, then call each edge a clean capture, a setup violation or a hold violation, and check your answers."
+chapter: sequential-logic
+section: practical-considerations
+order: 40401
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: five timing diagrams. Type the decision window around each clock edge, call each edge clean, setup violation or hold violation, check your work, and step through hints and worked steps on demand"

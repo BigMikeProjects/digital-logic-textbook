@@ -702,21 +702,21 @@
           "published": true
         },
         {
-          "num": "4.4.1",
+          "num": "4.4.2",
           "title": "Clock Skew",
           "slug": "clock-skew",
           "type": "full",
           "published": true
         },
         {
-          "num": "4.4.2",
+          "num": "4.4.3",
           "title": "Metastable States",
           "slug": "metastable-states",
           "type": "full",
           "published": true
         },
         {
-          "num": "4.4.3",
+          "num": "4.4.4",
           "title": "Synchronizers",
           "slug": "synchronizers",
           "type": "full",
@@ -768,6 +768,13 @@
           "num": "4.2.4",
           "title": "One Hot State Assignment Practice",
           "slug": "one-hot-state-assignment-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
+          "num": "4.4.1",
+          "title": "Decision Window Practice",
+          "slug": "decision-window-practice",
           "type": "practice",
           "published": true
         },

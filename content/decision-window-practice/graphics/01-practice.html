@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Window — Practice Set</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 24px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 revealed answer · amber #ffb74d given signals + hints · orange #ff8a3d decision window
+       · violet #b388ff edges / markers · navy #0d1b2a panels · right #66bb6a · wrong #ef5350 */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 72px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 12px; margin: 12px 0 2px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 11px; position: relative;
+        border: 2px solid #24384c; border-radius: 12px; padding: 9px 16px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 36px; height: 36px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 19px; font-weight: 700; }
+    .tab .tlabel { font-size: 18px; font-weight: 700; line-height: 1.15; }
+    .tab .tlabel small { display: block; font-size: 13px; font-weight: 500; color: #607d8b; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+    .tab .tdone { position: absolute; bottom: 5px; right: 12px; font-size: 13px; font-weight: 700; color: #66bb6a; display: none; }
+    .tab.done .tdone { display: block; color: #66bb6a; }
+    .tab.seen .tdone { display: block; color: #607d8b; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 10px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 10px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: center; gap: 12px; padding: 7px 14px 7px 18px;
+        border-bottom: 2px solid #24384c; white-space: nowrap; min-height: 46px; }
+    .panel-head .ph { font-size: 19px; font-weight: 700; color: #4fc3f7; }
+    .panel-head .ph .sn { color: #607d8b; margin-right: 6px; }
+    .panel-head .role { font-size: 15px; color: #607d8b; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ---- buttons ---- */
+    .btn { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px; padding: 4px 15px;
+        color: #90a4ae; font-size: 15.5px; font-weight: 700; background: #0b1622; white-space: nowrap; transition: all .12s; }
+    .btn:hover { border-color: #90a4ae; color: #cfd8dc; }
+    .btn .k { font-family: 'Menlo','Consolas',monospace; color: #607d8b; font-size: 13px; margin-left: 7px; font-weight: 400; }
+    .btn.hint { border-color: #ffb74d; color: #ffb74d; background: rgba(255,183,77,0.08); }
+    .btn.hint .k { color: #8a6a3a; }
+    .btn.check { border-color: #66bb6a; color: #66bb6a; background: rgba(102,187,106,0.08); }
+    .btn.check .k { color: #3f7a42; }
+    .btn.show { border-color: #4a6274; color: #90a4ae; }
+    .btn.final { border-color: #4fc3f7; color: #0d1b2a; background: #4fc3f7; }
+    .btn.final .k { color: #1d5f7d; }
+    .btn.used { opacity: 0.55; }
+    .btn.big { font-size: 17px; padding: 6px 18px; }
+    .btn.sm { font-size: 14px; padding: 2px 12px; }
+
+    /* ---- page 0: the method ---- */
+    .leadwrap { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .steps { display: flex; align-items: stretch; gap: 8px; }
+    .step { flex: 1; border: 2px solid #37506a; border-radius: 14px; background: #0b1622; padding: 12px 15px;
+        display: flex; flex-direction: column; gap: 7px; }
+    .step .sn { width: 34px; height: 34px; border: 2px solid #4fc3f7; border-radius: 9px; color: #4fc3f7;
+        font-size: 18px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step .st { font-size: 19px; font-weight: 700; color: #cfd8dc; }
+    .step .sd { font-size: 15.5px; color: #90a4ae; line-height: 1.45; flex: 1; }
+    .step .sd b { color: #cfd8dc; } .step .sd .mono { color: #4fc3f7; }
+    .step .sd .or { color: #ff8a3d; font-weight: 700; }
+    .arrowcell { align-self: center; color: #4a6274; font-size: 24px; flex: 0 0 auto; }
+    .leadrow { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .conv { flex: 1.15; }
+    .convbody { padding: 12px 22px; display: flex; flex-direction: column; gap: 9px; font-size: 16.5px; color: #b0bec5; line-height: 1.42; }
+    .convbody b { color: #cfd8dc; } .convbody .or { color: #ff8a3d; font-weight: 700; }
+    .convbody li { margin-left: 20px; margin-bottom: 4px; }
+    .helpkey { flex: 1; }
+    .helpbody { padding: 12px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .hrow { display: flex; align-items: center; gap: 14px; font-size: 16px; color: #b0bec5; line-height: 1.35; }
+    .hrow .btn { flex: 0 0 196px; text-align: center; cursor: default; }
+    .hrow b { color: #cfd8dc; }
+    .cards { display: flex; gap: 12px; }
+    .card { flex: 1; cursor: pointer; border: 2px solid #37506a; border-radius: 14px; background: #0b1622; padding: 10px 16px;
+        display: flex; flex-direction: column; gap: 3px; transition: all .12s; }
+    .card:hover { border-color: #4fc3f7; background: rgba(79,195,247,0.06); }
+    .card .cn { font-size: 14px; color: #607d8b; font-weight: 700; letter-spacing: .5px; }
+    .card .ct { font-size: 19px; color: #cfd8dc; font-weight: 700; }
+    .card .cf { font-size: 14.5px; color: #90a4ae; }
+    .card .cg { align-self: flex-start; margin-top: 4px; font-size: 13px; color: #ffb74d; border: 1px solid #6a5324; border-radius: 999px; padding: 1px 10px; }
+
+    /* ---- problem pages ---- */
+    .toparea { flex: 0 0 300px; display: flex; gap: 10px; min-height: 0; }
+    .probpanel { flex: 0 0 470px; }
+    .probbody { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 18px 12px; gap: 8px; }
+    .story { font-size: 16.5px; color: #cfd8dc; line-height: 1.45; }
+    .story b { color: #ffb74d; } .story .cy { color: #4fc3f7; font-weight: 700; }
+    .givens { display: flex; flex-wrap: wrap; gap: 6px; }
+    .giv { border: 2px solid #37506a; border-radius: 9px; padding: 2px 11px; font-size: 16px; color: #cfd8dc; background: #0b1622; }
+    .giv b { color: #ffb74d; font-family: 'Menlo','Consolas',monospace; }
+    .find { font-size: 15px; color: #90a4ae; border-top: 2px solid #24384c; padding-top: 8px; line-height: 1.4; }
+    .find b { color: #cfd8dc; }
+    .cardrow { flex: 1; display: flex; gap: 10px; min-width: 0; }
+    .scard { flex: 1; min-width: 0; }
+    .scard .panel-head { min-height: 36px; padding: 5px 14px; }
+    .scard.open { border-color: #2c6a88; }
+    .stitle { padding: 8px 14px 0; font-size: 17px; font-weight: 700; color: #cfd8dc; }
+    .sbody { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .blank { flex: 1; display: flex; align-items: center; justify-content: center; color: #37506a; font-size: 14px; font-style: italic;
+        margin: 8px; border: 2px dashed #24384c; border-radius: 10px; }
+    .sbtns { display: flex; gap: 8px; padding: 0 12px 10px; }
+    .ctext { padding: 6px 14px; font-size: 14.5px; color: #cfd8dc; line-height: 1.42; }
+    .ctext .mono { color: #4fc3f7; font-weight: 700; } .ctext .or { color: #ff8a3d; font-weight: 700; }
+    .ctext .vl { color: #b388ff; font-weight: 700; } .ctext .ok { color: #66bb6a; font-weight: 700; } .ctext .bad { color: #ef5350; font-weight: 700; }
+    .ctext .dimn { color: #90a4ae; font-size: 13.5px; }
+
+    .tdpanel { flex: 1; min-height: 0; }
+    .tdbody { flex: 1; min-height: 0; padding: 4px 8px; display: flex; align-items: center; justify-content: center; }
+    .td { width: 100%; height: 100%; display: block; user-select: none; touch-action: none; }
+    .td .tlab { fill: #90a4ae; font-family: 'Menlo','Consolas',monospace; font-size: 14px; text-anchor: middle; }
+    .td .tlab.tl { text-anchor: end; fill: #607d8b; }
+    .td .gl { stroke: #1c2c3c; stroke-width: 1; } .td .gl.major { stroke: #37506a; stroke-width: 1.5; }
+    .td .rlab { font-family: 'Segoe UI',sans-serif; font-size: 20px; font-weight: 700; fill: #ffb74d; }
+    .td .rlab.ans { fill: #4fc3f7; }
+    .td .rsub { font-family: 'Segoe UI',sans-serif; font-size: 13.5px; fill: #607d8b; }
+    .td .tr { fill: none; stroke-width: 3.5; stroke-linejoin: miter; }
+    .td .tr.given { stroke: #ffb74d; }
+    .td .tr.rev { stroke: #4fc3f7; stroke-width: 4; }
+    .td .edgeguide { stroke: #6a4fa0; stroke-width: 1.5; stroke-dasharray: 4 6; }
+    .td .chg { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; font-size: 14px; font-weight: 700; text-anchor: middle; }
+    .td .cmk { stroke-width: 2.5; fill: #0d1b2a; } .td .cmk.in { stroke: #ef5350; } .td .cmk.out { stroke: #66bb6a; }
+    .td .placeholder { stroke: #37506a; stroke-width: 2; stroke-dasharray: 3 7; }
+    .wentry { display: flex; align-items: center; justify-content: center; gap: 3px; height: 34px;
+        font-family: 'Menlo','Consolas',monospace; font-size: 20px; font-weight: 700; color: #ff8a3d; }
+    .wentry input { width: 52px; height: 28px; background: #0b1622; border: 2px solid #37506a; border-radius: 7px; color: #eceff1;
+        font-family: 'Menlo','Consolas',monospace; font-size: 17px; font-weight: 700; text-align: center; outline: none; }
+    .wentry input:focus { border-color: #ff8a3d; }
+    .wentry.ok input { border-color: #66bb6a; background: rgba(102,187,106,0.15); }
+    .wentry.bad input { border-color: #ef5350; background: rgba(239,83,80,0.18); }
+    .wentry.miss input { border-color: #ffb74d; }
+    .wentry.rev input { color: #4fc3f7; }
+    .td .shade.stu.ok { fill: rgba(102,187,106,0.35); } .td .shade.stu.bad { fill: rgba(239,83,80,0.35); }
+    .td .shade.stu { fill: rgba(236,239,241,0.38); }
+    .td .shade.rev { fill: rgba(255,138,61,0.55); }
+    .td .winbound { stroke: #ff8a3d; stroke-width: 2; stroke-dasharray: 6 5; }
+    .td .mk { fill: none; } .td .mk.ok { fill: rgba(102,187,106,0.28); } .td .mk.bad { fill: rgba(239,83,80,0.42); } .td .mk.miss { fill: rgba(255,183,77,0.22); }
+    .td .chip rect { fill: #0b1622; stroke: #37506a; stroke-width: 2; cursor: pointer; }
+    .td .chip:hover rect { stroke: #90a4ae; }
+    .td .chip text { font-family: 'Segoe UI',sans-serif; font-size: 16px; font-weight: 700; text-anchor: middle; fill: #607d8b; pointer-events: none; }
+    .td .chip.stu text { fill: #eceff1; } .td .chip.rev text { fill: #4fc3f7; }
+    .td .chip.ok rect { stroke: #66bb6a; fill: rgba(102,187,106,0.15); }
+    .td .chip.bad rect { stroke: #ef5350; fill: rgba(239,83,80,0.18); }
+    .td .chip.miss rect { stroke: #ffb74d; }
+    .td .unk { fill: url(#hx); stroke: #ff8a3d; stroke-width: 2; }
+    .td .unkq { fill: #ff8a3d; font-family: 'Segoe UI',sans-serif; font-size: 18px; font-weight: 700; text-anchor: middle; }
+
+    .helpbar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; padding: 8px 14px; min-height: 58px; }
+    .hintbox { flex: 1; min-width: 0; font-size: 16px; color: #cfd8dc; line-height: 1.35; border-left: 3px solid #6a5324; padding-left: 12px; }
+    .hintbox .hl { color: #ffb74d; font-weight: 700; margin-right: 6px; }
+    .hintbox .dim { color: #607d8b; }
+    .checkbox { flex: 0 0 auto; font-size: 15px; color: #90a4ae; white-space: nowrap; }
+    .checkbox b { color: #66bb6a; } .checkbox .bad { color: #ef5350; font-weight: 700; } .checkbox .miss { color: #ffb74d; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 8px; height: 30px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 15px; white-space: nowrap; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        margin: 0 2px; font-size: 14px; font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.green { color: #66bb6a; border-color: #3f7a42; }
+    .controls .k.cy { color: #4fc3f7; border-color: #2c6a88; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="96" y="14" width="60" height="70" fill="rgba(255,138,61,0.30)" stroke="none"/>
+                <path d="M 14 70 H 136 V 30 H 244" stroke="#ffb74d" stroke-width="3.5"/>
+                <line x1="136" y1="10" x2="136" y2="88" stroke="#b388ff" stroke-width="2.5" stroke-dasharray="5 4"/>
+                <text x="116" y="100" font-family="Menlo,monospace" font-size="13" fill="#ff8a3d" text-anchor="middle">t</text>
+                <text x="124" y="102" font-family="Menlo,monospace" font-size="10" fill="#ff8a3d" text-anchor="middle">su</text>
+                <text x="146" y="100" font-family="Menlo,monospace" font-size="13" fill="#ff8a3d" text-anchor="middle">t</text>
+                <text x="152" y="102" font-family="Menlo,monospace" font-size="10" fill="#ff8a3d" text-anchor="middle">h</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Decision Window <span class="sub">&mdash; practice set</span></h1>
+            <div class="subtitle">Find the window around every clock edge, then call each edge: a clean capture, a setup violation or a hold violation</div>
+        </div>
+        <div class="page-count">Page <b id="pcNum">0</b> of 0&ndash;5</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip"></div>
+    <div class="stage" id="stage"></div>
+
+    <div class="footer">
+        <div class="progress" id="progress"></div>
+        <div class="controls">
+            <span class="k">0</span>&ndash;<span class="k">5</span> page
+            &middot; <span class="k">type</span> [start, end] under each edge
+            &middot; <span class="k">click a box</span> clean &rarr; setup &rarr; hold
+            &middot; <span class="k green">C</span> check my work
+            &middot; <span class="k amber">H</span> next hint
+            &middot; <span class="k cy">F</span> final answer
+            &middot; <span class="k">R</span> &#8634; clear
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize,100));
+
+    // ============ THE THREE PROBLEMS (source of truth) ============
+    // Time runs from 0 to 80 ns. The flip-flop is positive-edge triggered; edges = its rising clock edges, the clock
+    // is high for half of each period. D starts at 0 and toggles at each time in `ch`. Q starts at 0.
+    // Every window [edge - tsu, edge + th] lands on whole nanoseconds; the student types its start and end.
+    // D never changes at an edge or within 0.5 ns of a window boundary, and no window contains more than one change,
+    // so every verdict is unique (self-tested).
+    const T0 = 0, T1 = 80, TCO = 1;
+    // Problems are deliberately unnamed (tabs and cards say only "Problem N"): a title would give the call away.
+    const PROBS = [
+        {   tsu: 2, th: 1, period: 20, edges: [10, 30, 50, 70], ch: [4.5, 29.5, 41.5, 60.5],
+            note: 'D changed before the edge at 30, but not before its window: the window had already opened at 28.' },
+        {   tsu: 1, th: 2, period: 20, edges: [10, 30, 50, 70], ch: [6.5, 10.5, 33.5, 51.5, 68.5],
+            note: 'The flip-flop needs D steady for 2 ns after each edge. The changes at 10.5 and 51.5 come too soon; 68.5 is clear because the window at 70 opens at 69.' },
+        {   tsu: 3, th: 1, period: 16, edges: [8, 24, 40, 56, 72], ch: [2.5, 22.5, 30.5, 40.5, 48.5, 57.5, 69.5],
+            note: 'The change at 57.5 is safe: the window at 56 closed at 57. The one at 69.5 is not: the window at 72 opened at 69.' },
+        {   tsu: 2, th: 2, period: 12, edges: [6, 18, 30, 42, 54, 66], ch: [2.5, 18.5, 25.5, 41.5, 47.5, 56.5, 61.5],
+            note: 'The change at 18.5 lands after the edge at 18 but before its window closes at 20; 41.5 lands after the window at 42 opened at 40. 56.5 is clear: the window at 54 closed at 56.' },
+        {   tsu: 4, th: 3, period: 20, edges: [10, 30, 50, 70], ch: [5.5, 13.5, 24.5, 32.5, 47.5, 71.5],
+            note: 'Wide windows: 32.5 is still inside the window at 30, which stays open until 33, and 47.5 is inside the window at 50, which opens at 46. 5.5 and 13.5 sit just outside the window from 6 to 13.' },
+    ];
+    const NPROB = PROBS.length;
+
+    // ============ DERIVED ANSWERS (computed, never typed) ============
+    const dAt = (P, t) => P.ch.filter(c => c < t).length % 2;                      // D's value at time t
+    const windowOf = (P, e) => [e - P.tsu, e + P.th];
+    const windows = P => P.edges.map(e => windowOf(P, e));
+    function verdict(P, e) {
+        const [lo, hi] = windowOf(P, e), inside = P.ch.filter(c => c > lo && c < hi);
+        if (!inside.length) return { kind: 'clean', v: dAt(P, e) };
+        return { kind: inside[0] < e ? 'setup' : 'hold', at: inside[0] };
+    }
+    const verdicts = P => P.edges.map(e => verdict(P, e));
+    function qSegments(P) {        // [{a, b, v}] with v = 0 / 1 / null (unknown)
+        const segs = []; let t = T0, v = 0;
+        P.edges.forEach(e => { const vd = verdict(P, e), at = e + TCO;
+            const nv = vd.kind === 'clean' ? vd.v : null;
+            if (nv !== v) { segs.push({ a: t, b: at, v }); t = at; v = nv; } });
+        segs.push({ a: t, b: T1, v });
+        return segs.filter(s => s.b > s.a);
+    }
+    const fmt = x => String(x);
+    const VERD = ['clean', 'setup', 'hold'];
+    const CHIPCYCLE = ['', 'clean', 'setup', 'hold'];
+
+    // ============ STEP CARDS ============
+    const STEPS = [
+        { n: 0, title: 'Understand the problem' },
+        { n: 1, title: 'Find each window' },
+        { n: 2, title: 'Place each change' },
+        { n: 3, title: 'Call each edge' },
+        { n: 4, title: 'What Q does' },
+    ];
+    function stepHint(P, n) {
+        const e0 = P.edges[0], w0 = windowOf(P, e0);
+        if (n === 0) return `Collect the givens: t<sub>su</sub> = ${P.tsu} ns, t<sub>h</sub> = ${P.th} ns, the rising edges at t = ${P.edges.join(', ')}, and the times at which D changes.`;
+        if (n === 1) return `A window starts t<sub>su</sub> before an edge and ends t<sub>h</sub> after it. For the edge at ${e0} that is ${w0[0]} to ${w0[1]} ns, entered as [${w0[0]}, ${w0[1]}].`;
+        if (n === 2) return 'Take the changes of D one at a time: does each one fall inside a window, or outside every window?';
+        if (n === 3) return 'No change inside the window: clean, and Q takes D at the edge. A change inside, before the edge: setup violation. Inside, after the edge: hold violation.';
+        return `After a clean edge Q shows the captured value t<sub>co</sub> = ${TCO} ns later. After a violation Q is unknown until the next clean edge.`;
+    }
+    const blankST = () => ({ hint: [false, false, false, false, false], shown: [false, false, false, false, false], lastHint: -1,
+        win: null, winRev: null, chips: null, chipRev: null, marks: null, solved: false });
+    function freshST(P) { const s = blankST(); s.win = P.edges.map(() => ['', '']); s.winRev = P.edges.map(() => false);
+        s.chips = P.edges.map(() => ''); s.chipRev = P.edges.map(() => false); return s; }
+    const ST = PROBS.map(freshST);
+    function resetST(pi) { ST[pi] = freshST(PROBS[pi]); }
+    const parseWin = w => { const a = w.map(x => String(x).trim() === '' ? NaN : Number(x)); return a; };
+    let page = 0;
+    function nextHelp(pi) {
+        const s = ST[pi];
+        for (let n = 0; n < 5; n++) { if (!s.hint[n] && !s.shown[n]) return { kind: 'hint', n }; if (!s.shown[n]) return { kind: 'show', n }; }
+        return null;
+    }
+
+    // ============ PAGE BUILD ============
+    const stage = document.getElementById('stage');
+    const tabstrip = document.getElementById('tabstrip'), progress = document.getElementById('progress');
+    const TABS = [{ n: 0, label: 'How to Work', small: 'the steps + the buttons' }].concat(PROBS.map((P, i) => ({ n: i + 1, label: `Problem ${i + 1}`, small: `${P.edges.length} edges` })));
+    TABS.forEach(t => {
+        const d = document.createElement('div'); d.className = 'tab'; d.dataset.page = t.n;
+        d.innerHTML = `<div class="tnum">${t.n}</div><div class="tlabel">${t.label}<small>${t.small}</small></div><div class="tdone"></div>`;
+        tabstrip.appendChild(d);
+        const dot = document.createElement('div'); dot.className = 'dot'; dot.dataset.dot = t.n; progress.appendChild(dot);
+    });
+    const pages = [];
+    function mkPage(id, inner) { const p = document.createElement('div'); p.className = 'page'; p.id = 'p' + id; p.innerHTML = inner; stage.appendChild(p); pages.push(p); return p; }
+
+    mkPage(0, `
+      <div class="leadwrap">
+        <div class="steps">
+          <div class="step"><div class="sn">0</div><div class="st">Understand the problem</div>
+            <div class="sd">Each problem gives the flip-flop&rsquo;s <b>setup time</b> t<sub>su</sub> and <b>hold time</b> t<sub>h</sub>, the clock, and the times at which <b>D</b> changes.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">1</div><div class="st">Find each window</div>
+            <div class="sd">For every rising edge, find the <span class="or">decision window</span>: from t<sub>su</sub> <b>before</b> the edge to t<sub>h</sub> <b>after</b> it, and type it as <b>[start, end]</b>.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">2</div><div class="st">Place each change</div>
+            <div class="sd">For every change of D, ask whether it lands <b>inside</b> a window or outside all of them. Changing before the edge is not enough; it must be before the <b>window</b>.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">3</div><div class="st">Call each edge</div>
+            <div class="sd"><b>Clean</b>: nothing changes inside the window. <b>Setup violation</b>: a change inside, before the edge. <b>Hold violation</b>: a change inside, after the edge.</div></div>
+          <div class="arrowcell">&rarr;</div>
+          <div class="step"><div class="sn">4</div><div class="st">What Q does</div>
+            <div class="sd">After a clean edge, Q shows D&rsquo;s value t<sub>co</sub> later. After a violation the result is not guaranteed, so Q is <b>unknown</b> until the next clean edge.</div></div>
+        </div>
+        <div class="leadrow">
+          <div class="panel conv"><div class="panel-head"><div class="ph">Conventions used in every problem</div></div>
+            <div class="convbody">
+              <ul>
+                <li>Time runs from <b>t = 0 to 80 ns</b>. The flip-flop is <b>positive-edge</b> triggered, t<sub>co</sub> = ${TCO} ns, and Q starts at 0. D starts at 0.</li>
+                <li>The grid is in <b>1 ns</b> steps, and every window starts and ends on a whole nanosecond.</li>
+                <li><b>D never changes exactly at an edge or at a window boundary</b>, and no window holds more than one change, so every answer is unique.</li>
+                <li><b>To enter a window:</b> type its start and end, in ns, in the <span class="or">[ , ]</span> boxes under the edge. A window from 8 to 11 ns is entered as [8, 11], and it lights up on the diagram as soon as both numbers are in.</li>
+                <li><b>To call an edge:</b> click the box under it. Each click steps through <b>clean</b>, <b>setup</b> and <b>hold</b>.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel helpkey"><div class="panel-head"><div class="ph">Getting help</div><div class="role">enter every window and call every edge first</div></div>
+            <div class="helpbody">
+              <div class="hrow"><span class="btn check">Check my work<span class="k">C</span></span><div>Marks every window and every call: <b style="color:#66bb6a">green</b> right, <b style="color:#ef5350">red</b> wrong, <b style="color:#ffb74d">amber</b> missing. Nothing is revealed.</div></div>
+              <div class="hrow"><span class="btn hint">Hint</span> <div>On each step card: a nudge for that step, in the bar at the bottom.</div></div>
+              <div class="hrow"><span class="btn show">Show</span><div>On each step card: the worked step, drawn on the diagram &mdash; the windows, the changes, the calls or Q.</div></div>
+              <div class="hrow"><span class="btn final">Final answer<span class="k">F</span></span><div>Shows every step at once. <span class="k">H</span> walks the hints and steps in order.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="cards">${PROBS.map((P, i) => `<div class="card" data-goto="${i + 1}"><div class="cn">PROBLEM ${i + 1}</div><div class="cf">t<sub>su</sub> = ${P.tsu} ns &middot; t<sub>h</sub> = ${P.th} ns &middot; T = ${P.period} ns</div></div>`).join('')}</div>
+      </div>`);
+
+    // ---- timing-diagram geometry (SVG user units) ----
+    const VW = 1780, X0 = 196, UX = 19.5, ROWY = { clk: 80, d: 156, win: 220, call: 318, q: 384 }, AMP = 22, VH = 430;
+    const tx = t => X0 + (t - T0) * UX;
+    const hiY = r => ROWY[r] - AMP, loY = r => ROWY[r] + AMP;
+    function wavePath(r, changes, v0) {
+        let v = v0, d = `M${tx(T0)},${v ? hiY(r) : loY(r)}`;
+        changes.filter(c => c > T0 && c < T1).forEach(c => { d += `L${tx(c)},${v ? hiY(r) : loY(r)}`; v = 1 - v; d += `L${tx(c)},${v ? hiY(r) : loY(r)}`; });
+        return d + `L${tx(T1)},${v ? hiY(r) : loY(r)}`;
+    }
+    const clkChanges = P => { const c = []; P.edges.forEach(e => { c.push(e, e + P.period / 2); }); return c.filter(x => x < T1); };
+    function diagramSVG(pi) {
+        const P = PROBS[pi], s = ST[pi];
+        let o = `<svg viewBox="0 0 ${VW} ${VH}" class="td" id="td${pi + 1}">`;
+        o += `<defs><pattern id="hx${pi}" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="14" height="14" fill="#2a1d14"/><line x1="0" y1="0" x2="0" y2="14" stroke="#ff8a3d" stroke-width="4"/></pattern></defs>`;
+        for (let t = T0; t <= T1; t += 10) o += `<text class="tlab" x="${tx(t)}" y="26">${t}</text>`;
+        o += `<text class="tlab tl" x="${X0 - 14}" y="26">t (ns)</text>`;
+        // grid: 1 ns, darker every 10
+        for (let t = T0; t <= T1; t++) o += `<line class="gl${t % 10 === 0 ? ' major' : ''}" x1="${tx(t)}" y1="40" x2="${tx(t)}" y2="${VH - 8}"/>`;
+        // window boundaries (step 1)
+        if (s.shown[1]) windows(P).forEach(([lo, hi]) => { [lo, hi].forEach(x => o += `<line class="winbound" x1="${tx(x)}" y1="44" x2="${tx(x)}" y2="${ROWY.win + 30}"/>`); });
+        // edge guides
+        P.edges.forEach(e => o += `<line class="edgeguide" x1="${tx(e)}" y1="44" x2="${tx(e)}" y2="${VH - 10}"/>`);
+        // row labels
+        [['clk', 'CLK', '', ''], ['d', 'D', '', ''], ['win', 'Window', 'type [start, end]', 'ans'], ['call', 'Call', 'click a box', 'ans'], ['q', 'Q', 'step 4', 'ans']].forEach(([r, l, sub, c]) => {
+            o += `<text class="rlab ${c}" x="14" y="${ROWY[r] + (sub ? 0 : 7)}">${l}</text>`;
+            if (sub) o += `<text class="rsub" x="14" y="${ROWY[r] + 22}">${sub}</text>`;
+        });
+        // given traces
+        o += `<path class="tr given" d="${wavePath('clk', clkChanges(P), 0)}"/><path class="tr given" d="${wavePath('d', P.ch, 0)}"/>`;
+        P.ch.forEach(c => o += `<text class="chg" x="${tx(c)}" y="${hiY('d') - 10}">${fmt(c)}</text>`);
+        // change markers (step 2)
+        if (s.shown[2]) P.ch.forEach(c => { const inside = windows(P).some(([lo, hi]) => c > lo && c < hi);
+            o += `<circle class="cmk ${inside ? 'in' : 'out'}" cx="${tx(c)}" cy="${ROWY.d}" r="7"/>`; });
+        // window row: the true windows once shown, the student's typed windows after a check, and one [start, end] entry per edge
+        o += `<line class="placeholder" x1="${tx(T0)}" y1="${ROWY.win}" x2="${tx(T1)}" y2="${ROWY.win}"/>`;
+        if (s.shown[1]) windows(P).forEach(([lo, hi]) => o += `<rect class="shade rev" x="${tx(lo)}" y="${ROWY.win - 26}" width="${(hi - lo) * UX}" height="52"/>`);
+        P.edges.forEach((e, i) => o += `<rect class="shade stu ${s.marks ? s.marks.win[i] : ''}" id="sw${pi}-${i}" ${swAttrs(s, i)}/>`);
+        P.edges.forEach((e, i) => { const mk = s.marks ? s.marks.win[i] : 'none', rv = s.winRev[i] ? ' rev' : '';
+            o += `<foreignObject x="${tx(e) - 78}" y="${ROWY.win + 26}" width="156" height="34"><div xmlns="http://www.w3.org/1999/xhtml" class="wentry ${mk}${rv}">[<input class="win" data-i="${i}" data-j="0" inputmode="decimal" value="${s.win[i][0]}">,<input class="win" data-i="${i}" data-j="1" inputmode="decimal" value="${s.win[i][1]}">]</div></foreignObject>`; });
+        // call row: one box per edge
+        P.edges.forEach((e, i) => {
+            const v = s.chips[i], mk = s.marks ? s.marks.chips[i] : 'none';
+            o += `<g class="chip ${v ? (s.chipRev[i] ? 'rev' : 'stu') : ''} ${mk}" data-i="${i}"><rect x="${tx(e) - 44}" y="${ROWY.call - 18}" width="88" height="36" rx="9"/>` +
+                 `<text x="${tx(e)}" y="${ROWY.call + 6}">${v || '?'}</text></g>`;
+        });
+        // Q (step 4)
+        if (s.shown[4]) {
+            let d = '', last = null;
+            qSegments(P).forEach(sg => {
+                if (sg.v === null) { o += `<rect class="unk" x="${tx(sg.a)}" y="${hiY('q')}" width="${tx(sg.b) - tx(sg.a)}" height="${2 * AMP}" style="fill:url(#hx${pi})"/><text class="unkq" x="${(tx(sg.a) + tx(sg.b)) / 2}" y="${ROWY.q + 7}">?</text>`; last = null; return; }
+                const y = sg.v ? hiY('q') : loY('q');
+                d += last === null ? `M${tx(sg.a)},${y}` : `L${tx(sg.a)},${last}L${tx(sg.a)},${y}`;
+                d += `L${tx(sg.b)},${y}`; last = y;
+            });
+            o += `<path class="tr rev" d="${d}"/>`;
+        } else o += `<line class="placeholder" x1="${tx(T0)}" y1="${ROWY.q}" x2="${tx(T1)}" y2="${ROWY.q}"/>`;
+        return o + `</svg>`;
+    }
+
+    const cardHTML = (id, n) => `
+        <div class="panel scard" data-step="${n}">
+          <div class="panel-head"><div class="ph"><span class="sn">Step ${n}</span></div></div>
+          <div class="stitle">${STEPS[n].title}</div>
+          <div class="sbody" id="s${id}-${n}"></div>
+          <div class="sbtns"><span class="btn hint sm" data-act="hint" data-n="${n}">Hint</span><span class="btn show sm" data-act="show" data-n="${n}">Show</span></div>
+        </div>`;
+    function probPage(pi) {
+        const P = PROBS[pi], id = pi + 1;
+        const p = mkPage(id, `
+          <div class="toparea">
+            <div class="panel probpanel">
+              <div class="panel-head"><div class="ph">Problem ${id}</div></div>
+              <div class="probbody">
+                <div class="story">A <b>positive-edge D flip-flop</b> is clocked as shown. D changes at the labeled times. Find the <b style="color:#ff8a3d">decision window</b> around every rising edge, then call each edge.</div>
+                <div class="givens">
+                  <span class="giv">t<sub>su</sub> = <b>${P.tsu} ns</b></span><span class="giv">t<sub>h</sub> = <b>${P.th} ns</b></span>
+                  <span class="giv">t<sub>co</sub> = <b>${TCO} ns</b></span><span class="giv">T = <b>${P.period} ns</b></span>
+                </div>
+                <div class="find">Type each window as <b>[start, end]</b> under its edge; click the box under an edge to call it.</div>
+              </div>
+            </div>
+            <div class="cardrow">${[0, 1, 2, 3, 4].map(n => cardHTML(id, n)).join('')}</div>
+          </div>
+          <div class="panel tdpanel">
+            <div class="panel-head"><div class="ph">Timing diagram</div><div class="role">enter the windows, call the edges</div></div>
+            <div class="tdbody" id="tdb${id}"></div>
+          </div>
+          <div class="helpbar">
+            <span class="btn hint big" data-act="next">Next hint<span class="k">H</span></span>
+            <div class="hintbox" id="hint${id}"></div>
+            <div class="checkbox" id="chk${id}"></div>
+            <span class="btn check big" data-act="check">Check my work<span class="k">C</span></span>
+            <span class="btn final big" data-act="final">Final answer<span class="k">F</span></span>
+            <span class="btn big" data-act="reset">&#8634; Clear<span class="k">R</span></span>
+          </div>`);
+        p.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => act(pi, b.dataset.act, b.dataset.n === undefined ? undefined : +b.dataset.n)));
+        const tdb = p.querySelector('#tdb' + id);
+        tdb.addEventListener('pointerdown', e => {
+            const g = e.target.closest('.chip'); if (g) { e.preventDefault(); cycleChip(pi, +g.dataset.i); }
+        });
+        tdb.addEventListener('input', e => { const t = e.target; if (!t.classList || !t.classList.contains('win')) return;
+            typeWin(pi, +t.dataset.i, +t.dataset.j, t.value, false); });
+    }
+    PROBS.forEach((P, i) => probPage(i));
+
+    // the student's window i, highlighted as soon as both ends are numbers with start < end
+    function swGeom(s, i) { const [lo, hi] = parseWin(s.win[i]);
+        return !s.winRev[i] && isFinite(lo) && isFinite(hi) && hi > lo ? { x: tx(Math.max(T0, lo)), w: (Math.min(T1, hi) - Math.max(T0, lo)) * UX } : null; }
+    function swAttrs(s, i) { const g = swGeom(s, i); return g && g.w > 0 ? `x="${g.x}" y="${ROWY.win - 26}" width="${g.w}" height="52"` : `x="0" y="0" width="0" height="0" display="none"`; }
+    // typing never re-renders the diagram, so the caret stays put; marks on that entry clear and its highlight follows
+    function typeWin(pi, i, j, v, rerender = true) {
+        const s = ST[pi]; s.win[i][j] = v; s.winRev[i] = false;
+        if (s.marks) { s.marks.win[i] = 'none'; const box = document.querySelector(`#td${pi + 1} .wentry input[data-i="${i}"]`); if (box) box.parentNode.className = 'wentry none'; }
+        const r = document.getElementById(`sw${pi}-${i}`);
+        if (r) { const g = swGeom(s, i); r.setAttribute('class', 'shade stu');
+            if (g && g.w > 0) { r.removeAttribute('display'); r.setAttribute('x', g.x); r.setAttribute('y', ROWY.win - 26); r.setAttribute('width', g.w); r.setAttribute('height', 52); }
+            else r.setAttribute('display', 'none'); }
+        if (rerender) renderDiagram(pi);
+    }
+    function setChip(pi, i, v) { const s = ST[pi]; s.chips[i] = v; s.chipRev[i] = false; if (s.marks) s.marks.chips[i] = 'none'; renderDiagram(pi); }
+    function cycleChip(pi, i) { const s = ST[pi]; setChip(pi, i, CHIPCYCLE[(CHIPCYCLE.indexOf(s.chips[i]) + 1) % CHIPCYCLE.length]); }
+
+    // ============ WORKED STEPS (card text; the drawing happens on the diagram) ============
+    function stepCardHTML(P, n) {
+        if (n === 0) return `<div class="ctext">Edges at t = <span class="mono">${P.edges.join(', ')}</span>.<br>D changes at <span class="mono">${P.ch.join(', ')}</span>.<br>t<sub>su</sub> = ${P.tsu}, t<sub>h</sub> = ${P.th}, t<sub>co</sub> = ${TCO} ns.</div>`;
+        if (n === 1) return `<div class="ctext"><span class="or">Windows</span> (ns): ${windows(P).map(w => `${w[0]}&ndash;${w[1]}`).join(', ')}.</div>`;
+        if (n === 2) { const ins = P.ch.filter(c => windows(P).some(([lo, hi]) => c > lo && c < hi));
+            return `<div class="ctext"><span class="bad">Inside</span>: ${ins.length ? ins.map(c => { const e = P.edges.find(e => c > e - P.tsu && c < e + P.th); return `${c} (${c < e ? 'before' : 'after'} ${e})`; }).join(', ') : 'none'}.<br><span class="ok">Clear</span>: the other ${P.ch.length - ins.length} changes.</div>`; }
+        if (n === 3) return `<div class="ctext">${P.edges.map((e, i) => { const v = verdicts(P)[i]; return `${e}: ${v.kind === 'clean' ? `<span class="ok">clean</span> (${v.v})` : `<span class="bad">${v.kind}</span>`}`; }).join(' &middot; ')}<br><span class="dimn">${P.note}</span></div>`;
+        return `<div class="ctext">${qSegments(P).map(sg => sg.v === null ? `unknown from ${sg.a}` : `${sg.v} from ${sg.a}`).join(', ')}.</div>`;
+    }
+
+    // ============ RENDER ============
+    function renderDiagram(pi) { document.getElementById('tdb' + (pi + 1)).innerHTML = diagramSVG(pi); renderCheck(pi); }
+    function renderCheck(pi) {
+        const s = ST[pi], cb = document.getElementById('chk' + (pi + 1));
+        if (!s.marks) { cb.innerHTML = ''; return; }
+        const cnt = (arr, m) => arr.filter(x => x === m).length;
+        const part = (lab, arr, tot) => `${lab} <b>${cnt(arr, 'ok')}</b>/${tot}` + (cnt(arr, 'bad') ? ` <span class="bad">${cnt(arr, 'bad')} wrong</span>` : '') + (cnt(arr, 'miss') ? ` <span class="miss">${cnt(arr, 'miss')} missing</span>` : '');
+        cb.innerHTML = `${part('windows', s.marks.win, PROBS[pi].edges.length)} &middot; ${part('calls', s.marks.chips, PROBS[pi].edges.length)}`;
+    }
+    function renderProblem(pi) {
+        const P = PROBS[pi], s = ST[pi], id = pi + 1, p = document.getElementById('p' + id);
+        for (let n = 0; n < 5; n++) {
+            const body = document.getElementById(`s${id}-${n}`), card = body.closest('.scard');
+            card.classList.toggle('open', s.shown[n]);
+            body.innerHTML = s.shown[n] ? stepCardHTML(P, n) : `<div class="blank">step ${n}</div>`;
+            card.querySelector('[data-act="hint"]').classList.toggle('used', s.hint[n]);
+            card.querySelector('[data-act="show"]').classList.toggle('used', s.shown[n]);
+        }
+        renderDiagram(pi);
+        const hb = document.getElementById('hint' + id), nx = nextHelp(pi);
+        hb.innerHTML = s.lastHint >= 0 ? `<span class="hl">Step ${s.lastHint} hint</span>${stepHint(P, s.lastHint)}` :
+            `<span class="dim">Enter every window and call every edge, then press <b style="color:#66bb6a">Check my work</b>. Stuck? Each step card has a <b style="color:#ffb74d">Hint</b> and a <b style="color:#90a4ae">Show</b>.</span>`;
+        p.querySelector('[data-act="next"]').classList.toggle('used', !nx);
+        p.querySelector('[data-act="final"]').classList.toggle('used', s.shown.every(Boolean));
+        renderTabs();
+    }
+    function renderTabs() {
+        document.querySelectorAll('.tab').forEach(t => {
+            const n = +t.dataset.page; t.classList.toggle('on', n === page);
+            if (n > 0) { const s = ST[n - 1], seen = s.shown[1] || s.shown[3]; t.classList.toggle('done', s.solved); t.classList.toggle('seen', !s.solved && seen);
+                t.querySelector('.tdone').textContent = s.solved ? '✓ solved' : seen ? 'answer shown' : ''; }
+        });
+    }
+
+    // ============ ACTIONS ============
+    function doShow(pi, n) {
+        const s = ST[pi], P = PROBS[pi]; s.shown[n] = true;
+        if (n === 1) { windows(P).forEach((w, i) => { const [lo, hi] = parseWin(s.win[i]); if (lo !== w[0] || hi !== w[1]) { s.win[i] = [String(w[0]), String(w[1])]; s.winRev[i] = true; } }); if (s.marks) s.marks.win = s.marks.win.map(() => 'none'); }
+        if (n === 3) { verdicts(P).forEach((v, i) => { if (s.chips[i] !== v.kind) { s.chips[i] = v.kind; s.chipRev[i] = true; } }); if (s.marks) s.marks.chips = s.marks.chips.map(() => 'none'); }
+    }
+    function act(pi, a, n) {
+        const s = ST[pi], P = PROBS[pi];
+        if (a === 'hint') { s.hint[n] = true; s.lastHint = n; }
+        else if (a === 'show') doShow(pi, n);
+        else if (a === 'next') { const nx = nextHelp(pi); if (nx) { if (nx.kind === 'hint') { s.hint[nx.n] = true; s.lastHint = nx.n; } else doShow(pi, nx.n); } }
+        else if (a === 'final') { for (let k = 0; k < 5; k++) doShow(pi, k); }
+        else if (a === 'check') {
+            const W = windows(P), vs = verdicts(P);
+            const win = s.win.map((w, i) => { const [lo, hi] = parseWin(w);
+                if (String(w[0]).trim() === '' || String(w[1]).trim() === '') return 'miss';
+                return lo === W[i][0] && hi === W[i][1] ? (s.winRev[i] ? 'none' : 'ok') : 'bad'; });
+            const chips = s.chips.map((v, i) => v === '' ? 'miss' : v === vs[i].kind ? (s.chipRev[i] ? 'none' : 'ok') : 'bad');
+            s.marks = { win, chips };
+            if (win.every(m => m === 'ok') && chips.every(m => m === 'ok')) s.solved = true;
+        }
+        else if (a === 'reset') { resetST(pi); }
+        renderProblem(pi);
+    }
+
+    // ============ NAVIGATION ============
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p' + page));
+        document.querySelectorAll('.dot').forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        document.getElementById('pcNum').textContent = page;
+        if (page > 0) renderProblem(page - 1); else renderTabs();
+    }
+    function setPage(n) { page = Math.max(0, Math.min(NPROB, n)); render(); }
+    tabstrip.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-goto]').forEach(c => c.addEventListener('click', () => setPage(+c.dataset.goto)));
+    document.addEventListener('keydown', (e) => {
+        if (e.target && e.target.tagName === 'INPUT') { if (e.key === 'Enter') e.target.blur(); return; }
+        const k = e.key;
+        if (k >= '0' && k <= String(NPROB)) { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); return;
+            case 'ArrowLeft': setPage(page - 1); e.preventDefault(); return;
+        }
+        if (page === 0) return;
+        const pi = page - 1;
+        switch (k.toLowerCase()) {
+            case 'h': act(pi, 'next'); break;
+            case 'c': act(pi, 'check'); break;
+            case 'f': act(pi, 'final'); break;
+            case 'r': act(pi, 'reset'); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, act, typeWin, setChip, cycleChip, getState: () => ({ page, ST }), nextHelp, stepHint, stepCardHTML, STEPS,
+        PROBS, TCO, T0, T1, dAt, windows, verdict, verdicts, qSegments,
+    };
+
+    render();
+</script>
+</body>
+</html>
