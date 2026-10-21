@@ -2,7 +2,7 @@ title: "Metastable States"
 description: "A flip-flop whose D input changes inside the decision window can be left balanced between 0 and 1. A ball-and-hill model explains what a metastable state is, what makes the push marginal, how long settling takes, and why a faster clock leaves less time for it."
 chapter: sequential-logic
 section: practical-considerations
-order: 40403
+order: 40404
 
 graphics:
   01-video.youtube:

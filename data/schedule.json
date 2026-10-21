@@ -702,21 +702,21 @@
           "published": true
         },
         {
-          "num": "4.4.2",
+          "num": "4.4.3",
           "title": "Clock Skew",
           "slug": "clock-skew",
           "type": "full",
           "published": true
         },
         {
-          "num": "4.4.3",
+          "num": "4.4.4",
           "title": "Metastable States",
           "slug": "metastable-states",
           "type": "full",
           "published": true
         },
         {
-          "num": "4.4.4",
+          "num": "4.4.5",
           "title": "Synchronizers",
           "slug": "synchronizers",
           "type": "full",

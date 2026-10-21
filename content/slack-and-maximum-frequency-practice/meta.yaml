@@ -1,0 +1,10 @@
+title: "Slack and Maximum Frequency Practice"
+description: "Five timing budgets: place t_co, t_pd, t_su and the slack on one clock period by start and duration, then find the maximum clock frequency, with every bar drawn as you type."
+chapter: sequential-logic
+section: practical-considerations
+order: 40402
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: five timing budgets. Give each delay its start and duration, watch the bars fill one clock period, find the slack and the maximum frequency, check your work, and step through hints and worked steps on demand"
