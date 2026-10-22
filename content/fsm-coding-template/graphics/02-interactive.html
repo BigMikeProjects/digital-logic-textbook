@@ -407,7 +407,7 @@
         { t: '' },
         { t: '  // Block 1 — state register: the two flip-flops', b: 1 },
         { t: '  always @(posedge clk)', b: 1, hw: ['ff', 'clkw'], note: '<span class="mono">posedge clk</span>: this block runs only on the rising edge, so what it assigns <b class="c1">becomes flip-flops</b>.' },
-        { t: '    if (reset) state <= LOW;', b: 1, hw: ['rand', 'rstw'], note: 'Synchronous reset: an <b class="c1">AND in front of each D</b> (reset through a bubble), so the next edge loads LOW = 00 &mdash; the register from <b data-topic="state-memory">Defining State Memory in Verilog</b>.' },
+        { t: '    if (reset) state <= LOW;', b: 1, hw: ['rand', 'rstw'], note: 'Synchronous reset: an <b class="c1">AND in front of each D</b> (reset through a bubble), so the next edge loads LOW = 00 &mdash; the register from <b data-topic="verilog-registers">Registers in Verilog</b>.' },
         { t: '    else       state <= next;', b: 1, hw: ['ff'], note: '<span class="mono">state &lt;= next</span>: <b class="c1">two D flip-flops</b>, D = next, Q = state. Non-blocking, so both bits update together on the edge.' },
         { t: '' },
         { t: '  // Block 2 — next-state logic: gates only', b: 2 },

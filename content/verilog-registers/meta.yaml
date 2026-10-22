@@ -1,0 +1,11 @@
+title: "Registers in Verilog"
+description: "The D flip-flop written in Verilog as always @(posedge clk) with q <= d, widened into an 8-bit register, then given a synchronous reset (an AND gate in front of each D input) and an enable (a 2:1 mux whose other input is q fed back, so the register holds)."
+chapter: verilog
+section: verilog-basics
+order: 70403
+
+graphics:
+  01-video.youtube:
+    caption: "Video: from the D flip-flop to an 8-bit register in Verilog, adding a synchronous reset and an enable, narrated over the interactive"
+  02-interactive.html:
+    caption: "Interactive: click a line of Verilog to light the hardware it builds, from one flip-flop to an 8-bit register with a synchronous reset (an AND gate) and an enable (a 2:1 mux), and step the clock to watch each version load, reset and hold"

@@ -135,7 +135,7 @@ The hardware decides which operator is right:
 - In a combinational block, describing gates, use blocking `=`. Each line reads a value that must already be resolved.
 - Do not mix the two operators within one block.
 
-These rules matter most when writing state machines, which combine both kinds of logic. **FSM Coding Template** uses exactly this split: a clocked block with `<=` for the state flip-flops, and combinational blocks with `=` for the next-state and output logic. **Defining State Memory in Verilog** covers the clocked half on its own.
+These rules matter most when writing state machines, which combine both kinds of logic. **FSM Coding Template** uses exactly this split: a clocked block with `<=` for the state flip-flops, and combinational blocks with `=` for the next-state and output logic. **Registers in Verilog** covers the clocked half on its own.
 
 ## Key Takeaways
 

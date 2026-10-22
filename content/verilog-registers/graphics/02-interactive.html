@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registers in Verilog — always @(posedge clk) Is a Flip-Flop</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 logic-1 / loaded value · amber #ffb74d clk + edge · violet #b388ff
+       highlighted code line ↔ hardware · navy #0d1b2a panels · logic-0 wires #7d9bb5 */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #ffb74d; border-radius: 12px;
+        background: rgba(255,183,77,0.06); padding: 8px 16px; }
+    .anchor-sym svg { width: 178px; height: 80px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #4fc3f7; font-size: 34px; font-weight: 700; }
+    .titles h1 .sub { color: #90a4ae; font-size: 21px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 17px; margin-top: 2px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #4fc3f7; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; }
+    .tab.on { color: #4fc3f7; border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .tab.on .tnum { background: #4fc3f7; color: #0d1b2a; border-color: #4fc3f7; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 12px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px;
+        display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: baseline; gap: 12px; padding: 9px 18px;
+        border-bottom: 2px solid #24384c; }
+    .panel-head .ph { font-size: 19px; font-weight: 700; color: #4fc3f7; }
+    .panel-head .ph.amber { color: #ffb74d; }
+    .panel-head .ph.violet { color: #b388ff; }
+    .panel-head .role { font-size: 15px; color: #607d8b; }
+    .panel-head .fn { font-family: 'Menlo','Consolas',monospace; font-size: 18px; color: #4fc3f7; font-weight: 700; }
+
+    /* diff strip (beats 2–4) */
+    .diff { display: flex; align-items: center; gap: 16px; border: 2px solid #6a4fa0; border-radius: 12px;
+        background: rgba(179,136,255,0.07); padding: 8px 18px; font-size: 16px; color: #90a4ae; }
+    .diff .dl { color: #b388ff; font-weight: 700; letter-spacing: 1px; font-size: 13px; }
+    .diff .tok { font-family: 'Menlo','Consolas',monospace; color: #b388ff; background: rgba(179,136,255,0.16);
+        border: 1px solid #6a4fa0; border-radius: 6px; padding: 1px 8px; font-size: 16px; }
+    .diff b { color: #cfd8dc; }
+
+    .main { display: flex; gap: 16px; flex: 1; min-height: 0; }
+    .codepanel { flex: 0 0 700px; }
+    .code { padding: 6px 0; font-family: 'Menlo','Consolas','Courier New',monospace; font-size: 18px;
+        line-height: 1.45; flex: 1; min-height: 0; overflow: hidden; }
+    .cl { display: flex; padding: 0 14px; white-space: pre; cursor: pointer; transition: background .12s; }
+    .cl .ln { width: 34px; flex-shrink: 0; text-align: right; margin-right: 16px; color: #34495c; user-select: none; }
+    .cl .gut { width: 10px; flex-shrink: 0; margin-right: 10px; border-radius: 3px; }
+    .cl .src { white-space: pre; }
+    .cl.new .gut { background: #b388ff; }
+    .cl.hw:hover { background: rgba(179,136,255,0.10); }
+    .cl.hl { background: rgba(179,136,255,0.18); box-shadow: inset 4px 0 0 #b388ff; }
+    .cl.nohw { cursor: default; }
+    .kw { color: #4fc3f7; } .cm { color: #56708a; } .nm { color: #ffb74d; } .op { color: #b388ff; }
+    .codenote { border-top: 2px solid #24384c; padding: 7px 16px; font-size: 14px; color: #90a4ae; min-height: 46px; line-height: 1.35; }
+    .codenote b { color: #b388ff; }
+
+    .circpanel { flex: 1; }
+    .circ { flex: 1; min-height: 0; padding: 4px 10px; }
+    .circ svg { width: 100%; height: 100%; display: block; }
+    .hwg { cursor: pointer; }
+    .hwg .body { transition: all .12s; }
+    .hwg.hl .body { stroke: #b388ff !important; }
+    .hwg.hl .hlfill { fill: rgba(179,136,255,0.18); }
+    .hwg.hl text.lab { fill: #b388ff !important; }
+
+    /* the walk */
+    .walk { display: flex; gap: 14px; flex: 0 0 250px; min-height: 0; }
+    .strip { flex: 0 0 760px; }
+    .stripbody { display: flex; flex-direction: column; gap: 3px; padding: 6px 14px; flex: 1; min-height: 0; overflow: hidden; }
+    .row { display: flex; align-items: center; gap: 4px; }
+    .row .rl { width: 64px; flex-shrink: 0; font-family: 'Menlo','Consolas',monospace; font-size: 15px; color: #90a4ae; text-align: right; padding-right: 8px; }
+    .cell { flex: 1; text-align: center; font-family: 'Menlo','Consolas',monospace; font-size: 16px; padding: 2px 0;
+        border: 2px solid transparent; border-radius: 7px; color: #cfd8dc; }
+    .cell.one { color: #4fc3f7; font-weight: 700; }
+    .cell.zero { color: #7d9bb5; }
+    .cell.future { opacity: .38; }
+    .cell.now { border-color: #ffb74d; background: rgba(255,183,77,0.10); }
+    .row.hdr .cell { font-size: 13px; color: #607d8b; padding: 0; }
+    .row.unused { opacity: 0.28; }   /* an input this beat's module does not have */
+    .row.now .cell { font-size: 13px; color: #ffb74d; padding: 0; height: 16px; }
+    .ctrl { display: flex; align-items: center; gap: 12px; padding: 6px 14px; border-top: 2px solid #24384c; white-space: nowrap; }
+    .stepbtn { cursor: pointer; user-select: none; border: 2px solid #ffb74d; border-radius: 999px; padding: 5px 18px; white-space: nowrap;
+        color: #ffb74d; font-size: 17px; background: rgba(255,183,77,0.08); font-weight: 700; letter-spacing: 1px; }
+    .stepbtn .k, .rstbtn .k { font-family: 'Menlo','Consolas',monospace; color: #8a6a3a; font-size: 14px; margin-left: 8px; }
+    .rstbtn { cursor: pointer; user-select: none; border: 2px solid #37506a; border-radius: 999px; padding: 5px 14px; white-space: nowrap;
+        color: #90a4ae; font-size: 16px; background: #0b1622; }
+    .rstbtn .k { color: #607d8b; }
+    .readout { margin-left: auto; font-family: 'Menlo','Consolas',monospace; font-size: 16px; color: #90a4ae; }
+    .readout b { color: #4fc3f7; }
+    .readout .amber { color: #ffb74d; }
+    .freeplay { font-size: 12px; color: #607d8b; padding: 0 14px 6px; white-space: nowrap; }
+    .freeplay .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a; border-radius: 5px; padding: 0 6px;
+        font-family: 'Menlo','Consolas',monospace; font-size: 12px; }
+    .console { flex: 1; }
+    .conbody { flex: 1; background: #06111c; font-family: 'Menlo','Consolas',monospace; font-size: 13.5px; line-height: 1.3;
+        color: #ffb74d; padding: 8px 16px; white-space: pre; overflow: hidden; }
+    .conbody .chead { color: #607d8b; }
+    .conbody .last { color: #4fc3f7; }
+    .conbody .off { color: #b388ff; }
+
+    /* closing card (beat 4) */
+    .closing { display: flex; gap: 14px; align-items: stretch; }
+    .stack { flex: 0 0 auto; display: flex; gap: 10px; }
+    .blk { border: 2px solid #37506a; border-radius: 10px; padding: 4px 12px; background: #0b1622; font-size: 13px; color: #90a4ae;
+        display: flex; flex-direction: row; gap: 10px; align-items: center; }
+    .blk .bn { font-family: 'Menlo','Consolas',monospace; color: #4fc3f7; font-size: 15px; }
+    .blk .bc { color: #ffb74d; font-weight: 700; }
+    .closeline { flex: 1; border: 2px solid #6a5324; border-radius: 12px; background: rgba(255,183,77,0.07);
+        padding: 5px 16px; font-size: 14.5px; color: #cfd8dc; line-height: 1.4; display: flex; align-items: center; }
+    .closeline b { color: #ffb74d; } .closeline .mono { color: #4fc3f7; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 8px; height: 32px; }
+    .progress { display: flex; gap: 9px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid #4a6274; }
+    .dot.on { background: #4fc3f7; border-color: #4fc3f7; }
+    .controls { color: #607d8b; font-size: 16px; }
+    .controls .k { display: inline-block; color: #90a4ae; border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        margin: 0 2px; font-size: 14px; font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .controls .k.amber { color: #ffb74d; border-color: #6a5324; }
+    .controls .k.violet { color: #b388ff; border-color: #6a4fa0; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 258 104" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <g font-family="'Menlo',monospace" font-size="12" fill="#4fc3f7"><text x="10" y="30">always @(posedge clk)</text></g>
+                <g font-family="'Menlo',monospace" font-size="12" fill="#ffb74d"><text x="24" y="50">q &lt;= d;</text></g>
+                <path d="M 120 62 L 150 62" stroke="#4fc3f7" stroke-width="2.4"/>
+                <text x="98" y="66" font-family="'Menlo',monospace" font-size="11" fill="#90a4ae">d</text>
+                <rect x="150" y="34" width="60" height="56" rx="6" fill="#0d1b2a" stroke="#cfd8dc" stroke-width="2.4"/>
+                <path d="M 150 80 L 160 86 L 150 92" stroke="#ffb74d" stroke-width="2"/>
+                <path d="M 120 86 L 150 86" stroke="#ffb74d" stroke-width="2.4"/>
+                <text x="157" y="66" font-family="'Menlo',monospace" font-size="13" fill="#cfd8dc">D</text>
+                <text x="196" y="66" font-family="'Menlo',monospace" font-size="13" fill="#cfd8dc">Q</text>
+                <path d="M 210 62 L 244 62" stroke="#4fc3f7" stroke-width="2.4"/>
+                <text x="228" y="12" font-family="'Segoe UI',sans-serif" font-size="11" fill="#90a4ae">=</text>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Registers in Verilog <span class="sub">&mdash; <span class="mono">always @(posedge clk)</span> is a flip-flop</span></h1>
+            <div class="subtitle">One bit, then a register, then a reset, then an enable &middot; each added line of code is a piece of hardware in front of the D pin</div>
+        </div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">One Bit</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Eight Bits</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Add a Reset</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Add an Enable</div></div>
+    </div>
+
+    <div class="stage" id="stage"></div>
+
+    <div class="footer">
+        <div class="progress">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="4"></div>
+        </div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> beat
+            &middot; <span class="k">Space</span>/<span class="k">&rarr;</span> next
+            &middot; <span class="k violet">click a code line</span> or a gate to pair them
+            &middot; <span class="k amber">S</span> CLK step
+            &middot; <span class="k">R</span> &#8634; restart the walk
+            &middot; <span class="k">E</span>/<span class="k">X</span>/<span class="k">D</span> free play: enable / reset / d
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer');
+        const s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16/9) { ch = vh; cw = ch*(16/9); } else { cw = vw; ch = cw*(9/16); }
+        c.style.width = cw+'px'; c.style.height = ch+'px';
+        s.style.transform = `scale(${cw/DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize,50); });
+
+    // ============ THE FOUR MODULES (iverilog-verified — see BRIEF.md) ============
+    // hw: which hardware a line produces (null = no hardware; the module wrapper).
+    const BEATS = [
+      { id: 1, name: 'dff', title: 'One bit: the D flip-flop', out: 'q1',
+        added: [], addedNote: '',
+        lines: [
+          ['module dff (', null, false], ['  input      clk,', 'clk', false], ['  input      d,', 'dq', false],
+          ['  output reg q', 'dq', false], [');', null, false],
+          ['  always @(posedge clk)', 'clk', false], ['    q <= d;', 'dq', false], ['endmodule', null, false] ],
+        notes: { clk: '<b>always @(posedge clk)</b> → the ▷ pin and the clock wire. The block runs only at the rising edge; between edges nothing happens — that silence <i>is</i> the hold.',
+                 dq:  '<b>q &lt;= d</b> → the D→Q path. At the edge Q takes D, then holds it. <b>output reg q</b>: q is a stored value, so it must be declared <span class="mono">reg</span>.' },
+        idle: 'Click a code line to light the hardware it produces (and a gate to find its line). Nothing here says "hold" — <b>posedge</b> means it.' },
+      { id: 2, name: 'reg8', title: 'Eight bits: the register', out: 'q2',
+        added: ['[7:0]'], addedNote: 'the only edit — and it added seven flip-flops',
+        lines: [
+          ['module reg8 (', null, false], ['  input            clk,', 'clk', false], ['  input      [7:0] d,', 'bus', true],
+          ['  output reg [7:0] q', 'bus', true], [');', null, false],
+          ['  always @(posedge clk)', 'clk', false], ['    q <= d;', 'dq', false], ['endmodule', null, false] ],
+        notes: { clk: '<b>always @(posedge clk)</b> → one clock wire shared by all eight ▷ pins. A register is flip-flops that load together.',
+                 dq:  '<b>q &lt;= d</b> → unchanged. Eight D→Q paths now, one statement.',
+                 bus: '<b>[7:0]</b> → seven more flip-flops. The block did not change shape — only the width did. Click the register box to expand it.' },
+        idle: 'The <b>always</b> block is byte-for-byte the same as beat 1. Only the widths grew.' },
+      { id: 3, name: 'reg8_rst', title: 'Add a synchronous reset', out: 'q3',
+        added: ['if (reset)', 'else'], addedNote: 'an AND gate with reset-bar in front of every D pin',
+        lines: [
+          ['module reg8_rst (', null, false], ['  input            clk,', 'clk', false], ['  input            reset,', 'rst', true],
+          ['  input      [7:0] d,', 'bus', false], ['  output reg [7:0] q', 'bus', false], [');', null, false],
+          ['  always @(posedge clk)', 'clk', false], ['    if (reset) q <= 8\'d0;', 'rst', true],
+          ['    else       q <= d;', 'dq', true], ['endmodule', null, false] ],
+        notes: { clk: '<b>always @(posedge clk)</b> → the reset lives <i>inside</i> the posedge block, so it only acts at a rising edge: a <b>synchronous</b> reset.',
+                 rst: '<b>if (reset) q &lt;= 0</b> → an AND gate with <span class="mono">reset</span> complemented (the bubble) on every D pin: D = d · R̄. Reset high forces 0 into D; the flip-flop still waits for the edge.',
+                 dq:  '<b>else q &lt;= d</b> → the ordinary D→Q path, taken when reset is low.',
+                 bus: '<b>[7:0]</b> → the same eight flip-flops as beat 2.' },
+        idle: 'Watch the walk: <span class="mono">q3</span> stays <b>x</b> until the first edge even though reset is already high — synchronous.' },
+      { id: 4, name: 'reg8_rst_en', title: 'Add an enable', out: 'q4',
+        added: ['else if (enable)'], addedNote: 'a 2:1 mux in front of every D pin — and the missing final else is the feedback wire',
+        lines: [
+          ['module reg8_rst_en (', null, false], ['  input            clk,', 'clk', false], ['  input            reset,', 'rst', false],
+          ['  input            enable,', 'en', true], ['  input      [7:0] d,', 'bus', false], ['  output reg [7:0] q', 'bus', false], [');', null, false],
+          ['  always @(posedge clk)', 'clk', false], ['    if (reset)       q <= 8\'d0;', 'rst', false],
+          ['    else if (enable) q <= d;', 'en', true], ['endmodule', null, false] ],
+        notes: { clk: '<b>always @(posedge clk)</b> → still one clock, still edge-only. Priority is the <span class="mono">if</span> order: reset beats enable.',
+                 rst: '<b>if (reset)</b> → the AND with reset-bar, after the mux: D = R̄ · (E·d + Ē·q).',
+                 en:  '<b>else if (enable) q &lt;= d</b> → a 2:1 mux, select = enable. Input 1 is d; input 0 is the flip-flop\'s own Q looped back. No final <span class="mono">else</span> = "keep what you hold" = the feedback wire.',
+                 bus: '<b>[7:0]</b> → eight of everything: flip-flop, AND, mux.' },
+        idle: 'The synthesizer builds "hold" as Q feeding back into the mux. That wire is the unwritten <b>else</b>.' },
+    ];
+
+    // ============ THE SCRIPTED WALK ============
+    // Interval i holds the inputs seen by rising edge i (edges at t = 5, 15, … 75; inputs change at 12, 22, …).
+    const SCRIPT = [
+      { reset: 1, en: 0, d: 0xa5 }, { reset: 0, en: 0, d: 0xa5 }, { reset: 0, en: 0, d: 0x3c }, { reset: 0, en: 1, d: 0x3c },
+      { reset: 0, en: 1, d: 0xff }, { reset: 0, en: 0, d: 0x00 }, { reset: 1, en: 0, d: 0x00 }, { reset: 0, en: 1, d: 0x5a },
+    ];
+    const NEDGE = SCRIPT.length;
+    const hex2 = (v) => v === null ? 'xx' : v.toString(16).padStart(2, '0');
+    const bit1 = (v) => v === null ? 'x' : String(v);
+    // models — q = null means x (never loaded)
+    function nextQ(beat, q, inp) {
+      switch (beat) {
+        case 1: return (inp.d >> 7) & 1;
+        case 2: return inp.d;
+        case 3: return inp.reset ? 0 : inp.d;
+        case 4: return inp.reset ? 0 : (inp.en ? inp.d : q);
+      }
+    }
+    // the structural build of beat 4 (mux + AND + flip-flop), for the in-page equivalence check
+    function nextQ4Struct(q, inp) {
+      const held = inp.en ? inp.d : (q === null ? 0 : q);
+      const dpin = held & (inp.reset ? 0x00 : 0xff);
+      return dpin;
+    }
+    function fmtLine(t, inp, qs) {
+      return `${String(t).padStart(4)}   ${inp.reset}   ${inp.en}  ${hex2(inp.d)}  |   ${bit1(qs[1])}   ${hex2(qs[2])}   ${hex2(qs[3])}   ${hex2(qs[4])}`;
+    }
+    // run the walk k edges under a given schedule → {qs, lines}
+    function runWalk(k, sched) {
+      const qs = { 1: null, 2: null, 3: null, 4: null };
+      const lines = [fmtLine(0, sched[0], qs)];
+      for (let i = 0; i < k; i++) {
+        for (const b of [1, 2, 3, 4]) qs[b] = nextQ(b, qs[b], sched[i]);
+        lines.push(fmtLine(5 + 10 * i, sched[i], qs));
+        if (i + 1 < sched.length) lines.push(fmtLine(12 + 10 * i, sched[i + 1], qs));
+      }
+      return { qs, lines };
+    }
+
+    // ============ PAGE STATE ============
+    const FIRST = 1, LAST = 4;
+    let page = 1, clock = 0, hl = null, expanded = false, offScript = false;
+    let sched = SCRIPT.map(s => ({ ...s }));
+    const pages = [], tabs = Array.from(document.querySelectorAll('.tab')), dots = Array.from(document.querySelectorAll('.dot'));
+    const pcNum = document.getElementById('pcNum');
+
+    // ============ CODE PANE ============
+    const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    function hi(line) {
+        return esc(line)
+            .replace(/\b(module|endmodule|input|output|reg|always|posedge|if|else)\b/g, '<span class="kw">$1</span>')
+            .replace(/(8&#39;d0|8'd0|\[7:0\])/g, '<span class="nm">$1</span>')
+            .replace(/(&lt;=|@)/g, '<span class="op">$1</span>');
+    }
+    function buildCode(beat) {
+        const div = document.createElement('div'); div.className = 'code';
+        beat.lines.forEach(([txt, hw, isNew], i) => {
+            const cl = document.createElement('div');
+            cl.className = 'cl ' + (hw ? 'hw' : 'nohw') + (isNew ? ' new' : '');
+            if (hw) cl.dataset.hw = hw;
+            cl.innerHTML = `<span class="ln">${i + 1}</span><span class="gut"></span><span class="src">${hi(txt)}</span>`;
+            if (hw) cl.addEventListener('click', () => { hl = (hl === hw) ? null : hw; renderPage(); });
+            div.appendChild(cl);
+        });
+        return div;
+    }
+
+    // ============ CIRCUIT DRAWINGS ============
+    // helpers write into an array of svg strings; every group carries data-hw for the pairing
+    const W0 = '#7d9bb5', W1 = '#4fc3f7', AMB = '#ffb74d', INK = '#cfd8dc';
+    const wire = (pts, col = W0, extra = '') => `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width="3" stroke-linejoin="round" ${extra}/>`;
+    const dot = (x, y, col = W0) => `<circle cx="${x}" cy="${y}" r="5" fill="${col}"/>`;
+    const hop = (x, y, col = W0) => `<path d="M ${x-9} ${y} A 9 9 0 0 1 ${x+9} ${y}" fill="none" stroke="${col}" stroke-width="3"/>`;
+    const lab = (x, y, t, anchor = 'start', size = 18, col = INK, extra = '') => `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="Menlo,Consolas,monospace" font-size="${size}" fill="${col}" class="lab" ${extra}>${t}</text>`;
+    const slash = (x, y, n) => `<line x1="${x-7}" y1="${y+9}" x2="${x+7}" y2="${y-9}" stroke="${INK}" stroke-width="2.5"/>${lab(x+4, y-12, n, 'start', 14, '#90a4ae')}`;
+    // D flip-flop: box with D (left, upper), ▷ (left, lower), Q (right upper), Q̄ (right lower)
+    function dff(x, y, w, h, opts = {}) {
+        const small = opts.small;
+        const fs = small ? 13 : 20;
+        let s = `<rect class="body hlfill" x="${x}" y="${y}" width="${w}" height="${h}" rx="${small?4:8}" fill="#0d1b2a" stroke="${INK}" stroke-width="${small?2:3}"/>`;
+        const dy = y + h * 0.3, cy = y + h * 0.75;
+        s += `<path class="body" d="M ${x} ${cy-(small?6:10)} L ${x+(small?10:18)} ${cy} L ${x} ${cy+(small?6:10)}" fill="none" stroke="${AMB}" stroke-width="${small?2:3}"/>`;
+        s += lab(x + (small?14:24), dy + fs*0.35, 'D', 'start', fs);
+        s += lab(x + w - (small?14:24), dy + fs*0.35, 'Q', 'end', fs);
+        // Q̄ with a drawn overbar
+        if (!small) {
+            const qx = x + w - 24, qy = cy + fs*0.35;
+            s += lab(qx, qy, 'Q', 'end', fs);
+            s += `<line x1="${qx - fs*0.62}" y1="${qy - fs*0.95}" x2="${qx}" y2="${qy - fs*0.95}" stroke="${INK}" stroke-width="2.2"/>`;
+        }
+        if (opts.label) s += lab(x + w/2, y + h + (small?14:26), opts.label, 'middle', small?12:15, '#90a4ae');
+        return { s, D: [x, dy], CLK: [x, cy], Q: [x + w, dy], QB: [x + w, cy] };
+    }
+    // bus register box
+    function regbox(x, y, w, h, label) {
+        let s = `<rect class="body hlfill" x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#0d1b2a" stroke="${INK}" stroke-width="3"/>`;
+        const dy = y + 60, cy = y + h - 50;
+        s += `<path class="body" d="M ${x} ${cy-10} L ${x+18} ${cy} L ${x} ${cy+10}" fill="none" stroke="${AMB}" stroke-width="3"/>`;
+        s += lab(x + 24, dy + 7, 'D', 'start', 20) + lab(x + w - 24, dy + 7, 'Q', 'end', 20);
+        s += lab(x + w/2, y + h/2 + 8, label, 'middle', 17, '#90a4ae');
+        s += lab(x + w/2, y + h/2 + 30, '8 × D flip-flop', 'middle', 13, '#607d8b');
+        return { s, D: [x, dy], CLK: [x, cy], Q: [x + w, dy] };
+    }
+    // AND gate, inputs at left (in1 upper, in2 lower with optional bubble), output at right centre
+    function andGate(x, y, w, h, bubble2) {
+        const r = h / 2;
+        let s = `<path class="body hlfill" d="M ${x} ${y} L ${x + w - r} ${y} A ${r} ${r} 0 0 1 ${x + w - r} ${y + h} L ${x} ${y + h} Z" fill="#0d1b2a" stroke="${INK}" stroke-width="3"/>`;
+        const in1 = [x, y + h * 0.3], in2 = [x, y + h * 0.7];
+        if (bubble2) { s += `<circle class="body" cx="${x - 8}" cy="${in2[1]}" r="8" fill="#0d1b2a" stroke="${INK}" stroke-width="3"/>`; in2[0] = x - 16; }
+        return { s, in1, in2, out: [x + w, y + h / 2] };
+    }
+    // 2:1 mux, trapezoid; inputs left (i1 upper labelled 1, i0 lower labelled 0), select at bottom, output right
+    function mux(x, y, w, h) {
+        let s = `<path class="body hlfill" d="M ${x} ${y} L ${x + w} ${y + 22} L ${x + w} ${y + h - 22} L ${x} ${y + h} Z" fill="#0d1b2a" stroke="${INK}" stroke-width="3"/>`;
+        const i1 = [x, y + h * 0.3], i0 = [x, y + h * 0.7];
+        s += lab(x + 10, i1[1] + 6, '1', 'start', 16, '#90a4ae') + lab(x + 10, i0[1] + 6, '0', 'start', 16, '#90a4ae');
+        return { s, i1, i0, sel: [x + w / 2, y + h - 11], out: [x + w, y + h / 2] };
+    }
+    const grp = (hw, inner, title) => `<g class="hwg" data-hw="${hw}"><title>${title}</title>${inner}</g>`;
+
+    function drawCircuit(beat, qs, inp) {
+        const V = { w: 1000, h: 470 };
+        let s = `<svg viewBox="0 0 ${V.w} ${V.h}" xmlns="http://www.w3.org/2000/svg">`;
+        const qv = qs[beat.id];
+        const qTxt = beat.id === 1 ? bit1(qv) : hex2(qv);
+        const qCol = qv === null ? '#90a4ae' : W1;
+        if (beat.id === 1) {
+            const f = dff(560, 140, 170, 180);
+            const dCol = (inp.d >> 7) & 1 ? W1 : W0;
+            s += grp('dq', wire([[120, f.D[1]], f.D], dCol) + dot(120, f.D[1], dCol) + lab(60, f.D[1] + 7, 'd', 'start', 20, INK) + lab(150, f.D[1] - 12, bit1((inp.d >> 7) & 1), 'start', 16, dCol), 'q <= d — the D→Q path');
+            s += grp('dq', f.s + wire([f.Q, [900, f.Q[1]]], qCol) + lab(925, f.Q[1] + 7, 'q', 'start', 20, INK) + lab(800, f.Q[1] - 12, qTxt, 'start', 16, qCol) + wire([f.QB, [800, f.QB[1]]], W0), 'the flip-flop');
+            s += grp('clk', wire([[120, 420], [400, 420], [400, f.CLK[1]], f.CLK], AMB) + lab(60, 427, 'clk', 'start', 20, INK) + lab(300, f.CLK[1] - 14, '▷ rising edge only', 'start', 14, AMB), 'always @(posedge clk) — the ▷ pin');
+        } else {
+            // shared: the register (bus box or expanded), clock rail, d/q buses; per beat the front-end logic
+            const RX = 620, RY = 90, RW = 200, RH = 300;
+            // expanded layout: eight flip-flops fh tall, gap apart, from y = ETOP
+            const EFH = 34, EGAP = 4, ETOP = RY + 60 - EFH * 0.3 - 2 * (EFH + EGAP);  // bit 5's D lines up with the bus entry at RY+60
+            let front; // the D-pin source point
+            const dBusCol = inp.d ? W1 : W0;
+            if (beat.id === 2) {
+                front = { x: 120, y: RY + 60 };
+            }
+            // front-end logic left of the register
+            let pre = '';
+            if (beat.id === 3 || beat.id === 4) {
+                const g = andGate(400, RY + 20, 110, 80, true);
+                const dIn = beat.id === 3 ? [120, g.in1[1]] : null;
+                const rc = inp.reset ? W1 : W0;
+                // reset climbs at x=340, clear of the mux body; R̄ sits under the bubble input
+                const rstWire = wire([[135, 300], [340, 300], [340, g.in2[1]], g.in2], rc);
+                pre += grp('rst', g.s + rstWire + lab(60, 307, 'reset', 'start', 20, INK)
+                    + lab(352, g.in2[1] + 24, 'R', 'start', 15, '#90a4ae') + `<line x1="${352}" y1="${g.in2[1] + 9}" x2="${363}" y2="${g.in2[1] + 9}" stroke="#90a4ae" stroke-width="2"/>`,
+                    'if (reset) — AND with reset-bar in front of every D pin');
+                pre += grp(beat.id === 3 ? 'dq' : 'rst', wire([g.out, [expanded ? RX - 60 : RX, g.out[1]]], inp.reset ? W0 : dBusCol) + slash(expanded ? 540 : 560, g.out[1], '8'), beat.id === 3 ? 'else q <= d — the D pin' : 'the D pin, after the reset AND');
+                if (beat.id === 3) {
+                    pre += grp('bus', wire([dIn, g.in1], dBusCol) + slash(200, g.in1[1], '8') + lab(60, g.in1[1] + 7, 'd', 'start', 20, INK) + lab(230, g.in1[1] - 12, hex2(inp.d), 'start', 16, dBusCol), 'd[7:0]');
+                } else {
+                    // mux output lands straight on the AND's upper input (y = g.in1); enable runs above reset so they never cross
+                    const m = mux(200, g.in1[1] - 65, 90, 130);
+                    const ec = inp.en ? W1 : W0;
+                    pre += grp('en', m.s + wire([m.out, g.in1], inp.en ? dBusCol : qCol) + wire([[150, 250], [m.sel[0], 250], m.sel], ec)
+                        + lab(60, 257, 'enable', 'start', 20, INK) + lab(m.sel[0] + 10, 230, 'E', 'start', 15, '#90a4ae')
+                        // feedback as a named net: input 0 is labelled q (same name, same wire as the register output)
+                        + wire([[150, m.i0[1]], m.i0], qCol) + lab(140, m.i0[1] + 7, 'q', 'end', 20, INK)
+                        + lab(140, m.i0[1] + 26, 'fed back = hold', 'end', 13, '#90a4ae'),
+                        'else if (enable) — a 2:1 mux; input 0 is Q fed back (the unwritten else)');
+                    pre += grp('bus', wire([[95, m.i1[1]], m.i1], dBusCol) + slash(120, m.i1[1], '8') + lab(60, m.i1[1] + 7, 'd', 'start', 20, INK) + lab(138, m.i1[1] - 12, hex2(inp.d), 'start', 15, dBusCol), 'd[7:0]');
+                }
+            }
+            // the register
+            let regS = '', clkPt, qPt;
+            if (!expanded) {
+                const r = regbox(RX, RY, RW, RH, `q[7:0] = ${qTxt}`);
+                regS = r.s; clkPt = r.CLK; qPt = r.Q;
+                if (beat.id === 2) pre += grp('dq', wire([[front.x, r.D[1]], r.D], dBusCol) + slash(200, r.D[1], '8') + lab(60, r.D[1] + 7, 'd', 'start', 20, INK) + lab(230, r.D[1] - 12, hex2(inp.d), 'start', 16, dBusCol), 'q <= d — eight D→Q paths, one statement');
+                regS += wire([qPt, [900, qPt[1]]], qCol) + slash(860, qPt[1], '8') + lab(925, qPt[1] + 7, 'q', 'start', 20, INK) + lab(830, qPt[1] - 14, qTxt, 'start', 16, qCol);
+                regS += lab(RX + RW / 2 + 30, RY + RH + 24, 'click to expand the eight flip-flops', 'middle', 13, '#607d8b');
+            } else {
+                // eight small flip-flops in a column, one shared clock rail
+                // every bit wired: d bus at x = RX-60 → each D pin (hopping the clock rail), each Q → the q bus (beat 4)
+                const fh = EFH, gap = EGAP, top = ETOP, FX = RX - 60, CX = RX - 40;
+                const botD = top + 7 * (fh + gap) + fh * 0.3;
+                let rail = '', fan = wire([[FX, top + fh * 0.3], [FX, botD]], W0) + dot(FX, RY + 60, W0);
+                clkPt = [CX, top + 7 * (fh + gap) + fh * 0.75];
+                for (let b = 7; b >= 0; b--) {
+                    const yy = top + (7 - b) * (fh + gap);
+                    const f = dff(RX + 30, yy, 130, fh, { small: true });
+                    const bitD = (inp.d >> b) & 1, bitQ = qv === null ? null : (qv >> b) & 1;
+                    const dc = bitD ? W1 : W0, qc = bitQ ? W1 : (bitQ === null ? '#90a4ae' : W0);
+                    const y = f.D[1];
+                    // bit 7's D sits above the top of the clock rail, so it needs no hop
+                    fan += (b === 7 ? wire([[FX, y], f.D], dc) : wire([[FX, y], [CX - 9, y]], dc) + hop(CX, y, dc) + wire([[CX + 9, y], f.D], dc))
+                        + (b > 0 && b < 7 ? dot(FX, y, W0) : '');
+                    regS += f.s + lab(RX + 26, y - 4, `d${b}`, 'end', 11, '#90a4ae');
+                    regS += wire([f.Q, [RX + 200, f.Q[1]]], qc) + lab(RX + 208, f.Q[1] + 5, `q${b}=${bit1(bitQ)}`, 'start', 12, bitQ ? W1 : '#90a4ae');
+                    rail += wire([[CX, f.CLK[1]], f.CLK], AMB) + (b > 0 ? dot(CX, f.CLK[1], AMB) : '');
+                }
+                rail += wire([[CX, top + fh * 0.75], [CX, clkPt[1]]], AMB);
+                regS = rail + fan + regS + lab(RX + 95, top + 8 * (fh + gap) + 14, 'click to collapse', 'middle', 13, '#607d8b');
+                qPt = [RX + 200, top + fh * 0.3];
+                if (beat.id === 2) pre += grp('dq', wire([[front.x, RY + 60], [FX, RY + 60]], dBusCol) + slash(200, RY + 60, '8') + lab(60, RY + 67, 'd', 'start', 20, INK), 'q <= d — eight D→Q paths, one statement');
+            }
+            s += pre;
+            s += grp(beat.id === 2 ? 'bus' : 'bus', regS, '[7:0] — eight flip-flops sharing one clock').replace('data-hw="bus"', `data-hw="bus" data-toggle="1"`);
+            s += grp('clk', wire([[120, 440], [RX - 40, 440], [RX - 40, clkPt[1]], clkPt], AMB) + lab(60, 447, 'clk', 'start', 20, INK) + (expanded ? '' : lab(RX - 30, clkPt[1] - 14, '▷', 'start', 14, AMB)), 'always @(posedge clk) — one clock, all eight ▷ pins');
+        }
+        s += `</svg>`;
+        return s;
+    }
+
+    // ============ BUILD PAGES ============
+    const stage = document.getElementById('stage');
+    BEATS.forEach((beat) => {
+        const p = document.createElement('div'); p.className = 'page'; p.id = 'p' + beat.id;
+        let diff = '';
+        if (beat.added.length) diff = `<div class="diff"><span class="dl">ADDED THIS BEAT</span>${beat.added.map(t => `<span class="tok">${esc(t)}</span>`).join('')}<span>→ <b>${beat.addedNote}</b></span></div>`;
+        p.innerHTML = `${diff}
+          <div class="main">
+            <div class="panel codepanel"><div class="panel-head"><span class="fn">${beat.name}.v</span><span class="role">${beat.title}</span></div>
+              <div class="codehost"></div><div class="codenote"></div></div>
+            <div class="panel circpanel"><div class="panel-head"><span class="ph">What the synthesizer builds</span><span class="role">click a gate to find its line &middot; ${beat.id === 1 ? 'one flip-flop' : 'eight flip-flops' + (beat.id >= 3 ? ' + AND' : '') + (beat.id === 4 ? ' + mux' : '')}</span></div>
+              <div class="circ"></div></div>
+          </div>
+          <div class="walk">
+            <div class="panel strip"><div class="panel-head"><span class="ph amber">The walk</span><span class="role">one rising edge per step &middot; the current clock is boxed &middot; ${beat.out} is this beat's output</span></div>
+              <div class="stripbody"></div>
+              <div class="ctrl"><span class="stepbtn">CLK ▶ step<span class="k">S</span></span><span class="rstbtn" title="Back to clock 0 on this beat; also clears free play">↺ restart<span class="k">R</span></span><span class="readout" title="Free play: E toggles enable, X toggles reset, D cycles d — edits the boxed clock's inputs"></span></div>
+</div>
+            <div class="panel console"><div class="panel-head"><span class="ph amber">$monitor</span><span class="role">the bench that drives all four modules at once</span></div><div class="conbody"></div></div>
+          </div>
+          ${beat.id === 4 ? `<div class="closing"><div class="stack">
+              <div class="blk"><span class="bn">dff</span><span>1 bit</span><span class="bc">1 FF</span></div>
+              <div class="blk"><span class="bn">reg8</span><span>+ [7:0]</span><span class="bc">8 FF</span></div>
+              <div class="blk"><span class="bn">reg8_rst</span><span>+ if (reset)</span><span class="bc">8 FF + 8 AND</span></div>
+              <div class="blk"><span class="bn">reg8_rst_en</span><span>+ else if (enable)</span><span class="bc">8 FF + 8 AND + 8 MUX</span></div></div>
+            <div class="closeline"><span>The template for every register in the course: <b>state register</b> = <span class="mono">always @(posedge clk)</span> + <span class="mono">&lt;=</span>. Reset and enable are just the logic in front of D. Why <span class="mono">&lt;=</span> and not <span class="mono">=</span>? &rarr; <b data-topic="blocking-versus-nonblocking">Blocking versus NonBlocking</b>.</span></div></div>` : ''}`;
+        p.querySelector('.codehost').appendChild(buildCode(beat));
+        p.querySelector('.stepbtn').addEventListener('click', doStep);
+        p.querySelector('.rstbtn').addEventListener('click', doReset);
+        stage.appendChild(p); pages.push(p);
+    });
+
+    function renderPage() {
+        const beat = BEATS[page - 1], p = pages[page - 1];
+        const { qs, lines } = runWalk(clock, sched);
+        const inp = sched[Math.min(clock, NEDGE - 1)];
+        // code highlight + note
+        p.querySelectorAll('.cl').forEach(cl => cl.classList.toggle('hl', !!hl && cl.dataset.hw === hl));
+        p.querySelector('.codenote').innerHTML = hl && beat.notes[hl] ? beat.notes[hl] : beat.idle;
+        // circuit
+        const circ = p.querySelector('.circ');
+        circ.innerHTML = drawCircuit(beat, qs, inp);
+        circ.querySelectorAll('.hwg').forEach(g => {
+            g.classList.toggle('hl', !!hl && g.dataset.hw === hl);
+            g.addEventListener('click', (e) => {
+                if (g.dataset.toggle && beat.id >= 2) { expanded = !expanded; }
+                hl = (hl === g.dataset.hw) ? null : g.dataset.hw; renderPage(); e.stopPropagation();
+            });
+        });
+        // input strip
+        const sb = p.querySelector('.stripbody');
+        const cellRow = (label, f, cls) => `<div class="row${cls ? ' ' + cls : ''}"><span class="rl">${label}</span>${sched.map((s, i) => {
+            const v = f(s, i); const isNow = i === clock; const fut = i > clock;
+            const oneZero = typeof v === 'number' && label !== 'd' ? (v ? ' one' : ' zero') : '';
+            return `<span class="cell${oneZero}${isNow ? ' now' : ''}${fut ? ' future' : ''}">${typeof v === 'number' && label === 'd' ? hex2(v) : v}</span>`; }).join('')}</div>`;
+        const qsAt = []; for (let i = 0; i <= NEDGE; i++) qsAt.push(runWalk(i, sched).qs[beat.id]);
+        sb.innerHTML = cellRow('edge', (s, i) => (i === clock ? '▲ ' : '') + `t=${5 + 10 * i}`, 'hdr')
+            + cellRow('reset', s => s.reset, beat.id < 3 ? 'unused' : '') + cellRow('enable', s => s.en, beat.id < 4 ? 'unused' : '') + cellRow('d', s => s.d)
+            + `<div class="row"><span class="rl">${beat.out} →</span>${sched.map((s, i) => { const v = qsAt[i + 1]; const txt = beat.id === 1 ? bit1(v) : hex2(v);
+                return `<span class="cell${i >= clock ? ' future' : ''}" style="color:${i < clock ? W1 : '#607d8b'};font-weight:700">${i < clock ? txt : '·'}</span>`; }).join('')}</div>`
+            ;
+        // readout
+        const ro = p.querySelector('.readout');
+        if (clock >= NEDGE) ro.innerHTML = `walk complete &middot; ${beat.out} = <b>${beat.id === 1 ? bit1(qs[beat.id]) : hex2(qs[beat.id])}</b> &middot; ↺ to restart`;
+        else {
+            const nq = nextQ(beat.id, qs[beat.id], inp);
+            const why = beat.id === 1 ? 'q ← d[7]' : beat.id === 2 ? 'q ← d' : beat.id === 3 ? (inp.reset ? 'reset → 0' : 'load d') : (inp.reset ? 'reset wins' : inp.en ? 'enable: load d' : 'enable=0: hold');
+            ro.innerHTML = `${beat.out} = <b>${beat.id === 1 ? bit1(qs[beat.id]) : hex2(qs[beat.id])}</b> &middot; <span class="amber">on CLK →</span> <b>${beat.id === 1 ? bit1(nq) : hex2(nq)}</b> <span style="color:#607d8b">(${why})</span>`;
+        }
+        // console
+        const con = p.querySelector('.conbody');
+        const head = 'time reset en   d  |  q1   q2   q3   q4';
+        // the console keeps the header and the most recent lines that fit (like a terminal)
+        const MAXL = offScript ? 8 : 9;
+        const tail = lines.length > MAXL ? lines.slice(lines.length - MAXL) : lines;
+        const elided = lines.length - tail.length;
+        con.innerHTML = `<span class="chead">${head}</span>\n` + (elided ? `<span class="chead">   … ${elided} earlier line${elided > 1 ? 's' : ''}</span>\n` : '')
+            + tail.map((l, i) => `<span class="${i === tail.length - 1 ? 'last' : ''}">${l}</span>`).join('\n') + (offScript ? `\n<span class="off">(free play — off the recorded script)</span>` : '');
+    }
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p' + page));
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        dots.forEach(d => d.classList.toggle('on', +d.dataset.dot === page));
+        pcNum.textContent = page;
+        renderPage();
+    }
+    function setPage(n) { page = Math.max(FIRST, Math.min(LAST, n)); hl = null; render(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    function doStep() { if (clock < NEDGE) { clock++; render(); } }
+    function doReset() { clock = 0; offScript = false; sched = SCRIPT.map(s => ({ ...s })); render(); }
+    function freePlay(fn) { if (clock >= NEDGE) return; fn(sched[clock]); offScript = true; render(); }
+    const DVALS = [0xa5, 0x3c, 0xff, 0x00, 0x5a];
+
+    // ============ KEYS ============
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= '4') { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowRight': case 'ArrowDown': setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'ArrowUp': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
+            case 's': case 'S': doStep(); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+            case 'e': case 'E': freePlay(s => { s.en = s.en ? 0 : 1; }); e.preventDefault(); break;
+            case 'x': case 'X': freePlay(s => { s.reset = s.reset ? 0 : 1; }); e.preventDefault(); break;
+            case 'd': case 'D': freePlay(s => { s.d = DVALS[(DVALS.indexOf(s.d) + 1) % DVALS.length]; }); e.preventDefault(); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, step: doStep, reset: doReset, runWalk, SCRIPT, NEDGE, nextQ, nextQ4Struct,
+        setHighlight: (h) => { hl = h; renderPage(); },
+        setExpanded: (v) => { expanded = !!v; renderPage(); },
+        getState: () => ({ page, clock, hl, expanded, offScript, qs: runWalk(clock, sched).qs }),
+    };
+
+    render();
+</script>
+</body>
+</html>
