@@ -1,0 +1,11 @@
+title: "FSMD - Finite State Machines with Datapaths"
+description: "The first worked example of the three-step RTL method on a 3-bit bounce counter: draw the FSMD with register transfers beside the states and data conditions on the arcs, read the datapath off it (register, arithmetic, a mux whose select is the control signal, comparators whose outputs are status signals), and derive the ordinary Moore controller that operates it."
+chapter: rtl-design
+section: introduction-to-rtl-design
+order: 50101
+
+graphics:
+  01-video.youtube:
+    caption: "Video: a first FSMD, the 3-bit bounce counter, taken through the three steps: draw the FSMD, build the datapath, derive the controller, then connect and run it"
+  02-interactive.html:
+    caption: "Interactive: build the FSMD step by step, read the datapath and the controller off it one reading at a time, then step the clock through the connected machine and follow the cycle trace"

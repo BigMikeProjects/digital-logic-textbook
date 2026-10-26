@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSMD — Finite State Machine with Datapath: a 3-Step Design Method on a 3-bit Bounce Counter</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 = the current state, register transfers, live data · amber #ffb74d = control (up) and CLK ·
+       violet #b388ff = status (at6, at1) and the data conditions that become them · slate #7d9bb5 = a wire carrying 0 · navy #0d1b2a = panels */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #4fc3f7; border-radius: 12px;
+        background: rgba(79,195,247,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #e8eef2; font-size: 38px; font-weight: 700; line-height: 1.15; }
+    .titles h1 .sub { color: #90a4ae; font-size: 25px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 20px; margin-top: 4px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #e8eef2; font-size: 26px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; }
+    .defs-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 20px; font-weight: 600;
+        color: #cfd8dc; background: transparent; border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k { border: 1px solid #37506a; border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: #90a4ae; line-height: 26px; }
+    .defs-btn.on { border-color: #b388ff; color: #e8eef2; background: rgba(179,136,255,0.10); }
+
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(8,13,24,0.78); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1440px; background: #0d1b2a; border: 2px solid #b388ff; border-radius: 16px; padding: 16px 38px 22px; box-shadow: 0 18px 60px rgba(0,0,0,0.55); }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+    .defs-title { font-size: 34px; font-weight: 700; color: #e8eef2; }
+    .defs-close { font-size: 20px; color: #607d8b; }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 11px; align-items: baseline; }
+    .defs-list .ds { font-size: 26px; font-weight: 700; white-space: nowrap; }
+    .defs-list .dd { font-size: 22px; line-height: 1.26; color: #b0bec5; }
+    .defs-list .dd b { color: #e8eef2; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 21px; font-weight: 700; white-space: nowrap; }
+    .tab .tstep { font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #4a627a; margin-left: auto; }
+    .tab.on { color: #e8eef2; border-color: #cfd8dc; background: rgba(207,216,220,0.07); }
+    .tab.on .tnum { background: #cfd8dc; color: #0d1b2a; border-color: #cfd8dc; }
+    .tab.on .tstep { color: #90a4ae; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 14px; flex-direction: column; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+    .panel svg { display: block; }
+    .phead { white-space: nowrap; font-size: 22px; font-weight: 700; color: #cfd8dc; padding: 10px 22px 0; }
+    .phead .dimtxt { color: #90a4ae; font-weight: 500; }
+
+    .c-ctl { color: #ffb74d; } .c-st { color: #b388ff; } .c-on { color: #4fc3f7; } .c-dim { color: #90a4ae; }
+
+    /* step beats: left/right rows */
+    .row { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .side { flex: 0 0 560px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+    .main svg { width: 100%; }
+    .fig1 svg { height: 776px; }
+    .fig2 svg, .fig3 svg { height: 760px; }
+    .card { padding: 12px 20px 14px; font-size: 20px; line-height: 1.38; color: #b0bec5; }
+    .card b { color: #e8eef2; }
+    .card .ct { font-size: 22px; font-weight: 700; color: #cfd8dc; margin-bottom: 6px; }
+    .card .ct .dimtxt { color: #90a4ae; font-weight: 500; }
+    .card ul { list-style: none; }
+    .card li { margin-top: 6px; padding-left: 18px; position: relative; }
+    .card li::before { content: '\25AA'; position: absolute; left: 0; color: #4fc3f7; }
+    .card .rule { border-left: 4px solid #b388ff; padding-left: 14px; margin-top: 6px; color: #cfd8dc; }
+    .card .chk { margin-top: 8px; color: #90a4ae; }
+    .card.fill { flex: 1; min-height: 0; }
+    .stepcard .snum { font-size: 17px; font-weight: 700; letter-spacing: 2px; color: #4fc3f7; }
+    .stepcard .reason { font-size: 22px; line-height: 1.4; color: #e0e0e0; margin-top: 4px; min-height: 92px; }
+    .stepcard .reason .mono { color: #4fc3f7; }
+    .steprow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+    .rowcard { border: 2px solid #24384c; border-radius: 12px; padding: 10px 16px 11px; cursor: pointer; transition: all .12s ease; }
+    .rowcard .rt { font-size: 21px; font-weight: 700; color: #cfd8dc; }
+    .rowcard .rt .arrow { color: #607d8b; font-weight: 500; }
+    .rowcard .rd { font-size: 19px; line-height: 1.35; color: #90a4ae; margin-top: 3px; }
+    .rowcard .rd b { color: #b0bec5; }
+    .rowcard.on { border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .rowcard.on .rt { color: #4fc3f7; }
+    .rowcard.on .rd { color: #cfd8dc; } .rowcard.on .rd b { color: #e8eef2; }
+    .rowcard .rd .mono { color: #e8eef2; }
+    .foot { font-size: 20px; line-height: 1.38; color: #b0bec5; padding: 12px 20px 14px; }
+    .foot b { color: #e8eef2; }
+    .foot .hdl { margin-top: 8px; color: #90a4ae; border-top: 1px solid #24384c; padding-top: 8px; }
+
+    /* the connected diagram (beat 4) */
+    .diag svg { width: 100%; height: auto; }
+    .brow { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .readout { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .readout .ro { padding: 10px 22px 10px; font-size: 21px; line-height: 1.4; color: #b0bec5; }
+    .readout .ro b { color: #e8eef2; }
+    .readout .ro .mono { color: #e8eef2; }
+    .readout .steprow { padding: 0 22px 14px; margin-top: auto; }
+    .legend { flex: 0 0 560px; }
+    .legend .lrow { display: flex; align-items: center; gap: 14px; padding: 6px 22px; font-size: 21px; color: #b0bec5; }
+    .legend .lrow:first-of-type { padding-top: 10px; }
+    .legend .sw { flex-shrink: 0; width: 54px; height: 0; border-top: 5px solid currentColor; position: relative; }
+    .legend .sw::after { content: ''; position: absolute; right: -4px; top: -9px; border: 7px solid transparent; border-left: 12px solid currentColor; }
+    .legend .sw.rev::after { right: auto; left: -4px; border-left: 7px solid transparent; border-right: 12px solid currentColor; }
+    .legend .lrow.c-ctl .sw { color: #ffb74d; } .legend .lrow.c-st .sw { color: #b388ff; }
+    .legend .lrow b { color: #e8eef2; }
+    .legend .lrow .mono { color: #e8eef2; font-weight: 700; }
+    .legend .lfoot { padding: 6px 22px 12px; font-size: 20px; color: #90a4ae; line-height: 1.35; }
+    .legend .lfoot b { color: #cfd8dc; }
+
+    .btn { font: inherit; font-size: 22px; font-weight: 700; color: #cfd8dc; background: transparent;
+        border: 3px solid #607d8b; border-radius: 12px; padding: 7px 18px; cursor: pointer; white-space: nowrap; }
+    .btn .kk { font-weight: 500; font-size: 20px; color: #90a4ae; }
+    .btn.clk { border-color: #ffb74d; color: #ffb74d; }
+    .btn.nxt { border-color: #4fc3f7; color: #4fc3f7; }
+    .chip { display: inline-block; font-size: 22px; font-weight: 700; border-radius: 999px; padding: 6px 20px;
+        border: 3px solid currentColor; white-space: nowrap; }
+    .chip.on { color: #4fc3f7; background: rgba(79,195,247,0.12); }
+    .chip.st { color: #b388ff; background: rgba(179,136,255,0.12); }
+
+    /* SVG classes */
+    .ct { fill: none; stroke: #37506a; stroke-width: 2.5; }
+    .ct-title { fill: #cfd8dc; font-size: 26px; font-weight: 700; }
+    .ct-sub { fill: #90a4ae; font-size: 18px; }
+    .blk { fill: #0d1b2a; stroke: #6f8799; stroke-width: 3; }
+    .blk.on, .blk.foc { stroke: #4fc3f7; stroke-width: 4; fill: rgba(79,195,247,0.10); }
+    .blk-l { fill: #e0e0e0; font-family: 'Menlo','Consolas',monospace; font-size: 25px; font-weight: 700; text-anchor: middle; }
+    .blk-l.sm { font-size: 20px; font-weight: 500; fill: #90a4ae; font-family: 'Segoe UI',sans-serif; }
+    .wire { fill: none; stroke: #7d9bb5; stroke-width: 3.5; stroke-linejoin: round; transition: stroke .15s, opacity .15s; }
+    .wire.data { stroke: #8fa8bd; }
+    .wire.ctl.on, .wire.ctl.foc { stroke: #ffb74d; stroke-width: 5; }
+    .wire.st.on, .wire.st.foc { stroke: #b388ff; stroke-width: 5; }
+    .wire.data.on, .wire.data.foc { stroke: #4fc3f7; stroke-width: 5; }
+    .wire.clk { stroke: #ffb74d; }
+    .wire.clk.foc { stroke-width: 5; }
+    .dot { fill: #8fa8bd; }
+    .dot.foc { fill: #4fc3f7; }
+    .val { font-family: 'Menlo','Consolas',monospace; font-size: 24px; font-weight: 700; fill: #4fc3f7; }
+    .val.dim { fill: #5d7488; font-weight: 500; }
+    .muxin { font-family: 'Menlo','Consolas',monospace; font-size: 21px; fill: #90a4ae; text-anchor: middle; }
+    .sig { font-family: 'Menlo','Consolas',monospace; font-size: 27px; font-weight: 700; text-anchor: middle; }
+    .sig.ctl { fill: #ffb74d; } .sig.st { fill: #b388ff; } .sig .v { fill: #e8eef2; font-weight: 500; } .sig .v.off { fill: #7d9bb5; }
+    .dir { font-size: 17px; font-weight: 700; letter-spacing: 2px; text-anchor: middle; }
+    .dir.ctl { fill: rgba(255,183,77,0.7); } .dir.st { fill: rgba(179,136,255,0.75); } .dir.data { fill: rgba(79,195,247,0.7); }
+    .regval { font-family: 'Menlo','Consolas',monospace; font-size: 27px; font-weight: 700; fill: #4fc3f7; text-anchor: middle; }
+    .regval .dec { fill: #cfd8dc; font-weight: 500; }
+    .clkl { font-family: 'Menlo','Consolas',monospace; font-size: 20px; fill: #ffb74d; text-anchor: end; }
+    .busl { font-family: 'Menlo','Consolas',monospace; font-size: 17px; fill: #90a4ae; }
+    .sd-node .sdc { fill: #0d1b2a; stroke: #6f8799; stroke-width: 3; transition: stroke .18s, fill .18s; }
+    .sd-node.on .sdc, .sd-node.foc .sdc { stroke: #4fc3f7; stroke-width: 5; fill: rgba(79,195,247,0.16); }
+    .sd-node .sdname { fill: #e0e0e0; font-weight: 700; text-anchor: middle; font-size: 32px; }
+    .sd-node.on .sdname, .sd-node.foc .sdname { fill: #4fc3f7; }
+    .sd-node .sdout { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 23px; font-weight: 700; }
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 3; transition: stroke .18s; }
+    .arc.on, .arc.foc { stroke: #4fc3f7; stroke-width: 5.5; }
+    .arc-l { fill: #b388ff; font-family: 'Menlo','Consolas',monospace; font-size: 28px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #0d1b2a; stroke-width: 8px; stroke-linejoin: round; }
+    .arc-l.on { fill: #4fc3f7; }
+    .rst { fill: none; stroke: #cfd8dc; stroke-width: 3; }
+    .rst-l { fill: #90a4ae; font-size: 19px; text-anchor: end; }
+    .dim { opacity: 0.22; }
+    /* the FSMD (beat 1) */
+    .fsmd .sdname { font-size: 36px; }
+    .xfer-box { fill: rgba(79,195,247,0.13); stroke: #4fc3f7; stroke-width: 2; }
+    .xfer { fill: #4fc3f7; font-family: 'Menlo','Consolas',monospace; font-size: 31px; font-weight: 700; text-anchor: middle; }
+    .leader { fill: none; stroke: #4a627a; stroke-width: 2; stroke-dasharray: 4 7; }
+    .cond { fill: #b388ff; font-family: 'Menlo','Consolas',monospace; font-size: 30px; font-weight: 700;
+        paint-order: stroke; stroke: #0d1b2a; stroke-width: 8px; stroke-linejoin: round; }
+    .port { font-size: 25px; fill: #b0bec5; text-anchor: middle; }
+    .port .pk { fill: #90a4ae; } .port .pv { fill: #e8eef2; font-family: 'Menlo','Consolas',monospace; font-weight: 700; }
+    .hid { display: none; }
+    .fnew { filter: drop-shadow(0 0 7px rgba(79,195,247,0.85)); }
+
+    /* beat 5 */
+    .row5 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .tcol { flex: 0 0 1090px; display: flex; flex-direction: column; min-height: 0; }
+    .rcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .mtab { padding: 6px 22px 12px; }
+    .mtab table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    .mtab th { font-size: 19px; font-weight: 600; color: #90a4ae; padding: 4px 10px 7px; text-align: center; border-bottom: 2px solid #37506a; white-space: nowrap; }
+    .mtab th:first-child, .mtab td:first-child { text-align: left; }
+    .mtab td { font-size: 21px; padding: 9px 10px; border-bottom: 1px solid #24384c; color: #cfd8dc; white-space: nowrap; text-align: center;
+        font-family: 'Menlo','Consolas',monospace; }
+    .mtab td.t { font-family: 'Segoe UI',sans-serif; }
+    .mtab td.zero { color: #5d7488; }
+    .mtab td.one.st { color: #b388ff; font-weight: 700; }
+    .mtab td.one.ign { color: #7d9bb5; font-weight: 500; }
+    .mtab td.one.ctl { color: #ffb74d; font-weight: 700; }
+    .mtab td.turn { color: #4fc3f7; font-weight: 700; }
+    .mtab tr.cur td { background: rgba(255,183,77,0.12); color: #e8eef2; }
+    .mtab tr.cur td:first-child { color: #ffb74d; font-weight: 700; box-shadow: inset 4px 0 0 #ffb74d; }
+    .mtab tr.cur td.zero { color: #90a4ae; }
+    .mtab .ignote { font-size: 18px; color: #7d9bb5; padding-top: 8px; line-height: 1.3; }
+    .strip svg { width: 100%; height: 206px; }
+    .eqcard { padding: 10px 22px 14px; }
+    .eqcard .eq { font-family: 'Menlo','Consolas',monospace; font-size: 27px; font-weight: 700; color: #e8eef2; margin-top: 6px; }
+    .eqcard .eq .ctl { color: #ffb74d; } .eqcard .eq .st { color: #b388ff; } .eqcard .eq .on { color: #4fc3f7; }
+    .eqcard .why { font-size: 20px; color: #b0bec5; line-height: 1.36; margin-top: 8px; }
+    .eqcard .why b { color: #e8eef2; }
+    .note { padding: 10px 22px 14px; font-size: 20px; line-height: 1.38; color: #b0bec5; }
+    .note b { color: #e8eef2; }
+    .note .rule { border-left: 4px solid #b388ff; padding-left: 14px; margin-top: 8px; color: #cfd8dc; }
+    .note .chk { margin-top: 8px; color: #90a4ae; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .pdot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #37506a; }
+    .pdot.on { background: #cfd8dc; border-color: #cfd8dc; }
+    .controls { font-size: 20px; color: #607d8b; }
+    .controls .k { border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        font-family: 'Menlo','Consolas',monospace; color: #90a4ae; }
+    .controls .k.amber { color: #ffb74d; border-color: #7a5a2a; }
+    .controls .k.cyan { color: #4fc3f7; border-color: #2a5a7a; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="8" width="54" height="46" rx="6" stroke="#cfd8dc" stroke-width="2.5"/>
+                <circle cx="22" cy="31" r="8" stroke="#4fc3f7" stroke-width="2.5"/>
+                <circle cx="42" cy="31" r="8" stroke="#6f8799" stroke-width="2.5"/>
+                <rect x="92" y="8" width="54" height="46" rx="6" stroke="#cfd8dc" stroke-width="2.5"/>
+                <rect x="104" y="18" width="30" height="12" rx="2" stroke="#4fc3f7" stroke-width="2.2"/>
+                <rect x="104" y="36" width="30" height="12" rx="2" stroke="#4fc3f7" stroke-width="2.2"/>
+                <path d="M58 22 H88 M84 17 L90 22 L84 27" stroke="#ffb74d" stroke-width="3"/>
+                <path d="M92 42 H62 M66 37 L60 42 L66 47" stroke="#b388ff" stroke-width="3"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>FSMD <span class="sub">&mdash; finite state machine with datapath, as a three-step method on a 3-bit bounce counter</span></h1>
+            <div class="subtitle">Draw the FSMD, build the datapath, derive the controller. HDL tools automate this; doing it by hand shows what the code implies.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 5</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Draw the FSMD</div><div class="tstep">STEP 1</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Build the Datapath</div><div class="tstep">STEP 2</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Derive the Controller</div><div class="tstep">STEP 3</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Connect and Run</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">Cycle Trace</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 — the FSMD -->
+        <div class="page" id="p1">
+            <div class="row">
+                <div class="panel main fig1">
+                    <div class="phead">Step 1 of 3 &mdash; draw the FSMD <span class="dimtxt">&mdash; a state diagram with register transfers beside the states and data conditions on the arcs</span></div>
+                    <svg id="d1" viewBox="0 0 1200 800" class="fsmd"></svg>
+                </div>
+                <div class="side">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum1"></div>
+                        <div class="reason" id="reason1"></div>
+                        <div class="steprow">
+                            <button class="btn nxt" id="nxt1">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel card">
+                        <div class="ct">What an FSMD adds to a state diagram</div>
+                        <ul>
+                            <li><b>Register transfers</b> beside each state: what the data does while the machine sits there.</li>
+                            <li><b>Arcs that read the data.</b> A plain FSM leaves a state on an input; this one leaves on <span class="mono c-st">C = 6</span>, a fact about a register.</li>
+                            <li>It is the whole algorithm in one picture, and <b>not yet hardware</b>. Steps 2 and 3 split it.</li>
+                        </ul>
+                    </div>
+                    <div class="panel card fill">
+                        <div class="ct">Why <span class="mono c-st">C = 6</span>, not 7</div>
+                        <div class="rule">The transfer and the transition happen on the <b>same clock edge</b>. Leaving UP at C = 6 still performs C &larr; C + 1, so C arrives in DOWN as <b>7</b>. Detecting one count early lets the count reach the end before it turns.</div>
+                        <div class="chk">Checked in simulation: conditions at 7 and 0 instead wrap 7 &rarr; 0, then toggle 0, 7, 0, 7 forever.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 — the datapath -->
+        <div class="page" id="p2">
+            <div class="row">
+                <div class="side">
+                    <div class="panel card" style="padding-bottom:10px">
+                        <div class="ct" style="margin:0">Step 2 of 3 &mdash; build the datapath <span class="dimtxt">&mdash; read the FSMD three times</span></div>
+                    </div>
+                    <div class="rowcard" data-row="0"><div class="rt">Registers <span class="arrow">&rarr;</span> a register</div>
+                        <div class="rd">The FSMD names one register, <b>C</b>. The datapath gets one 3-bit register, clocked. Its value feeds the arithmetic and leaves as the count.</div></div>
+                    <div class="rowcard" data-row="1"><div class="rt">Register transfers <span class="arrow">&rarr;</span> arithmetic + a mux</div>
+                        <div class="rd">Each different right-hand side is a block: <b>C + 1</b> and <b>C &minus; 1</b>. Two sources for one register need a <b>mux</b>. Its select is a new <b>control input</b>, <span class="mono c-ctl">up</span>: 1 picks C + 1, 0 picks C &minus; 1.</div></div>
+                    <div class="rowcard" data-row="2"><div class="rt">Data conditions <span class="arrow">&rarr;</span> comparators</div>
+                        <div class="rd">Each condition on an arc is a <b>comparator</b>: C = 6 and C = 1. Their outputs are new <b>status outputs</b>, <span class="mono c-st">at6</span> and <span class="mono c-st">at1</span>, for whoever operates the datapath.</div></div>
+                    <div class="panel foot fill">
+                        The datapath <b>does not know which way it is counting</b>. It offers both results and reports where C is. Something must drive <span class="mono c-ctl">up</span>: that is step 3.
+                        <div class="steprow"><button class="btn nxt" id="nxt2">next reading <span class="kk">Space</span></button><button class="btn" data-reset>&#8634; <span class="kk">R</span></button></div>
+                    </div>
+                </div>
+                <div class="panel main fig2">
+                    <div class="phead">The datapath <span class="dimtxt">&mdash; ports: control in, status out, the count out</span></div>
+                    <svg id="d2" viewBox="860 0 956 600"></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 — the controller -->
+        <div class="page" id="p3">
+            <div class="row">
+                <div class="side">
+                    <div class="panel card" style="padding-bottom:10px">
+                        <div class="ct" style="margin:0">Step 3 of 3 &mdash; derive the controller <span class="dimtxt">&mdash; from the same FSMD</span></div>
+                    </div>
+                    <div class="rowcard" data-row="0"><div class="rt">States carry over</div>
+                        <div class="rd">UP and DOWN, reset into UP: exactly the FSMD's states.</div></div>
+                    <div class="rowcard" data-row="1"><div class="rt">Register transfers <span class="arrow">&rarr;</span> control outputs</div>
+                        <div class="rd">C &larr; C + 1 in UP becomes <span class="mono c-ctl">up</span> = 1 inside UP; C &larr; C &minus; 1 becomes <span class="mono c-ctl">up</span> = 0 inside DOWN. Moore: the output lives in the state.</div></div>
+                    <div class="rowcard" data-row="2"><div class="rt">Data conditions <span class="arrow">&rarr;</span> status inputs</div>
+                        <div class="rd">C = 6 becomes the input <span class="mono c-st">at6</span>; C = 1 becomes <span class="mono c-st">at1</span>. Same arcs, now labelled with wires from the datapath.</div></div>
+                    <div class="rowcard" data-row="3"><div class="rt">Stay otherwise <span class="arrow">&rarr;</span> self-loops, equations</div>
+                        <div class="rd">Self-loops <span class="mono c-st">at6&prime;</span> and <span class="mono c-st">at1&prime;</span> complete it. S = 1 means UP: <span class="mono">S<sup>+</sup> = S&middot;at6&prime; + S&prime;&middot;at1</span>, <span class="mono">up = S</span>.</div></div>
+                    <div class="panel foot fill">
+                        <b>Nothing new in this box:</b> an ordinary Moore FSM. Only where its inputs come from is new.
+                        <div class="hdl">In practice you write the RTL and the tools build both boxes. The three steps are how to read what you wrote.</div>
+                        <div class="steprow"><button class="btn nxt" id="nxt3">next <span class="kk">Space</span></button><button class="btn" data-reset>&#8634; <span class="kk">R</span></button></div>
+                    </div>
+                </div>
+                <div class="panel main fig3">
+                    <div class="phead">The controller <span class="dimtxt">&mdash; a traditional FSM whose inputs are the datapath's status and whose output is its control</span></div>
+                    <svg id="d3" viewBox="0 0 790 600"></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 — connected, running -->
+        <div class="page" id="p4">
+            <div class="panel diag"><svg id="d4" viewBox="0 0 1816 600"></svg></div>
+            <div class="brow">
+                <div class="panel readout">
+                    <div class="ro" id="ro4"></div>
+                    <div class="steprow">
+                        <button class="btn clk" id="clk4">&#9654; CLK <span class="kk">Space</span></button>
+                        <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        <span class="chip" id="chip4"></span>
+                    </div>
+                </div>
+                <div class="panel legend">
+                    <div class="phead">Signals between the boxes</div>
+                    <div class="lrow c-ctl"><span class="sw"></span><span><b>Control</b> (FSM &rarr; datapath): <span class="mono">up</span></span></div>
+                    <div class="lrow c-st"><span class="sw rev"></span><span><b>Status</b> (datapath &rarr; FSM): <span class="mono">at6</span>, <span class="mono">at1</span></span></div>
+                    <div class="lfoot">Reset state <b>UP</b>, C = 0. Moore machine: <span class="mono c-ctl">up</span> changes one clock after the state does.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 5 — cycle trace -->
+        <div class="page" id="p5">
+            <div class="row5">
+                <div class="panel tcol">
+                    <div class="phead">One bounce, clock by clock <span class="dimtxt">&mdash; cycle 14 is cycle 0 again</span></div>
+                    <div class="mtab" id="tab5"></div>
+                </div>
+                <div class="rcol">
+                    <div class="panel strip">
+                        <div class="phead">C over the cycles <span class="dimtxt">&mdash; bar colour is <span class="c-ctl">up</span></span></div>
+                        <svg id="s5" viewBox="0 0 640 206"></svg>
+                        <div class="steprow" style="padding:0 22px 14px;margin-top:0">
+                            <button class="btn clk" id="clk5">&#9654; CLK <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel eqcard">
+                        <div class="phead" style="padding-left:0">The controller, as equations</div>
+                        <div class="eq"><span class="on">S</span> = 1 means UP &nbsp;&nbsp;&middot;&nbsp;&nbsp; <span class="ctl">up</span> = <span class="on">S</span></div>
+                        <div class="eq"><span class="on">S</span><sup>+</sup> = <span class="on">S</span>&middot;<span class="st">at6</span>&prime; + <span class="on">S</span>&prime;&middot;<span class="st">at1</span></div>
+                        <div class="why">In UP only <span class="mono c-st">at6</span> matters; in DOWN only <span class="mono c-st">at1</span>. The other status is <b>ignored</b> (cycles 1 and 8 in the table).</div>
+                    </div>
+                    <div class="panel note">
+                        <div class="phead" style="padding-left:0">Why 6 and 1, not 7 and 0</div>
+                        <div class="rule">Moore output: <span class="mono c-ctl">up</span> changes <b>one clock after</b> the state. So the datapath must flag the turn <b>one count early</b>: at 6 the machine still adds once more and reaches 7; at 1 it still subtracts once and reaches 0.</div>
+                        <div class="chk">Checked in simulation: comparing at 7 and 0 instead wraps 7 &rarr; 0, then toggles 0, 7, 0, 7 forever.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress"><div class="pdot" data-dot="1"></div><div class="pdot" data-dot="2"></div><div class="pdot" data-dot="3"></div><div class="pdot" data-dot="4"></div><div class="pdot" data-dot="5"></div></div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">5</span> beat
+            &middot; <span class="k">&larr;</span><span class="k">&rarr;</span> previous / next
+            &middot; <span class="k amber">Space</span> or <span class="k amber">C</span> next: build step (1), reading (2, 3), CLK (4, 5)
+            &middot; <span class="k cyan">&uarr;</span><span class="k cyan">&darr;</span> back / forward (1&ndash;3)
+            &middot; <span class="k">R</span> reset &middot; <span class="k">D</span> definitions
+        </div>
+    </div>
+
+    <div class="defs" id="defs">
+        <div class="defs-card">
+            <div class="defs-head"><div class="defs-title">Definitions</div><div class="defs-close">D or Esc closes</div></div>
+            <div class="defs-list">
+                <div class="ds c-on">FSMD</div><div class="dd"><b>Finite state machine with datapath.</b> A state diagram with register transfers beside the states and data-dependent conditions on the arcs: the whole algorithm in one picture. Introduced in <b data-topic="introduction-to-rtl-design">Introduction to Register Transfer Level Design</b>.</div>
+                <div class="ds c-on">Register transfer</div><div class="dd"><span class="mono">C &larr; C + 1</span>: on the clock edge, register C loads the value C + 1. Written beside the state that performs it.</div>
+                <div class="ds c-st">Data condition</div><div class="dd">An arc condition that reads a register, such as <span class="mono">C = 6</span>, rather than an external input. It becomes a comparator in the datapath and a status wire to the controller.</div>
+                <div class="ds">Datapath</div><div class="dd">The registers, arithmetic, multiplexers and comparators, built in step 2. It holds <span class="mono">C</span> and can add or subtract 1, but does not decide which.</div>
+                <div class="ds">Controller</div><div class="dd">An ordinary FSM, derived in step 3, that operates the datapath. Its state bits hold what the data does not: here, the <b>direction</b>.</div>
+                <div class="ds c-ctl">Control signal</div><div class="dd">Controller &rarr; datapath. Here <span class="mono">up</span> is the mux select: 1 = <span class="mono">C + 1</span>, 0 = <span class="mono">C &minus; 1</span>.</div>
+                <div class="ds c-st">Status signal</div><div class="dd">Datapath &rarr; controller. Here <span class="mono">at6</span> is 1 when C = 6 and <span class="mono">at1</span> is 1 when C = 1.</div>
+                <div class="ds">Moore output</div><div class="dd">Written <b>inside</b> the state, not on the arcs, so it changes one clock after the state changes. See <b data-topic="mealy-versus-moore">Mealy versus Moore</b>.</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALING ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const container = document.getElementById('viewportContainer'), surface = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * 16 / 9; } else { cw = vw; ch = cw * 9 / 16; }
+        container.style.width = cw + 'px'; container.style.height = ch + 'px';
+        surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    const $ = (id) => document.getElementById(id);
+
+    // ============ THE MACHINE (model) ============
+    // Controller: S = 1 means UP. S+ = S·at6' + S'·at1, up = S (Moore). Datapath: C <- up ? C+1 : C-1, at6 = (C==6), at1 = (C==1).
+    const HI = 6, LO = 1, PERIOD = 14;
+    function stepModel(m, hi = HI, lo = LO) {
+        const at6 = +(m.C === hi), at1 = +(m.C === lo), up = m.S;
+        return { S: (m.S & (1 - at6)) | ((1 - m.S) & at1), C: up ? (m.C + 1) & 7 : (m.C - 1) & 7 };
+    }
+    function snap(cyc, hi = HI, lo = LO) {
+        let m = { S: 1, C: 0 };
+        for (let i = 0; i < cyc; i++) m = stepModel(m, hi, lo);
+        const n = stepModel(m, hi, lo);
+        return { cyc, S: m.S, C: m.C, at6: +(m.C === hi), at1: +(m.C === lo), up: m.S, nextC: n.C, nextS: n.S, turn: n.S !== m.S };
+    }
+    const TRACE = Array.from({ length: PERIOD + 1 }, (_, i) => snap(i));          // cycles 0..14; 14 repeats 0
+    const SNAME = (S) => S ? 'UP' : 'DOWN';
+    const EQ_NEXT = (S, at6, at1) => (S & (1 - at6)) | ((1 - S) & at1);          // the drawn equation
+
+    // ============ STATE ============
+    const NPAGES = 5, NBUILD = 3, NROWS2 = 3, NROWS3 = 4;
+    let page = 1, build = 0, sel2 = 0, sel3 = 0, cyc = 0;
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+
+    // ============ SHARED SVG HELPERS ============
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const rad = (d) => d * Math.PI / 180, f1 = (n) => +n.toFixed(1);
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+    function txt(parent, x, y, s, cls, attrs = {}) { const t = el('text', { x, y, class: cls, ...attrs }, parent); t.textContent = s; return t; }
+    // Chrome does not render markers whose <defs> live inside a display:none subtree, so each SVG gets its own.
+    function injectMarkers(svg) {
+        const mk = svg.id, defs = el('defs', {}, svg);
+        for (const [id, fill] of [['ah', '#8fa8bd'], ['ahon', '#4fc3f7'], ['ahctl', '#ffb74d'], ['ahst', '#b388ff'], ['ahw', '#cfd8dc']]) {
+            const m = el('marker', { id: id + '-' + mk, markerWidth: 20, markerHeight: 16, refX: 14, refY: 6.5, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+            el('path', { d: 'M0,0 L16,6.5 L0,13 Z', fill }, m);
+        }
+        return mk;
+    }
+    const shorten = (pts) => {                 // pull the last point back 2px so the arrowhead tip lands on the target
+        const p = pts.map(q => q.slice()), n = p.length - 1, dx = Math.sign(p[n][0] - p[n - 1][0]), dy = Math.sign(p[n][1] - p[n - 1][1]);
+        p[n][0] -= 2 * dx; p[n][1] -= 2 * dy; return p;
+    };
+    // a bezier arc between two circles (or a self-loop), as in the sequence-detector graphic
+    function bezArc(A, B, ed, R) {
+        if (ed.loop !== undefined) {
+            const th = rad(ed.loop), a1 = th + 0.45, a2 = th - 0.45, ro = R + 84;
+            const p1 = { x: A.x + R * Math.cos(a1), y: A.y + R * Math.sin(a1) }, p2 = { x: A.x + (R + 2) * Math.cos(a2), y: A.y + (R + 2) * Math.sin(a2) };
+            const c1 = { x: A.x + ro * Math.cos(th + 0.55), y: A.y + ro * Math.sin(th + 0.55) }, c2 = { x: A.x + ro * Math.cos(th - 0.55), y: A.y + ro * Math.sin(th - 0.55) };
+            return { d: `M${f1(p1.x)},${f1(p1.y)} C${f1(c1.x)},${f1(c1.y)} ${f1(c2.x)},${f1(c2.y)} ${f1(p2.x)},${f1(p2.y)}`,
+                     lx: A.x + (R + 82) * Math.cos(th), ly: A.y + (R + 82) * Math.sin(th) + 10 };
+        }
+        const a = rad(ed.a), b = rad(ed.b);
+        const P0 = { x: A.x + R * Math.cos(a), y: A.y + R * Math.sin(a) }, P3 = { x: B.x + (R + 2) * Math.cos(b), y: B.y + (R + 2) * Math.sin(b) };
+        const C1 = { x: P0.x + ed.k * Math.cos(a), y: P0.y + ed.k * Math.sin(a) }, C2 = { x: P3.x + ed.k * Math.cos(b), y: P3.y + ed.k * Math.sin(b) };
+        const mx = (P0.x + 3 * C1.x + 3 * C2.x + P3.x) / 8, my = (P0.y + 3 * C1.y + 3 * C2.y + P3.y) / 8;
+        return { d: `M${f1(P0.x)},${f1(P0.y)} C${f1(C1.x)},${f1(C1.y)} ${f1(C2.x)},${f1(C2.y)} ${f1(P3.x)},${f1(P3.y)}`, mx, my };
+    }
+
+    // ============ BEAT 1 — THE FSMD (Mike's sketch) ============
+    const FN = { UP: { x: 520, y: 250 }, DOWN: { x: 520, y: 580 } }, RF = 78;
+    const FEDGES = [
+        { id: 'UP>DOWN', from: 'UP', to: 'DOWN', a: 40, b: -40, k: 120, side: 1, label: 'C = 6' },
+        { id: 'DOWN>UP', from: 'DOWN', to: 'UP', a: 220, b: 140, k: 120, side: -1, label: 'C = 1' },
+    ];
+    const XFER = { UP: 'C ← C + 1', DOWN: 'C ← C − 1' };
+    const FTAG = { x: 720, w: 280, h: 62 };                                       // the register-transfer tags beside the bubbles
+    const REASONS1 = [
+        'One state per direction: <b>UP</b> and <b>DOWN</b>. Reset into UP.',
+        'Beside each state, the register transfer it performs every clock: <span class="mono">C ← C + 1</span> in UP, <span class="mono">C ← C − 1</span> in DOWN.',
+        'The arcs read the <b>data</b>, not an input: leave UP when <span class="mono c-st">C = 6</span>, leave DOWN when <span class="mono c-st">C = 1</span>. Otherwise stay.',
+        'Ports of the whole system: <b>no inputs</b>; the output is the count <span class="mono">C</span>, 3 bits. The FSMD is complete.',
+    ];
+    function buildFsmd(svg) {
+        const mk = injectMarkers(svg), D = { svg, mk, groups: [[], [], [], []], nodes: {}, arcs: {}, tags: {} };
+        const G = (g, e) => { D.groups[g].push(e); e.setAttribute('data-g', g); return e; };
+        // group 0: states + reset
+        G(0, el('path', { d: `M520,110 L520,${FN.UP.y - RF - 3}`, class: 'rst', 'marker-end': `url(#ahw-${mk})` }, svg));
+        G(0, txt(svg, 506, 130, 'reset', 'rst-l'));
+        // group 1: transfers (tags + leaders)
+        for (const k of ['UP', 'DOWN']) {
+            const n = FN[k];
+            G(1, el('line', { x1: n.x + RF + 4, y1: n.y, x2: FTAG.x - 4, y2: n.y, class: 'leader' }, svg));
+            const r = G(1, el('rect', { x: FTAG.x, y: n.y - FTAG.h / 2, width: FTAG.w, height: FTAG.h, rx: 12, class: 'xfer-box', 'data-tag': k }, svg));
+            G(1, txt(svg, FTAG.x + FTAG.w / 2, n.y + 11, XFER[k], 'xfer', { 'data-in': 'tag' + k }));
+            D.tags[k] = r;
+        }
+        // group 2: the arcs with data conditions
+        for (const ed of FEDGES) {
+            const g = bezArc(FN[ed.from], FN[ed.to], ed, RF);
+            const path = G(2, el('path', { class: 'arc', d: g.d, 'data-id': ed.id, 'marker-end': `url(#ah-${mk})` }, svg));
+            const lab = G(2, txt(svg, f1(g.mx + 24 * ed.side), f1(g.my + 10), ed.label, 'cond', { 'text-anchor': ed.side > 0 ? 'start' : 'end', 'data-id': ed.id }));
+            D.arcs[ed.id] = { path, lab };
+        }
+        // group 0 (drawn last so bubbles sit on top): the two states
+        for (const k of ['UP', 'DOWN']) {
+            const n = FN[k], g = G(0, el('g', { class: 'sd-node', 'data-state': k }, svg));
+            el('circle', { class: 'sdc', cx: n.x, cy: n.y, r: RF }, g);
+            txt(g, n.x, n.y + 13, k, 'sdname', { 'data-in': 'node' + k });
+            D.nodes[k] = g;
+        }
+        // group 3: ports
+        const p1 = G(3, txt(svg, 520, 722, '', 'port')); el('tspan', { class: 'pk' }, p1).textContent = 'inputs: '; el('tspan', { class: 'pv' }, p1).textContent = 'none';
+        const p2 = G(3, txt(svg, 520, 764, '', 'port')); el('tspan', { class: 'pk' }, p2).textContent = 'outputs: '; el('tspan', { class: 'pv' }, p2).textContent = 'C (3-bit)';
+        return D;
+    }
+    function paintFsmd(D, b) {
+        D.groups.forEach((els, g) => els.forEach(e => { e.classList.toggle('hid', g > b); e.classList.toggle('fnew', g === b && b > 0); }));
+    }
+    const D1 = buildFsmd($('d1'));
+    function paintB1() {
+        paintFsmd(D1, build);
+        $('snum1').textContent = `BUILD ${build + 1} OF ${NBUILD + 1}`;
+        $('reason1').innerHTML = REASONS1[build];
+        $('nxt1').disabled = build >= NBUILD; $('nxt1').style.opacity = build >= NBUILD ? 0.4 : 1;
+    }
+
+    // ============ THE TWO-BOX DIAGRAM (beats 2, 3, 4) ============
+    const CTL = { x: 12, y: 8, w: 660, h: 584 }, DP = { x: 1010, y: 8, w: 794, h: 584 };
+    const XR = CTL.x + CTL.w;                                                    // 672: the controller's right edge
+    const BLK = {
+        inc: { x: 1230, y: 104, w: 160, h: 60, label: 'C + 1' },
+        dec: { x: 1450, y: 104, w: 160, h: 60, label: 'C − 1' },
+        mux: { x: 1270, y: 222, w: 300, h: 70, bot: 80 },                       // trapezoid: top 1270..1570, bottom 1350..1490
+        reg: { x: 1320, y: 346, w: 200, h: 66 },
+        c6:  { x: 1180, y: 466, w: 150, h: 46, label: 'C = 6 ?' },
+        c1:  { x: 1180, y: 532, w: 150, h: 46, label: 'C = 1 ?' },
+    };
+    const Y_UP = 257, Y_AT6 = 489, Y_AT1 = 555, X_DP0 = 880, X_CPORT = XR + 92;
+    const muxLeftX = (y) => BLK.mux.x + BLK.mux.bot * (y - BLK.mux.y) / BLK.mux.h;         // x of the slanted left edge at height y
+    const DP_WIRES = [
+        { id: 'fb',   kind: 'data', k: 'reg',   arrow: true,  pts: [[1420, 448], [1700, 448], [1700, 76], [1310, 76], [1310, 104]] },
+        { id: 'fb2',  kind: 'data', k: 'reg',   arrow: true,  pts: [[1530, 76], [1530, 104]] },
+        { id: 'cout', kind: 'data', k: 'reg',   arrow: true,  pts: [[1700, 448], [DP.x + DP.w, 448]] },
+        { id: 'inc',  kind: 'data', k: 'arith', arrow: true,  pts: [[1310, 164], [1310, 222]] },
+        { id: 'dec',  kind: 'data', k: 'arith', arrow: true,  pts: [[1530, 164], [1530, 222]] },
+        { id: 'muxo', kind: 'data', k: 'arith', arrow: true,  pts: [[1420, 292], [1420, 346]] },
+        { id: 'rego', kind: 'data', k: 'reg',   arrow: false, pts: [[1420, 412], [1420, 448]] },
+        { id: 'down', kind: 'data', k: 'cmp',   arrow: true,  pts: [[1420, 448], [1420, Y_AT1], [1330, Y_AT1]] },
+        { id: 'c6in', kind: 'data', k: 'cmp',   arrow: true,  pts: [[1420, Y_AT6], [1330, Y_AT6]] },
+        { id: 'clk',  kind: 'clk',  k: 'reg',   arrow: false, pts: [[1262, 385], [1320, 385]] },
+    ];
+    const gapWires = (x0) => [
+        { id: 'up',  kind: 'ctl', k: 'arith outs', arrow: true, pts: [[x0, Y_UP], [Math.round(muxLeftX(Y_UP)), Y_UP]] },
+        { id: 'at6', kind: 'st',  k: 'cmp conds',  arrow: true, pts: [[1180, Y_AT6], [x0, Y_AT6]] },
+        { id: 'at1', kind: 'st',  k: 'cmp conds',  arrow: true, pts: [[1180, Y_AT1], [x0, Y_AT1]] },
+    ];
+    const CTL_PORTS = [
+        { id: 'up',  kind: 'ctl', k: 'outs',  arrow: true, pts: [[XR, Y_UP], [X_CPORT, Y_UP]] },
+        { id: 'at6', kind: 'st',  k: 'conds', arrow: true, pts: [[X_CPORT, Y_AT6], [XR, Y_AT6]] },
+        { id: 'at1', kind: 'st',  k: 'conds', arrow: true, pts: [[X_CPORT, Y_AT1], [XR, Y_AT1]] },
+    ];
+    const DOTS = [[1420, 448, 'reg'], [1530, 76, 'reg'], [1700, 448, 'reg'], [1420, Y_AT6, 'cmp']];
+    // the FSM inside the controller
+    const NODES = { UP: { x: 250, y: 330 }, DOWN: { x: 470, y: 330 } }, R = 66;
+    const EDGES = [
+        { id: 'UP>DOWN',   from: 'UP',   to: 'DOWN', a: -50, b: -130, k: 95, side: -1, label: 'at6',       k2: 'conds' },
+        { id: 'DOWN>UP',   from: 'DOWN', to: 'UP',   a: 130, b: 50,   k: 95, side: 1,  label: 'at1',       k2: 'conds' },
+        { id: 'UP>UP',     from: 'UP',   to: 'UP',   loop: 180, label: 'at6′', k2: 'loops' },
+        { id: 'DOWN>DOWN', from: 'DOWN', to: 'DOWN', loop: 0,   label: 'at1′', k2: 'loops' },
+    ];
+    const WIRE_SETS = { full: DP_WIRES.concat(gapWires(XR)), dp: DP_WIRES.concat(gapWires(X_DP0)), ctl: CTL_PORTS };
+    const GAPX = { full: 840, dp: 940, ctl: XR + 46 };
+
+    // mode: 'full' (both boxes, beat 4) | 'dp' (datapath + its ports, beat 2) | 'ctl' (controller + its ports, beat 3)
+    function buildDiagram(svg, mode) {
+        const mk = injectMarkers(svg), D = { svg, mk, mode, wires: {}, kinds: {}, blocks: {}, nodes: {}, arcs: {}, vals: {}, sig: {}, defs: WIRE_SETS[mode] };
+        const gx = GAPX[mode], hasDP = mode !== 'ctl', hasCTL = mode !== 'dp';
+        const K = (e, k) => { if (k) e.setAttribute('data-k', k); return e; };
+        const cts = [];
+        if (hasCTL) cts.push([CTL, 'Controller (FSM)', 'Moore, 2 states']);
+        if (hasDP) cts.push([DP, 'Datapath', 'register + arithmetic']);
+        for (const [c, title, sub] of cts) {
+            el('rect', { x: c.x, y: c.y, width: c.w, height: c.h, rx: 16, class: 'ct' }, svg);
+            txt(svg, c.x + 20, c.y + 34, title, 'ct-title', { 'data-in': 'ct' });
+            txt(svg, c.x + 20, c.y + 60, sub, 'ct-sub', { 'data-in': 'ct' });
+        }
+        // wires first, then blocks on top
+        for (const w of D.defs) {
+            const pts = w.arrow ? shorten(w.pts) : w.pts;
+            D.wires[w.id] = K(el('polyline', { points: pts.map(p => p.join(',')).join(' '), class: 'wire ' + w.kind, 'data-id': w.id }, svg), w.k);
+            D.kinds[w.id] = w.kind;
+        }
+        if (hasDP) {
+            for (const [x, y, k] of DOTS) K(el('circle', { cx: x, cy: y, r: 6, class: 'dot', 'data-dot': x + ',' + y }, svg), k);
+            for (const [id, k] of [['inc', 'arith'], ['dec', 'arith'], ['reg', 'reg'], ['c6', 'cmp'], ['c1', 'cmp']]) {
+                const b = BLK[id];
+                D.blocks[id] = K(el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 8, class: 'blk', 'data-blk': id }, svg), k);
+                if (b.label) K(txt(svg, b.x + b.w / 2, b.y + b.h / 2 + 9, b.label, 'blk-l', { 'data-in': id }), k);
+            }
+            const m = BLK.mux, inset = (m.w - m.bot) / 2;
+            D.blocks.mux = K(el('path', { d: `M${m.x},${m.y} H${m.x + m.w} L${m.x + m.w - inset},${m.y + m.h} H${m.x + inset} Z`, class: 'blk', 'data-blk': 'mux' }, svg), 'arith');
+            K(txt(svg, 1324, 250, '1', 'muxin', { 'data-in': 'mux' }), 'arith'); K(txt(svg, 1516, 250, '0', 'muxin', { 'data-in': 'mux' }), 'arith');
+            K(txt(svg, 1420, 278, 'mux', 'blk-l sm', { 'data-in': 'mux' }), 'arith');
+            const r = BLK.reg;
+            K(txt(svg, r.x + r.w / 2, r.y + 24, 'C (3-bit)', 'blk-l sm', { 'data-in': 'reg' }), 'reg');
+            D.vals.reg = K(txt(svg, r.x + r.w / 2, r.y + 54, '', 'regval', { 'data-in': 'reg' }), 'reg');
+            K(el('path', { d: `M${r.x},375 L${r.x + 14},385 L${r.x},395`, class: 'wire clk', 'data-in': 'reg' }, svg), 'reg');
+            K(txt(svg, 1252, 392, 'CLK', 'clkl'), 'reg');
+            D.vals.inc = K(txt(svg, 1324, 202, '', 'val', { 'text-anchor': 'start' }), 'arith');
+            D.vals.dec = K(txt(svg, 1544, 202, '', 'val', { 'text-anchor': 'start' }), 'arith');
+            D.vals.mux = K(txt(svg, 1434, 327, '', 'val', { 'text-anchor': 'start' }), 'arith');
+            K(txt(svg, 1714, 270, 'C', 'val dim', { 'text-anchor': 'start' }), 'reg');
+            // the count leaves the datapath: bus slash + label
+            K(el('line', { x1: 1746, y1: 457, x2: 1758, y2: 439, class: 'wire data' }, svg), 'reg');
+            K(txt(svg, 1763, 436, '3', 'busl'), 'reg');
+            K(txt(svg, 1752, 428, 'C', 'val', { 'text-anchor': 'end' }), 'reg');
+            K(txt(svg, 1752, 475, 'OUT →', 'dir data', { 'text-anchor': 'middle' }), 'reg');
+        }
+        // the signals in the gap, with direction words
+        K(txt(svg, gx, 222, 'CONTROL →', 'dir ctl'), 'arith outs');
+        D.sig.up = K(txt(svg, gx, Y_UP - 14, '', 'sig ctl'), 'arith outs');
+        D.sig.at6 = K(txt(svg, gx, Y_AT6 - 14, '', 'sig st'), 'cmp conds');
+        D.sig.at1 = K(txt(svg, gx, Y_AT1 - 14, '', 'sig st'), 'cmp conds');
+        K(txt(svg, gx, Y_AT1 + 32, '← STATUS', 'dir st'), 'cmp conds');
+        if (hasCTL) {
+            K(el('path', { d: `M250,196 L250,${NODES.UP.y - R - 3}`, class: 'rst', 'marker-end': `url(#ahw-${mk})` }, svg), 'states');
+            K(txt(svg, 238, 212, 'reset', 'rst-l'), 'states');
+            for (const ed of EDGES) {
+                const g = bezArc(NODES[ed.from], NODES[ed.to], ed, R);
+                const lx = ed.loop !== undefined ? g.lx : g.mx, ly = ed.loop !== undefined ? g.ly : (ed.side < 0 ? g.my - 14 : g.my + 36);
+                const path = K(el('path', { class: 'arc', d: g.d, 'data-id': ed.id }, svg), ed.k2);
+                const lab = K(txt(svg, f1(lx), f1(ly), ed.label, 'arc-l', { 'data-id': ed.id }), ed.k2);
+                D.arcs[ed.id] = { path, lab };
+            }
+            for (const k of ['UP', 'DOWN']) {
+                const n = NODES[k], g = K(el('g', { class: 'sd-node', 'data-state': k }, svg), 'states');
+                el('circle', { class: 'sdc', cx: n.x, cy: n.y, r: R }, g);
+                txt(g, n.x, n.y - 8, k, 'sdname', { 'data-in': 'node' + k });
+                K(txt(g, n.x, n.y + 28, 'up = ' + (k === 'UP' ? 1 : 0), 'sdout', { 'data-in': 'node' + k }), 'outs');
+                D.nodes[k] = g;
+            }
+        }
+        return D;
+    }
+    // v = trace row {S, C, at6, at1} for the live picture, or null for the static (step) pictures
+    function paintDiagram(D, v) {
+        const live = !!v, up = live ? v.S : null;
+        const setMarker = (w, c) => w && w.setAttribute('marker-end', `url(#ah${c}-${D.mk})`);
+        const W = D.wires, has = (id) => !!W[id];
+        if (has('up')) { W.up.setAttribute('class', 'wire ctl' + (up ? ' on' : '')); setMarker(W.up, up ? 'ctl' : ''); }
+        if (has('at6')) { W.at6.setAttribute('class', 'wire st' + (live && v.at6 ? ' on' : '')); setMarker(W.at6, live && v.at6 ? 'st' : ''); }
+        if (has('at1')) { W.at1.setAttribute('class', 'wire st' + (live && v.at1 ? ' on' : '')); setMarker(W.at1, live && v.at1 ? 'st' : ''); }
+        const incOn = up === 1, decOn = up === 0;
+        if (D.mode !== 'ctl') {
+            for (const [id, on] of [['inc', incOn], ['dec', decOn], ['muxo', live]]) { W[id].setAttribute('class', 'wire data' + (on ? ' on' : '')); setMarker(W[id], on ? 'on' : ''); }
+            for (const id of ['fb', 'fb2', 'down', 'c6in', 'cout']) setMarker(W[id], '');
+            D.blocks.inc.setAttribute('class', 'blk' + (incOn ? ' on' : ''));
+            D.blocks.dec.setAttribute('class', 'blk' + (decOn ? ' on' : ''));
+            D.blocks.c6.setAttribute('class', 'blk' + (live && v.at6 ? ' on' : ''));
+            D.blocks.c1.setAttribute('class', 'blk' + (live && v.at1 ? ' on' : ''));
+            D.blocks.mux.setAttribute('class', 'blk'); D.blocks.reg.setAttribute('class', 'blk');
+            if (live) {
+                const inc = (v.C + 1) & 7, dec = (v.C - 1) & 7;
+                D.vals.inc.textContent = String(inc); D.vals.inc.setAttribute('class', 'val' + (incOn ? '' : ' dim'));
+                D.vals.dec.textContent = String(dec); D.vals.dec.setAttribute('class', 'val' + (decOn ? '' : ' dim'));
+                D.vals.mux.textContent = String(up ? inc : dec);
+                D.vals.reg.innerHTML = '';
+                D.vals.reg.appendChild(document.createTextNode(v.C.toString(2).padStart(3, '0')));
+                el('tspan', { class: 'dec' }, D.vals.reg).textContent = ' = ' + v.C;
+            } else { D.vals.inc.textContent = ''; D.vals.dec.textContent = ''; D.vals.mux.textContent = ''; D.vals.reg.textContent = ''; }
+        }
+        const sigText = (t, name, val) => { t.innerHTML = ''; t.appendChild(document.createTextNode(live ? name + ' = ' : name)); if (live) { const s = el('tspan', { class: 'v' + (val ? '' : ' off') }, t); s.textContent = String(val); } };
+        sigText(D.sig.up, 'up', up); sigText(D.sig.at6, 'at6', live ? v.at6 : 0); sigText(D.sig.at1, 'at1', live ? v.at1 : 0);
+        if (D.mode !== 'dp') {
+            const taken = live ? (v.S ? (v.at6 ? 'UP>DOWN' : 'UP>UP') : (v.at1 ? 'DOWN>UP' : 'DOWN>DOWN')) : null;
+            for (const k of ['UP', 'DOWN']) D.nodes[k].setAttribute('class', 'sd-node' + (live && SNAME(v.S) === k ? ' on' : ''));
+            for (const id in D.arcs) { const on = id === taken; D.arcs[id].path.setAttribute('class', 'arc' + (on ? ' on' : '')); D.arcs[id].lab.setAttribute('class', 'arc-l' + (on ? ' on' : ''));
+                D.arcs[id].path.setAttribute('marker-end', `url(#ah${on ? 'on' : ''}-${D.mk})`); }
+        }
+    }
+    // focus one reading (group key) on a static picture: everything else dims
+    function applyFocus(D, g) {
+        D.svg.querySelectorAll('[data-k]').forEach(e => {
+            const hit = !!g && e.dataset.k.split(' ').includes(g);
+            e.classList.toggle('dim', !!g && !hit); e.classList.toggle('foc', hit);
+            if (e.tagName === 'polyline' && e.dataset.id) { const kind = D.kinds[e.dataset.id]; e.setAttribute('marker-end', `url(#ah${hit ? (kind === 'data' ? 'on' : kind) : ''}-${D.mk})`); }
+            if (e.tagName === 'path' && e.classList.contains('arc')) e.setAttribute('marker-end', `url(#ah${hit ? 'on' : ''}-${D.mk})`);
+        });
+    }
+    const D2 = buildDiagram($('d2'), 'dp'), D3 = buildDiagram($('d3'), 'ctl'), D4 = buildDiagram($('d4'), 'full');
+    const ROWK2 = ['reg', 'arith', 'cmp'], ROWK3 = ['states', 'outs', 'conds', 'loops'];
+    function paintB2() { paintDiagram(D2, null); applyFocus(D2, ROWK2[sel2]); document.querySelectorAll('#p2 .rowcard').forEach(c => c.classList.toggle('on', +c.dataset.row === sel2)); }
+    function paintB3() { paintDiagram(D3, null); applyFocus(D3, ROWK3[sel3]); document.querySelectorAll('#p3 .rowcard').forEach(c => c.classList.toggle('on', +c.dataset.row === sel3)); }
+
+    // ============ BEAT 4 — connected, running ============
+    const M = (s) => `<span class="mono">${s}</span>`;
+    function paintB4() {
+        const t = TRACE[cyc];
+        paintDiagram(D4, t);
+        const bits = t.C.toString(2).padStart(3, '0');
+        const other = t.S ? (t.at1 ? ` ${M('at1')} is 1 too, but UP only listens to ${M('at6')}.` : '') : (t.at6 ? ` ${M('at6')} is 1 too, but DOWN only listens to ${M('at1')}.` : '');
+        const line1 = `<b>Cycle ${t.cyc}</b> &mdash; state <b>${SNAME(t.S)}</b>, so ${M('up')} = ${t.up}: the mux picks ${M(t.up ? 'C + 1' : 'C − 1')} = ${M(String(t.nextC))}. Register ${M('C')} = ${bits} = ${t.C}.`;
+        let line2;
+        if (t.turn) line2 = `Status ${M(t.S ? 'at6' : 'at1')} = 1 reaches the controller. <b>On CLK:</b> ${M('C')} &larr; ${t.nextC} and the state goes to <b>${SNAME(t.nextS)}</b>. ${M('up')} does not change until the clock after.`;
+        else line2 = `Status: ${M('at6')} = ${t.at6}, ${M('at1')} = ${t.at1}.${other} <b>On CLK:</b> ${M('C')} &larr; ${t.nextC}, state stays <b>${SNAME(t.S)}</b>.`;
+        let line3 = '';
+        if (t.C === 4) line3 = `<br>${M('C')} = 4 again at cycle ${t.S ? 10 : 4} in ${SNAME(1 - t.S)}, where next ${M('C')} = ${t.S ? 3 : 5}. <b>Same C, different next value:</b> the direction is in the state bit.`;
+        $('ro4').innerHTML = line1 + '<br>' + line2 + line3;
+        const chip = $('chip4');
+        if (t.turn) { chip.className = 'chip st'; chip.textContent = `${t.S ? 'at6' : 'at1'} = 1 → turn around`; }
+        else { chip.className = 'chip on'; chip.textContent = `${SNAME(t.S)}: C ${t.S ? '+' : '−'} 1`; }
+    }
+
+    // ============ BEAT 5 — cycle trace ============
+    const cell = (v, kind, ignored) => `<td class="${v ? 'one ' + (ignored ? 'ign' : kind) : 'zero'}">${v}${v && ignored ? '*' : ''}</td>`;
+    function paintTable() {
+        let h = '<table><tr><th>Cycle</th><th>State</th><th>C</th><th class="c-st">at6</th><th class="c-st">at1</th><th class="c-ctl">up</th><th>Next C</th><th>Next state</th></tr>';
+        for (const t of TRACE) {
+            h += `<tr class="${t.cyc === cyc ? 'cur' : ''}" data-cyc="${t.cyc}"><td>${t.cyc}</td><td class="t">${SNAME(t.S)}</td><td>${t.C}</td>` +
+                 cell(t.at6, 'st', t.S === 0) + cell(t.at1, 'st', t.S === 1) + cell(t.up, 'ctl', false) +
+                 `<td>${t.nextC}</td><td class="t${t.turn ? ' turn' : ''}">${t.turn ? '→ ' + SNAME(t.nextS) : SNAME(t.nextS)}</td></tr>`;
+        }
+        h += '</table><div class="ignote">* a status the current state ignores: UP watches only at6, DOWN watches only at1.</div>';
+        $('tab5').innerHTML = h;
+    }
+    function paintStrip() {
+        const svg = $('s5'); svg.innerHTML = '';
+        const X0 = 66, CW = 37, BASE = 150, SC = 13;
+        for (const t of TRACE) {
+            const x = X0 + t.cyc * CW, h = t.C * SC, cur = t.cyc === cyc;
+            el('rect', { x: x + 5, y: BASE - h, width: CW - 10, height: h, rx: 3, fill: t.up ? '#ffb74d' : '#4a627a', opacity: cur ? 1 : 0.8, 'data-bar': t.cyc }, svg);
+            if (cur) el('rect', { x: x + 1, y: 20, width: CW - 2, height: 170, rx: 5, fill: 'none', stroke: '#ffb74d', 'stroke-width': 2.5 }, svg);
+            txt(svg, x + CW / 2, BASE - h - 8, String(t.C), '', { 'text-anchor': 'middle', fill: cur ? '#e8eef2' : '#b0bec5', 'font-size': 18, 'font-family': 'Menlo,Consolas,monospace', 'font-weight': 700 });
+            txt(svg, x + CW / 2, BASE + 24, String(t.cyc), '', { 'text-anchor': 'middle', fill: cur ? '#ffb74d' : '#607d8b', 'font-size': 16, 'font-family': 'Menlo,Consolas,monospace' });
+            if ((t.S && t.at6) || (!t.S && t.at1)) el('circle', { cx: x + CW / 2, cy: BASE - h - 30, r: 5, fill: '#b388ff' }, svg);
+        }
+        el('line', { x1: X0, y1: BASE + 1, x2: X0 + CW * TRACE.length, y2: BASE + 1, stroke: '#37506a', 'stroke-width': 2 }, svg);
+        txt(svg, X0 + CW * TRACE.length - 4, 16, '● status that turns the machine', '', { 'text-anchor': 'end', fill: '#b388ff', 'font-size': 15 });
+        txt(svg, 6, BASE + 24, 'cycle', '', { fill: '#607d8b', 'font-size': 15 });
+    }
+    function paintB5() { paintTable(); paintStrip(); }
+
+    // ============ RENDER / NAV ============
+    function drawPage() { [null, paintB1, paintB2, paintB3, paintB4, paintB5][page](); }
+    function render() {
+        for (let i = 1; i <= NPAGES; i++) $('p' + i).classList.toggle('active', i === page);
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        document.querySelectorAll('[data-dot]').forEach(d => d.classList.toggle('on', +d.dataset.dot <= page));
+        $('pcNum').textContent = page;
+        drawPage();
+    }
+    const defsEl = $('defs'), defsBtn = $('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) { closeDefs(); page = Math.max(1, Math.min(NPAGES, n)); render(); }
+    function setBuild(b) { build = Math.max(0, Math.min(NBUILD, b)); if (page === 1) drawPage(); }
+    function setSel(n, p = page) { if (p === 2) sel2 = ((n % NROWS2) + NROWS2) % NROWS2; else if (p === 3) sel3 = ((n % NROWS3) + NROWS3) % NROWS3; if (page === p) drawPage(); }
+    function setCyc(k) { cyc = Math.max(0, Math.min(PERIOD, k)); drawPage(); }
+    function step() { cyc = cyc >= PERIOD ? 1 : cyc + 1; drawPage(); }
+    function advance(dir = 1) {         // Space / C: the natural "next" on every beat
+        if (page === 1) setBuild(build + dir);
+        else if (page === 2) setSel(sel2 + dir, 2);
+        else if (page === 3) setSel(sel3 + dir, 3);
+        else if (dir > 0) step(); else setCyc(cyc - 1);
+    }
+    function doReset() {        // ↺ / R resets only the beat on screen and stays on it
+        if (defsOpen()) return;
+        if (page === 1) build = 0; else if (page === 2) sel2 = 0; else if (page === 3) sel3 = 0; else cyc = 0;
+        drawPage();
+    }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    for (const id of ['nxt1', 'nxt2', 'nxt3', 'clk4', 'clk5']) $(id).addEventListener('click', e => { advance(1); e.currentTarget.blur(); });
+    document.querySelectorAll('#p2 .rowcard').forEach(c => c.addEventListener('click', () => setSel(+c.dataset.row, 2)));
+    document.querySelectorAll('#p3 .rowcard').forEach(c => c.addEventListener('click', () => setSel(+c.dataset.row, 3)));
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) { if (k === 'Escape') closeDefs(); if (k === ' ' || 'rRcC'.includes(k)) e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'c': case 'C': advance(1); e.preventDefault(); break;
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
+            case 'ArrowDown': if (page <= 3) { advance(1); e.preventDefault(); } break;
+            case 'ArrowUp': if (page <= 3) { advance(-1); e.preventDefault(); } break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, advance, step, setBuild, setSel, setCyc, reset: doReset, openDefs, closeDefs, defsOpen,
+        key: (k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })),
+        getState: () => ({ page, build, sel2, sel3, cyc }),
+        model: { HI, LO, PERIOD, TRACE, stepModel, snap, EQ_NEXT, WIRE_SETS, BLK, NODES, EDGES, FN, FEDGES },
+        shown: (id) => { const svg = $(id); return {
+            state: Array.from(svg.querySelectorAll('.sd-node.on')).map(g => g.dataset.state),
+            arcOn: Array.from(svg.querySelectorAll('path.arc.on')).map(p => p.dataset.id),
+            wiresOn: Array.from(svg.querySelectorAll('.wire.on')).map(p => p.dataset.id),
+            foc: Array.from(svg.querySelectorAll('.foc')).length, dim: Array.from(svg.querySelectorAll('.dim')).length,
+            visibleGroups: [...new Set(Array.from(svg.querySelectorAll('[data-g]:not(.hid)')).map(e => +e.dataset.g))].sort(),
+            reg: (svg.querySelector('.regval') || {}).textContent || '',
+            up: (svg.querySelector('.sig.ctl') || {}).textContent || '' }; },
+    };
+
+    setPage(1);
+
+    // ?beat=N&step=M&verify — deep-link a state (M = build on beat 1, reading on 2/3, cycle on 4/5)
+    {
+        const q = new URLSearchParams(location.search);
+        const b = q.get('beat') ? Math.max(1, Math.min(NPAGES, +q.get('beat'))) : 1;
+        if (q.get('step') !== null) { const m = +q.get('step');
+            if (b === 1) build = Math.max(0, Math.min(NBUILD, m)); else if (b === 2) sel2 = Math.max(0, Math.min(NROWS2 - 1, m));
+            else if (b === 3) sel3 = Math.max(0, Math.min(NROWS3 - 1, m)); else cyc = Math.max(0, Math.min(PERIOD, m)); }
+        setPage(b);
+    }
+
+    // ============ IN-PAGE ASSERTIONS (house rule) ============
+    function runAssertions() {
+        const fails = [], S0 = { page, build, sel2, sel3, cyc };
+        // 1) the model reproduces the iverilog trace (fsmd-verify.v): [S, C, at6, at1] for cycles 0..14
+        const EXP = [[1,0,0,0],[1,1,0,1],[1,2,0,0],[1,3,0,0],[1,4,0,0],[1,5,0,0],[1,6,1,0],[0,7,0,0],[0,6,1,0],[0,5,0,0],[0,4,0,0],[0,3,0,0],[0,2,0,0],[0,1,0,1],[1,0,0,0]];
+        EXP.forEach((e, i) => { const t = TRACE[i]; if (t.S !== e[0] || t.C !== e[1] || t.at6 !== e[2] || t.at1 !== e[3]) fails.push('trace cyc ' + i); });
+        const seq = Array.from({ length: 16 }, (_, i) => snap(i).C).join('');
+        if (seq !== '0123456765432101') fails.push('bounce ' + seq);
+        // 2) the drawn next-state equation equals the state table over all 8 rows
+        for (const S of [0, 1]) for (const a6 of [0, 1]) for (const a1 of [0, 1]) {
+            const table = S ? (a6 ? 0 : 1) : (a1 ? 1 : 0);
+            if (EQ_NEXT(S, a6, a1) !== table) fails.push(`eq S${S} at6=${a6} at1=${a1}`);
+        }
+        // 3) the 7/0 variant wraps and then toggles — the claim in the notes
+        const v70 = Array.from({ length: 12 }, (_, i) => snap(i, 7, 0).C).join('');
+        if (v70 !== '012345670707') fails.push('7/0 variant ' + v70);
+        // 4) the FSMD and the controller agree: each FSMD arc is a controller arc on the matching status, each transfer is the matching output
+        for (const fe of FEDGES) { const ce = EDGES.find(e => e.from === fe.from && e.to === fe.to && e.loop === undefined);
+            if (!ce || ce.label !== { 'C = 6': 'at6', 'C = 1': 'at1' }[fe.label]) fails.push('fsmd arc ' + fe.id); }
+        if (XFER.UP !== 'C ← C + 1' || XFER.DOWN !== 'C ← C − 1') fails.push('xfer text');
+        // 5) geometry: no wire through a block, no label on a block / wire / bubble / tag, everything inside its viewBox
+        const rectOf = (id) => { const b = BLK[id]; return { x: b.x, y: b.y, width: b.w, height: b.h }; };
+        const inOpen = (v, lo, hi) => v > lo + 1 && v < hi - 1;
+        const segHitsBlock = (p, q, id) => {
+            const r = rectOf(id);
+            if (p[1] === q[1]) {
+                const y = p[1], a = Math.min(p[0], q[0]), b = Math.max(p[0], q[0]);
+                if (!inOpen(y, r.y, r.y + r.height)) return false;
+                let xl = r.x, xr = r.x + r.width;
+                if (id === 'mux') { xl = muxLeftX(y); xr = r.x + r.width - (muxLeftX(y) - r.x); }
+                return Math.min(b, xr - 1) - Math.max(a, xl + 1) > 0.5;
+            }
+            const x = p[0], a = Math.min(p[1], q[1]), b = Math.max(p[1], q[1]);
+            if (!inOpen(x, r.x, r.x + r.width)) return false;
+            return Math.min(b, r.y + r.height - 1) - Math.max(a, r.y + 1) > 0.5;
+        };
+        const overlap = (a, b, pad = 0) => a.x < b.x + b.width + pad && a.x + a.width + pad > b.x && a.y < b.y + b.height + pad && a.y + a.height + pad > b.y;
+        const circleHit = (bb, c, r) => { const cx = Math.max(bb.x, Math.min(c.x, bb.x + bb.width)), cy = Math.max(bb.y, Math.min(c.y, bb.y + bb.height)); return Math.hypot(cx - c.x, cy - c.y) < r + 2; };
+        const vbOf = (svg) => svg.getAttribute('viewBox').split(' ').map(Number);
+        function checkSvg(svg, tag, wires, blocks, nodes, nodeR, extraRects = []) {
+            const [vx, vy, vw, vh] = vbOf(svg);
+            for (const w of wires) for (let i = 0; i + 1 < w.pts.length; i++) for (const id in blocks)
+                if (segHitsBlock(w.pts[i], w.pts[i + 1], id)) fails.push(`${tag} wire ${w.id} crosses ${id}`);
+            for (const t of Array.from(svg.querySelectorAll('text'))) {
+                if (t.classList.contains('hid')) continue;
+                const bb = t.getBBox(); if (!bb.width) continue;
+                if (bb.x < vx || bb.y < vy || bb.x + bb.width > vx + vw || bb.y + bb.height > vy + vh) fails.push(`${tag} text outside: ` + t.textContent);
+                if (t.dataset.in) continue;
+                for (const id in blocks) if (overlap(bb, rectOf(id))) fails.push(`${tag} label "${t.textContent}" on block ${id}`);
+                for (const r of extraRects) if (overlap(bb, r)) fails.push(`${tag} label "${t.textContent}" on tag`);
+                for (const w of wires) for (let i = 0; i + 1 < w.pts.length; i++) {
+                    const p = w.pts[i], q = w.pts[i + 1];
+                    const sr = { x: Math.min(p[0], q[0]) - 2, y: Math.min(p[1], q[1]) - 2, width: Math.abs(q[0] - p[0]) + 4, height: Math.abs(q[1] - p[1]) + 4 };
+                    if (overlap(bb, sr)) fails.push(`${tag} label "${t.textContent}" on wire ${w.id}`);
+                }
+                for (const k in nodes) if (circleHit(bb, nodes[k], nodeR)) fails.push(`${tag} label "${t.textContent}" on bubble ${k}`);
+            }
+            for (const p of svg.querySelectorAll('path.arc')) { const bb = p.getBBox(); if (bb.x < vx || bb.x + bb.width > vx + vw || bb.y < vy || bb.y + bb.height > vy + vh) fails.push(`${tag} arc outside ` + p.dataset.id); }
+        }
+        const sweep = (tag) => {
+            const ds = $('designSurface'); if (ds.scrollHeight > 1080 + 1 || ds.scrollWidth > 1920 + 1) fails.push('overflow ' + tag);
+            document.querySelectorAll('.page.active .panel, .page.active .ro, .page.active .rowcard').forEach(p => { if (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1) fails.push('panel overflow ' + tag + ' ' + (p.className || '').split(' ').slice(1, 3).join('.')); });
+        };
+        // beat 1: build sweep + geometry at the full picture
+        setPage(1);
+        for (let b = 0; b <= NBUILD; b++) { build = b; drawPage(); const sh = window.__api.shown('d1');
+            if (sh.visibleGroups.join() !== Array.from({ length: b + 1 }, (_, i) => i).join()) fails.push('b1 groups ' + b);
+            sweep('p1b' + b); }
+        const tagRects = Object.values(D1.tags).map(r => ({ x: +r.getAttribute('x'), y: +r.getAttribute('y'), width: +r.getAttribute('width'), height: +r.getAttribute('height') }));
+        checkSvg($('d1'), 'fsmd', [], {}, FN, RF, tagRects);
+        for (const id in D1.arcs) { const bb = D1.arcs[id].path.getBBox(); for (const r of tagRects) if (overlap(bb, r)) fails.push('fsmd arc on tag ' + id); }
+        // beat 2: each reading focuses something and dims the rest
+        setPage(2);
+        for (let s = 0; s < NROWS2; s++) { sel2 = s; drawPage(); const sh = window.__api.shown('d2'); if (!sh.foc || !sh.dim) fails.push('b2 focus ' + s); sweep('p2s' + s); }
+        checkSvg($('d2'), 'dp', WIRE_SETS.dp, BLK, {}, 0);
+        setPage(3);
+        for (let s = 0; s < NROWS3; s++) { sel3 = s; drawPage(); const sh = window.__api.shown('d3'); if (!sh.foc || !sh.dim) fails.push('b3 focus ' + s); sweep('p3s' + s); }
+        checkSvg($('d3'), 'ctl', WIRE_SETS.ctl, {}, NODES, R);
+        // beat 4 at every cycle: the lit wires, bubble, arc and register follow the trace
+        setPage(4);
+        checkSvg($('d4'), 'full', WIRE_SETS.full, BLK, NODES, R);
+        for (let k = 0; k <= PERIOD; k++) {
+            cyc = k; drawPage(); const t = TRACE[k], sh = window.__api.shown('d4');
+            if (sh.state.join() !== SNAME(t.S)) fails.push('bubble cyc ' + k);
+            const want = ['up', 'at6', 'at1'].filter(n => t[n]).concat([t.up ? 'inc' : 'dec', 'muxo']).sort().join();
+            if (sh.wiresOn.slice().sort().join() !== want) fails.push('wires cyc ' + k + ' ' + sh.wiresOn.join('/'));
+            if (!sh.reg.startsWith(t.C.toString(2).padStart(3, '0'))) fails.push('reg cyc ' + k);
+            const arc = t.S ? (t.at6 ? 'UP>DOWN' : 'UP>UP') : (t.at1 ? 'DOWN>UP' : 'DOWN>DOWN');
+            if (sh.arcOn.join() !== arc) fails.push('arc cyc ' + k);
+            sweep('p4c' + k);
+        }
+        setPage(5);
+        for (let k = 0; k <= PERIOD; k++) { cyc = k; drawPage();
+            if (!document.querySelector(`#tab5 tr.cur[data-cyc="${k}"]`)) fails.push('table cursor ' + k);
+            sweep('p5c' + k); }
+        openDefs(); sweep('defs'); closeDefs();
+        // restore the exact pre-assertion state
+        page = S0.page; build = S0.build; sel2 = S0.sel2; sel3 = S0.sel3; cyc = S0.cyc; render();
+        if (fails.length) {
+            document.title += ' — ASSERT FAIL: ' + [...new Set(fails)].slice(0, 12).join(', ');
+        } else if (location.search.indexOf('verify') >= 0) {
+            document.title += ' — ASSERT PASS';
+        }
+    }
+    runAssertions();
+</script>
+</body>
+</html>
