@@ -1,0 +1,10 @@
+title: "FSM Coding Template Practice"
+description: "Four state machines written in Verilog with the coding template, two binary and two one-hot: read each one back to its state assignment, next state table and output, then draw the state diagram and say what the machine does, with hints and worked steps on demand."
+chapter: verilog
+section: verilog-basics
+order: 70405
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: four finite state machines written in Verilog with the coding template, two binary and two one-hot. Read the code back to the state assignment, the next state table, the output and the state diagram on paper, then step through hints and worked steps on demand"

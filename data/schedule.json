@@ -903,6 +903,13 @@
           "slug": "switch-debouncer",
           "type": "full",
           "published": false
+        },
+        {
+          "num": "7.4.5",
+          "title": "FSM Coding Template Practice",
+          "slug": "fsm-coding-template-practice",
+          "type": "practice",
+          "published": true
         }
       ]
     },
