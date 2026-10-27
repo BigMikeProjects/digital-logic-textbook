@@ -885,8 +885,8 @@
         },
         {
           "num": "5.1.3",
-          "title": "Timing Diagram FSMD Analysis",
-          "slug": "timing-diagram-fsmd-analysis",
+          "title": "FSMD Timing",
+          "slug": "fsmd-timing",
           "type": "full",
           "published": false
         },
