@@ -1,0 +1,11 @@
+title: "FSMD Timing"
+description: ""
+chapter: rtl-design
+section: introduction-to-rtl-design
+order: 50103
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the given FSMD run through the three-step method — datapath, one-hot controller by inspection — then clocked through the timing diagram one edge at a time, predicting the next state and the value that lands in R"
+  02-interactive.html:
+    caption: "Interactive: start from a given FSMD, build its datapath with the FSMD in view, derive a one-hot controller by inspection with both in view, connect and run the two boxes, then step the timing diagram one clock at a time with the edge just taken and the next edge marked on the FSMD"

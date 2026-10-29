@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSMD Timing — Build the Datapath and the Controller, then Step the Timing Diagram</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #e0e0e0; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4fc3f7 = the current state, register transfers, live data · amber #ffb74d = control (selX, selY) and CLK ·
+       violet #b388ff = status (none here, so only the port label) · slate #7d9bb5 = a wire carrying 0 · navy #0d1b2a = panels */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #4fc3f7; border-radius: 12px;
+        background: rgba(79,195,247,0.06); padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #e8eef2; font-size: 38px; font-weight: 700; line-height: 1.15; }
+    .titles h1 .sub { color: #90a4ae; font-size: 25px; font-weight: 500; }
+    .titles .subtitle { color: #90a4ae; font-size: 20px; margin-top: 4px; }
+    .page-count { flex-shrink: 0; color: #607d8b; font-size: 20px; font-weight: 600;
+        border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #e8eef2; font-size: 26px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; }
+    .defs-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 20px; font-weight: 600;
+        color: #cfd8dc; background: transparent; border: 2px solid #37506a; border-radius: 10px; padding: 8px 18px; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k { border: 1px solid #37506a; border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: #90a4ae; line-height: 26px; }
+    .defs-btn.on { border-color: #b388ff; color: #e8eef2; background: rgba(179,136,255,0.10); }
+
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(8,13,24,0.78); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1480px; background: #0d1b2a; border: 2px solid #b388ff; border-radius: 16px; padding: 16px 38px 22px; box-shadow: 0 18px 60px rgba(0,0,0,0.55); }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+    .defs-title { font-size: 34px; font-weight: 700; color: #e8eef2; }
+    .defs-close { font-size: 20px; color: #607d8b; }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 10px; align-items: baseline; }
+    .defs-list .ds { font-size: 25px; font-weight: 700; white-space: nowrap; }
+    .defs-list .dd { font-size: 21px; line-height: 1.26; color: #b0bec5; }
+    .defs-list .dd b { color: #e8eef2; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px;
+        border: 2px solid #24384c; border-radius: 12px; padding: 11px 20px;
+        color: #6a8398; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tlabel { font-size: 21px; font-weight: 700; white-space: nowrap; }
+    .tab .tstep { font-size: 15px; font-weight: 600; letter-spacing: 1px; color: #4a627a; margin-left: auto; white-space: nowrap; }
+    .tab.on { color: #e8eef2; border-color: #cfd8dc; background: rgba(207,216,220,0.07); }
+    .tab.on .tnum { background: #cfd8dc; color: #0d1b2a; border-color: #cfd8dc; }
+    .tab.on .tstep { color: #90a4ae; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 14px; flex-direction: column; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .ov { text-decoration: overline; text-decoration-thickness: 2px; text-underline-offset: 2px; }
+
+    .panel { background: #0d1b2a; border: 2px solid #37506a; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+    .panel svg { display: block; }
+    .phead { white-space: nowrap; font-size: 22px; font-weight: 700; color: #cfd8dc; padding: 10px 22px 0; }
+    .phead .dimtxt { color: #90a4ae; font-weight: 500; }
+
+    .c-ctl { color: #ffb74d; } .c-st { color: #b388ff; } .c-on { color: #4fc3f7; } .c-dim { color: #90a4ae; }
+
+    .row { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .side { flex: 0 0 560px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+    .main svg { width: 100%; }
+    .fig1 svg { height: 776px; }
+    /* beats 2 and 3: readings | the part being built | the givens it is built from */
+    .side.narrow { flex: 0 0 400px; }
+    .side.s1 { flex: 0 0 460px; }
+    .mid { flex: 0 0 760px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .mid svg { width: 100%; height: auto; }
+    .refcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .refcol svg { width: 100%; height: auto; }
+    .panel.grow { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .panel.grow svg { flex: 1; min-height: 0; height: 100%; width: 100%; }
+    .stepcard .rh { font-size: 26px; font-weight: 700; color: #e8eef2; margin-top: 6px; }
+    .stepcard .rl { font-size: 22px; color: #b0bec5; margin-top: 6px; line-height: 1.4; }
+    .stepcard .rl .mono { color: #4fc3f7; white-space: nowrap; }
+    .stepcard.fill { display: flex; flex-direction: column; }
+    .stepcard.fill .steprow { margin-top: 18px; }
+    .rowcard .rt { font-size: 22px; } .rowcard .rd { font-size: 20px; }
+    /* the live FSMD on beat 5: current state, the arc about to be taken, the transfer that edge performs */
+    .xfer-box.on { fill: rgba(79,195,247,0.30); stroke-width: 4; }
+    .cond.on { fill: #4fc3f7; }
+    .live5 svg { width: 100%; height: 292px; }   /* sized so the rule card, the FSMD and the one-hot equations share the column */
+    .phead .given { color: #90a4ae; font-size: 15px; font-weight: 700; letter-spacing: 2px; border: 2px solid #37506a; border-radius: 6px; padding: 0 7px; margin-right: 8px; vertical-align: 2px; }
+    .ctlrow { padding: 10px 16px 12px; }
+    .ctlrow .steprow { margin-top: 0; }
+    .probcard .pg { margin-top: 2px; }
+    .probcard ol { margin: 8px 0 0 26px; }
+    .probcard ol li { margin-top: 4px; padding-left: 4px; }
+    .probcard ol li::before { content: none; }
+    .probcard ol li::marker { color: #4fc3f7; font-weight: 700; }
+    .portmap { display: grid; grid-template-columns: max-content 1fr; column-gap: 14px; row-gap: 6px; margin-top: 6px; }
+    .portmap .pm { font-family: 'Menlo','Consolas',monospace; font-weight: 700; color: #e8eef2; }
+    .card { padding: 12px 20px 14px; font-size: 20px; line-height: 1.38; color: #b0bec5; }
+    .card b { color: #e8eef2; }
+    .card .ct { font-size: 22px; font-weight: 700; color: #cfd8dc; margin-bottom: 6px; }
+    .card .ct .dimtxt { color: #90a4ae; font-weight: 500; }
+    .card ul { list-style: none; }
+    .card li { margin-top: 6px; padding-left: 18px; position: relative; }
+    .card li::before { content: '\25AA'; position: absolute; left: 0; color: #4fc3f7; }
+    .card .rule { border-left: 4px solid #b388ff; padding-left: 14px; margin-top: 6px; color: #cfd8dc; }
+    .card .chk { margin-top: 8px; color: #90a4ae; }
+    .card.fill { flex: 1; min-height: 0; }
+    .stepcard .snum { font-size: 17px; font-weight: 700; letter-spacing: 2px; color: #4fc3f7; }
+    .stepcard .reason { color: #e0e0e0; }
+    .stepcard .reason .mono { color: #4fc3f7; }
+    .steprow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+    .rowcard { border: 2px solid #24384c; border-radius: 12px; padding: 10px 16px 11px; cursor: pointer; transition: all .12s ease; }
+    .rowcard .rt { font-size: 21px; font-weight: 700; color: #cfd8dc; }
+    .rowcard .rt .arrow { color: #607d8b; font-weight: 500; }
+    .rowcard .rd { font-size: 19px; line-height: 1.35; color: #90a4ae; margin-top: 3px; }
+    .rowcard .rd b { color: #b0bec5; }
+    .rowcard.on { border-color: #4fc3f7; background: rgba(79,195,247,0.08); }
+    .rowcard.on .rt { color: #4fc3f7; }
+    .rowcard.on .rd { color: #cfd8dc; } .rowcard.on .rd b { color: #e8eef2; }
+    .rowcard .rd .mono { color: #e8eef2; white-space: nowrap; }
+    .foot { font-size: 20px; line-height: 1.38; color: #b0bec5; padding: 12px 20px 14px; }
+    .foot b { color: #e8eef2; }
+    .foot .hdl { margin-top: 8px; color: #90a4ae; border-top: 1px solid #24384c; padding-top: 8px; }
+
+    /* beat 4 */
+    .diag svg { width: 100%; height: auto; }
+    .brow { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .readout { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .readout .ro { padding: 10px 22px 6px; font-size: 19px; line-height: 1.36; color: #b0bec5; }
+    .readout .ro b { color: #e8eef2; }
+    .readout .ro .mono { color: #e8eef2; }
+    .readout .steprow { padding: 0 22px 12px; margin-top: auto; }
+    .strip { flex: 0 0 860px; display: flex; flex-direction: column; }
+    .strip .phead { padding-bottom: 4px; }
+    .strip .phead .hint { font-size: 16px; color: #607d8b; font-weight: 500; }
+    .strip table { border-collapse: collapse; margin: 0 22px 10px; font-variant-numeric: tabular-nums; }
+    .strip th { font-size: 17px; font-weight: 600; color: #90a4ae; padding: 2px 6px; text-align: center; white-space: nowrap; }
+    .strip th.lab, .strip td.lab { text-align: right; padding-right: 12px; font-size: 18px; color: #cfd8dc; font-family: 'Menlo','Consolas',monospace; font-weight: 700; }
+    .strip td { width: 58px; height: 36px; text-align: center; font-size: 19px; font-family: 'Menlo','Consolas',monospace; color: #cfd8dc;
+        border: 2px solid #24384c; cursor: pointer; user-select: none; }
+    .strip td.one { color: #e8eef2; font-weight: 700; } .strip td.zero { color: #5d7488; }
+    .strip td.cur { box-shadow: inset 0 0 0 3px #ffb74d; color: #ffb74d; }
+    .strip td.chg { color: #4fc3f7; font-weight: 700; }
+    .strip td.cur.chg { color: #ffb74d; }
+    .strip td input { width: 52px; font: inherit; font-size: 19px; text-align: center; background: #0b1622; color: #4fc3f7; border: 1px solid #4fc3f7; border-radius: 4px; outline: none; }
+    .strip .ssub { padding: 0 22px 10px; font-size: 17px; color: #607d8b; line-height: 1.3; }
+    .lfoot { padding: 0 22px 10px; font-size: 17px; color: #90a4ae; line-height: 1.3; white-space: nowrap; overflow: hidden; }
+    .lfoot b { color: #cfd8dc; }
+
+    .btn { font: inherit; font-size: 22px; font-weight: 700; color: #cfd8dc; background: transparent;
+        border: 3px solid #607d8b; border-radius: 12px; padding: 7px 18px; cursor: pointer; white-space: nowrap; }
+    .btn .kk { font-weight: 500; font-size: 20px; color: #90a4ae; }
+    .btn.clk { border-color: #ffb74d; color: #ffb74d; }
+    .btn.nxt { border-color: #4fc3f7; color: #4fc3f7; }
+    .btn.sm { font-size: 18px; padding: 5px 14px; }
+    .btn.prv { border-color: #4fc3f7; color: #4fc3f7; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+    .chip { display: inline-block; font-size: 22px; font-weight: 700; border-radius: 999px; padding: 6px 20px;
+        border: 3px solid currentColor; white-space: nowrap; }
+    .chip.on { color: #4fc3f7; background: rgba(79,195,247,0.12); }
+    .chip.st { color: #b388ff; background: rgba(179,136,255,0.12); }
+    .chip.ctl { color: #ffb74d; background: rgba(255,183,77,0.12); }
+
+    /* SVG classes */
+    .ct { fill: none; stroke: #37506a; stroke-width: 2.5; }
+    .ct-title { fill: #cfd8dc; font-size: 26px; font-weight: 700; }
+    .ct-sub { fill: #90a4ae; font-size: 18px; }
+    .blk { fill: #0d1b2a; stroke: #6f8799; stroke-width: 3; }
+    .blk.on, .blk.foc { stroke: #4fc3f7; stroke-width: 4; fill: rgba(79,195,247,0.10); }
+    .blk-l { fill: #e0e0e0; font-family: 'Menlo','Consolas',monospace; font-size: 25px; font-weight: 700; text-anchor: middle; }
+    .blk-l.sm { font-size: 20px; font-weight: 500; fill: #90a4ae; font-family: 'Segoe UI',sans-serif; }
+    .wire { fill: none; stroke: #7d9bb5; stroke-width: 3.5; stroke-linejoin: round; transition: stroke .15s, opacity .15s; }
+    .wire.data { stroke: #8fa8bd; }
+    .wire.ctl.on, .wire.ctl.foc { stroke: #ffb74d; stroke-width: 5; }
+    .wire.st.on, .wire.st.foc { stroke: #b388ff; stroke-width: 5; }
+    .wire.data.on, .wire.data.foc { stroke: #4fc3f7; stroke-width: 5; }
+    .wire.in.on, .wire.in.foc { stroke: #e8eef2; stroke-width: 5; }
+    .wire.clk { stroke: #ffb74d; }
+    .wire.clk.foc { stroke-width: 5; }
+    .dot { fill: #8fa8bd; }
+    .dot.foc { fill: #4fc3f7; }
+    .val { font-family: 'Menlo','Consolas',monospace; font-size: 24px; font-weight: 700; fill: #4fc3f7; }
+    .val.dim { fill: #5d7488; font-weight: 500; }
+    .val.in { fill: #e8eef2; }
+    .muxin { font-family: 'Menlo','Consolas',monospace; font-size: 21px; fill: #90a4ae; text-anchor: middle; }
+    .sig { font-family: 'Menlo','Consolas',monospace; font-size: 27px; font-weight: 700; text-anchor: middle; }
+    .sig.ctl { fill: #ffb74d; } .sig.st { fill: #b388ff; } .sig.in { fill: #cfd8dc; } .sig .v { fill: #e8eef2; font-weight: 500; } .sig .v.off { fill: #7d9bb5; }
+    .sig.none { fill: #5d7488; font-weight: 500; font-size: 22px; font-family: 'Segoe UI',sans-serif; }
+    .dir { font-size: 17px; font-weight: 700; letter-spacing: 2px; text-anchor: middle; }
+    .dir.ctl { fill: rgba(255,183,77,0.7); } .dir.st { fill: rgba(179,136,255,0.75); } .dir.data { fill: rgba(79,195,247,0.7); } .dir.in { fill: rgba(232,238,242,0.55); }
+    .regval { font-family: 'Menlo','Consolas',monospace; font-size: 27px; font-weight: 700; fill: #4fc3f7; text-anchor: middle; }
+    .regval .dec { fill: #cfd8dc; font-weight: 500; font-size: 20px; }
+    .clkl { font-family: 'Menlo','Consolas',monospace; font-size: 20px; fill: #ffb74d; text-anchor: end; }
+    .busl { font-family: 'Menlo','Consolas',monospace; font-size: 17px; fill: #90a4ae; }
+    .sd-node .sdc { fill: #0d1b2a; stroke: #6f8799; stroke-width: 3; transition: stroke .18s, fill .18s; }
+    .sd-node.on .sdc, .sd-node.foc .sdc { stroke: #4fc3f7; stroke-width: 5; fill: rgba(79,195,247,0.16); }
+    .sd-node .sdname { fill: #e0e0e0; font-weight: 700; text-anchor: middle; font-size: 32px; }
+    .sd-node.on .sdname, .sd-node.foc .sdname { fill: #4fc3f7; }
+    .sd-node .sdout { fill: #ffb74d; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 20px; font-weight: 700; }
+    .sd-node .sdout.none { fill: #5d7488; font-weight: 500; }
+    .sd-node .sdz { fill: #4fc3f7; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 20px; font-weight: 700; }
+    .sd-node .sdz.off { fill: #7d9bb5; font-weight: 500; }
+    .arc { fill: none; stroke: #8fa8bd; stroke-width: 3; transition: stroke .18s; }
+    .arc.on, .arc.foc { stroke: #4fc3f7; stroke-width: 5.5; }
+    .arc-l { fill: #cfd8dc; font-family: 'Menlo','Consolas',monospace; font-size: 28px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #0d1b2a; stroke-width: 8px; stroke-linejoin: round; }
+    .arc-l.on { fill: #4fc3f7; }
+    .ovl { stroke: currentColor; stroke-width: 3; }
+    .rst { fill: none; stroke: #cfd8dc; stroke-width: 3; }
+    .rst-l { fill: #90a4ae; font-size: 19px; text-anchor: end; }
+    /* not-in-focus parts stay readable (Mike, 10-27): focus brightens and colors, the rest only steps back */
+    .notrans, .notrans * { transition: none !important; }   /* while the load-time assertions sweep every state */
+    .dim { opacity: 0.55; }
+    .dimsoft { opacity: 0.55; }
+    .fsmd .sdname { font-size: 36px; }
+    /* the reference copy of the FSMD on beats 2 and 3 is drawn at ~0.55 scale, so its type is set larger */
+    .fsmd.ref .sdname { font-size: 46px; } .fsmd.ref .sdz { font-size: 28px; }
+    .fsmd.ref .xfer { font-size: 40px; } .fsmd.ref .cond { font-size: 40px; } .fsmd.ref .rst-l { font-size: 28px; }
+    .xfer-box { fill: rgba(79,195,247,0.13); stroke: #4fc3f7; stroke-width: 2; }
+    .xfer { fill: #4fc3f7; font-family: 'Menlo','Consolas',monospace; font-size: 31px; font-weight: 700; text-anchor: middle; }
+    .leader { fill: none; stroke: #4a627a; stroke-width: 2; stroke-dasharray: 4 7; }
+    .cond { fill: #cfd8dc; font-family: 'Menlo','Consolas',monospace; font-size: 30px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #0d1b2a; stroke-width: 8px; stroke-linejoin: round; }
+    .port { font-size: 25px; fill: #b0bec5; text-anchor: middle; }
+    .port .pk { fill: #90a4ae; } .port .pv { fill: #e8eef2; font-family: 'Menlo','Consolas',monospace; font-weight: 700; }
+    .hid, .panel svg.hid, .wbody svg.hid { display: none; }
+    .fnew { filter: drop-shadow(0 0 7px rgba(79,195,247,0.85)); }
+
+    /* beat 5 */
+    .row5 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .wcol { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+    .wcol .phead { display: flex; align-items: center; gap: 16px; }
+    .wcol .phead .sp { flex: 1; }
+    .wcol svg { width: 100%; height: 100%; }
+    .wbody { flex: 1; min-height: 0; padding: 4px 16px 0; }
+    .wbody.table { overflow: hidden; }
+    .wfoot { display: flex; align-items: center; gap: 14px; padding: 6px 22px 12px; }
+    .wfoot .edgelab { font-size: 20px; color: #ffb74d; font-weight: 700; margin-left: auto; font-family: 'Menlo','Consolas',monospace; }
+    .rcol { flex: 0 0 560px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .rulecard { padding: 10px 22px 14px; flex: 1; min-height: 0; }
+    .rulecard .rn { font-size: 17px; font-weight: 700; letter-spacing: 2px; color: #ffb74d; }
+    .rulecard .rt { font-size: 23px; font-weight: 700; color: #e8eef2; margin-top: 4px; line-height: 1.3; }
+    .rulecard .rb { font-size: 20px; color: #b0bec5; line-height: 1.38; margin-top: 8px; }
+    .rulecard .rb b { color: #e8eef2; } .rulecard .rb .mono { color: #4fc3f7; }
+    .rulecard .rules { margin-top: 10px; border-top: 1px solid #24384c; padding-top: 8px; font-size: 17px; color: #607d8b; line-height: 1.4; }
+    .rulecard .rules b { color: #90a4ae; }
+    .mini svg { width: 100%; height: 214px; }
+    .mtab table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    .mtab th { font-size: 17px; font-weight: 600; color: #90a4ae; padding: 2px 8px 5px; text-align: center; border-bottom: 2px solid #37506a; white-space: nowrap; }
+    .mtab th:first-child, .mtab td:first-child { text-align: left; }
+    .mtab td { font-size: 19px; padding: 5px 8px; border-bottom: 1px solid #24384c; color: #cfd8dc; white-space: nowrap; text-align: center;
+        font-family: 'Menlo','Consolas',monospace; }
+    .mtab td.t { font-family: 'Segoe UI',sans-serif; }
+    .mtab td.zero { color: #5d7488; }
+    .mtab td.one.ctl { color: #ffb74d; font-weight: 700; }
+    .mtab td.one.z { color: #4fc3f7; font-weight: 700; }
+    .mtab td.chg { color: #4fc3f7; font-weight: 700; }
+    .mtab tr.cur td { background: rgba(255,183,77,0.12); color: #e8eef2; }
+    .mtab tr.cur td:first-child { color: #ffb74d; font-weight: 700; box-shadow: inset 4px 0 0 #ffb74d; }
+    .mtab tr.cur td.zero { color: #90a4ae; }
+    .mtab tr.fut td { opacity: 0.3; }
+    .eqcard { padding: 6px 22px 10px; }
+    .eqcard .eq { font-family: 'Menlo','Consolas',monospace; font-size: 21px; font-weight: 700; color: #e8eef2; margin-top: 2px; line-height: 1.3; }
+    .eqcard .eq .ctl { color: #ffb74d; } .eqcard .eq .st { color: #b388ff; } .eqcard .eq .on { color: #4fc3f7; }
+    .eqcard .why { font-size: 18px; color: #b0bec5; line-height: 1.3; margin-top: 4px; }
+    .eqcard .why b { color: #e8eef2; }
+    /* waveform svg */
+    .wv-lab { font-family: 'Menlo','Consolas',monospace; font-size: 21px; font-weight: 700; fill: #cfd8dc; text-anchor: end; }
+    .wv-lab.ctl { fill: #ffb74d; } .wv-lab.z { fill: #4fc3f7; } .wv-lab.in { fill: #e8eef2; } .wv-lab.clk { fill: #ffb74d; }
+    .wv-grid { stroke: #1f3144; stroke-width: 1; }
+    .wv-bit { fill: none; stroke: #cfd8dc; stroke-width: 3; stroke-linejoin: round; }
+    .wv-bit.ctl { stroke: #ffb74d; } .wv-bit.z { stroke: #4fc3f7; } .wv-bit.clk { stroke: #ffb74d; stroke-width: 2.5; }
+    .wv-bus { fill: rgba(143,168,189,0.10); stroke: #8fa8bd; stroke-width: 2.5; stroke-linejoin: round; }
+    .wv-bus.state { fill: rgba(79,195,247,0.10); stroke: #4fc3f7; }
+    .wv-bus.reg { fill: rgba(79,195,247,0.16); stroke: #4fc3f7; }
+    .wv-bus.unk { fill: none; stroke: #5d7488; stroke-dasharray: 5 5; }
+    .wv-bus.ctl { fill: rgba(255,183,77,0.14); stroke: #ffb74d; } .wv-bus.z { fill: rgba(79,195,247,0.14); stroke: #4fc3f7; }
+    .wv-bus.in { fill: rgba(143,168,189,0.10); stroke: #8fa8bd; }
+    .wv-bus.zero { fill: rgba(125,155,181,0.05); stroke-opacity: 0.6; }
+    .wv-bt.ctl { fill: #ffb74d; } .wv-bt.z { fill: #4fc3f7; } .wv-bt.in { fill: #e8eef2; }
+    .wv-bt.zero { fill: #8aa2b6; font-weight: 500; }
+    .wv-bt { font-family: 'Menlo','Consolas',monospace; font-size: 19px; font-weight: 700; fill: #e8eef2; text-anchor: middle; }
+    .wv-bt.chg { fill: #4fc3f7; }
+    .wv-bt.unk { fill: #5d7488; font-weight: 500; }
+    .wv-fut { stroke: #37506a; stroke-width: 2; stroke-dasharray: 3 7; }
+    .wv-cyc { font-family: 'Menlo','Consolas',monospace; font-size: 16px; fill: #607d8b; text-anchor: middle; }
+    .wv-cyc.cur { fill: #ffb74d; font-weight: 700; }
+    .wv-cursor { stroke: #ffb74d; stroke-width: 3; }
+    /* two cursors (Mike, 10-27): amber = the edge just taken (the rule card's edge); cyan = the next edge, the one whose
+       arc and transfer the given FSMD lights, in the FSMD's highlight color */
+    .wv-next { stroke: #4fc3f7; stroke-width: 3; stroke-dasharray: 9 5; }
+    .wv-curlab { font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+    .wv-curlab.amber { fill: #ffb74d; text-anchor: end; } .wv-curlab.cyan { fill: #4fc3f7; text-anchor: start; }
+    .wv-pin { fill: #ffb74d; font-size: 15px; font-weight: 700; text-anchor: middle; }
+    .wv-pinmark { fill: none; stroke: #ffb74d; stroke-width: 2; stroke-dasharray: 4 4; opacity: 0.5; }
+    .mini-box { fill: none; stroke: #37506a; stroke-width: 2.5; }
+    .mini-t { fill: #90a4ae; font-size: 15px; font-weight: 700; letter-spacing: 1px; }
+    .mini-v { font-family: 'Menlo','Consolas',monospace; font-size: 20px; font-weight: 700; fill: #4fc3f7; text-anchor: middle; }
+    .mini-s { font-family: 'Menlo','Consolas',monospace; font-size: 17px; font-weight: 700; }
+    .mini-s.ctl { fill: #ffb74d; } .mini-s.in { fill: #e8eef2; } .mini-s.z { fill: #4fc3f7; } .mini-s.off { fill: #7d9bb5; font-weight: 500; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .pdot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #37506a; }
+    .pdot.on { background: #cfd8dc; border-color: #cfd8dc; }
+    .controls { font-size: 20px; color: #607d8b; }
+    .controls .k { border: 1px solid #37506a; border-radius: 6px; padding: 1px 8px;
+        font-family: 'Menlo','Consolas',monospace; color: #90a4ae; }
+    .controls .k.amber { color: #ffb74d; border-color: #7a5a2a; }
+    .controls .k.cyan { color: #4fc3f7; border-color: #2a5a7a; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 44 H26 V18 H46 V44 H66 V18 H86 V44 H106 V18 H126 V44 H144" stroke="#ffb74d" stroke-width="2.5"/>
+                <path d="M6 12 H46 L52 6 H86 L92 12 H144" stroke="#4fc3f7" stroke-width="2.5"/>
+                <path d="M46 54 H86 L92 48 H144 M6 54 H40 L46 54" stroke="#cfd8dc" stroke-width="2.5"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>FSMD Timing <span class="sub">&mdash; given an FSMD, build its datapath and controller, then step the timing diagram</span></h1>
+            <div class="subtitle">Each rising edge: the controller follows a; the datapath performs the leaving state&rsquo;s transfer.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 5</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">The Given FSMD</div><div class="tstep">STEP 1</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Build the Datapath</div><div class="tstep">STEP 2</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Derive the Controller</div><div class="tstep">STEP 3</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Connect and Run</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">Timing Diagram</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 — the given FSMD (the problem statement) -->
+        <div class="page" id="p1">
+            <div class="row">
+                <div class="panel main fig1">
+                    <div class="phead"><span class="given">GIVEN</span>The FSMD <span class="dimtxt">&mdash; the problem starts here</span></div>
+                    <svg id="d1" viewBox="0 0 1200 800" class="fsmd"></svg>
+                </div>
+                <div class="side s1">
+                    <div class="panel card probcard">
+                        <div class="ct">The problem</div>
+                        <div class="pg">Given this FSMD: build its <b>datapath</b>, derive its <b>controller</b>, then read its <b>timing diagram</b>.</div>
+                    </div>
+                    <div class="panel card stepcard fill">
+                        <div class="snum" id="snum1"></div>
+                        <div class="reason" id="reason1"></div>
+                        <div class="steprow">
+                            <button class="btn prv" id="prv1" title="back a step">&#9664; <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt1">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 — the datapath, built beside the FSMD -->
+        <div class="page" id="p2">
+            <div class="row">
+                <div class="side narrow">
+                    <div class="panel card" style="padding-bottom:10px"><div class="ct" style="margin:0">Step 2 &mdash; build the datapath</div></div>
+                    <div class="rowcard" data-row="0"><div class="rt">Registers <span class="arrow">&rarr;</span> a register</div>
+                        <div class="rd">One 8-bit register <b>R</b>, loaded every clock.</div></div>
+                    <div class="rowcard" data-row="1"><div class="rt">Transfers <span class="arrow">&rarr;</span> a mux</div>
+                        <div class="rd">0 (default), X, Y; <span class="mono c-ctl">selX</span>, <span class="mono c-ctl">selY</span> choose.</div></div>
+                    <div class="rowcard" data-row="2"><div class="rt">Conditions <span class="arrow">&rarr;</span> status</div>
+                        <div class="rd"><b>None</b>: no arc reads R.</div></div>
+                    <div class="panel ctlrow"><div class="steprow"><button class="btn prv" id="prv2" title="back a step">&#9664; <span class="kk">&uarr;</span></button><button class="btn nxt" id="nxt2">next <span class="kk">Space</span></button><button class="btn" data-reset>&#8634; <span class="kk">R</span></button></div></div>
+                </div>
+                <div class="mid">
+                    <div class="panel fig2 grow">
+                        <div class="phead">The datapath</div>
+                        <svg id="d2" viewBox="860 0 956 560"></svg>
+                    </div>
+                </div>
+                <div class="refcol">
+                    <div class="panel ref grow">
+                        <div class="phead"><span class="given">GIVEN</span>The FSMD</div>
+                        <svg id="r2" viewBox="0 0 860 580" class="fsmd ref"></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 — the controller, derived beside the FSMD and the datapath -->
+        <div class="page" id="p3">
+            <div class="row">
+                <div class="side narrow">
+                    <div class="panel card" style="padding-bottom:10px"><div class="ct" style="margin:0">Step 3 &mdash; derive the controller</div></div>
+                    <div class="rowcard" data-row="0"><div class="rt">States <span class="arrow">&rarr;</span> one-hot</div>
+                        <div class="rd">A flip-flop per state; reset <span class="mono">Q<sub>A</sub></span> = 1.</div></div>
+                    <div class="rowcard" data-row="1"><div class="rt">Transfers <span class="arrow">&rarr;</span> control outputs</div>
+                        <div class="rd"><span class="mono"><span class="c-ctl">selX</span> = Q<sub>B</sub></span>, <span class="mono"><span class="c-ctl">selY</span> = Q<sub>C</sub></span>, <span class="mono"><span class="c-on">z</span> = Q<sub>C</sub></span></div></div>
+                    <div class="rowcard" data-row="2"><div class="rt">Conditions <span class="arrow">&rarr;</span> the input a</div>
+                        <div class="rd">Same arcs. No status.</div></div>
+                    <div class="rowcard" data-row="3"><div class="rt">Arcs into A <span class="arrow">&rarr;</span> <span class="mono">Q<sub>A</sub><sup>+</sup></span></div>
+                        <div class="rd mono" id="eqA"></div></div>
+                    <div class="rowcard" data-row="4"><div class="rt">Arcs into B <span class="arrow">&rarr;</span> <span class="mono">Q<sub>B</sub><sup>+</sup></span></div>
+                        <div class="rd mono" id="eqB"></div></div>
+                    <div class="rowcard" data-row="5"><div class="rt">Arcs into C <span class="arrow">&rarr;</span> <span class="mono">Q<sub>C</sub><sup>+</sup></span></div>
+                        <div class="rd mono" id="eqC"></div></div>
+                    <div class="panel ctlrow"><div class="steprow"><button class="btn prv" id="prv3" title="back a step">&#9664; <span class="kk">&uarr;</span></button><button class="btn nxt" id="nxt3">next <span class="kk">Space</span></button><button class="btn" data-reset>&#8634; <span class="kk">R</span></button></div></div>
+                </div>
+                <div class="mid">
+                    <div class="panel fig3 grow">
+                        <div class="phead">The controller</div>
+                        <svg id="d3" viewBox="0 0 790 600"></svg>
+                    </div>
+                    <div class="panel foot">One-hot: each control signal <b>is</b> a flip-flop &middot; <span class="mono c-on">z</span> and <span class="mono c-ctl">selY</span>: one wire, <span class="mono">Q<sub>C</sub></span></div>
+                </div>
+                <div class="refcol">
+                    <div class="panel ref grow">
+                        <div class="phead"><span class="given">GIVEN</span>The FSMD</div>
+                        <svg id="r3f" viewBox="0 0 860 580" class="fsmd ref"></svg>
+                    </div>
+                    <div class="panel ref grow">
+                        <div class="phead"><span class="given">STEP 2</span>The datapath</div>
+                        <svg id="r3d" viewBox="860 0 956 540"></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 — connected, running -->
+        <div class="page" id="p4">
+            <div class="panel diag"><svg id="d4" viewBox="0 0 1816 540"></svg></div>
+            <div class="brow">
+                <div class="panel readout">
+                    <div class="ro" id="ro4"></div>
+                    <div class="lfoot"><b>Control</b>: <span class="mono c-ctl">selX</span>, <span class="mono c-ctl">selY</span> &middot; <b>Status</b>: none &middot; reset <b>A</b></div>
+                    <div class="steprow">
+                        <button class="btn prv" id="prv4" title="back a step">&#9664; <span class="kk">&uarr;</span></button>
+                        <button class="btn clk" id="clk4">&#9654; CLK <span class="kk">Space</span></button>
+                        <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        <button class="btn sm" id="script4">scripted run <span class="kk">S</span></button>
+                        <span class="chip" id="chip4"></span>
+                    </div>
+                </div>
+                <div class="panel strip">
+                    <div class="phead">Inputs per cycle <span class="hint">&mdash; click a to flip; X, Y to type hex</span></div>
+                    <table id="strip4"></table>
+                    <div class="ssub" id="ssub4"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 5 — timing diagram -->
+        <div class="page" id="p5">
+            <div class="row5">
+                <div class="panel wcol">
+                    <div class="phead"><span>Timing diagram <span class="dimtxt">&mdash; <span class="c-ctl">amber</span> = just taken, <span class="c-on">cyan</span> = next &middot; values change only at edges</span></span><span class="sp"></span>
+                        <button class="btn sm" id="view5">show table <span class="kk">T</span></button></div>
+                    <div class="wbody" id="wbody5"><svg id="w5" viewBox="0 0 1230 530"></svg><div class="mtab hid" id="tab5"></div></div>
+                    <div class="wfoot">
+                        <button class="btn prv" id="prv5" title="back a step">&#9664; <span class="kk">&uarr;</span></button>
+                        <button class="btn clk" id="clk5">&#9654; CLK <span class="kk">Space</span></button>
+                        <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        <span class="edgelab" id="edge5"></span>
+                    </div>
+                </div>
+                <div class="rcol">
+                    <div class="panel rulecard">
+                        <div class="rn" id="rn5"></div>
+                        <div class="rt" id="rt5"></div>
+                        <div class="rb" id="rb5"></div>
+                        <div class="rules"><b>1</b> only at the edge &middot; <b>2</b> a picks the arc &middot; <b>3</b> R lags one cycle &middot; <b>4</b> inputs are sampled</div>
+                    </div>
+                    <div class="panel live5">
+                        <div class="phead"><span class="given">GIVEN</span>The FSMD <span class="dimtxt">&mdash; <span class="c-on">cyan</span> = the next edge</span></div>
+                        <svg id="r5" viewBox="0 0 860 580" class="fsmd ref"></svg>
+                    </div>
+                    <div class="panel eqcard">
+                        <div class="phead" style="padding-left:0">The controller, one-hot by inspection</div>
+                        <div class="eq" id="eq5A"></div>
+                        <div class="eq" id="eq5B"></div>
+                        <div class="eq" id="eq5C"></div>
+                        <div class="eq"><span class="ctl">selX</span> = <span class="on">Q<sub>B</sub></span>,&ensp;<span class="ctl">selY</span> = <span class="on">Q<sub>C</sub></span>,&ensp;<span class="on">z</span> = <span class="on">Q<sub>C</sub></span></div>
+                        <div class="why">One-hot, reset <span class="mono">Q<sub>A</sub></span> = 1 &middot; one term per arc into the state</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress"><div class="pdot" data-dot="1"></div><div class="pdot" data-dot="2"></div><div class="pdot" data-dot="3"></div><div class="pdot" data-dot="4"></div><div class="pdot" data-dot="5"></div></div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">5</span> beat
+            &middot; <span class="k">&larr;</span><span class="k">&rarr;</span> previous / next
+            &middot; <span class="k amber">Space</span> or <span class="k amber">C</span> next: reading (beats 1&ndash;3), CLK (beats 4, 5)
+            &middot; <span class="k cyan">&#9664;</span><span class="k cyan">&uarr;</span> back <span class="k cyan">&darr;</span> forward
+            &middot; <span class="k">R</span> reset &middot; <span class="k">S</span> scripted inputs &middot; <span class="k">T</span> table &middot; <span class="k">D</span> definitions
+        </div>
+    </div>
+
+    <div class="defs" id="defs">
+        <div class="defs-card">
+            <div class="defs-head"><div class="defs-title">Definitions</div><div class="defs-close">D or Esc closes</div></div>
+            <div class="defs-list">
+                <div class="ds c-on">FSMD</div><div class="dd"><b>Finite state machine with datapath.</b> A state diagram with register transfers beside the states and, when the data decides, conditions that read a register. Introduced in <b data-topic="introduction-to-rtl-design">Introduction to Register Transfer Level Design</b>; the three-step method is <b data-topic="fsmd-with-datapaths">FSMD - Finite State Machines with Datapaths</b>.</div>
+                <div class="ds c-on">Register transfer</div><div class="dd"><span class="mono">R &larr; X</span>: on the clock edge, register R loads X. Written beside the state that performs it, and performed on the edge that <b>leaves</b> that state.</div>
+                <div class="ds">Datapath</div><div class="dd">The registers, arithmetic, multiplexers and comparators, built in step 2. Here one register and one mux: it can load 0, X or Y, but does not decide which.</div>
+                <div class="ds">Controller</div><div class="dd">An ordinary FSM, derived in step 3, that operates the datapath. Its state is the only memory of what a has done.</div>
+                <div class="ds c-ctl">Control signal</div><div class="dd">Controller &rarr; datapath. Here <span class="mono">selX</span> and <span class="mono">selY</span> pick the mux leg; neither asserted means the constant 0.</div>
+                <div class="ds c-st">Status signal</div><div class="dd">Datapath &rarr; controller: a fact about a register, such as a comparator output. <b>This machine has none</b>; every decision reads the input a.</div>
+                <div class="ds">One-hot</div><div class="dd">One flip-flop per state, exactly one of them 1. Each next-state equation is read off the diagram: <b>one term per arc into the state</b>, the source flip-flop AND the arc&rsquo;s condition.</div>
+                <div class="ds">Moore output</div><div class="dd">Written <b>inside</b> the state, so it changes right after the edge that changes the state, never in the middle of a cycle. See <b data-topic="mealy-versus-moore">Mealy versus Moore</b>.</div>
+                <div class="ds">Sampling at the edge</div><div class="dd">A register captures the value present on its input <b>just before</b> the rising edge. X and Y may change any time; only their values at an edge whose state loads them ever reach R.</div>
+                <div class="ds">R at cycle 0</div><div class="dd">R has no reset of its own, so it is unknown (<span class="mono">??</span>) until A&rsquo;s <span class="mono">R &larr; 0</span> lands at the first edge. That is what A&rsquo;s transfer is for.</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALING ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const container = document.getElementById('viewportContainer'), surface = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * 16 / 9; } else { cw = vw; ch = cw * 9 / 16; }
+        container.style.width = cw + 'px'; container.style.height = ch + 'px';
+        surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    const $ = (id) => document.getElementById(id);
+
+    // ============ THE MACHINE (model) ============
+    // Mike's sketch: A (R <- 0, z = 0), B (R <- X, z = 0), C (R <- Y, z = 1). From every state a -> C;
+    // a' from A -> B, from B -> A, from C -> B. No status signals. Controller one-hot (Mike, 10-27): QA, QB, QC, reset
+    // QA = 1; by inspection, one term per arc into the state: QA+ = QB·a', QB+ = QA·a' + QC·a', QC+ = QA·a + QB·a + QC·a;
+    // selX = QB, selY = QC, z = QC. Datapath: R <- selY ? Y : selX ? X : 0 every edge.
+    const SN = ['A', 'B', 'C'], NCYC = 12;
+    const hex = (v) => v === null ? '??' : v.toString(16).toUpperCase().padStart(2, '0');
+    // the drawn equations: for each flip-flop, its terms as [from-state, value of a] — one per incoming arc
+    const OH = { A: [['B', 0]], B: [['A', 0], ['C', 0]], C: [['A', 1], ['B', 1], ['C', 1]] };
+    const OH_ERR = [];                                                                    // non-one-hot results, if any
+    const ONEHOT = (q) => SN.map((_, i) => +(i === q));                                   // state index -> [QA, QB, QC]
+    const OH_NEXT = (Q, a) => SN.map(s => +OH[s].some(([f, v]) => Q[SN.indexOf(f)] === 1 && a === v));
+    function stepModel(m, inp) {                                                        // m = {q (state index), R}, inp = {a, X, Y}
+        const Q = ONEHOT(m.q), selX = Q[1], selY = Q[2], n = OH_NEXT(Q, inp.a);
+        // a broken equation must not stop the page: record it (the assertions fail on it) and stay in the current state
+        if (n.reduce((x, y) => x + y, 0) !== 1) { OH_ERR.push(`${SN[m.q]} a=${inp.a} -> ${n.join('')}`); return { q: m.q, R: selY ? inp.Y : (selX ? inp.X : 0) }; }
+        return { q: n.indexOf(1), R: selY ? inp.Y : (selX ? inp.X : 0) };
+    }
+    // the scripted inputs: a chosen so every arc is taken; X changes in cycle 4, Y in cycle 6
+    const SCRIPT_A = [0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1];
+    const scriptInputs = () => SCRIPT_A.map((a, k) => ({ a, X: k >= 4 ? 0x5A : 0x3C, Y: k >= 6 ? 0x7E : 0xA5 }));
+    let INPUTS = scriptInputs();
+    function computeTrace(inputs) {
+        let m = { q: 0, R: null }; const T = [];
+        for (let k = 0; k < inputs.length; k++) {
+            const inp = inputs[k], n = stepModel(m, inp), Q = ONEHOT(m.q);
+            T.push({ cyc: k, q: m.q, s: SN[m.q], a: inp.a, X: inp.X, Y: inp.Y, R: m.R, selX: Q[1], selY: Q[2], z: Q[2],
+                     nextQ: n.q, nextS: SN[n.q], nextR: n.R, src: Q[2] ? 'Y' : (Q[1] ? 'X' : '0'),
+                     Xchg: k > 0 && inputs[k - 1].X !== inp.X, Ychg: k > 0 && inputs[k - 1].Y !== inp.Y });
+            m = n;
+        }
+        return T;
+    }
+    let TRACE = computeTrace(INPUTS);
+    const isScripted = () => JSON.stringify(INPUTS) === JSON.stringify(scriptInputs());
+
+    // ============ STATE ============
+    const NPAGES = 5, NBUILD = 3, NROWS2 = 3, NROWS3 = 6;
+    let page = 1, build = 0, sel2 = 0, sel3 = 0, cyc = 0, view5 = 'waves';
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+
+    // ============ SHARED SVG HELPERS ============
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const rad = (d) => d * Math.PI / 180, f1 = (n) => +n.toFixed(1);
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+    function txt(parent, x, y, s, cls, attrs = {}) { const t = el('text', { x, y, class: cls, ...attrs }, parent); t.textContent = s; return t; }
+    // a condition label "a" or "ā": the bar is drawn as a line over the glyph, measured once the page is active
+    function condText(parent, x, y, bar, cls, attrs = {}) {
+        const t = txt(parent, x, y, 'a', cls, attrs); if (bar) t.setAttribute('data-bar', '1'); return t;
+    }
+    function drawBars(svg) {
+        svg.querySelectorAll('[data-bar]').forEach(t => {
+            const old = t.parentNode.querySelector(`[data-barfor="${t.getAttribute('data-barid') || ''}"]`);
+            if (!t.getAttribute('data-barid')) t.setAttribute('data-barid', 'b' + Math.random().toString(36).slice(2, 8));
+            if (old) old.remove();
+            const bb = t.getBBox(); if (!bb.width) return;
+            const fs = parseFloat(getComputedStyle(t).fontSize) || 28, y = +t.getAttribute('y') - 0.88 * fs;
+            const ln = el('line', { x1: f1(bb.x + 1), y1: f1(y), x2: f1(bb.x + bb.width - 1), y2: f1(y), class: 'ovl', 'data-barfor': t.getAttribute('data-barid') }, t.parentNode);
+            ln.style.stroke = getComputedStyle(t).fill; ln.setAttribute('data-k', t.getAttribute('data-k') || ''); ln.setAttribute('data-id', t.getAttribute('data-id') || '');
+            if (t.classList.contains('hid')) ln.classList.add('hid'); if (t.classList.contains('dim')) ln.classList.add('dim');
+            if (t.hasAttribute('data-g')) ln.setAttribute('data-g', t.getAttribute('data-g'));
+        });
+    }
+    // Chrome does not render markers whose <defs> live inside a display:none subtree, so each SVG gets its own.
+    function injectMarkers(svg) {
+        const mk = svg.id, defs = el('defs', {}, svg);
+        for (const [id, fill] of [['ah', '#8fa8bd'], ['ahon', '#4fc3f7'], ['ahctl', '#ffb74d'], ['ahst', '#b388ff'], ['ahw', '#cfd8dc'], ['ahin', '#e8eef2']]) {
+            const m = el('marker', { id: id + '-' + mk, markerWidth: 20, markerHeight: 16, refX: 14, refY: 6.5, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+            el('path', { d: 'M0,0 L16,6.5 L0,13 Z', fill }, m);
+        }
+        return mk;
+    }
+    const shorten = (pts) => {
+        const p = pts.map(q => q.slice()), n = p.length - 1, dx = Math.sign(p[n][0] - p[n - 1][0]), dy = Math.sign(p[n][1] - p[n - 1][1]);
+        p[n][0] -= 2 * dx; p[n][1] -= 2 * dy; return p;
+    };
+    // a bezier arc between two circles: a = departure angle at A, b = arrival angle at B, k = control length; or a self-loop
+    function bezArc(A, B, ed, R) {
+        if (ed.loop !== undefined) {
+            const th = rad(ed.loop), a1 = th + 0.45, a2 = th - 0.45, ro = R + 84;
+            const p1 = { x: A.x + R * Math.cos(a1), y: A.y + R * Math.sin(a1) }, p2 = { x: A.x + (R + 2) * Math.cos(a2), y: A.y + (R + 2) * Math.sin(a2) };
+            const c1 = { x: A.x + ro * Math.cos(th + 0.55), y: A.y + ro * Math.sin(th + 0.55) }, c2 = { x: A.x + ro * Math.cos(th - 0.55), y: A.y + ro * Math.sin(th - 0.55) };
+            return { d: `M${f1(p1.x)},${f1(p1.y)} C${f1(c1.x)},${f1(c1.y)} ${f1(c2.x)},${f1(c2.y)} ${f1(p2.x)},${f1(p2.y)}`,
+                     lx: A.x + (R + 82) * Math.cos(th), ly: A.y + (R + 82) * Math.sin(th) + 10 };
+        }
+        const a = rad(ed.a), b = rad(ed.b);
+        const P0 = { x: A.x + R * Math.cos(a), y: A.y + R * Math.sin(a) }, P3 = { x: B.x + (R + 2) * Math.cos(b), y: B.y + (R + 2) * Math.sin(b) };
+        const C1 = { x: P0.x + ed.k * Math.cos(a), y: P0.y + ed.k * Math.sin(a) }, C2 = { x: P3.x + ed.k * Math.cos(b), y: P3.y + ed.k * Math.sin(b) };
+        const mx = (P0.x + 3 * C1.x + 3 * C2.x + P3.x) / 8, my = (P0.y + 3 * C1.y + 3 * C2.y + P3.y) / 8;
+        // label offset: away from the chord midpoint (outside the bow); labIn puts it between the arc and its chord;
+        // lt (default 0.5) slides the label along the arc
+        const cmx = (A.x + B.x) / 2, cmy = (A.y + B.y) / 2; let nx = mx - cmx, ny = my - cmy, nl = Math.hypot(nx, ny);
+        if (nl < 4) { nx = -(B.y - A.y); ny = B.x - A.x; nl = Math.hypot(nx, ny); if (ed.flip) { nx = -nx; ny = -ny; } }
+        const sg = ed.labIn ? -1 : 1, t = ed.lt !== undefined ? ed.lt : 0.5, u = 1 - t;
+        const px = u * u * u * P0.x + 3 * u * u * t * C1.x + 3 * u * t * t * C2.x + t * t * t * P3.x, py = u * u * u * P0.y + 3 * u * u * t * C1.y + 3 * u * t * t * C2.y + t * t * t * P3.y;
+        return { d: `M${f1(P0.x)},${f1(P0.y)} C${f1(C1.x)},${f1(C1.y)} ${f1(C2.x)},${f1(C2.y)} ${f1(P3.x)},${f1(P3.y)}`, mx, my, lx: px + sg * 26 * nx / nl, ly: py + sg * 26 * ny / nl + 10 };
+    }
+    // the six arcs of the sketch, in one description shared by the FSMD and the controller.
+    // (dir − δ at the source, back + δ at the target) bows to the traveler's left, so a pair lands on opposite sides.
+    function arcDefs(N, pairD = 45, kPair = 110, sD = 14, kS = 60) {
+        const ang = (P, Q) => Math.atan2(Q.y - P.y, Q.x - P.x) * 180 / Math.PI;
+        const mk = (f, t, bar, d, k, extra = {}) => { const dir = ang(N[f], N[t]), back = ang(N[t], N[f]); return { id: f + '>' + t, from: f, to: t, bar, a: dir - d, b: back + d, k, ...extra }; };
+        return [
+            mk('A', 'B', true, sD, kS, { lt: 0.4 }),              // ā, nearly straight along its chord; label on its outer (left) side, nearer A
+            mk('B', 'A', true, pairD, kPair),                     // ā, bows well outside, left
+            mk('B', 'C', false, pairD - 12, kPair - 20, { labIn: true }),  // a, bows up (inside); label below it, toward the chord
+            mk('C', 'B', true, pairD, kPair),                     // ā, bows down (outside)
+            mk('A', 'C', false, 25, 90),                          // a, bowed a little outward (up-right)
+            { id: 'C>C', from: 'C', to: 'C', bar: false, loop: 90 },  // a, self-loop below C
+        ];
+    }
+    const nextOf = (s, a) => a ? 'C' : { A: 'B', B: 'A', C: 'B' }[s];                  // the sketch, as a table (used by assertions too)
+    const takenArc = (s, a) => s + '>' + nextOf(s, a);
+
+    // ============ BEAT 1 — THE GIVEN FSMD (Mike's sketch), and its reference copy on beats 2 and 3 ============
+    // groups: 0 = states, reset and z · 1 = the register transfers · 2 = the arcs and their conditions · 3 = the ports (beat 1 only)
+    const XFER = { A: 'R ← 0', B: 'R ← X', C: 'R ← Y' }, ZOF = { A: 0, B: 0, C: 1 };
+    const GEO1 = { N: { A: { x: 600, y: 190 }, B: { x: 330, y: 540 }, C: { x: 870, y: 540 } }, R: 78,
+                   tag: { A: { x: 722 }, B: { x: 12 }, C: { x: 992 }, w: 206, h: 62 },
+                   rst: { x: 600, y0: 48, lx: 586, ly: 70 }, zdy: 34, xdy: 11, ports: [730, 772] };
+    // the reference copy is compact, closer to the sketch itself: B's transfer below-left of B, C's self-loop below-right
+    const GEOR = { N: { A: { x: 400, y: 122 }, B: { x: 215, y: 392 }, C: { x: 585, y: 392 } }, R: 64,
+                   tag: { A: { x: 500 }, B: { x: 14, y: 530 }, C: { x: 676 }, w: 176, h: 60 },
+                   rst: { x: 400, y0: 4, lx: 386, ly: 36 }, zdy: 38, xdy: 14, ports: null };
+    GEO1.edges = arcDefs(GEO1.N); GEOR.edges = arcDefs(GEOR.N);
+    GEOR.edges.find(e => e.id === 'C>C').loop = 55;
+    const FN = GEO1.N, RF = GEO1.R, FEDGES = GEO1.edges;
+    const REASONS1 = [                                                                  // voice-over cues: a headline and one line
+        ['States and z', 'A, B, C; reset into A. <span class="mono">z</span> = 1 only in C.'],
+        ['Register transfers', '<span class="mono">R ← 0</span>, <span class="mono">R ← X</span>, <span class="mono">R ← Y</span>: one register, three sources.'],
+        ['Arcs read only a', '<span class="mono">a</span> = 1 → C from anywhere. No arc reads R.'],
+        ['Ports', '<span class="mono">X</span>, <span class="mono">Y</span>, <span class="mono">R</span> → datapath &middot; <span class="mono">a</span>, <span class="mono">z</span> → controller.'],
+    ];
+    function buildFsmd(svg, geo) {
+        const mk = injectMarkers(svg), N = geo.N, RR = geo.R, TG = geo.tag, D = { svg, mk, geo, groups: [[], [], [], []], nodes: {}, arcs: {}, tags: {} };
+        const G = (g, e) => { D.groups[g].push(e); e.setAttribute('data-g', g); return e; };
+        G(0, el('path', { d: `M${geo.rst.x},${geo.rst.y0} L${geo.rst.x},${N.A.y - RR - 3}`, class: 'rst', 'marker-end': `url(#ahw-${mk})` }, svg));
+        G(0, txt(svg, geo.rst.lx, geo.rst.ly, 'reset', 'rst-l'));
+        for (const k of SN) {
+            const n = N[k], t = TG[k], ty = t.y !== undefined ? t.y : n.y;
+            // dotted leader from the bubble's rim toward the tag, stopping 4 short of the tag's edge
+            const cx = t.x + TG.w / 2, dx = cx - n.x, dy = ty - n.y, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
+            const sx = ux ? (TG.w / 2 + 4) / Math.abs(ux) : 1e9, sy = uy ? (TG.h / 2 + 4) / Math.abs(uy) : 1e9, back = Math.min(sx, sy);
+            G(1, el('line', { x1: f1(n.x + (RR + 4) * ux), y1: f1(n.y + (RR + 4) * uy), x2: f1(cx - back * ux), y2: f1(ty - back * uy), class: 'leader' }, svg));
+            const r = G(1, el('rect', { x: t.x, y: ty - TG.h / 2, width: TG.w, height: TG.h, rx: 12, class: 'xfer-box', 'data-tag': k }, svg));
+            G(1, txt(svg, cx, ty + geo.xdy, XFER[k], 'xfer', { 'data-in': 'tag' + k }));
+            D.tags[k] = r;
+        }
+        for (const ed of geo.edges) {
+            const g = bezArc(N[ed.from], N[ed.to], ed, RR);
+            const path = G(2, el('path', { class: 'arc', d: g.d, 'data-id': ed.id, 'marker-end': `url(#ah-${mk})` }, svg));
+            const lab = G(2, condText(svg, f1(g.lx), f1(g.ly), ed.bar, 'cond', { 'data-id': ed.id }));
+            D.arcs[ed.id] = { path, lab };
+        }
+        for (const k of SN) {
+            const n = N[k], g = G(0, el('g', { class: 'sd-node', 'data-state': k }, svg));
+            el('circle', { class: 'sdc', cx: n.x, cy: n.y, r: RR }, g);
+            txt(g, n.x, n.y + 2, k, 'sdname', { 'data-in': 'node' + k });
+            txt(g, n.x, n.y + geo.zdy, 'z = ' + ZOF[k], 'sdz' + (ZOF[k] ? '' : ' off'), { 'data-in': 'node' + k });
+            D.nodes[k] = g;
+        }
+        if (geo.ports) {
+            const p1 = G(3, txt(svg, 600, geo.ports[0], '', 'port')); el('tspan', { class: 'pk' }, p1).textContent = 'inputs: '; el('tspan', { class: 'pv' }, p1).textContent = 'a, X (8-bit), Y (8-bit)';
+            const p2 = G(3, txt(svg, 600, geo.ports[1], '', 'port')); el('tspan', { class: 'pk' }, p2).textContent = 'outputs: '; el('tspan', { class: 'pv' }, p2).textContent = 'z, R (8-bit)';
+        }
+        return D;
+    }
+    // the FSMD is given, so nothing is ever hidden: group f is lit, the rest soften (f = null: all plain)
+    function paintFsmd(D, f) {
+        drawBars(D.svg);
+        const into = typeof f === 'string' ? f : null;
+        const lit = (e, g) => into ? e.dataset.state === into || (g === 2 && (e.dataset.id || '').split('>')[1] === into) : g === f;
+        D.svg.querySelectorAll('[data-g]').forEach(e => { const g = +e.dataset.g, on = lit(e, g); e.classList.toggle('dimsoft', f !== null && !on); e.classList.toggle('fnew', f !== null && on); });
+    }
+    const D1 = buildFsmd($('d1'), GEO1), R2 = buildFsmd($('r2'), GEOR), R3F = buildFsmd($('r3f'), GEOR), R5 = buildFsmd($('r5'), GEOR);
+    function paintB1() {
+        paintFsmd(D1, build);
+        $('snum1').textContent = `READING ${build + 1} OF ${NBUILD + 1}`;
+        $('reason1').innerHTML = `<div class="rh">${REASONS1[build][0]}</div><div class="rl">${REASONS1[build][1]}</div>`;
+        $('nxt1').disabled = build >= NBUILD;
+    }
+
+    // ============ THE TWO-BOX DIAGRAM (beats 2, 3, 4) ============
+    const CTL = { x: 70, y: 8, w: 600, h: 524 }, DP = { x: 1010, y: 8, w: 794, h: 524 };
+    const XR = CTL.x + CTL.w;                                                     // 670: the controller's right edge
+    const BLK = {
+        cst: { x: 1130, y: 112, w: 100, h: 54, label: '0' },
+        mux: { x: 1150, y: 222, w: 500, h: 70, bot: 80 },                        // trapezoid: top 1150..1650, bottom 1190..1610
+        reg: { x: 1300, y: 346, w: 200, h: 66 },
+    };
+    const Y_SELX = 240, Y_SELY = 276, Y_NONE = 470, Y_A = 236, Y_Z = 330, X_DP0 = 880, X_CPORT = XR + 92;
+    const X_IN = { c: 1180, X: 1400, Y: 1610 };                                  // the three mux legs
+    const muxLeftX = (y) => BLK.mux.x + BLK.mux.bot / 2 * (y - BLK.mux.y) / BLK.mux.h;
+    const DP_WIRES = [
+        { id: 'xin',  kind: 'in',   k: 'mux',  arrow: true,  pts: [[X_IN.X, 72], [X_IN.X, 222]] },
+        { id: 'yin',  kind: 'in',   k: 'mux',  arrow: true,  pts: [[X_IN.Y, 72], [X_IN.Y, 222]] },
+        { id: 'cin',  kind: 'data', k: 'mux',  arrow: true,  pts: [[X_IN.c, 166], [X_IN.c, 222]] },
+        { id: 'muxo', kind: 'data', k: 'mux',  arrow: true,  pts: [[1400, 292], [1400, 346]] },
+        { id: 'rego', kind: 'data', k: 'reg',  arrow: true,  pts: [[1400, 412], [1400, 448], [DP.x + DP.w, 448]] },
+        { id: 'clk',  kind: 'clk',  k: 'reg',  arrow: false, pts: [[1242, 385], [1300, 385]] },
+    ];
+    const gapWires = (x0) => [
+        { id: 'selX', kind: 'ctl', k: 'mux outs', arrow: true, pts: [[x0, Y_SELX], [Math.round(muxLeftX(Y_SELX)), Y_SELX]] },
+        { id: 'selY', kind: 'ctl', k: 'mux outs', arrow: true, pts: [[x0, Y_SELY], [Math.round(muxLeftX(Y_SELY)), Y_SELY]] },
+    ];
+    const CTL_PORTS = [
+        { id: 'selX', kind: 'ctl', k: 'outs', arrow: true, pts: [[XR, Y_SELX], [X_CPORT, Y_SELX]] },
+        { id: 'selY', kind: 'ctl', k: 'outs', arrow: true, pts: [[XR, Y_SELY], [X_CPORT, Y_SELY]] },
+    ];
+    const CTL_SIDE = [                                                           // a in from the left, z out to the left
+        { id: 'ain', kind: 'in',   k: 'conds intoA intoB intoC', arrow: true, pts: [[14, Y_A], [CTL.x, Y_A]] },
+        { id: 'zout', kind: 'data', k: 'outs', arrow: true, pts: [[CTL.x, Y_Z], [14, Y_Z]] },
+    ];
+    const DOTS = [];
+    const NODES = { A: { x: 370, y: 150 }, B: { x: 225, y: 362 }, C: { x: 515, y: 362 } }, R = 66;
+    const EDGES = arcDefs(NODES, 42, 92);
+    const WIRE_SETS = { full: DP_WIRES.concat(gapWires(XR), CTL_SIDE), dp: DP_WIRES.concat(gapWires(X_DP0)), ctl: CTL_PORTS.concat(CTL_SIDE) };
+    const GAPX = { full: 840, dp: 940, ctl: XR + 46 };
+
+    function buildDiagram(svg, mode) {
+        const mk = injectMarkers(svg), D = { svg, mk, mode, wires: {}, kinds: {}, blocks: {}, nodes: {}, arcs: {}, vals: {}, sig: {}, defs: WIRE_SETS[mode] };
+        const gx = GAPX[mode], hasDP = mode !== 'ctl', hasCTL = mode !== 'dp';
+        const K = (e, k) => { if (k) e.setAttribute('data-k', k); return e; };
+        const cts = [];
+        if (hasCTL) cts.push([CTL, 'Controller (FSM)', 'Moore, 3 states']);
+        if (hasDP) cts.push([DP, 'Datapath', 'register + mux']);
+        for (const [c, title, sub] of cts) {
+            el('rect', { x: c.x, y: c.y, width: c.w, height: c.h, rx: 16, class: 'ct' }, svg);
+            txt(svg, c.x + 20, c.y + 34, title, 'ct-title', { 'data-in': 'ct' });
+            txt(svg, c.x + 20, c.y + 60, sub, 'ct-sub', { 'data-in': 'ct' });
+        }
+        for (const w of D.defs) {
+            const pts = w.arrow ? shorten(w.pts) : w.pts;
+            D.wires[w.id] = K(el('polyline', { points: pts.map(p => p.join(',')).join(' '), class: 'wire ' + w.kind, 'data-id': w.id }, svg), w.k);
+            D.kinds[w.id] = w.kind;
+        }
+        if (hasDP) {
+            for (const [id, k] of [['cst', 'mux'], ['reg', 'reg']]) {
+                const b = BLK[id];
+                D.blocks[id] = K(el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 8, class: 'blk', 'data-blk': id }, svg), k);
+                if (b.label) K(txt(svg, b.x + b.w / 2, b.y + b.h / 2 + 9, b.label, 'blk-l', { 'data-in': id }), k);
+            }
+            const m = BLK.mux, inset = m.bot / 2;
+            D.blocks.mux = K(el('path', { d: `M${m.x},${m.y} H${m.x + m.w} L${m.x + m.w - inset},${m.y + m.h} H${m.x + inset} Z`, class: 'blk', 'data-blk': 'mux' }, svg), 'mux');
+            K(txt(svg, X_IN.c + 24, 250, '0', 'muxin', { 'data-in': 'mux' }), 'mux'); K(txt(svg, X_IN.X + 24, 250, 'X', 'muxin', { 'data-in': 'mux' }), 'mux'); K(txt(svg, X_IN.Y - 26, 250, 'Y', 'muxin', { 'data-in': 'mux' }), 'mux');
+            K(txt(svg, 1400, 278, 'mux', 'blk-l sm', { 'data-in': 'mux' }), 'mux');
+            const r = BLK.reg;
+            K(txt(svg, r.x + r.w / 2, r.y + 24, 'R (8-bit)', 'blk-l sm', { 'data-in': 'reg' }), 'reg');
+            D.vals.reg = K(txt(svg, r.x + r.w / 2, r.y + 54, '', 'regval', { 'data-in': 'reg' }), 'reg');
+            K(el('path', { d: `M${r.x},375 L${r.x + 14},385 L${r.x},395`, class: 'wire clk', 'data-in': 'reg' }, svg), 'reg');
+            K(txt(svg, 1232, 392, 'CLK', 'clkl'), 'reg');
+            // X and Y enter from the top: label, bus slash and live value
+            for (const [id, x] of [['X', X_IN.X], ['Y', X_IN.Y]]) {
+                K(txt(svg, x - 14, 62, id, 'val in', { 'text-anchor': 'end' }), 'mux');
+                K(txt(svg, x + 14, 60, 'IN ↓', 'dir in', { 'text-anchor': 'start' }), 'mux');
+                K(el('line', { x1: x - 7, y1: 118, x2: x + 7, y2: 102, class: 'wire data' }, svg), 'mux');
+                K(txt(svg, x + 12, 102, '8', 'busl'), 'mux');
+                D.vals[id] = K(txt(svg, x + 14, 160, '', 'val in', { 'text-anchor': 'start' }), 'mux');
+            }
+            D.vals.mux = K(txt(svg, 1414, 327, '', 'val', { 'text-anchor': 'start' }), 'mux');
+            // R leaves the datapath: bus slash + label
+            K(el('line', { x1: 1746, y1: 457, x2: 1758, y2: 439, class: 'wire data' }, svg), 'reg');
+            K(txt(svg, 1763, 436, '8', 'busl'), 'reg');
+            K(txt(svg, 1752, 428, 'R', 'val', { 'text-anchor': 'end' }), 'reg');
+            K(txt(svg, 1752, 475, 'OUT →', 'dir data', { 'text-anchor': 'middle' }), 'reg');
+        }
+        K(txt(svg, gx, 192, 'CONTROL →', 'dir ctl'), 'mux outs');
+        D.sig.selX = K(txt(svg, gx, Y_SELX - 12, '', 'sig ctl'), 'mux outs');
+        D.sig.selY = K(txt(svg, gx, Y_SELY + 34, '', 'sig ctl'), 'mux outs');
+        K(txt(svg, gx, Y_NONE - 12, '(none)', 'sig none'), 'cond conds');
+        K(txt(svg, gx, Y_NONE + 20, '← STATUS', 'dir st'), 'cond conds');
+        if (hasCTL) {
+            K(el('path', { d: `M370,34 L370,${NODES.A.y - R - 3}`, class: 'rst', 'marker-end': `url(#ahw-${mk})` }, svg), 'states');
+            K(txt(svg, 358, 52, 'reset', 'rst-l'), 'states');
+            // a in, z out: labels beside the side wires
+            D.sig.a = K(txt(svg, 50, Y_A - 14, '', 'sig in'), 'conds'); K(txt(svg, 50, Y_A - 46, 'IN →', 'dir in'), 'conds');
+            D.sig.z = K(txt(svg, 50, Y_Z + 44, '', 'sig in'), 'outs'); K(txt(svg, 50, Y_Z + 72, '← OUT', 'dir data'), 'outs');
+            for (const ed of EDGES) {
+                const g = bezArc(NODES[ed.from], NODES[ed.to], ed, R);
+                const key = 'conds into' + ed.to;                                   // the readings that light this arc
+                const path = K(el('path', { class: 'arc', d: g.d, 'data-id': ed.id }, svg), key);
+                const lab = K(condText(svg, f1(g.lx), f1(g.ly), ed.bar, 'arc-l', { 'data-id': ed.id }), key);
+                D.arcs[ed.id] = { path, lab };
+            }
+            for (const k of SN) {
+                const n = NODES[k], g = K(el('g', { class: 'sd-node', 'data-state': k }, svg), 'states into' + k);
+                el('circle', { class: 'sdc', cx: n.x, cy: n.y, r: R }, g);
+                txt(g, n.x, n.y - 12, k, 'sdname', { 'data-in': 'node' + k });
+                const out = k === 'B' ? 'selX' : k === 'C' ? 'selY' : '—';
+                K(txt(g, n.x, n.y + 14, out, 'sdout' + (k === 'A' ? ' none' : ''), { 'data-in': 'node' + k }), 'outs');
+                K(txt(g, n.x, n.y + 40, 'z = ' + ZOF[k], 'sdz' + (ZOF[k] ? '' : ' off'), { 'data-in': 'node' + k }), 'outs');
+                D.nodes[k] = g;
+            }
+        }
+        drawBars(svg);
+        return D;
+    }
+    // v = trace row for the live picture, or null for the static (step) pictures
+    function paintDiagram(D, v) {
+        const live = !!v;
+        const setMarker = (w, c) => w && w.setAttribute('marker-end', `url(#ah${c}-${D.mk})`);
+        const W = D.wires, has = (id) => !!W[id];
+        for (const id of ['selX', 'selY']) if (has(id)) { const on = live && v[id]; W[id].setAttribute('class', 'wire ctl' + (on ? ' on' : '')); setMarker(W[id], on ? 'ctl' : ''); }
+        if (has('ain')) { const on = live && v.a; W.ain.setAttribute('class', 'wire in' + (on ? ' on' : '')); setMarker(W.ain, on ? 'in' : ''); }
+        if (has('zout')) { const on = live && v.z; W.zout.setAttribute('class', 'wire data' + (on ? ' on' : '')); setMarker(W.zout, on ? 'on' : ''); }
+        if (D.mode !== 'ctl') {
+            const leg = live ? v.src : null;
+            for (const [id, on] of [['xin', leg === 'X'], ['yin', leg === 'Y'], ['cin', leg === '0'], ['muxo', live], ['rego', live && v.R !== null]]) {
+                const kind = D.kinds[id]; W[id].setAttribute('class', 'wire ' + kind + (on ? ' on' : '')); setMarker(W[id], on ? (kind === 'data' ? 'on' : 'in') : '');
+            }
+            D.blocks.cst.setAttribute('class', 'blk' + (leg === '0' ? ' on' : ''));
+            D.blocks.mux.setAttribute('class', 'blk'); D.blocks.reg.setAttribute('class', 'blk');
+            if (live) {
+                D.vals.X.textContent = hex(v.X); D.vals.Y.textContent = hex(v.Y);
+                D.vals.mux.textContent = hex(v.nextR);
+                D.vals.reg.innerHTML = '';
+                D.vals.reg.appendChild(document.createTextNode(hex(v.R)));
+                el('tspan', { class: 'dec' }, D.vals.reg).textContent = v.R === null ? '' : ' = ' + v.R.toString(2).padStart(8, '0');
+            } else { D.vals.X.textContent = ''; D.vals.Y.textContent = ''; D.vals.mux.textContent = ''; D.vals.reg.textContent = ''; }
+        }
+        const sigText = (t, name, val) => { t.innerHTML = ''; t.appendChild(document.createTextNode(live ? name + ' = ' : name)); if (live) { const s = el('tspan', { class: 'v' + (val ? '' : ' off') }, t); s.textContent = String(val); } };
+        sigText(D.sig.selX, 'selX', live ? v.selX : 0); sigText(D.sig.selY, 'selY', live ? v.selY : 0);
+        if (D.mode !== 'dp') {
+            sigText(D.sig.a, 'a', live ? v.a : 0); sigText(D.sig.z, 'z', live ? v.z : 0);
+            const taken = live ? takenArc(v.s, v.a) : null;
+            for (const k of SN) D.nodes[k].setAttribute('class', 'sd-node' + (live && v.s === k ? ' on' : ''));
+            for (const id in D.arcs) { const on = id === taken; D.arcs[id].path.setAttribute('class', 'arc' + (on ? ' on' : '')); D.arcs[id].lab.setAttribute('class', 'arc-l' + (on ? ' on' : ''));
+                D.arcs[id].path.setAttribute('marker-end', `url(#ah${on ? 'on' : ''}-${D.mk})`); }
+            drawBars(D.svg);
+        }
+    }
+    function applyFocus(D, g) {
+        D.svg.querySelectorAll('[data-k]').forEach(e => {
+            const hit = !!g && e.dataset.k.split(' ').includes(g);
+            e.classList.toggle('dim', !!g && !hit); e.classList.toggle('foc', hit);
+            if (e.tagName === 'polyline' && e.dataset.id) { const kind = D.kinds[e.dataset.id]; e.setAttribute('marker-end', `url(#ah${hit ? (kind === 'data' ? 'on' : kind) : ''}-${D.mk})`); }
+            if (e.tagName === 'path' && e.classList.contains('arc')) e.setAttribute('marker-end', `url(#ah${hit ? 'on' : ''}-${D.mk})`);
+        });
+        // opacity multiplies down the tree: a dimmed bubble must not dim its labels a second time, and a bubble
+        // holding a focused label stays at full strength so the label is not faded with it
+        D.svg.querySelectorAll('.dim').forEach(e => { if (e.parentNode.closest && e.parentNode.closest('.dim')) e.classList.remove('dim'); });
+        D.svg.querySelectorAll('.dim').forEach(e => { if (e.querySelector('.foc')) e.classList.remove('dim'); });
+        drawBars(D.svg);
+    }
+    // the equations as drawn, generated from OH so the text and the model cannot disagree
+    const QS = (x) => `Q<sub>${x}</sub>`;
+    const eqHtml = (x, on = '') => `<span class="${on}">${QS(x)}</span><sup>+</sup> = ` + OH[x].map(([f, v]) => `<span class="${on}">${QS(f)}</span>&middot;${v ? 'a' : '<span class="ov">a</span>'}`).join(' + ');
+    for (const x of SN) { $('eq' + x).innerHTML = eqHtml(x); $('eq5' + x).innerHTML = eqHtml(x, 'on'); }
+    const D2 = buildDiagram($('d2'), 'dp'), D3 = buildDiagram($('d3'), 'ctl'), D4 = buildDiagram($('d4'), 'full');
+    const R3D = buildDiagram($('r3d'), 'dp');                                       // the step-2 datapath, as the given beside the controller
+    const ROWK2 = ['reg', 'mux', 'cond'], ROWK3 = ['states', 'outs', 'conds', 'intoA', 'intoB', 'intoC'];
+    // what each reading looks at in the givens: an FSMD group (see buildFsmd), and on beat 3 the datapath ports it uses
+    const REFF2 = [1, 1, 2], REFF3 = [0, 1, 2, 'A', 'B', 'C'], REFD3 = [null, 'outs', 'cond', null, null, null];
+    function paintB2() { paintDiagram(D2, null); applyFocus(D2, ROWK2[sel2]); paintFsmd(R2, REFF2[sel2]);
+        document.querySelectorAll('#p2 .rowcard').forEach(c => c.classList.toggle('on', +c.dataset.row === sel2)); }
+    function paintB3() { paintDiagram(D3, null); applyFocus(D3, ROWK3[sel3]); paintFsmd(R3F, REFF3[sel3]);
+        paintDiagram(R3D, null); applyFocus(R3D, REFD3[sel3]);
+        document.querySelectorAll('#p3 .rowcard').forEach(c => c.classList.toggle('on', +c.dataset.row === sel3)); }
+
+    // ============ BEAT 4 — connected, running ============
+    const M = (s) => `<span class="mono">${s}</span>`;
+    const OV = (s) => `<span class="ov">${s}</span>`;
+    function teachingPoint(t) {
+        if (!isScripted()) return '';
+        return ({ 2: 'R shows B&rsquo;s transfer one cycle late.', 5: 'The arc was set by a before the edge.', 6: 'X was sampled at the edge B left.',
+                  7: 'Y changed in A: A&rsquo;s R ← 0 lands first.', 8: '7E arrives, a cycle after C chose it.' })[t.cyc] || '';
+    }
+    function paintB4() {
+        const t = TRACE[cyc];
+        paintDiagram(D4, t);
+        const load = t.src === '0' ? M('R ← 0') : M('R ← ' + t.src) + ' = ' + M(hex(t.nextR));
+        const tp = teachingPoint(t);
+        $('ro4').innerHTML = `<b>Cycle ${t.cyc}</b> &middot; state <b>${t.s}</b> &middot; ${M('R')} = ${M(hex(t.R))} &middot; ${M('z')} = ${t.z}<br>` +
+            `${M('a')} = ${t.a} &rarr; <b>on CLK:</b> ${t.nextS}, ${load}` + (tp ? `<br><b>${tp}</b>` : '');
+        const chip = $('chip4');
+        if (t.nextS === t.s) { chip.className = 'chip on'; chip.textContent = `${t.s} stays · R ← ${t.src}`; }
+        else { chip.className = 'chip ctl'; chip.textContent = `${t.s} → ${t.nextS} on a = ${t.a} · R ← ${t.src}`; }
+        paintStrip4();
+        $('script4').style.opacity = isScripted() ? 0.45 : 1;
+    }
+    function paintStrip4() {
+        const T = TRACE;
+        let h = '<tr><th class="lab">cycle</th>' + T.map(t => `<th>${t.cyc}</th>`).join('') + '</tr>';
+        h += '<tr><td class="lab">a</td>' + T.map(t => `<td class="${t.a ? 'one' : 'zero'}${t.cyc === cyc ? ' cur' : ''}" data-in="a" data-cyc="${t.cyc}">${t.a}</td>`).join('') + '</tr>';
+        for (const id of ['X', 'Y']) h += `<tr><td class="lab">${id}</td>` + T.map(t => `<td class="${t[id + 'chg'] ? 'chg' : ''}${t.cyc === cyc ? ' cur' : ''}" data-in="${id}" data-cyc="${t.cyc}">${hex(t[id])}</td>`).join('') + '</tr>';
+        $('strip4').innerHTML = h;
+        $('strip4').querySelectorAll('td[data-in]').forEach(td => td.addEventListener('click', () => editCell(td)));
+        $('ssub4').innerHTML = isScripted() ? 'Scripted: X &rarr; <b style="color:#4fc3f7">5A</b> in cycle 4, Y &rarr; <b style="color:#4fc3f7">7E</b> in cycle 6.' : 'Free play &middot; <b>S</b> restores the script.';
+    }
+    function editCell(td) {
+        const k = +td.dataset.cyc, id = td.dataset.in;
+        if (id === 'a') { setInputs(k, { a: 1 - INPUTS[k].a }); return; }
+        if (td.querySelector('input')) return;
+        const inp = document.createElement('input'); inp.value = hex(INPUTS[k][id]); inp.maxLength = 2; td.textContent = ''; td.appendChild(inp); inp.focus(); inp.select();
+        const commit = () => { const v = parseInt(inp.value, 16); if (!isNaN(v) && v >= 0 && v < 256) setInputs(k, { [id]: v }); else drawPage(); };
+        inp.addEventListener('blur', commit); inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { inp.value = hex(INPUTS[k][id]); inp.blur(); } e.stopPropagation(); });
+    }
+    // a changes only its cycle; X and Y hold from the cycle on (an input that stays until it is changed again)
+    function setInputs(k, v) {
+        if (v.a !== undefined) INPUTS[k].a = v.a ? 1 : 0;
+        for (const id of ['X', 'Y']) if (v[id] !== undefined) { const old = INPUTS[k][id]; for (let j = k; j < NCYC && INPUTS[j][id] === old; j++) INPUTS[j][id] = v[id] & 255; }
+        TRACE = computeTrace(INPUTS); drawPage();
+    }
+    function setScript() { INPUTS = scriptInputs(); TRACE = computeTrace(INPUTS); drawPage(); }
+
+    // ============ BEAT 5 — timing diagram ============
+    const RULES = {                                              // what the edge just taken demonstrates (scripted run); voice-over cues
+        0: [1, 'After reset', 'In A. R unknown: no reset of its own.'],
+        1: [3, 'A&rsquo;s transfer lands', '<span class="mono">R ← 0</span> done: R = 00, now in B.'],
+        2: [3, 'R lags one cycle', 'B&rsquo;s <span class="mono">R ← X</span> lands in C: R = 3C.'],
+        3: [1, 'C holds', 'a = 1: stay in C, R ← Y = A5.'],
+        4: [1, 'C holds again', 'X changes to 5A in this cycle.'],
+        5: [2, 'a decides before the edge', 'a = 0 in cycle 4: C → B. R = A5 still.'],
+        6: [4, 'X sampled at the edge', 'B loads 5A on its way out.'],
+        7: [4, 'Y changes in A', 'A loads 0 first: R = 00.'],
+        8: [4, '7E arrives', 'Loaded by C, one cycle late.'],
+        9: [3, 'B leaves on a = 0', 'R ← X = 5A, now in A.'],
+        10: [1, 'A → C on a = 1', 'R = 00; z = 1 at once.'],
+        11: [3, 'C → B on a = 0', 'R = 7E; z drops at once.'],
+    };
+    function ruleFor(k) {
+        if (isScripted() && RULES[k]) return RULES[k];
+        const t = TRACE[k], p = k > 0 ? TRACE[k - 1] : null;
+        if (!p) return [1, 'After reset', 'In A. R unknown until the first edge.'];
+        return [p.s === t.s ? 1 : 2, `${p.s} → ${t.s} on a = ${p.a}`, `${p.s}&rsquo;s <span class="mono">R ← ${p.src}</span> lands: R = ${hex(t.R)}.`];
+    }
+    const WROWS = [
+        { id: 'clk', lab: 'CLK', kind: 'clk' },
+        { id: 'a', lab: 'a', kind: 'bit', cls: 'in', get: t => t.a },
+        { id: 'state', lab: 'state', kind: 'bus', cls: 'state', get: t => t.s },
+        { id: 'selX', lab: 'selX', kind: 'bit', cls: 'ctl', get: t => t.selX },
+        { id: 'selY', lab: 'selY', kind: 'bit', cls: 'ctl', get: t => t.selY },
+        { id: 'X', lab: 'X', kind: 'bus', cls: 'in', get: t => hex(t.X) },
+        { id: 'Y', lab: 'Y', kind: 'bus', cls: 'in', get: t => hex(t.Y) },
+        { id: 'R', lab: 'R', kind: 'bus', cls: 'reg', get: t => hex(t.R) },
+        { id: 'z', lab: 'z', kind: 'bit', cls: 'z', get: t => t.z },
+    ];
+    const WV = { x0: 118, cw: 88, top: 34, rh: 48, hi: 10, lo: 38 };
+    const WX = (k) => WV.x0 + k * WV.cw;
+    function paintWaves() {
+        const svg = $('w5'); svg.innerHTML = '';
+        const T = TRACE, xEnd = WX(NCYC);
+        const VLINES = (isScripted() ? [2, 5, 6, 7, 8].map(WX) : []).concat(cyc > 0 ? [WX(cyc)] : []);
+        WROWS.forEach((r, i) => {
+            const y = WV.top + i * WV.rh, yh = y + WV.hi, yl = y + WV.lo, ym = (yh + yl) / 2;
+            el('line', { x1: WV.x0, y1: y + WV.rh, x2: xEnd, y2: y + WV.rh, class: 'wv-grid' }, svg);
+            txt(svg, WV.x0 - 14, ym + 7, r.lab, 'wv-lab ' + (r.cls || r.kind), { 'data-row': r.id });
+            if (r.kind === 'clk') {
+                let d = '';
+                for (let k = 0; k < NCYC; k++) { const x = WX(k); d += `${k ? 'L' : 'M'}${x},${yl} L${x},${yh} L${x + WV.cw / 2},${yh} L${x + WV.cw / 2},${yl} `; }
+                d += `L${xEnd},${yl}`;
+                el('path', { d, class: 'wv-bit clk', 'data-row': 'clk' }, svg);
+                return;
+            }
+            // every other row, one-bit or bus, is drawn the same way (Mike, 10-27): runs of equal value as hexagons with the
+            // value inside, every crossing centered on an edge. The convention taught: values change only at edges, steady
+            // on both sides. The last revealed run tapers to a point 6 short of the next (cyan) edge.
+            let k = 0;
+            while (k <= cyc) {
+                const v = r.get(T[k]); let j = k; while (j + 1 <= cyc && r.get(T[j + 1]) === v) j++;
+                const x1 = WX(k), x2 = WX(j + 1), unk = v === '??', chg = (r.id === 'X' && T[k].Xchg) || (r.id === 'Y' && T[k].Ychg);
+                const lm = x1 + 6, rm = x2 - 6, lt = lm + 6, rt = rm - 6;
+                const bit = r.kind === 'bit', cls = unk ? 'unk' : (r.cls || '') + (bit && !v ? ' zero' : '');
+                el('path', { d: `M${lm},${ym} L${lt},${yh} L${rt},${yh} L${rm},${ym} L${rt},${yl} L${lt},${yl} Z`, class: 'wv-bus ' + cls, 'data-row': r.id, 'data-k': k, 'data-k2': j }, svg);
+                // the label sits in the middle of the longest stretch of the run not crossed by a rule pin or the amber cursor
+                const cuts = VLINES.filter(x => x > x1 + 1 && x < x2 - 1), bounds = [x1, ...cuts, x2];
+                let lx = (x1 + x2) / 2, best = -1;
+                for (let q = 0; q + 1 < bounds.length; q++) if (bounds[q + 1] - bounds[q] > best) { best = bounds[q + 1] - bounds[q]; lx = (bounds[q] + bounds[q + 1]) / 2; }
+                txt(svg, lx, ym + 7, String(v), 'wv-bt' + (unk ? ' unk' : chg ? ' chg' : '') + (bit ? ' ' + (r.cls || '') + (v ? '' : ' zero') : ''), { 'data-row': r.id, 'data-k': k });
+                k = j + 1;
+            }
+            if (cyc < NCYC - 1) el('line', { x1: WX(cyc + 1), y1: ym, x2: xEnd, y2: ym, class: 'wv-fut' }, svg);
+        });
+        const yb = WV.top + WROWS.length * WV.rh;
+        for (let k = 0; k < NCYC; k++) txt(svg, WX(k) + WV.cw / 2, yb + 22, String(k), 'wv-cyc' + (k === cyc ? ' cur' : ''), { 'data-cyc': k });
+        txt(svg, WV.x0 - 14, yb + 22, 'cycle', 'wv-cyc', { 'text-anchor': 'end' });
+        // the pinned edges of the scripted run
+        if (isScripted()) for (const k of [2, 5, 6, 7, 8]) { el('line', { x1: WX(k), y1: WV.top - 4, x2: WX(k), y2: yb, class: 'wv-pinmark' }, svg); txt(svg, WX(k), WV.top - 10, 'rule ' + RULES[k][0], 'wv-pin'); }
+        // amber: the edge into this cycle (none at cycle 0, after reset); cyan: the edge out of it, at the right end of the
+        // drawn traces. At the last cycle the cyan line is the final edge, still a real edge with an arc and a transfer.
+        const t = T[cyc], yc = yb + 32;
+        if (cyc > 0) { el('line', { x1: WX(cyc), y1: WV.top - 2, x2: WX(cyc), y2: yc, class: 'wv-cursor', 'data-cursor': cyc }, svg);
+            txt(svg, WX(cyc) - 5, yb + 50, 'just taken', 'wv-curlab amber'); }
+        el('line', { x1: WX(cyc + 1), y1: WV.top - 2, x2: WX(cyc + 1), y2: yc, class: 'wv-next', 'data-cursor': cyc + 1, 'data-arc': takenArc(t.s, t.a), 'data-xfer': t.s }, svg);
+        txt(svg, WX(cyc + 1) + 5, yb + 50, 'next', 'wv-curlab cyan');
+    }
+    function paintTable5() {
+        let h = '<table><tr><th>Cycle</th><th>a</th><th>State</th><th class="c-ctl">selX</th><th class="c-ctl">selY</th><th>X</th><th>Y</th><th>R</th><th class="c-on">z</th><th>on CLK &rarr;</th></tr>';
+        for (const t of TRACE) {
+            const b = (v, cls) => `<td class="${v ? 'one ' + cls : 'zero'}">${v}</td>`;
+            h += `<tr class="${t.cyc === cyc ? 'cur' : t.cyc > cyc ? 'fut' : ''}" data-cyc="${t.cyc}"><td>${t.cyc}</td>${b(t.a, 'in')}<td class="t">${t.s}</td>${b(t.selX, 'ctl')}${b(t.selY, 'ctl')}` +
+                 `<td class="${t.Xchg ? 'chg' : ''}">${hex(t.X)}</td><td class="${t.Ychg ? 'chg' : ''}">${hex(t.Y)}</td><td>${hex(t.R)}</td>${b(t.z, 'z')}<td class="t">${t.nextS}, R ← ${t.src}${t.src === '0' ? '' : ' = ' + hex(t.nextR)}</td></tr>`;
+        }
+        $('tab5').innerHTML = h + '</table>';
+    }
+    // the given FSMD, live: the current state, the arc the next edge takes, and the transfer that edge performs
+    function paintFsmdLive(D, t) {
+        const taken = takenArc(t.s, t.a);
+        for (const k of SN) { D.nodes[k].setAttribute('class', 'sd-node' + (k === t.s ? ' on' : '')); D.tags[k].setAttribute('class', 'xfer-box' + (k === t.s ? ' on' : '')); }
+        for (const id in D.arcs) { const on = id === taken; D.arcs[id].path.setAttribute('class', 'arc' + (on ? ' on' : '')); D.arcs[id].lab.setAttribute('class', 'cond' + (on ? ' on' : ''));
+            D.arcs[id].path.setAttribute('marker-end', `url(#ah${on ? 'on' : ''}-${D.mk})`); }
+        drawBars(D.svg);
+    }
+    function paintB5() {
+        $('w5').classList.toggle('hid', view5 !== 'waves'); $('tab5').classList.toggle('hid', view5 !== 'table');
+        $('wbody5').classList.toggle('table', view5 === 'table');
+        $('view5').innerHTML = (view5 === 'waves' ? 'show table' : 'show waves') + ' <span class="kk">T</span>';
+        if (view5 === 'waves') paintWaves(); else paintTable5();
+        const [n, title, body] = ruleFor(cyc);
+        $('rn5').textContent = `RULE ${n} · EDGE INTO CYCLE ${cyc}`; $('rt5').innerHTML = title; $('rb5').innerHTML = body;
+        $('edge5').textContent = cyc === 0 ? 'after reset · cycle 0' : `edge ${cyc - 1} → ${cyc} taken · cycle ${cyc}`;
+        paintFsmdLive(R5, TRACE[cyc]);
+    }
+
+    // ============ RENDER / NAV ============
+    // the step index each beat's back button walks: reading on beats 1-3, cycle on 4-5; back is disabled at step 0
+    const stepIdx = () => [null, build, sel2, sel3, cyc, cyc][page];
+    function drawPage() { [null, paintB1, paintB2, paintB3, paintB4, paintB5][page](); const b = $('prv' + page); if (b) b.disabled = stepIdx() === 0; }
+    function render() {
+        for (let i = 1; i <= NPAGES; i++) $('p' + i).classList.toggle('active', i === page);
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        document.querySelectorAll('[data-dot]').forEach(d => d.classList.toggle('on', +d.dataset.dot <= page));
+        $('pcNum').textContent = page;
+        drawPage();
+    }
+    const defsEl = $('defs'), defsBtn = $('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) { closeDefs(); page = Math.max(1, Math.min(NPAGES, n)); render(); }
+    function setBuild(b) { build = Math.max(0, Math.min(NBUILD, b)); if (page === 1) drawPage(); }
+    function setSel(n, p = page) { if (p === 2) sel2 = ((n % NROWS2) + NROWS2) % NROWS2; else if (p === 3) sel3 = ((n % NROWS3) + NROWS3) % NROWS3; if (page === p) drawPage(); }
+    function setCyc(k) { cyc = Math.max(0, Math.min(NCYC - 1, k)); drawPage(); }
+    function step() { cyc = cyc >= NCYC - 1 ? 0 : cyc + 1; drawPage(); }
+    function setView(v) { view5 = v; if (page === 5) drawPage(); }
+    function advance(dir = 1) {
+        if (page === 1) setBuild(build + dir);
+        else if (page === 2) setSel(sel2 + dir, 2);
+        else if (page === 3) setSel(sel3 + dir, 3);
+        else if (dir > 0) step(); else setCyc(cyc - 1);
+    }
+    function doReset() {
+        if (defsOpen()) return;
+        if (page === 1) build = 0; else if (page === 2) sel2 = 0; else if (page === 3) sel3 = 0; else cyc = 0;
+        drawPage();
+    }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    for (const id of ['nxt1', 'nxt2', 'nxt3', 'clk4', 'clk5']) $(id).addEventListener('click', e => { advance(1); e.currentTarget.blur(); });
+    for (let i = 1; i <= NPAGES; i++) $('prv' + i).addEventListener('click', e => { if (stepIdx() > 0) advance(-1); e.currentTarget.blur(); });
+    $('script4').addEventListener('click', e => { setScript(); e.currentTarget.blur(); });
+    $('view5').addEventListener('click', e => { setView(view5 === 'waves' ? 'table' : 'waves'); e.currentTarget.blur(); });
+    document.querySelectorAll('#p2 .rowcard').forEach(c => c.addEventListener('click', () => setSel(+c.dataset.row, 2)));
+    document.querySelectorAll('#p3 .rowcard').forEach(c => c.addEventListener('click', () => setSel(+c.dataset.row, 3)));
+    document.addEventListener('keydown', (e) => {
+        if (e.target && e.target.tagName === 'INPUT') return;                // typing a hex value: no shortcuts
+        const k = e.key;
+        if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) { if (k === 'Escape') closeDefs(); if (k === ' ' || 'rRcC'.includes(k)) e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'c': case 'C': advance(1); e.preventDefault(); break;
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
+            case 'ArrowDown': advance(1); e.preventDefault(); break;
+            case 'ArrowUp': if (stepIdx() > 0) advance(-1); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+            case 's': case 'S': setScript(); e.preventDefault(); break;
+            case 't': case 'T': if (page === 5) { setView(view5 === 'waves' ? 'table' : 'waves'); e.preventDefault(); } break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, advance, step, setBuild, setSel, setCyc, setInputs, setScript, setView, reset: doReset, openDefs, closeDefs, defsOpen,
+        key: (k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })),
+        getState: () => ({ page, build, sel2, sel3, cyc, view5, scripted: isScripted() }),
+        model: { NCYC, SN, get TRACE() { return TRACE; }, get INPUTS() { return INPUTS; }, scriptInputs, computeTrace, stepModel, OH, OH_NEXT, ONEHOT, nextOf, takenArc, WIRE_SETS, BLK, NODES, EDGES, FN, FEDGES, XFER, ZOF, WV, WROWS, RULES, hex },
+        shown: (id) => { const svg = $(id); return {
+            state: Array.from(svg.querySelectorAll('.sd-node.on')).map(g => g.dataset.state),
+            arcOn: Array.from(svg.querySelectorAll('path.arc.on')).map(p => p.dataset.id),
+            wiresOn: Array.from(svg.querySelectorAll('.wire.on')).map(p => p.dataset.id),
+            blocksOn: Array.from(svg.querySelectorAll('.blk.on')).map(p => p.dataset.blk),
+            foc: Array.from(svg.querySelectorAll('.foc')).length, dim: Array.from(svg.querySelectorAll('.dim')).length,
+            visibleGroups: [...new Set(Array.from(svg.querySelectorAll('[data-g]:not(.hid)')).map(e => +e.dataset.g))].sort(),
+            reg: (svg.querySelector('.regval') || {}).textContent || '',
+            sigs: Array.from(svg.querySelectorAll('.sig')).map(t => t.textContent) }; },
+    };
+
+    setPage(1);
+
+    // ?beat=N&step=M&verify — deep-link a state (M = build on beat 1, reading on 2/3, cycle on 4/5)
+    {
+        const q = new URLSearchParams(location.search);
+        const b = q.get('beat') ? Math.max(1, Math.min(NPAGES, +q.get('beat'))) : 1;
+        if (q.get('step') !== null) { const m = +q.get('step');
+            if (b === 1) build = Math.max(0, Math.min(NBUILD, m)); else if (b === 2) sel2 = Math.max(0, Math.min(NROWS2 - 1, m));
+            else if (b === 3) sel3 = Math.max(0, Math.min(NROWS3 - 1, m)); else cyc = Math.max(0, Math.min(NCYC - 1, m)); }
+        setPage(b);
+    }
+
+    // ============ IN-PAGE ASSERTIONS (house rule) ============
+    function runAssertions() {
+        const fails = [], S0 = { page, build, sel2, sel3, cyc, view5, inputs: JSON.stringify(INPUTS) };
+        let measured = 0;
+        setScript();
+        // (a) the model reproduces the iverilog trace (fsmd-verify.v): [state, selX, selY, R, z] for cycles 0..11, and the next state
+        const EXP = [['A',0,0,null,0,'B'],['B',1,0,0x00,0,'C'],['C',0,1,0x3C,1,'C'],['C',0,1,0xA5,1,'C'],['C',0,1,0xA5,1,'B'],['B',1,0,0xA5,0,'A'],
+                     ['A',0,0,0x5A,0,'C'],['C',0,1,0x00,1,'B'],['B',1,0,0x7E,0,'A'],['A',0,0,0x5A,0,'C'],['C',0,1,0x00,1,'B'],['B',1,0,0x7E,0,'C']];
+        EXP.forEach((e, i) => { const t = TRACE[i]; if (t.s !== e[0] || t.selX !== e[1] || t.selY !== e[2] || t.R !== e[3] || t.z !== e[4] || t.nextS !== e[5]) fails.push('trace cyc ' + i); });
+        if (TRACE[11].nextR !== 0x5A) fails.push('trace next R at 11');
+        const arcsTaken = new Set(TRACE.map(t => takenArc(t.s, t.a))); if (arcsTaken.size !== 6) fails.push('script misses an arc');
+        // an independent reference written from the sketch: names, not bits; the register follows the leaving state's source sampled before the edge
+        function ref(inputs) {
+            let s = 'A', R = null; const out = [];
+            for (const inp of inputs) {
+                out.push({ s, R, selX: +(s === 'B'), selY: +(s === 'C'), z: +(s === 'C') });
+                R = s === 'A' ? 0 : s === 'B' ? inp.X : inp.Y;
+                s = inp.a ? 'C' : ({ A: 'B', B: 'A', C: 'B' })[s];
+            }
+            return out;
+        }
+        const rnd = () => Array.from({ length: NCYC }, () => ({ a: Math.random() < 0.5 ? 1 : 0, X: Math.floor(Math.random() * 256), Y: Math.floor(Math.random() * 256) }));
+        for (let trial = 0; trial < 200; trial++) {
+            const inputs = rnd(), T = computeTrace(inputs), Rf = ref(inputs);
+            for (let k = 0; k < NCYC; k++) { const t = T[k], r = Rf[k]; if (t.s !== r.s || t.R !== r.R || t.selX !== r.selX || t.selY !== r.selY || t.z !== r.z) { fails.push('random trial ' + trial + ' cyc ' + k); break; } }
+        }
+        // (b) the drawn equations equal the state table on all 6 rows; the output lines on all 3 states
+        if (OH_ERR.length) fails.push('equations left the one-hot code: ' + [...new Set(OH_ERR)].slice(0, 3).join('; '));
+        // one-hot: from every state and input, the equations leave exactly the next state's flip-flop at 1
+        for (let q = 0; q < 3; q++) for (const a of [0, 1]) { const n = OH_NEXT(ONEHOT(q), a); if (n.join() !== ONEHOT(SN.indexOf(nextOf(SN[q], a))).join()) fails.push(`one-hot eq ${SN[q]} a=${a}: ${n}`); }
+        // each equation has exactly one term per arc into its state, read from the FSMD's arcs
+        for (const x of SN) { const want = FEDGES.filter(e => e.to === x).map(e => e.from + (e.bar ? 0 : 1)).sort().join(), got = OH[x].map(([f, v]) => f + v).sort().join();
+            if (want !== got) fails.push(`terms of Q${x}+: ${got} vs arcs ${want}`); }
+        for (let q = 0; q < 3; q++) { const s = SN[q], Q = ONEHOT(q); if (Q[1] !== +(s === 'B') || Q[2] !== +(s === 'C') || Q[2] !== ZOF[s]) fails.push('outputs ' + s); }
+        // the drawn text, against literals
+        const EQT = { A: 'QA+ = QB·a', B: 'QB+ = QA·a + QC·a', C: 'QC+ = QA·a + QB·a + QC·a' };
+        for (const x of SN) { if ($('eq' + x).textContent !== EQT[x] || $('eq5' + x).textContent !== EQT[x]) fails.push('equation text ' + x);
+            const bars = $('eq' + x).querySelectorAll('.ov').length; if (bars !== (x === 'C' ? 0 : OH[x].length)) fails.push('overbars ' + x); }
+        // (c) FSMD and controller agree arc for arc, and the transfer text is exact
+        for (const fe of FEDGES) { const ce = EDGES.find(e => e.id === fe.id); if (!ce || ce.bar !== fe.bar || (ce.loop !== undefined) !== (fe.loop !== undefined)) fails.push('arc ' + fe.id); }
+        for (const [s, x] of [['A', 'R ← 0'], ['B', 'R ← X'], ['C', 'R ← Y']]) if (XFER[s] !== x) fails.push('xfer ' + s);
+        for (const fe of FEDGES) if (nextOf(fe.from, fe.bar ? 0 : 1) !== fe.to) fails.push('fsmd arc vs table ' + fe.id);
+        if (FEDGES.length !== 6) fails.push('arc count');
+        // (d) geometry
+        const rectOf = (id) => { const b = BLK[id]; return { x: b.x, y: b.y, width: b.w, height: b.h }; };
+        const inOpen = (v, lo, hi) => v > lo + 1 && v < hi - 1;
+        const segHitsBlock = (p, q, id) => {
+            const r = rectOf(id);
+            if (p[1] === q[1]) {
+                const y = p[1], a = Math.min(p[0], q[0]), b = Math.max(p[0], q[0]);
+                if (!inOpen(y, r.y, r.y + r.height)) return false;
+                let xl = r.x, xr = r.x + r.width;
+                if (id === 'mux') { xl = muxLeftX(y); xr = r.x + r.width - (muxLeftX(y) - r.x); }
+                return Math.min(b, xr - 1) - Math.max(a, xl + 1) > 0.5;
+            }
+            const x = p[0], a = Math.min(p[1], q[1]), b = Math.max(p[1], q[1]);
+            if (!inOpen(x, r.x, r.x + r.width)) return false;
+            return Math.min(b, r.y + r.height - 1) - Math.max(a, r.y + 1) > 0.5;
+        };
+        const overlap = (a, b, pad = 0) => a.x < b.x + b.width + pad && a.x + a.width + pad > b.x && a.y < b.y + b.height + pad && a.y + a.height + pad > b.y;
+        const circleHit = (bb, c, r) => { const cx = Math.max(bb.x, Math.min(c.x, bb.x + bb.width)), cy = Math.max(bb.y, Math.min(c.y, bb.y + bb.height)); return Math.hypot(cx - c.x, cy - c.y) < r + 2; };
+        const vbOf = (svg) => svg.getAttribute('viewBox').split(' ').map(Number);
+        function checkSvg(svg, tag, wires, blocks, nodes, nodeR, extraRects = []) {
+            const [vx, vy, vw, vh] = vbOf(svg); let n = 0;
+            for (const w of wires) for (let i = 0; i + 1 < w.pts.length; i++) for (const id in blocks)
+                if (segHitsBlock(w.pts[i], w.pts[i + 1], id)) fails.push(`${tag} wire ${w.id} crosses ${id}`);
+            const labels = [];
+            for (const t of Array.from(svg.querySelectorAll('text'))) {
+                if (t.classList.contains('hid')) continue;
+                const bb = t.getBBox(); if (!bb.width) continue; n++;
+                if (bb.x < vx || bb.y < vy || bb.x + bb.width > vx + vw || bb.y + bb.height > vy + vh) fails.push(`${tag} text outside: ` + t.textContent);
+                if (t.dataset.in) continue;
+                labels.push({ t, bb });
+                for (const id in blocks) if (overlap(bb, rectOf(id))) fails.push(`${tag} label "${t.textContent}" on block ${id}`);
+                for (const r of extraRects) if (overlap(bb, r)) fails.push(`${tag} label "${t.textContent}" on tag`);
+                for (const w of wires) for (let i = 0; i + 1 < w.pts.length; i++) {
+                    const p = w.pts[i], q = w.pts[i + 1];
+                    const sr = { x: Math.min(p[0], q[0]) - 2, y: Math.min(p[1], q[1]) - 2, width: Math.abs(q[0] - p[0]) + 4, height: Math.abs(q[1] - p[1]) + 4 };
+                    if (overlap(bb, sr)) fails.push(`${tag} label "${t.textContent}" on wire ${w.id}`);
+                }
+                for (const k in nodes) if (circleHit(bb, nodes[k], nodeR)) fails.push(`${tag} label "${t.textContent}" on bubble ${k}`);
+            }
+            // no two free labels overlap; no condition label sits on another arc
+            for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) if (overlap(labels[i].bb, labels[j].bb)) fails.push(`${tag} labels overlap "${labels[i].t.textContent}" "${labels[j].t.textContent}"`);
+            const arcs = Array.from(svg.querySelectorAll('path.arc'));
+            for (const p of arcs) { const bb = p.getBBox(); if (bb.x < vx || bb.x + bb.width > vx + vw || bb.y < vy || bb.y + bb.height > vy + vh) fails.push(`${tag} arc outside ` + p.dataset.id); }
+            for (const { t, bb } of labels) { if (!t.dataset.id) continue;
+                for (const p of arcs) { if (p.dataset.id === t.dataset.id) continue; const L = p.getTotalLength(); let hit = 0;
+                    for (let d = 0; d <= L; d += 3) { const q = p.getPointAtLength(d); if (q.x > bb.x - 2 && q.x < bb.x + bb.width + 2 && q.y > bb.y - 2 && q.y < bb.y + bb.height + 2) hit++; }
+                    if (hit) fails.push(`${tag} label "${t.textContent}" (${t.dataset.id}) crosses arc ${p.dataset.id}`); } }
+            // arcs do not pass through bubbles other than their own ends
+            for (const p of arcs) { const [f, to] = p.dataset.id.split('>'), L = p.getTotalLength();
+                for (const k in nodes) { if (k === f || k === to) continue; for (let d = 0; d <= L; d += 4) { const q = p.getPointAtLength(d); if (Math.hypot(q.x - nodes[k].x, q.y - nodes[k].y) < nodeR + 4) { fails.push(`${tag} arc ${p.dataset.id} through bubble ${k}`); break; } } } }
+            measured += n; return n;
+        }
+        // nothing in a diagram fades below a readable floor: effective opacity = the product down the tree
+        const FLOOR = 0.5;
+        const effOp = (e, svg) => { let o = 1; for (let n = e; n && n !== svg.parentNode; n = n.parentNode) if (n.nodeType === 1) o *= parseFloat(getComputedStyle(n).opacity); return o; };
+        const opFloor = (tag) => { let n = 0;
+            document.querySelectorAll('.page.active svg').forEach(svg => svg.querySelectorAll('text, path, polyline, line, circle, rect').forEach(e => {
+                if (e.closest('defs') || e.closest('.hid')) return; n++; const o = effOp(e, svg);
+                if (o < FLOOR - 1e-6) fails.push(`${tag} faint ${svg.id} ${e.tagName}.${e.getAttribute('class') || ''} ${o.toFixed(2)}`); }));
+            if (n < 20) fails.push(tag + ': too few elements for the opacity floor'); };
+        const sweep = (tag) => { opFloor(tag);
+            const ds = $('designSurface'); if (ds.scrollHeight > 1080 + 1 || ds.scrollWidth > 1920 + 1) fails.push('overflow ' + tag);
+            document.querySelectorAll('.page.active .panel, .page.active .ro, .page.active .rowcard, .page.active .wbody').forEach(p => { if (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1) fails.push('panel overflow ' + tag + ' ' + (p.className || '').split(' ').slice(0, 3).join('.')); });
+            // every panel and card stays inside the stage (a column that grows past it spills over the footer without overflowing anything)
+            const st = $('stage').getBoundingClientRect();
+            document.querySelectorAll('.page.active .panel, .page.active .rowcard').forEach(p => { const r = p.getBoundingClientRect(); if (!r.width) return;
+                if (r.bottom > st.bottom + 1 || r.right > st.right + 1 || r.left < st.left - 1 || r.top < st.top - 1) fails.push('outside stage ' + tag + ' ' + (p.className || '').split(' ').slice(0, 3).join('.')); });
+        };
+        // beat 1
+        setPage(1);
+        // the FSMD is the given: every group drawn at every reading, only the reading's group lit
+        const litOnly = (D, f, tag) => { const sh = window.__api.shown(D.svg.id);
+            if (sh.visibleGroups.join() !== [0, 1, 2, 3].filter(g => D.groups[g].length).join()) fails.push(tag + ' groups hidden');
+            D.svg.querySelectorAll('[data-g]').forEach(e => { const g = +e.dataset.g, lit = !e.classList.contains('dimsoft');
+                if (f === null ? !lit : lit !== (g === f)) fails.push(`${tag} group ${g} lit=${lit} at focus ${f}`); }); };
+        for (let b = 0; b <= NBUILD; b++) { build = b; drawPage(); litOnly(D1, b, 'b1 reading ' + b); sweep('p1b' + b); }
+        const tagRectsOf = (D) => Object.values(D.tags).map(r => ({ x: +r.getAttribute('x'), y: +r.getAttribute('y'), width: +r.getAttribute('width'), height: +r.getAttribute('height') }));
+        const checkFsmd = (D, tag, min) => {
+            const tr = tagRectsOf(D);
+            if (checkSvg(D.svg, tag, [], {}, D.geo.N, D.geo.R, tr) < min) fails.push(tag + ': too few text boxes');
+            for (const id in D.arcs) { const bb = D.arcs[id].path.getBBox(); for (const r of tr) if (overlap(bb, r)) fails.push(tag + ' arc on tag ' + id); }
+            // tags inside the viewBox and clear of every bubble
+            const [vx, vy, vw, vh] = vbOf(D.svg);
+            for (const r of tr) { if (r.x < vx || r.y < vy || r.x + r.width > vx + vw || r.y + r.height > vy + vh) fails.push(tag + ' tag outside');
+                for (const k in D.geo.N) if (circleHit(r, D.geo.N[k], D.geo.R)) fails.push(tag + ' tag on bubble ' + k); }
+        };
+        checkFsmd(D1, 'fsmd', 12);
+        // beat 2
+        setPage(2);
+        for (let s = 0; s < NROWS2; s++) { sel2 = s; drawPage(); const sh = window.__api.shown('d2'); if (!sh.foc || !sh.dim) fails.push('b2 focus ' + s);
+            litOnly(R2, [1, 1, 2][s], 'b2 given fsmd ' + s);   /* register and transfers -> the tags; conditions -> the arcs */ sweep('p2s' + s); }
+        if (checkSvg($('d2'), 'dp', WIRE_SETS.dp, BLK, {}, 0) < 14) fails.push('dp: too few text boxes');
+        checkFsmd(R2, 'b2 fsmd', 12);
+        // beat 3
+        setPage(3);
+        for (let s = 0; s < NROWS3; s++) { sel3 = s; drawPage(); const sh = window.__api.shown('d3'); if (!sh.foc || !sh.dim) fails.push('b3 focus ' + s);
+            // readings 3-5 light the state and the arcs into it, written out here: into A = B>A; into B = A>B, C>B; into C = A>C, B>C, C>C
+            const INTO = [null, null, null, ['A', 'B>A'], ['B', 'A>B,C>B'], ['C', 'A>C,B>C,C>C']][s];
+            if (!INTO) litOnly(R3F, [0, 1, 2][s], 'b3 given fsmd ' + s);
+            else for (const [sv, tag] of [[$('r3f'), 'given fsmd'], [$('d3'), 'controller']]) {
+                const litArcs = Array.from(sv.querySelectorAll('path.arc')).filter(e => tag === 'controller' ? e.classList.contains('foc') : !e.classList.contains('dimsoft')).map(e => e.dataset.id).sort().join();
+                const litNodes = Array.from(sv.querySelectorAll('.sd-node')).filter(e => tag === 'controller' ? e.classList.contains('foc') : !e.classList.contains('dimsoft')).map(e => e.dataset.state).join();
+                if (litArcs !== INTO[1] || litNodes !== INTO[0]) fails.push(`b3 reading ${s} ${tag} lights ${litNodes} / ${litArcs}`); }
+            // the given datapath lights what the reading uses, written out here rather than read back from REFD3:
+            // transfers -> the selX and selY inputs; conditions -> the empty status port; the other readings leave it plain
+            const foc = Array.from($('r3d').querySelectorAll('.foc')), dimN = $('r3d').querySelectorAll('.dim').length;
+            const litWires = foc.filter(e => e.tagName === 'polyline').map(e => e.dataset.id).sort().join(), litText = foc.filter(e => e.tagName === 'text').map(e => e.textContent).join('|');
+            const want = [{ w: '', t: null }, { w: 'selX,selY', t: null }, { w: '', t: '(none)' }, { w: '', t: null }, { w: '', t: null }, { w: '', t: null }][s];
+            const ok = (want.w || want.t) ? litWires === want.w && (!want.t || litText.includes(want.t)) && dimN > 0 : !foc.length && !dimN;
+            if (!ok) fails.push(`b3 datapath focus ${s}: ${litWires} / ${litText}`);
+            sweep('p3s' + s); }
+        if (checkSvg($('d3'), 'ctl', WIRE_SETS.ctl, {}, NODES, R) < 14) fails.push('ctl: too few text boxes');
+        checkFsmd(R3F, 'b3 fsmd', 12);
+        if (checkSvg($('r3d'), 'b3 dp', WIRE_SETS.dp, BLK, {}, 0) < 14) fails.push('b3 dp: too few text boxes');
+        // beat 4 at every cycle, scripted and in random free play
+        setPage(4);
+        if (checkSvg($('d4'), 'full', WIRE_SETS.full, BLK, NODES, R) < 24) fails.push('full: too few text boxes');
+        const checkRun = (tag) => {
+            for (let k = 0; k < NCYC; k++) {
+                cyc = k; drawPage(); const t = TRACE[k], sh = window.__api.shown('d4');
+                if (sh.state.join() !== t.s) fails.push(`${tag} bubble cyc ${k}`);
+                const want = ['selX', 'selY', 'z'].filter(n => t[n]).map(n => n === 'z' ? 'zout' : n).concat(t.a ? ['ain'] : [], [t.src === 'X' ? 'xin' : t.src === 'Y' ? 'yin' : 'cin', 'muxo'], t.R !== null ? ['rego'] : []).sort().join();
+                if (sh.wiresOn.slice().sort().join() !== want) fails.push(`${tag} wires cyc ${k} ${sh.wiresOn.join('/')}`);
+                if (!sh.reg.startsWith(hex(t.R))) fails.push(`${tag} reg cyc ${k}`);
+                if (sh.arcOn.join() !== takenArc(t.s, t.a)) fails.push(`${tag} arc cyc ${k}`);
+                if ((sh.blocksOn.join() === 'cst') !== (t.src === '0')) fails.push(`${tag} const cyc ${k}`);
+                if (!document.querySelector(`#strip4 td.cur[data-cyc="${k}"]`)) fails.push(`${tag} strip cursor ${k}`);
+                sweep(tag + 'c' + k);
+            }
+        };
+        checkRun('p4');
+        const saveInputs = JSON.stringify(INPUTS);
+        INPUTS = rnd(); TRACE = computeTrace(INPUTS); checkRun('p4free');
+        INPUTS = JSON.parse(saveInputs); TRACE = computeTrace(INPUTS);
+        if (!isScripted()) fails.push('script restore');
+        // beat 5
+        setPage(5); view5 = 'waves';
+        const PIN = { 2: 3, 5: 2, 6: 4, 7: 4, 8: 4 };
+        for (let k = 0; k < NCYC; k++) { cyc = k; drawPage();
+            const svg = $('w5'), [vx, vy, vw, vh] = vbOf(svg);
+            // every non-clock row is runs whose boundaries fall exactly on edges (crossing centered on the edge, so a run's
+            // left point is edge + 6 and its right point edge - 6), that tile cycles 0..k with no gap, whose text equals the
+            // independent reference (0/1 for the one-bit rows), and that merge only equal neighbours
+            { const Rf = ref(INPUTS), refv = { a: q => INPUTS[q].a, state: q => Rf[q].s, selX: q => Rf[q].selX, selY: q => Rf[q].selY,
+                  X: q => hex(INPUTS[q].X), Y: q => hex(INPUTS[q].Y), R: q => hex(Rf[q].R), z: q => Rf[q].z };
+              for (const row of WROWS) { if (row.kind === 'clk') continue;
+                  if (svg.querySelector(`.wv-bit[data-row="${row.id}"]`)) fails.push(`${row.id} drawn as a square wave, cyc ${k}`);
+                  const runs = Array.from(svg.querySelectorAll(`.wv-bus[data-row="${row.id}"]`)).map(p => { const n = p.getAttribute('d').match(/-?[\d.]+/g).map(Number);
+                      return { k1: +p.dataset.k, k2: +p.dataset.k2, l: n[0], r: n[6] }; }).sort((u, w) => u.k1 - w.k1);
+                  const texts = Array.from(svg.querySelectorAll(`.wv-bt[data-row="${row.id}"]`)).sort((u, w) => +u.dataset.k - +w.dataset.k).map(t => t.textContent);
+                  let next = 0;
+                  runs.forEach((u, ii) => {
+                      if (u.k1 !== next || Math.abs(u.l - (WX(u.k1) + 6)) > 0.5 || Math.abs(u.r - (WX(u.k2 + 1) - 6)) > 0.5) fails.push(`${row.id} run ${u.k1}-${u.k2} off the edges, cyc ${k}`);
+                      for (let q = u.k1; q <= u.k2; q++) if (String(refv[row.id](q)) !== texts[ii]) fails.push(`${row.id} value cycle ${q}: ${texts[ii]}, cyc ${k}`);
+                      if (ii && texts[ii] === texts[ii - 1]) fails.push(`${row.id} unmerged equal runs at ${u.k1}, cyc ${k}`);
+                      next = u.k2 + 1; });
+                  if (next !== k + 1) fails.push(`${row.id} runs stop at ${next}, cyc ${k}`); } }
+            // amber = the edge into cycle k (absent at cycle 0); cyan = the edge out of it, at the right end of the drawn traces;
+            // the cyan edge's arc and transfer are what the given FSMD lights and what the independent reference says
+            const cur = svg.querySelector('.wv-cursor'), nxt = svg.querySelector('.wv-next');
+            if (k === 0 ? !!cur : (!cur || +cur.dataset.cursor !== k || +cur.getAttribute('x1') !== WX(k))) fails.push('amber cursor ' + k);
+            if (!nxt || +nxt.getAttribute('x1') !== WX(k + 1)) fails.push('cyan cursor ' + k);
+            { let right = 0; for (const p of svg.querySelectorAll('.wv-bus, .wv-bit')) if (p.dataset.row !== 'clk') right = Math.max(right, p.getBBox().x + p.getBBox().width);
+              if (nxt && Math.abs(right - +nxt.getAttribute('x1')) > 7) fails.push(`cyan cursor not at the end of the traces ${k}: ${right}`); }
+            { const r = ref(INPUTS)[k], want = r.s + '>' + (INPUTS[k].a ? 'C' : ({ A: 'B', B: 'A', C: 'B' })[r.s]);
+              const litArc = Array.from($('r5').querySelectorAll('path.arc.on')).map(e => e.dataset.id).join(), litTag = Array.from($('r5').querySelectorAll('.xfer-box.on')).map(e => e.dataset.tag).join();
+              if (!nxt || nxt.dataset.arc !== want || nxt.dataset.arc !== litArc || nxt.dataset.xfer !== r.s || litTag !== r.s) fails.push('cyan edge vs fsmd ' + k); }
+            // no rule-pin line through a run label either
+            for (const ln of svg.querySelectorAll('.wv-pinmark')) { const x = +ln.getAttribute('x1');
+                for (const t of svg.querySelectorAll('.wv-bt')) { const b = t.getBBox(); if (b.width && x > b.x - 1 && x < b.x + b.width + 1) fails.push(`pin line through "${t.textContent}" (${t.dataset.row}) cyc ${k}`); } }
+            // cursor labels clear of each other and of the rule pins
+            { const labs = Array.from(svg.querySelectorAll('.wv-curlab, .wv-pin')).map(t => t.getBBox());
+              for (let i = 0; i < labs.length; i++) for (let j = i + 1; j < labs.length; j++) if (overlap(labs[i], labs[j])) fails.push('cursor/pin labels overlap ' + k);
+              for (const ln of svg.querySelectorAll('.wv-cursor, .wv-next')) { const x = +ln.getAttribute('x1');
+                for (const t of svg.querySelectorAll('.wv-curlab, .wv-pin, .wv-cyc, .wv-bt')) { const b = t.getBBox(); if (b.width && x > b.x + 1 && x < b.x + b.width - 1 && +ln.getAttribute('y1') < b.y + b.height && +ln.getAttribute('y2') > b.y) fails.push(`line through label "${t.textContent}" ${k}`); } } }
+            const curLab = svg.querySelector('.wv-cyc.cur'); if (!curLab || +curLab.dataset.cyc !== k) fails.push('cycle label ' + k);
+            let n = 0;
+            for (const t of svg.querySelectorAll('text')) { const bb = t.getBBox(); if (!bb.width) continue; n++;
+                if (bb.x < vx || bb.y < vy || bb.x + bb.width > vx + vw || bb.y + bb.height > vy + vh) fails.push(`waves text outside "${t.textContent}" cyc ${k}`); }
+            if (n < WROWS.length + NCYC) fails.push('waves: too few text boxes ' + k); measured += n;
+            // every drawn segment lies inside its row box and left of (or at) the cursor; nothing drawn right of the cursor
+            for (const p of svg.querySelectorAll('.wv-bus, .wv-bit')) { const bb = p.getBBox(), row = WROWS.findIndex(r => r.id === p.dataset.row);
+                if (row < 0) continue; const y0 = WV.top + row * WV.rh;
+                if (bb.y < y0 - 1 || bb.y + bb.height > y0 + WV.rh + 1) fails.push(`waves row ${p.dataset.row} out of its box cyc ${k}`);
+                if (p.dataset.row !== 'clk' && bb.x + bb.width > WX(k + 1) + 1) fails.push(`waves ${p.dataset.row} drawn past the cursor cyc ${k}`); }
+            for (const t of svg.querySelectorAll('.wv-bt')) { const bb = t.getBBox(); if (bb.x + bb.width > WX(k + 1) + 1) fails.push('bus text past cursor ' + k); }
+            // the bus text at the cursor is the trace value
+            const last = (id) => { const ts = Array.from(svg.querySelectorAll(`.wv-bt[data-row="${id}"]`)); return ts.length ? ts[ts.length - 1].textContent : ''; };
+            if (last('R') !== hex(TRACE[k].R) || last('state') !== TRACE[k].s) fails.push('bus value at cursor ' + k);
+            if (PIN[k] !== undefined && ruleFor(k)[0] !== PIN[k]) fails.push('rule card at edge ' + k);
+            // the given FSMD beside the diagram: lit bubble = the state at the cursor, lit arc = the arc its next edge takes,
+            // lit tag = the transfer that edge performs (from the independent name-based reference, not the page's trace)
+            { const r = ref(INPUTS)[k], nx = INPUTS[k].a ? 'C' : ({ A: 'B', B: 'A', C: 'B' })[r.s], sv = $('r5');
+              const on = (sel) => Array.from(sv.querySelectorAll(sel)).map(e => e.dataset.state || e.dataset.id || e.dataset.tag).join();
+              if (on('.sd-node.on') !== r.s || on('path.arc.on') !== r.s + '>' + nx || on('.xfer-box.on') !== r.s || on('text.cond.on') !== r.s + '>' + nx) fails.push('b5 fsmd lit cyc ' + k); }
+            sweep('p5c' + k);
+        }
+        checkFsmd(R5, 'b5 fsmd', 12);
+        view5 = 'table';
+        for (let k = 0; k < NCYC; k++) { cyc = k; drawPage(); if (!document.querySelector(`#tab5 tr.cur[data-cyc="${k}"]`)) fails.push('table cursor ' + k); sweep('p5t' + k); }
+        view5 = 'waves';
+        openDefs(); sweep('defs'); closeDefs();
+        // back restores the exact prior frame: for every step k, (go to k) and (go to k+1, then the back button) match on
+        // every class, lit set and text on the active page, beat 5's live FSMD and cursor included; back is disabled at 0
+        const frame = () => { const pg = $('p' + page); return Array.from(pg.querySelectorAll('svg *, .rowcard, #reason1, #snum1, #ro4, #chip4, #rn5, #rt5, #rb5, #edge5, #strip4 td, #tab5 tr'))
+            .map(e => (e.getAttribute('class') || '') + '|' + (e.getAttribute('x1') || '') + '|' + (e.children.length ? '' : e.textContent)).join('\n'); };
+        const setStep = (k) => { if (page === 1) build = k; else if (page === 2) sel2 = k; else if (page === 3) sel3 = k; else cyc = k; drawPage(); };
+        for (const [pg, n] of [[1, NBUILD + 1], [2, NROWS2], [3, NROWS3], [4, NCYC], [5, NCYC]]) {
+            setPage(pg); view5 = 'waves';
+            setStep(0); if (!$('prv' + pg).disabled) fails.push('back enabled at step 0, beat ' + pg);
+            $('prv' + pg).click(); if (stepIdx() !== 0) fails.push('back moved below step 0, beat ' + pg);
+            for (let k = 0; k + 1 < n; k++) { setStep(k); const a = frame(); setStep(k + 1); if (frame() === a) fails.push(`beat ${pg} steps ${k}, ${k + 1} look the same`);
+                $('prv' + pg).click(); if (stepIdx() !== k || frame() !== a) fails.push(`back differs, beat ${pg} step ${k}`); if ($('prv' + pg).disabled !== (k === 0)) fails.push(`back disabled state, beat ${pg} step ${k}`); }
+            measured += n;
+        }
+        if (measured < 120) fails.push('implausibly few boxes measured: ' + measured);
+        // restore
+        INPUTS = JSON.parse(S0.inputs); TRACE = computeTrace(INPUTS);
+        page = S0.page; build = S0.build; sel2 = S0.sel2; sel3 = S0.sel3; cyc = S0.cyc; view5 = S0.view5; render();
+        if (fails.length) {
+            document.title += ' — ASSERT FAIL: ' + [...new Set(fails)].slice(0, 14).join(', ');
+        } else if (location.search.indexOf('verify') >= 0) {
+            document.title += ' — ASSERT PASS';
+        }
+    }
+    // the sweep repaints every state; with transitions live, the page would ease back from the sweep's last state
+    // (a visible flash, and a stale headless screenshot), so transitions are off until the restored state is flushed
+    $('designSurface').classList.add('notrans');
+    try { runAssertions(); } catch (e) { document.title += ' — ERR ' + e.message; }
+    void $('designSurface').offsetHeight; getComputedStyle($('designSurface')).opacity;
+    requestAnimationFrame(() => $('designSurface').classList.remove('notrans'));
+</script>
+</body>
+</html>
