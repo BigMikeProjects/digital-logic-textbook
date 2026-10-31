@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 470" role="img" aria-label="The timer's FSMD: one state, COUNT, entered on reset and looping back to itself every clock. If clr + tc, TR is cleared to 0; otherwise TR becomes TR + 1. tc is TR = D - 1, and tic = tc.">
+  <style>
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .label { font-size: 30px; font-weight: 700; fill: #24313f; }
+    .small { font-size: 24px; fill: #64748b; }
+    .blk   { font-size: 32px; font-weight: 700; fill: #24313f; }
+    .ctl   { font-size: 28px; font-weight: 700; fill: #f97316; }
+    .wire  { fill: none; stroke: #24313f; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .cwire { fill: none; stroke: #f97316; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .gate  { fill: #fff; stroke: #24313f; stroke-width: 4; stroke-linejoin: round; }
+    .box   { fill: #f3f6fb; stroke: #24313f; stroke-width: 4; stroke-linejoin: round; }
+    .mbox  { fill: #fff4e8; stroke: #f97316; stroke-width: 4; stroke-linejoin: round; }
+    .node  { fill: #24313f; }
+    .head  { fill: #24313f; }
+    .chead { fill: #f97316; }
+    .pin   { font-size: 24px; font-weight: 700; fill: #64748b; }
+    .cnode { fill: #f97316; }
+    .wave  { fill: none; stroke: #24313f; stroke-width: 5; stroke-linejoin: round; stroke-linecap: round; }
+    .awave { fill: none; stroke: #12866f; stroke-width: 6; stroke-linejoin: round; stroke-linecap: round; }
+    .guide { stroke: #c3ccd8; stroke-width: 2; stroke-dasharray: 6 8; }
+    .lvl   { stroke: #c3ccd8; stroke-width: 2; stroke-dasharray: 2 10; }
+    .bar   { stroke: #24313f; stroke-width: 3; stroke-linecap: round; }
+  </style>
+<style>.arc0 { fill: none; stroke: #24313f; stroke-width: 4; }.arc1 { fill: none; stroke: #4a6fa5; stroke-width: 5; }.h1 { fill: #4a6fa5; } .lab1 { font-size: 30px; font-weight: 700; fill: #4a6fa5; }.bub { fill: #fff; stroke: #24313f; stroke-width: 4; }.code { font-size: 40px; font-weight: 700; fill: #24313f; }.inbub { font-size: 28px; font-weight: 700; fill: #64748b; }.codeb { font-size: 30px; font-weight: 700; fill: #4a6fa5; }</style><style>.arcA { fill: none; stroke: #12866f; stroke-width: 5; stroke-dasharray: 14 9; } .hA { fill: #12866f; }.labA { font-size: 30px; font-weight: 700; fill: #12866f; }</style><path class="arc0" d="M379.1,224.6 C480.1,107.6 480.1,432.4 395.6,332.5"/><polygon class="head" points="382.7,317.2 389.5,345.5 409.4,328.7"/><text class="small" x="445.2967849168092" y="165" text-anchor="middle">every clock</text><circle class="bub" cx="290" cy="270" r="100"/><text class="code" x="290" y="284" text-anchor="middle">COUNT</text><path class="wire" d="M110,110 L195.8,186.3"/><polygon class="head" points="212.3,200.9 201.5,173.9 184.2,193.3"/><text class="label" x="40" y="100" text-anchor="start">reset</text><rect x="600" y="200" width="316.96" height="48" rx="10" fill="#fff" stroke="#4a6fa5" stroke-width="3"/><text x="902.96" y="230" text-anchor="end" font-size="30" font-weight="700" fill="#4a6fa5" style="font-family: Menlo, monospace">clr + tc: TR &#8592; 0</text><rect x="600" y="290" width="425.32" height="48" rx="10" fill="#fff" stroke="#4a6fa5" stroke-width="3"/><text x="1011.3199999999999" y="320" text-anchor="end" font-size="30" font-weight="700" fill="#4a6fa5" style="font-family: Menlo, monospace">otherwise: TR &#8592; TR + 1</text><text class="small" x="600" y="410" text-anchor="start">tc = (TR = D &#8722; 1)</text><text class="small" x="880" y="410" text-anchor="start">tic = tc</text><text class="small" x="1030" y="40" text-anchor="end">in: clr, D  &#183;  out: tic</text></svg>

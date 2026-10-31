@@ -39,6 +39,8 @@ Those sentences turn directly into a three-state FSMD. Each state is named for w
 - **WAIT**, "$S$ disagrees, count it": $C \leftarrow C + 1$. Return to IDLE on $\overline{\mathit{diff}}$ (a bounce); go to LOAD on $\mathit{diff} \cdot \mathit{tc}$; stay on $\mathit{diff} \cdot \overline{\mathit{tc}}$.
 - **LOAD**, "believe it": $Q \leftarrow S$, $C \leftarrow 0$. Always return to IDLE.
 
+![The debouncer's FSMD: IDLE, WAIT and LOAD, each with its register transfers, and the arcs between them](./images/debouncer-fsmd.svg)
+
 $C$ starts at 0 because IDLE clears it, and WAIT adds one each clock. When $C$ reaches $N - 1$, the comparator raises $\mathit{tc}$, and if $S$ still disagrees with $Q$ that clock, the machine has spent exactly $N$ clocks in WAIT and moves on to LOAD.
 
 The arc out of WAIT into LOAD is $\mathit{diff} \cdot \mathit{tc}$, not $\mathit{tc}$ alone. With $\mathit{tc}$ alone, a clock with $\mathit{tc} = 1$ and $\mathit{diff} = 0$ would make two exits true at once, back to IDLE and on to LOAD. Including $\mathit{diff}$ makes the three arcs out of WAIT mutually exclusive and keeps the rule honest: a level is accepted only if it is still there on the last clock of the count.

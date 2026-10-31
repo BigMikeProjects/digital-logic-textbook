@@ -27,6 +27,8 @@ $$\mathit{tc} = (\mathit{TR} = D - 1)$$
 
 and the output is simply $\mathit{tic} = \mathit{tc}$.
 
+![The timer's FSMD: one state, COUNT, entered on reset and looping every clock, with its two register transfers](./images/timer-fsmd.svg)
+
 The comparison is against $D - 1$, not $D$, because the restart happens on the *next* clock. When $\mathit{TR}$ shows $D - 1$, the transfer $\mathit{TR} \leftarrow 0$ is set up, and on the following edge $\mathit{TR}$ becomes 0. The register therefore visits exactly $D$ values, $0$ through $D - 1$, and the period is $D$ clocks. Comparing against $D$ would let $\mathit{TR}$ reach $D$ before restarting and stretch the period to $D + 1$.
 
 ## Step 2: The Datapath
