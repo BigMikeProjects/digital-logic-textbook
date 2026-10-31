@@ -1,5 +1,11 @@
 title: "Timer Circuit"
-description: ""
+description: "A timer whose period is a data input, built by the FSMD method from a register, an adder, a mux and a comparator; with one state, the controller is a single OR gate."
 chapter: rtl-design
 section: timer-circuit
 order: 50200
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the timer circuit, narrated over the interactive: the one-state FSMD, the datapath in four steps, the one-gate controller, a run, and registering tic"
+  02-interactive.html:
+    caption: "Interactive: the simplest timer, one tic every D clocks, built as an FSMD with the timer register TR, then split into controller and datapath and stepped clock by clock"

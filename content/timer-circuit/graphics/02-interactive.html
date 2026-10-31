@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timer Circuit — One tic Every D Clocks</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden;
+        background: #f6f6f4; }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9;
+        max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #1c2433; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* tokens: cyan #4a6fa5 = the current state, register transfers, live data · amber #b8640a = control (selD, cnt) and CLK ·
+       violet #6b4fa8 = status (tc; at14, at1 inside the datapath) · green #2e7d4f = tic, the registered output ·
+       slate #858e99 = a wire carrying 0 · navy #ffffff = panels */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 2px solid #4a6fa5; border-radius: 12px;
+        background: rgba(74,111,165,0.048); padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #1c2433; font-size: 38px; font-weight: 700; line-height: 1.15; }
+    .titles h1 .sub { color: #5b6472; font-size: 25px; font-weight: 500; }
+    .titles .subtitle { color: #5b6472; font-size: 20px; margin-top: 4px; }
+    .page-count { flex-shrink: 0; color: #858e99; font-size: 20px; font-weight: 600;
+        border: 2px solid #d9dde3; border-radius: 10px; padding: 8px 18px; }
+    .page-count b { color: #1c2433; font-size: 26px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; }
+    .defs-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 20px; font-weight: 600;
+        color: #1c2433; background: transparent; border: 2px solid #d9dde3; border-radius: 10px; padding: 8px 18px; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k { border: 1px solid #d9dde3; border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: #5b6472; line-height: 26px; }
+    .defs-btn.on { border-color: #6b4fa8; color: #1c2433; background: rgba(107,79,168,0.08); }
+
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(28,36,51,0.351); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1480px; background: #ffffff; border: 2px solid #6b4fa8; border-radius: 16px; padding: 16px 38px 22px;  }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+    .defs-title { font-size: 34px; font-weight: 700; color: #1c2433; }
+    .defs-close { font-size: 20px; color: #858e99; }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 9px; align-items: baseline; }
+    .defs-list .ds { font-size: 24px; font-weight: 700; white-space: nowrap; }
+    .defs-list .dd { font-size: 20.5px; line-height: 1.26; color: #5b6472; }
+    .defs-list .dd b { color: #1c2433; }
+
+    .tabstrip { display: flex; gap: 14px; margin: 14px 0 4px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0;
+        border: 2px solid #d9dde3; border-radius: 12px; padding: 9px 16px;
+        color: #858e99; transition: all .12s ease; cursor: pointer; }
+    .tab .tnum { width: 38px; height: 38px; flex-shrink: 0; border: 2px solid currentColor;
+        border-radius: 9px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; font-weight: 700; }
+    .tab .tl { display: flex; flex-direction: column; min-width: 0; }
+    .tab .tlabel { font-size: 20px; font-weight: 700; white-space: nowrap; line-height: 1.15; }
+    .tab .tstep { font-size: 13px; font-weight: 600; letter-spacing: 1.5px; color: #858e99; line-height: 1.2; }
+    .tab.on { color: #1c2433; border-color: #1c2433; background: rgba(28,36,51,0.042); }
+    .tab.on .tnum { background: #1c2433; color: #ffffff; border-color: #1c2433; }
+    .tab.on .tstep { color: #5b6472; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 14px; flex-direction: column; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .ov { display: inline-block; border-top: 2px solid currentColor; line-height: 0.98; }   /* a bar just above the caps, not a floating overline */
+
+    .panel { background: #ffffff; border: 2px solid #d9dde3; border-radius: 14px; overflow: hidden; flex-shrink: 0; }
+    .panel svg { display: block; }
+    .phead { white-space: nowrap; font-size: 22px; font-weight: 700; color: #1c2433; padding: 10px 22px 0; }
+    .phead .dimtxt { color: #5b6472; font-weight: 500; }
+
+    .c-ctl { color: #b8640a; } .c-st { color: #6b4fa8; } .c-on { color: #4a6fa5; } .c-dim { color: #5b6472; } .c-tic { color: #2e7d4f; }
+
+    .row { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .side { flex: 0 0 560px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+    .main svg { width: 100%; }
+    .fig1 svg { height: 776px; }
+    .fig0 svg { height: 686px; }
+    .side.sp { gap: 10px; }
+    .side.sp .rowcard { padding: 7px 16px 8px; }
+    .rowcard .rt .tg { font-family: 'Menlo','Consolas',monospace; }
+    /* beats 3 and 4: the reference diagram beside the one being built, readings along the bottom */
+    .refrow { display: flex; gap: 14px; }
+    .refrow > .panel svg { display: block; }
+    #d2f { width: 747px; height: 580px; } #d2 { width: 916px; height: 580px; }
+    #d3r { width: 885px; height: 560px; } #d3 { width: 737px; height: 560px; }
+    .refrow { justify-content: center; flex: 0 0 auto; }
+    .rstrip { flex: 1; min-height: 0; }
+    .rstrip .stepbox { flex: 0 0 370px; padding: 10px 18px 12px; font-size: 18.5px; line-height: 1.34; }
+    .rstrip .stepbox .steprow { margin-top: 8px; }
+    .refp.ref .dim { opacity: 0.4; }
+    .refp .phead .ref { color: #858e99; font-size: 15px; font-weight: 700; letter-spacing: 2px; margin-right: 8px; }
+    .refside { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+    .rstrip { display: flex; gap: 14px; }
+    .rstrip .rowcard { flex: 1; min-width: 0; }
+    .card { padding: 12px 20px 14px; font-size: 20px; line-height: 1.38; color: #5b6472; }
+    .card b { color: #1c2433; }
+    .card .ct { font-size: 22px; font-weight: 700; color: #1c2433; margin-bottom: 6px; }
+    .card .ct .dimtxt { color: #5b6472; font-weight: 500; }
+    .card ul { list-style: none; }
+    .card li { margin-top: 6px; padding-left: 18px; position: relative; }
+    .card li::before { content: '\25AA'; position: absolute; left: 0; color: #4a6fa5; }
+    .card .rule { border-left: 4px solid #6b4fa8; padding-left: 14px; margin-top: 6px; color: #1c2433; }
+    .card .rule.tic { border-left-color: #2e7d4f; }
+    .card .chk { margin-top: 8px; color: #5b6472; }
+    .card.fill { flex: 1; min-height: 0; }
+    .stepcard .snum { font-size: 17px; font-weight: 700; letter-spacing: 2px; color: #4a6fa5; }
+    .stepcard .reason { font-size: 21px; line-height: 1.38; color: #1c2433; margin-top: 4px; min-height: 118px; }
+    .stepcard .reason .mono { color: #4a6fa5; }
+    .steprow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+    .rowcard { border: 2px solid #d9dde3; border-radius: 12px; padding: 8px 16px 9px; cursor: pointer; transition: all .12s ease; }
+    .rowcard .rt { font-size: 21px; font-weight: 700; color: #1c2433; }
+    .rowcard .rt .arrow { color: #858e99; font-weight: 500; }
+    .rowcard .rd { font-size: 18px; line-height: 1.32; color: #5b6472; margin-top: 3px; }
+    .rowcard .rd b { color: #5b6472; }
+    .rowcard.on { border-color: #4a6fa5; background: rgba(74,111,165,0.064); }
+    .rowcard.on .rt { color: #4a6fa5; }
+    .rowcard.on .rd { color: #1c2433; } .rowcard.on .rd b { color: #1c2433; }
+    .rowcard .rd .mono { color: #1c2433; }
+    .foot { font-size: 20px; line-height: 1.38; color: #5b6472; padding: 12px 20px 14px; }
+    .foot b { color: #1c2433; }
+    .foot .hdl { margin-top: 8px; color: #5b6472; border-top: 1px solid #d9dde3; padding-top: 8px; }
+
+    .diag svg { width: 100%; height: 578px; }
+    .brow { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .readout { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .readout .ro { padding: 8px 22px 6px; font-size: 18.5px; line-height: 1.3; color: #5b6472; }
+    .readout .ro b { color: #1c2433; }
+    .readout .ro .mono { color: #1c2433; }
+    .readout .steprow { padding: 0 22px 10px; margin-top: auto; }
+    .inputs { flex: 0 0 760px; display: flex; flex-direction: column; }
+    .inputs .irow { display: flex; align-items: center; gap: 10px; padding: 5px 18px; font-size: 19px; color: #5b6472; }
+    .inputs .irow:first-of-type { padding-top: 9px; }
+    .inputs .irow b { color: #1c2433; }
+    .inputs .ilab { flex: 0 0 60px; font-weight: 700; color: #1c2433; }
+    .inputs .ilab .mono { color: #1c2433; }
+    .inputs .sep { width: 4px; }
+    .bit { width: 38px; height: 38px; border: 3px solid #858e99; border-radius: 9px; font: inherit; font-size: 19px; font-weight: 700;
+        color: #5b6472; background: transparent; cursor: pointer; font-family: 'Menlo','Consolas',monospace; }
+    .bit.on { border-color: #4a6fa5; color: #ffffff; background: #4a6fa5; }
+    .dval { font-family: 'Menlo','Consolas',monospace; font-size: 20px; color: #1c2433; font-weight: 700; white-space: nowrap; }
+    .btn.mode { font-size: 18px; padding: 4px 12px; }
+    .btn.mode.on { border-color: #1c2433; color: #ffffff; background: #1c2433; }
+    .btn.ldb { border-color: #1c2433; }
+    .btn.ldb.armed { background: #1c2433; color: #ffffff; }
+    .inputs .ifoot { padding: 2px 18px 8px; font-size: 17.5px; color: #5b6472; line-height: 1.3; margin-top: auto; }
+    .inputs .ifoot b { color: #1c2433; }
+
+    .btn { font: inherit; font-size: 22px; font-weight: 700; color: #1c2433; background: transparent;
+        border: 3px solid #858e99; border-radius: 12px; padding: 7px 18px; cursor: pointer; white-space: nowrap; }
+    .btn .kk { font-weight: 500; font-size: 20px; color: #5b6472; }
+    .btn.clk { border-color: #b8640a; color: #b8640a; }
+    .btn.nxt { border-color: #4a6fa5; color: #4a6fa5; }
+    .btn.bk { border-color: #4a6fa5; color: #4a6fa5; padding: 7px 14px; }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+    .chip { display: inline-block; font-size: 21px; font-weight: 700; border-radius: 999px; padding: 6px 18px;
+        border: 3px solid currentColor; white-space: nowrap; }
+    .chip.on { color: #4a6fa5; background: rgba(74,111,165,0.096); }
+    .chip.st { color: #6b4fa8; background: rgba(107,79,168,0.096); }
+    .chip.tic { color: #2e7d4f; background: rgba(46,125,79,0.096); }
+    .chip.idle { color: #5b6472; }
+
+    /* SVG classes */
+    .ct { fill: none; stroke: #d9dde3; stroke-width: 2.5; }
+    .ct-title { fill: #1c2433; font-size: 26px; font-weight: 700; }
+    .ct-sub { fill: #5b6472; font-size: 18px; }
+    .blk { fill: #ffffff; stroke: #3a4350; stroke-width: 3; }
+    .blk.on, .blk.foc { stroke: #4a6fa5; stroke-width: 4; fill: rgba(74,111,165,0.08); }
+    .blk.tic.on, .blk.tic.foc { stroke: #2e7d4f; fill: rgba(46,125,79,0.096); }
+    .blk-l { fill: #1c2433; font-family: 'Menlo','Consolas',monospace; font-size: 24px; font-weight: 700; text-anchor: middle; }
+    .blk-l.sm { font-size: 19px; font-weight: 500; fill: #5b6472; font-family: 'Segoe UI',sans-serif; }
+    .blk-l.xs { font-size: 16px; font-weight: 500; fill: #5b6472; font-family: 'Segoe UI',sans-serif; }
+    .wire { fill: none; stroke: #858e99; stroke-width: 3.5; stroke-linejoin: round; transition: stroke .15s, opacity .15s; }
+    .wire.data { stroke: #3a4350; }
+    .wire.ctl.on, .wire.ctl.foc { stroke: #b8640a; stroke-width: 5; }
+    .wire.st.on, .wire.st.foc { stroke: #6b4fa8; stroke-width: 5; }
+    .wire.data.on, .wire.data.foc { stroke: #4a6fa5; stroke-width: 5; }
+    .wire.tic.on, .wire.tic.foc { stroke: #2e7d4f; stroke-width: 5; }
+    .wire.clk { stroke: #b8640a; }
+    .wire.clk.foc { stroke-width: 5; }
+    .dot { fill: #3a4350; }
+    .dot.foc { fill: #4a6fa5; }
+    .val { font-family: 'Menlo','Consolas',monospace; font-size: 21px; font-weight: 700; fill: #4a6fa5; }
+    .val.dim { fill: #858e99; font-weight: 500; }
+    .val.st { fill: #6b4fa8; }
+    .muxin { font-family: 'Menlo','Consolas',monospace; font-size: 19px; fill: #5b6472; text-anchor: middle; }
+    .muxin.xs { font-size: 15px; }
+    .sig { font-family: 'Menlo','Consolas',monospace; font-size: 26px; font-weight: 700; text-anchor: middle; }
+    .sig.ctl { fill: #b8640a; } .sig.st { fill: #6b4fa8; } .sig.tic { fill: #2e7d4f; } .sig.data { fill: #1c2433; }
+    .sig.l { text-anchor: start; } .sig.r { text-anchor: end; } .sig.dimv { fill: #858e99; }
+    .sig .v { fill: #1c2433; font-weight: 500; } .sig .v.off { fill: #858e99; }
+    .dir { font-size: 17px; font-weight: 700; letter-spacing: 2px; text-anchor: middle; }
+    .dir.ctl { fill: rgba(184,100,10,0.56); } .dir.st { fill: rgba(107,79,168,0.6); } .dir.data { fill: rgba(74,111,165,0.56); } .dir.tic { fill: rgba(46,125,79,0.64); }
+    .regval { font-family: 'Menlo','Consolas',monospace; font-size: 25px; font-weight: 700; fill: #4a6fa5; text-anchor: middle; }
+    .regval .dec { fill: #1c2433; font-weight: 500; }
+    .clkl { font-family: 'Menlo','Consolas',monospace; font-size: 18px; fill: #b8640a; text-anchor: end; }
+    .busl { font-family: 'Menlo','Consolas',monospace; font-size: 16px; fill: #5b6472; }
+    .sd-node .sdc { fill: #ffffff; stroke: #3a4350; stroke-width: 3; transition: stroke .18s, fill .18s; }
+    .sd-node.on .sdc, .sd-node.foc .sdc { stroke: #4a6fa5; stroke-width: 5; fill: rgba(74,111,165,0.128); }
+    .sd-node .sdname { fill: #1c2433; font-weight: 700; text-anchor: middle; font-size: 28px; }
+    .sd-node.on .sdname, .sd-node.foc .sdname { fill: #4a6fa5; }
+    .sd-node .sdout { fill: #b8640a; font-family: 'Menlo','Consolas',monospace; text-anchor: middle; font-size: 19px; font-weight: 700; }
+    .sd-node .sdout.none { fill: #858e99; font-weight: 500; }
+    .arc { fill: none; stroke: #3a4350; stroke-width: 3; transition: stroke .18s; }
+    .arc.on, .arc.foc { stroke: #4a6fa5; stroke-width: 5.5; }
+    .arc-l { fill: #6b4fa8; font-family: 'Menlo','Consolas',monospace; font-size: 26px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #ffffff; stroke-width: 8px; stroke-linejoin: round; }
+    .arc-l.in { fill: #1c2433; }
+    .arc-l.on { fill: #4a6fa5; }
+    .bar { stroke: #6b4fa8; stroke-width: 2.6; }
+    .bar.in { stroke: #1c2433; } .bar.on { stroke: #4a6fa5; }
+    .rst { fill: none; stroke: #1c2433; stroke-width: 3; }
+    .rst-l { fill: #5b6472; font-size: 19px; text-anchor: end; }
+    .dim { opacity: 0.22; }
+    .fsmd .sdname { font-size: 34px; }
+    .xfer-box { fill: rgba(74,111,165,0.104); stroke: #4a6fa5; stroke-width: 2; }
+    .xfer-box.hold { fill: rgba(28,36,51,0.032); stroke: #858e99; stroke-dasharray: 6 6; }
+    .xfer { fill: #4a6fa5; font-family: 'Menlo','Consolas',monospace; font-size: 29px; font-weight: 700; text-anchor: middle; }
+    .xfer.hold { fill: #5b6472; font-size: 22px; font-weight: 500; font-family: 'Segoe UI',sans-serif; }
+    .xfer .cnd { fill: #6b4fa8; font-size: 24px; }
+    .xfer.sm { font-size: 24px; }
+    .xfer .cnd.en { fill: #1c2433; }
+    .leader { fill: none; stroke: #858e99; stroke-width: 2; stroke-dasharray: 4 7; }
+    .cond { fill: #6b4fa8; font-family: 'Menlo','Consolas',monospace; font-size: 29px; font-weight: 700;
+        paint-order: stroke; stroke: #ffffff; stroke-width: 8px; stroke-linejoin: round; }
+    .cond.in { fill: #1c2433; }
+    .cond.bar-src { }
+    .port { font-size: 24px; fill: #5b6472; text-anchor: middle; }
+    .port .pk { fill: #5b6472; } .port .pv { fill: #1c2433; font-family: 'Menlo','Consolas',monospace; font-weight: 700; }
+    .ticbox { fill: rgba(46,125,79,0.056); stroke: #2e7d4f; stroke-width: 2; stroke-dasharray: 8 6; }
+    .tict { fill: #2e7d4f; font-size: 20px; font-weight: 700; }
+    .tict.eq { font-family: 'Menlo','Consolas',monospace; font-size: 25px; }
+    .tict.sm { fill: #2e7d4f; font-size: 17px; font-weight: 500; }
+    .hid { display: none; }
+    .fnew { }
+    .bar.cnd { stroke: #6b4fa8; stroke-width: 2.4; }
+
+    /* beat 1 — the specification: the timer as a box, and the scripted run as waveforms */
+    .bbox { fill: #ffffff; stroke: #1c2433; stroke-width: 3; }
+    .bbox-t { fill: #1c2433; font-size: 34px; font-weight: 700; text-anchor: middle; }
+    .bbox-s { fill: #5b6472; font-size: 19px; text-anchor: middle; }
+    .pin { fill: none; stroke: #3a4350; stroke-width: 3.5; }
+    .pin.foc { stroke: #4a6fa5; stroke-width: 5; }
+    .pin.tic.foc { stroke: #2e7d4f; }
+    .pinl { fill: #1c2433; font-family: 'Menlo','Consolas',monospace; font-size: 26px; font-weight: 700; }
+    .pinl.tic { fill: #2e7d4f; }
+    .pind { fill: #5b6472; font-size: 18px; }
+    .wvl { fill: #1c2433; font-family: 'Menlo','Consolas',monospace; font-size: 22px; font-weight: 700; text-anchor: end; }
+    .wvl.tic { fill: #2e7d4f; }
+    .wv { fill: none; stroke: #3a4350; stroke-width: 3; stroke-linejoin: round; }
+    .wv.foc { stroke: #4a6fa5; stroke-width: 4; }
+    .wv.tic.foc { stroke: #2e7d4f; }
+    .busv { fill: #1c2433; font-family: 'Menlo','Consolas',monospace; font-size: 19px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #ffffff; stroke-width: 8px; stroke-linejoin: round; }
+    .busv.foc { fill: #4a6fa5; }
+    .cycn { fill: #858e99; font-family: 'Menlo','Consolas',monospace; font-size: 16px; text-anchor: middle; }
+    .grid { stroke: #d9dde3; stroke-width: 1.5; }
+    .band { fill: rgba(184,100,10,0.048); stroke: #b8640a; stroke-width: 2; stroke-dasharray: 5 5; }
+    .bandl { fill: #b8640a; font-family: 'Menlo','Consolas',monospace; font-size: 17px; font-weight: 700; text-anchor: middle; }
+
+    /* beat 5 */
+    .row5 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .tcol { flex: 0 0 1040px; display: flex; flex-direction: column; min-height: 0; }
+    .rcol { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .mtab { padding: 4px 18px 10px; }
+    .mtab table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    .mtab th { font-size: 17px; font-weight: 600; color: #5b6472; padding: 3px 6px 6px; text-align: center; border-bottom: 2px solid #d9dde3; white-space: nowrap; }
+    .mtab th:first-child, .mtab td:first-child { text-align: left; }
+    .mtab td { font-size: 19px; padding: 6px 6px; border-bottom: 1px solid #d9dde3; color: #1c2433; white-space: nowrap; text-align: center;
+        font-family: 'Menlo','Consolas',monospace; }
+    .mtab td.t { font-family: 'Segoe UI',sans-serif; }
+    .mtab td.zero { color: #858e99; }
+    .mtab td.one.st { color: #6b4fa8; font-weight: 700; }
+    .mtab td.one.ctl { color: #b8640a; font-weight: 700; }
+    .mtab td.one.tic { color: #2e7d4f; font-weight: 700; }
+    .mtab td.one.in { color: #1c2433; font-weight: 700; }
+    .mtab td.turn { color: #4a6fa5; font-weight: 700; }
+    .mtab tr.cur td { background: rgba(184,100,10,0.096); color: #1c2433; }
+    .mtab tr.cur td:first-child { color: #b8640a; font-weight: 700; box-shadow: inset 4px 0 0 #b8640a; }
+    .mtab tr.cur td.zero { color: #5b6472; }
+    .strip svg { width: 100%; height: 190px; }
+    .eqcard { padding: 10px 22px 12px; }
+    .eqcard .eq { font-family: 'Menlo','Consolas',monospace; font-size: 22px; font-weight: 700; color: #1c2433; margin-top: 5px; }
+    .eqcard .eq .ctl { color: #b8640a; } .eqcard .eq .st { color: #6b4fa8; } .eqcard .eq .on { color: #4a6fa5; } .eqcard .eq .tic { color: #2e7d4f; } .eqcard .eq .in { color: #1c2433; } .eqcard .eq sub { font-size: 14px; }
+    .eqcard .why { font-size: 19px; color: #5b6472; line-height: 1.34; margin-top: 7px; }
+    .eqcard .why b { color: #1c2433; }
+    .note { padding: 10px 22px 12px; font-size: 19.5px; line-height: 1.36; color: #5b6472; }
+    .note b { color: #1c2433; }
+    .note .rule { border-left: 4px solid #6b4fa8; padding-left: 14px; margin-top: 8px; color: #1c2433; }
+    .note .chk { margin-top: 8px; color: #5b6472; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .pdot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #d9dde3; }
+    .pdot.on { background: #1c2433; border-color: #1c2433; }
+    .controls { font-size: 20px; color: #858e99; }
+    .controls .k { border: 1px solid #d9dde3; border-radius: 6px; padding: 1px 8px;
+        font-family: 'Menlo','Consolas',monospace; color: #5b6472; }
+    .controls .k.amber { color: #b8640a; border-color: #d9dde3; }
+    .controls .k.cyan { color: #4a6fa5; border-color: #d9dde3; }
+    /* ---- simple timer (10-28 redo) ---- */
+                                       /* focus never hides (Mike, 10-27): the floor is 0.5 */
+    .refp.ref 
+    .fig1 svg { height: 690px; }
+    #d2f { width: 850px; height: 510px; } #d2 { width: 745px; height: 510px; }
+    .row4 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .col4 { flex: 0 0 572px; display: flex; flex-direction: column; gap: 14px; }
+    #d3f { width: 556px; height: 334px; } #d3r { width: 556px; height: 301px; }
+    .main4 { flex: 1; min-width: 0; }
+    .main4 svg { width: 100%; height: 560px; }
+    .side4 { flex: 0 0 330px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+    .side4 .rowcard { padding: 8px 14px 9px; }
+    .rowcard .rt.mono { font-family: 'Menlo','Consolas',monospace; font-size: 19px; }
+    .rowcard .rt sub, .rowcard .rd sub { font-size: 0.7em; }
+    .side4 .stepbox { padding: 10px 14px; margin-top: auto; }
+    .carried .ct .ref, .phead .ref { color: #858e99; font-size: 15px; font-weight: 700; letter-spacing: 2px; margin-right: 8px; }
+    .carried svg { width: 100%; height: 240px; }
+    .row5top { display: flex; gap: 14px; flex: 0 0 auto; }
+    .diag5 { flex: 1; min-width: 0; } .diag5 svg { width: 100%; height: 372px; }
+    .ctl5 { flex: 0 0 520px; display: flex; flex-direction: column; padding: 4px 0 12px; }
+    .ctl5 .ro { padding: 10px 20px 6px; font-size: 19px; line-height: 1.34; color: #5b6472; min-height: 96px; }
+    .ctl5 .ro b { color: #1c2433; } .ctl5 .ro .mono { color: #1c2433; }
+    .ctl5 .irow { display: flex; align-items: center; gap: 10px; padding: 6px 20px; font-size: 19px; color: #5b6472; }
+    .ctl5 .ilab { flex: 0 0 26px; font-weight: 700; color: #1c2433; }
+    .ctl5 .steprow { padding: 4px 20px 0; margin-top: auto; }
+    .wave5 { flex: 1; min-height: 0; } .wave5 svg { width: 100%; height: 340px; display: block; }
+    .col6 { gap: 14px; } .col6 #d6 { width: 100%; height: 300px; } .col6 #w6 { width: 100%; height: 350px; }
+    .qsub { font-size: 15px; }
+    .gate { fill: #ffffff; stroke: #3a4350; stroke-width: 3; }
+    .gate.on, .gate.foc { stroke: #4a6fa5; stroke-width: 4; fill: rgba(74,111,165,0.08); }
+    .gate.tic.on { stroke: #2e7d4f; fill: rgba(46,125,79,0.096); }
+    .blk.st.on { stroke: #6b4fa8; fill: rgba(107,79,168,0.096); }
+    .cdef { fill: #6b4fa8; font-family: 'Menlo','Consolas',monospace; font-size: 24px; font-weight: 700; text-anchor: middle; }
+    .cdef.tic { fill: #2e7d4f; }
+    .xfer-box.on { fill: rgba(74,111,165,0.176); stroke-width: 3; }
+    .new6 { fill: #b8640a; }
+    /* timing diagrams (39's convention: every row a run of hexagons, crossings on edges) */
+    .wv-lab { font-family: 'Menlo','Consolas',monospace; font-size: 20px; font-weight: 700; text-anchor: end; fill: #1c2433; }
+    .wv-lab.ctl, .wv-lab.clk { fill: #b8640a; } .wv-lab.st { fill: #6b4fa8; } .wv-lab.tic { fill: #2e7d4f; } .wv-lab.on { fill: #4a6fa5; }
+    .wv-grid { stroke: #eef0f3; stroke-width: 1; }
+    .wv-bit { fill: none; stroke: #b8640a; stroke-width: 2.5; stroke-linejoin: round; }
+    .wv-bus { fill: rgba(28,36,51,0.04); stroke: #3a4350; stroke-width: 2.5; stroke-linejoin: round; }
+    .wv-bus.on { fill: rgba(74,111,165,0.096); stroke: #4a6fa5; }
+    .wv-bus.st { fill: rgba(107,79,168,0.112); stroke: #6b4fa8; } .wv-bus.tic { fill: rgba(46,125,79,0.144); stroke: #2e7d4f; }
+    .wv-bus.zero { fill: rgba(28,36,51,0.02); stroke: #858e99; }
+    .wv-bt { font-family: 'Menlo','Consolas',monospace; font-size: 18px; font-weight: 700; fill: #1c2433; text-anchor: middle; }
+    .wv-bt.zero { fill: #858e99; font-weight: 500; }
+    .wv-fut { stroke: #d9dde3; stroke-width: 2; stroke-dasharray: 3 7; }
+    .wv-cyc { font-family: 'Menlo','Consolas',monospace; font-size: 15px; fill: #858e99; text-anchor: middle; }
+    .wv-cyc.cur { fill: #b8640a; font-weight: 700; }
+    .wv-cursor { stroke: #b8640a; stroke-width: 3; }
+    .wv-next { stroke: #4a6fa5; stroke-width: 3; stroke-dasharray: 9 5; }
+    .wv-curlab { font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+    .wv-curlab.amber { fill: #b8640a; text-anchor: end; } .wv-curlab.cyan { fill: #4a6fa5; text-anchor: start; }
+    .wv-same { fill: rgba(184,100,10,0.056); stroke: #b8640a; stroke-width: 2; stroke-dasharray: 5 5; }
+    .wv-samel { fill: #b8640a; font-size: 16px; font-weight: 700; text-anchor: middle; }
+    .bnd { stroke: #b8640a; stroke-width: 2.5; stroke-dasharray: 8 6; }
+    .bndl { fill: #b8640a; font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+    .r4 #d3f { width: 466px; height: 462px; } .r4 #d3 { width: 668px; height: 396px; } .r4 #d3r { width: 590px; height: 396px; }
+    .r4 { align-items: stretch; }
+    .strip4 { display: flex; align-items: center; gap: 22px; padding: 14px 22px; flex: 0 0 auto; }
+    .strip4 .s4n { flex: 0 0 auto; font-size: 17px; font-weight: 700; letter-spacing: 2px; color: #4a6fa5; }
+    .strip4 .s4t { flex: 1; font-size: 21px; line-height: 1.38; color: #1c2433; }
+    .strip4 .s4t b { color: #1c2433; } .strip4 .s4t .mono { color: #1c2433; }
+    .strip4 .steprow { margin-top: 0; flex: 0 0 auto; }
+    #p4 .refrow { flex: 1; min-height: 0; } #p4 .refrow > .panel { display: flex; flex-direction: column; } #p4 .refrow > .panel svg { margin: auto; }
+    /* datapath labels sized for projection (40's rule): block labels >= 16 px, ports and values >= 14 px on screen */
+    #d2 .blk-l, #d3r .blk-l, #d4 .blk-l { font-size: 26px; }
+    #d2 .blk-l.sm, #d3r .blk-l.sm, #d4 .blk-l.sm { font-size: 25px; }
+    #d2 .muxin, #d3r .muxin, #d4 .muxin { font-size: 22px; }
+    #d2 .val, #d3r .val, #d4 .val { font-size: 22px; }
+
+    /* ======== VISUAL SYSTEM v2 (light) — the house look from 10-28; copy this block into the next graphic ========
+       surround #f6f6f4 · stage white · text #1c2433 · secondary #5b6472 · unfocused #858e99 (3.4:1) · hairline #d9dde3
+       accent (lecture-deck blue) #4a6fa5, emphasis #2f4f7f · control #b8640a · status #6b4fa8 · data/registers #4a6fa5
+       output/accept #2e7d4f · raw btn #b4472f · every text color >= 4.5:1 on white except unfocused (>= 3:1)
+       no glows, shadows or gradients; 1.5 px structure, 2.5 px lit path; lit = accent stroke + 8-10% tint; unfocused = grey, not faded */
+    :root { --surround: #f6f6f4; --stage: #ffffff; --ink: #1c2433; --ink2: #5b6472; --mute: #858e99; --hair: #d9dde3;
+        --accent: #4a6fa5; --accent2: #2f4f7f; --ctl: #b8640a; --st: #6b4fa8; --data: #4a6fa5; --ok: #2e7d4f; --raw: #b4472f; }
+    .viewport-container { background: var(--stage); }
+    .design-surface { background: var(--stage); color: var(--ink); }
+    .anchor-sym { border: 1px solid var(--hair); background: none; border-radius: 6px; }
+    .titles h1 { font-weight: 600; } .titles h1 .sub { font-weight: 400; }
+    .page-count, .defs-btn { border-width: 1px; border-radius: 6px; font-weight: 500; }
+    .defs-btn .k, .controls .k { border-color: var(--hair); }
+    .defs-card { border: 1px solid var(--hair); border-radius: 8px; }
+    .tabstrip { gap: 30px; border-bottom: 1px solid var(--hair); margin-bottom: 6px; }
+    .tab { border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 8px 2px 10px; background: none; color: var(--ink2); }
+    .tab .tnum { width: 30px; height: 30px; border-width: 1px; border-radius: 50%; font-size: 17px; font-weight: 600; }
+    .tab .tlabel { font-weight: 600; }
+    .tab .tstep { letter-spacing: 0; font-weight: 500; color: var(--mute); }
+    .tab.on { color: var(--accent2); border-bottom-color: var(--accent); background: none; }
+    .tab.on .tnum { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .panel { border: 1px solid var(--hair); border-radius: 6px; background: var(--stage); }
+    .phead { font-weight: 600; } .ct-title, .sp-title { font-weight: 600; }
+    .sp-frame, .ct { stroke: var(--hair); stroke-width: 1; fill: var(--stage); }
+    .btn { font-size: 19px; font-weight: 600; border-width: 1px; border-radius: 6px; padding: 5px 14px; }
+    .btn .kk { font-size: 17px; }
+    .chip { font-size: 19px; font-weight: 600; border-width: 1px; padding: 4px 14px; }
+    .card .rule, .rule2 { border-left-width: 3px; }
+    .stepcard .snum, .nm .nk { letter-spacing: 0.5px; }
+    .blk, .pill, .sd-node .sdc, .ff, .gate { stroke-width: 1.5; }
+    .blk.on, .blk.st-on, .pill.on { stroke-width: 2.5; }
+    .sd-node.on .sdc { stroke-width: 2.5; }
+    .wire { stroke-width: 1.5; } .wire.ctl.on, .wire.st.on, .wire.data.on { stroke-width: 2.5; }
+    .arc { stroke-width: 1.5; } .arc.on { stroke-width: 2.5; }
+    .arc-l { stroke: var(--stage); stroke-width: 6px; }
+    .xfer-box { stroke-width: 1; } .xfer-box.on { stroke-width: 2; }
+    .tl-w { stroke-width: 1.75; } .tl-w.q { stroke-width: 2; }
+    .tl-bus { stroke-width: 1.25; }
+    .tl-bus.z { fill: none; stroke-opacity: 1; } .tl-bl.z { fill-opacity: 1; fill: var(--ink2); }
+    .tl-cur { stroke: var(--ctl); stroke-width: 2; stroke-dasharray: none; }
+    .tl-box { stroke-width: 1.5; }
+    .tl-col { stroke-width: 1.5; }
+    .tl-grid { stroke: #eef0f3; } .tl-rowline { stroke: #e6e9ee; }
+    .tl-unk { opacity: 0.3; }
+    .code4 pre { background: #f3f5f8; color: var(--ink); border-radius: 6px; }
+    .code4 pre .kw { color: var(--accent2); } .code4 pre .cm { color: var(--ink2); }
+    /* Lectures/STYLE.md template blocks: state register blue, next state amber, outputs violet; synchronizer and datapath neutral */
+    .code4 pre .l-reg { box-shadow: inset 6px 0 0 #4a6fa5; background: #cfdff5; padding-left: 12px; margin-left: -17px; display: inline-block; }
+    .code4 pre .l-nxt { box-shadow: inset 6px 0 0 #e0890b; background: #fde6ae; padding-left: 12px; margin-left: -17px; display: inline-block; }
+    .code4 pre .l-out { box-shadow: inset 6px 0 0 #7a52c7; background: #e6d9f8; padding-left: 12px; margin-left: -17px; display: inline-block; }
+    .code4 pre .l-sync, .code4 pre .l-dp { box-shadow: inset 6px 0 0 #b8bfc8; background: none; }
+    .code4 pre .l-none { background: none; }
+    /* unfocused in the three-panel beat: grey, not faded (contrast gate: text >= 3:1 on white) */
+    #dsp .dim, #dsp .dimt { opacity: 1; fill-opacity: 1; }
+    #dsp text.dim, #dsp .dimt, #dsp .dim text { fill: var(--mute) !important; }
+    #dsp .dim:not(text):not(g), #dsp .dim .sdc { stroke: #bcc3cc !important; }
+    #dsp line.dim[data-bar] { stroke: var(--mute) !important; }
+
+    /* 54: unfocused is grey, not faded, in every diagram (the v2 rule, applied page-wide) */
+    svg .dim, svg .dimt { opacity: 1 !important; fill-opacity: 1; }
+    svg text.dim, svg .dim text, svg .dim tspan { fill: var(--mute) !important; }
+    svg .dim:not(text):not(g):not(tspan), svg .dim .sdc { stroke: #bcc3cc !important; }
+    svg line.dim.bar { stroke: var(--mute) !important; }
+    .wv-bus { stroke-width: 1.25; } .wv-bit { stroke-width: 1.75; } .wv-cursor { stroke-width: 2; } .wv-next { stroke-width: 2; }
+    .gate.on, .gate.foc { stroke-width: 2.5; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="8" width="54" height="46" rx="6" stroke="#1c2433" stroke-width="2.5"/>
+                <rect x="16" y="20" width="30" height="22" rx="3" stroke="#4a6fa5" stroke-width="2.2"/>
+                <rect x="92" y="8" width="54" height="46" rx="6" stroke="#1c2433" stroke-width="2.5"/>
+                <circle cx="108" cy="31" r="7" stroke="#4a6fa5" stroke-width="2.5"/><circle cx="130" cy="31" r="7" stroke="#3a4350" stroke-width="2.5"/>
+                <path d="M92 22 H62 M66 17 L60 22 L66 27" stroke="#b8640a" stroke-width="3"/>
+                <path d="M58 42 H88 M84 37 L90 42 L84 47" stroke="#6b4fa8" stroke-width="3"/>
+                <path d="M146 54 V60 H120" stroke="#2e7d4f" stroke-width="2.5"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Timer Circuit <span class="sub">&mdash; one tic every D clocks</span></h1>
+            <div class="subtitle">A stopwatch that counts clock edges: specify, draw the FSMD, build the datapath, derive the controller, run, and register the tic.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 6</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tl"><div class="tlabel">Specify</div><div class="tstep">THE PROBLEM</div></div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tl"><div class="tlabel">Draw the FSMD</div><div class="tstep">STEP 1</div></div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tl"><div class="tlabel">Build the Datapath</div><div class="tstep">STEP 2</div></div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tl"><div class="tlabel">Derive the Controller</div><div class="tstep">STEP 3</div></div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tl"><div class="tlabel">Connect and Run</div><div class="tstep">BOTH BOXES</div></div></div>
+        <div class="tab" data-page="6"><div class="tnum">6</div><div class="tl"><div class="tlabel">Registering tic</div><div class="tstep">WHEN IT LEAVES</div></div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 — the specification -->
+        <div class="page" id="p1">
+            <div class="row">
+                <div class="panel main fig0">
+                    <div class="phead">The specification <span class="dimtxt">&mdash; D = 12 gives one tic every 12 clocks; drawn here with D = 4</span></div>
+                    <svg id="d0" viewBox="0 0 1240 690"></svg>
+                </div>
+                <div class="side sp">
+                    <div class="rowcard" data-row="0"><div class="rt">The box</div>
+                        <div class="rd">Two inputs, <span class="mono">clr</span> and a 4-bit number <span class="mono">D</span>. One output, <span class="mono c-tic">tic</span>.</div></div>
+                    <div class="rowcard" data-row="1"><div class="rt">clr holds the count at 0</div>
+                        <div class="rd">While <span class="mono">clr</span> is 1, the count TR stays at 0.</div></div>
+                    <div class="rowcard" data-row="2"><div class="rt">D sets the period</div>
+                        <div class="rd">TR counts 0, 1, 2, &hellip; up to D &minus; 1, then starts over.</div></div>
+                    <div class="rowcard" data-row="3"><div class="rt">tic marks each period</div>
+                        <div class="rd"><span class="mono c-tic">tic</span> is 1 for one clock, when TR shows D &minus; 1.</div></div>
+                    <div class="panel foot fill">
+                        What, not how. Step 1 turns it into an FSMD.
+                        <div class="steprow"><button class="btn bk" id="bk1">&#9664; <span class="kk">&uarr;</span></button><button class="btn nxt" id="nxt1">next <span class="kk">Space</span></button><button class="btn" data-reset>&#8634; <span class="kk">R</span></button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 — the FSMD, the spec carried -->
+        <div class="page" id="p2">
+            <div class="row">
+                <div class="panel main fig1">
+                    <div class="phead">Step 1 of 3 &mdash; draw the FSMD <span class="dimtxt">&mdash; states, transfers, conditions</span></div>
+                    <svg id="d1" viewBox="0 0 1000 640" class="fsmd"></svg>
+                </div>
+                <div class="side">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum2"></div>
+                        <div class="reason" id="reason2"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk2">&#9664; <span class="kk">&uarr;</span></button><button class="btn nxt" id="nxt2">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel card fill carried">
+                        <div class="ct"><span class="ref">FROM</span>The specification</div>
+                        <svg id="dspec" viewBox="0 0 520 250"></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 — the datapath, the FSMD carried -->
+        <div class="page" id="p3">
+            <div class="refrow">
+                <div class="panel refp ref">
+                    <div class="phead"><span class="ref">READ</span>The FSMD <span class="dimtxt">&mdash; from step 1</span></div>
+                    <svg id="d2f" viewBox="0 0 1000 640" class="fsmd"></svg>
+                </div>
+                <div class="panel refp">
+                    <div class="phead"><span class="ref">BUILD</span>Step 2 of 3 &mdash; the datapath <span class="dimtxt">control in, status out</span></div>
+                    <svg id="d2" viewBox="0 0 760 520"></svg>
+                </div>
+            </div>
+            <div class="rstrip">
+                <div class="rowcard" data-row="0"><div class="rt">1 &middot; The count TR needs a register</div>
+                    <div class="rd">4 bits, loaded on every clock.</div></div>
+                <div class="rowcard" data-row="1"><div class="rt">2 &middot; TR + 1 needs an adder</div>
+                    <div class="rd">It adds one to the register&rsquo;s own value.</div></div>
+                <div class="rowcard" data-row="2"><div class="rt">3 &middot; Two choices need a mux</div>
+                    <div class="rd">0 or TR + 1, picked by the control input <span class="mono c-ctl">zero</span>.</div></div>
+                <div class="rowcard" data-row="3"><div class="rt">4 &middot; The test needs a comparator</div>
+                    <div class="rd">Is TR = D &minus; 1? Its answer, <span class="mono c-st">tc</span>, goes to the controller.</div></div>
+                <div class="panel stepbox">
+                    A counter and a comparator. Who decides between 0 and TR + 1? Step 3.
+                    <div class="steprow"><button class="btn bk" id="bk3">&#9664; <span class="kk">&uarr;</span></button><button class="btn nxt" id="nxt3">next <span class="kk">Space</span></button><button class="btn" data-reset>&#8634; <span class="kk">R</span></button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 — the controller, FSMD and datapath carried -->
+        <div class="page" id="p4">
+            <div class="refrow r4">
+                <div class="panel refp ref">
+                    <div class="phead"><span class="ref">READ</span>The FSMD</div>
+                    <svg id="d3f" viewBox="200 50 600 595" class="fsmd"></svg>
+                </div>
+                <div class="panel refp">
+                    <div class="phead"><span class="ref">BUILD</span>Step 3 of 3 &mdash; the controller</div>
+                    <svg id="d3" viewBox="0 0 860 510"></svg>
+                </div>
+                <div class="panel refp ref">
+                    <div class="phead"><span class="ref">OPERATE</span>The datapath</div>
+                    <svg id="d3r" viewBox="0 0 760 510"></svg>
+                </div>
+            </div>
+            <div class="panel strip4">
+                <div class="s4n" id="snum4"></div>
+                <div class="s4t" id="reason4"></div>
+                <div class="steprow"><button class="btn bk" id="bk4">&#9664; <span class="kk">&uarr;</span></button><button class="btn nxt" id="nxt4">next <span class="kk">Space</span></button><button class="btn" data-reset>&#8634; <span class="kk">R</span></button></div>
+            </div>
+        </div>
+
+        <!-- BEAT 5 — connected, running -->
+        <div class="page" id="p5">
+            <div class="row5top">
+                <div class="panel diag5"><svg id="d4" viewBox="-40 0 1672 520"></svg></div>
+                <div class="panel ctl5">
+                    <div class="ro" id="ro5"></div>
+                    <div class="irow"><span class="ilab mono">D</span><button class="bit" data-bit="3">8</button><button class="bit" data-bit="2">4</button><button class="bit" data-bit="1">2</button><button class="bit" data-bit="0">1</button><span class="dval" id="dval"></span></div>
+                    <div class="irow"><button class="btn mode" id="btnClr">clr <span class="kk">X</span></button><span id="clrNote" class="c-dim"></span></div>
+                    <div class="steprow"><button class="btn bk" id="bk5">&#9664; <span class="kk">&uarr;</span></button><button class="btn clk" id="clk5">&#9654; CLK <span class="kk">Space</span></button><button class="btn" data-reset>&#8634; <span class="kk">R</span></button></div>
+                </div>
+            </div>
+            <div class="panel wave5">
+                <div class="phead">Timing diagram <span class="dimtxt">&mdash; <span class="c-ctl">amber</span> = just taken, <span class="c-on">blue</span> = next &middot; values change only at edges &middot; TR in hex</span></div>
+                <svg id="w5" viewBox="0 0 1816 388"></svg>
+            </div>
+        </div>
+
+        <!-- BEAT 6 — registering tic -->
+        <div class="page" id="p6">
+            <div class="row">
+                <div class="side">
+                    <div class="rowcard" data-row="0"><div class="rt">Add one flip-flop</div>
+                        <div class="rd">Its input is the next tic: <span class="mono">tic_r<sup>+</sup> = tc</span>.</div></div>
+                    <div class="rowcard" data-row="1"><div class="rt">tic_r comes straight off the flip-flop</div>
+                        <div class="rd">The same period, but one clock later.</div></div>
+                    <div class="rowcard" data-row="2"><div class="rt">Inside the same clock domain, use tic</div>
+                        <div class="rd">Flip-flops sample it at the edge, so its glitches don&rsquo;t matter and the count stays exact.</div></div>
+                    <div class="rowcard" data-row="3"><div class="rt">Register it only when it leaves</div>
+                        <div class="rd">To a pin or another clock domain. It is one clock late, so a design that counts N clocks and then acts would wait N + 1.</div></div>
+                    <div class="panel card">
+                        The pattern is <b data-topic="registered-outputs">Registered Outputs</b>.
+                    </div>
+                    <div class="panel foot fill">
+                        <div class="steprow"><button class="btn bk" id="bk6">&#9664; <span class="kk">&uarr;</span></button><button class="btn nxt" id="nxt6">next <span class="kk">Space</span></button><button class="btn" data-reset>&#8634; <span class="kk">R</span></button></div>
+                    </div>
+                </div>
+                <div class="main col6">
+                    <div class="panel">
+                        <div class="phead">The registered version <span class="dimtxt">&mdash; for a tic that leaves the design</span></div>
+                        <svg id="d6" viewBox="0 0 960 300"></svg>
+                    </div>
+                    <div class="panel">
+                        <div class="phead">tic and tic_r, D = 4 <span class="dimtxt">&mdash; the run from the specification</span></div>
+                        <svg id="w6" viewBox="0 0 1240 340"></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress"><div class="pdot" data-dot="1"></div><div class="pdot" data-dot="2"></div><div class="pdot" data-dot="3"></div><div class="pdot" data-dot="4"></div><div class="pdot" data-dot="5"></div><div class="pdot" data-dot="6"></div></div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">6</span> beat
+            &middot; <span class="k">&larr;</span><span class="k">&rarr;</span> previous / next
+            &middot; <span class="k amber">Space</span> or <span class="k amber">C</span> next: reading, build step, CLK
+            &middot; <span class="k cyan">&#9664;</span> or <span class="k cyan">&uarr;</span> back, <span class="k cyan">&darr;</span> forward
+            &middot; <span class="k">X</span> clr &middot; <span class="k">R</span> reset &middot; <span class="k">D</span> definitions
+        </div>
+    </div>
+
+    <div class="defs" id="defs">
+        <div class="defs-card">
+            <div class="defs-head"><div class="defs-title">Definitions</div><div class="defs-close">D or Esc closes</div></div>
+            <div class="defs-list">
+                <div class="ds c-on">FSMD</div><div class="dd"><b>Finite state machine with datapath.</b> States with register transfers beside them and conditions on the arcs; the method of <b data-topic="fsmd-with-datapaths">FSMD - Finite State Machines with Datapaths</b>, vocabulary from <b data-topic="introduction-to-rtl-design">Introduction to Register Transfer Level Design</b>.</div>
+                <div class="ds c-on">TR</div><div class="dd">The <b>Timer Register</b>: the 4-bit count. The debouncer that reuses this timer writes <span class="mono">TR &larr; 0</span> and <span class="mono">TR &larr; TR + 1</span>.</div>
+                <div class="ds c-on">Register transfer</div><div class="dd"><span class="mono">TR &larr; TR + 1</span>: on the clock edge, register TR takes the value TR + 1.</div>
+                <div class="ds c-st">Test condition</div><div class="dd"><span class="mono">tc = (TR = D &minus; 1)</span>: a comparator in the datapath, its one status signal.</div>
+                <div class="ds">Datapath</div><div class="dd">Register TR, an adder, a mux and a comparator. It counts and answers &ldquo;is TR = D &minus; 1?&rdquo;; it does not decide.</div>
+                <div class="ds">Controller</div><div class="dd">One state, so no flip-flops: just the OR gate <span class="mono">zero = clr + tc</span>, and <span class="mono">tic = tc</span>.</div>
+                <div class="ds c-ctl">Control signal</div><div class="dd"><span class="mono">zero</span> picks 0 in the mux; otherwise the register takes TR + 1.</div>
+                <div class="ds c-tic">tic, tic_r</div><div class="dd"><span class="mono">tic</span> = tc. <span class="mono">tic_r</span> is the same pulse one clock later, from a flip-flop (beat 6).</div>
+                <div class="ds c-dim">The period</div><div class="dd">After clr goes back to 0, the first tic comes D clocks later, then one every D clocks. D = 1: every clock. D = 0: every 16.</div>
+                <div class="ds">Next step: en</div><div class="dd">The usual extension is an <span class="mono">en</span> input that lets the timer count only when en = 1, for example to chain timers.</div>
+                <div class="ds">Reuse</div><div class="dd">The same register + adder + comparator pattern counts the hold time in <b data-topic="switch-debouncer">Switch Debouncer</b>. The timer is also packaged as <span class="mono">timer.v</span> for later designs.</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALING ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const container = document.getElementById('viewportContainer'), surface = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * 16 / 9; } else { cw = vw; ch = cw * 9 / 16; }
+        container.style.width = cw + 'px'; container.style.height = ch + 'px';
+        surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    const $ = (id) => document.getElementById(id);
+
+    // ============ THE MACHINE (model) ============
+    // Mike, 10-28: "what I'd like is the most basic and simple timer circuit that can be used in the debounce. And then
+    // couple those together in a way that is intuitive." → "yes, rebuild both". A stopwatch that counts clock edges.
+    // FSMD: one state, COUNT. If clr + tc: TR <- 0; otherwise TR <- TR + 1. tc = (TR = D - 1). tic = tc.
+    // Controller: no state flip-flops; zero = clr + tc (one OR gate); tic = tc.
+    // Datapath: TR <- zero ? 0 : TR + 1 (a register, an adder, a 2:1 mux); tc = (TR == D - 1) (a comparator). timer.v exports it.
+    const MASK = 15, NBITS = 4;
+    function derive(m, inp) {                                       // what every wire carries during a cycle
+        const D = inp.D & MASK, clr = +!!inp.clr, dm1 = (D - 1) & MASK, tc = +(m.TR === dm1), zero = clr | tc, tic = tc;
+        const plus1 = (m.TR + 1) & MASK, nextC = zero ? 0 : plus1;
+        return { TR: m.TR, ticR: m.ticR || 0, clr, D, dm1, tc, zero, tic, plus1, nextC };
+    }
+    const stepModel = (m, inp) => { const d = derive(m, inp); return { TR: d.nextC, ticR: d.tic }; };
+    const RESET = { TR: 0, ticR: 0 };
+    const run = (D, n, clrf) => {                                   // n cycles, clr from clrf; rows of derived values
+        let m = RESET; const rows = [];
+        for (let k = 0; k < n; k++) { const inp = { clr: clrf(k), D }; rows.push(Object.assign({ cyc: k }, derive(m, inp))); m = stepModel(m, inp); }
+        return rows;
+    };
+    // the spec's run (also beat 6 and fsmd-verify.v): D = 4, clr held at cycles 0-1, released at 2, pressed again at 12
+    const SPEC_D = 4, SPEC_N = 16, SPEC_CLR = (k) => +(k < 2 || k === 12), SPEC = run(SPEC_D, SPEC_N, SPEC_CLR);   // tics at 5 and 9
+    const R6_N = 16, R6 = SPEC;
+    const bin = (v) => v.toString(2).padStart(NBITS, '0'), hex = (v) => v.toString(16).toUpperCase();
+
+    // ============ STATE ============
+    const NPAGES = 6, NROWS1 = 4, NBUILD = 3, NROWS3 = 4, NROWS4 = 3, NROWS6 = 4;
+    let page = 1, sel1 = 0, build = 0, sel3 = 0, sel4 = 0, sel6 = 0;
+    let live = { m: RESET, cyc: 0, hist: [] }, panel = { clr: 0, D: 12 };          // beat 5: free play
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+
+    // ============ SHARED SVG HELPERS ============
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const rad = (d) => d * Math.PI / 180, f1 = (n) => +n.toFixed(1);
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+    function txt(parent, x, y, s, cls, attrs = {}) { const t = el('text', { x, y, class: cls, ...attrs }, parent); t.textContent = s; return t; }
+    function injectMarkers(svg) {
+        const mk = svg.id, defs = el('defs', {}, svg);
+        for (const [id, fill] of [['ah', '#3a4350'], ['ahon', '#4a6fa5'], ['ahctl', '#b8640a'], ['ahst', '#6b4fa8'], ['ahtic', '#2e7d4f'], ['ahw', '#1c2433']]) {
+            const m = el('marker', { id: id + '-' + mk, markerWidth: 20, markerHeight: 16, refX: 14, refY: 6.5, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+            el('path', { d: 'M0,0 L16,6.5 L0,13 Z', fill }, m);
+        }
+        return mk;
+    }
+    const shorten = (pts) => {
+        const p = pts.map(q => q.slice()), n = p.length - 1, dx = Math.sign(p[n][0] - p[n - 1][0]), dy = Math.sign(p[n][1] - p[n - 1][1]);
+        p[n][0] -= 2 * dx; p[n][1] -= 2 * dy; return p;
+    };
+    function bezArc(A, B, ed, R) {
+        if (ed.loop !== undefined) {
+            const th = rad(ed.loop), a1 = th + 0.45, a2 = th - 0.45, ro = R + 84;
+            const p1 = { x: A.x + R * Math.cos(a1), y: A.y + R * Math.sin(a1) }, p2 = { x: A.x + (R + 2) * Math.cos(a2), y: A.y + (R + 2) * Math.sin(a2) };
+            const c1 = { x: A.x + ro * Math.cos(th + 0.55), y: A.y + ro * Math.sin(th + 0.55) }, c2 = { x: A.x + ro * Math.cos(th - 0.55), y: A.y + ro * Math.sin(th - 0.55) };
+            return { d: `M${f1(p1.x)},${f1(p1.y)} C${f1(c1.x)},${f1(c1.y)} ${f1(c2.x)},${f1(c2.y)} ${f1(p2.x)},${f1(p2.y)}`,
+                     lx: A.x + (R + 82) * Math.cos(th), ly: A.y + (R + 82) * Math.sin(th) + 10 };
+        }
+        const a = rad(ed.a), b = rad(ed.b);
+        const P0 = { x: A.x + R * Math.cos(a), y: A.y + R * Math.sin(a) }, P3 = { x: B.x + (R + 2) * Math.cos(b), y: B.y + (R + 2) * Math.sin(b) };
+        const C1 = { x: P0.x + ed.k * Math.cos(a), y: P0.y + ed.k * Math.sin(a) }, C2 = { x: P3.x + ed.k * Math.cos(b), y: P3.y + ed.k * Math.sin(b) };
+        const mx = (P0.x + 3 * C1.x + 3 * C2.x + P3.x) / 8, my = (P0.y + 3 * C1.y + 3 * C2.y + P3.y) / 8;
+        return { d: `M${f1(P0.x)},${f1(P0.y)} C${f1(C1.x)},${f1(C1.y)} ${f1(C2.x)},${f1(C2.y)} ${f1(P3.x)},${f1(P3.y)}`, mx, my };
+    }
+    // an arc label sits beside the arc's midpoint, on the side away from the diagram's center
+    function outward(nodes, g, ed, dist) {
+        if (ed.loop !== undefined) return { x: g.lx, y: g.ly, anchor: 'middle' };
+        const ks = Object.keys(nodes), cx = ks.reduce((a, k) => a + nodes[k].x, 0) / ks.length, cy = ks.reduce((a, k) => a + nodes[k].y, 0) / ks.length;
+        let dx = g.mx - cx, dy = g.my - cy; const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+        return { x: g.mx + dx * dist, y: g.my + dy * dist + 9, anchor: dx < -0.3 ? 'end' : dx > 0.3 ? 'start' : 'middle' };
+    }
+    // complement labels carry an overbar drawn as a measured line (never a prime, never a combining character)
+    const BARS = [];
+    function barText(parent, x, y, s, cls, attrs = {}) {
+        const t = txt(parent, x, y, s, cls, attrs);
+        const line = el('line', { class: 'bar', 'data-bar-for': '1' }, parent);
+        BARS.push({ t, line }); return t;
+    }
+    // a barred tspan inside a longer label (the "up" of the RUN tag): x from the characters' extents, y from the baseline
+    function barSpan(textEl, s, cls, attrs = {}) {
+        const sp = el('tspan', { class: cls, ...attrs }, textEl); sp.textContent = s;
+        const line = el('line', { class: 'bar cnd', 'data-bar-for': '1' }, textEl.parentNode);
+        BARS.push({ t: sp, line, span: true, host: textEl }); return sp;
+    }
+    const clearBar = (line) => { for (const a of ['x1', 'x2', 'y1', 'y2']) line.removeAttribute(a); line.classList.remove('fnew', 'dim'); };   // a hidden bar carries no stale geometry
+    function fixBars() {                                   // measure on the active page only: getBBox is zero inside display:none
+        for (const { t, line, span, host } of BARS) {
+            if (!t.isConnected || t.closest('.page') && !t.closest('.page').classList.contains('active')) continue;
+            if (span) {
+                const hidden = host.classList.contains('hid'); line.classList.toggle('hid', hidden); if (hidden) { clearBar(line); continue; }
+                const n = t.getNumberOfChars(); if (!n) continue;
+                const a = t.getExtentOfChar(0), b = t.getExtentOfChar(n - 1); if (!a.width) continue;
+                const em = parseFloat(getComputedStyle(t).fontSize) || 24, y = t.getStartPositionOfChar(0).y - 0.88 * em;
+                line.setAttribute('x1', f1(a.x + 1)); line.setAttribute('x2', f1(b.x + b.width - 1)); line.setAttribute('y1', f1(y)); line.setAttribute('y2', f1(y));
+                line.classList.toggle('dim', host.classList.contains('dim')); line.classList.toggle('fnew', host.classList.contains('fnew'));
+                continue;
+            }
+            if (t.classList.contains('hid')) { line.classList.add('hid'); clearBar(line); continue; } else line.classList.remove('hid');
+            const bb = t.getBBox(); if (!bb.width) continue;
+            const em = parseFloat(getComputedStyle(t).fontSize) || 26;
+            const y = +t.getAttribute('y') - 0.88 * em;
+            line.setAttribute('x1', f1(bb.x + 1)); line.setAttribute('x2', f1(bb.x + bb.width - 1)); line.setAttribute('y1', f1(y)); line.setAttribute('y2', f1(y));
+            line.setAttribute('class', 'bar' + (t.classList.contains('on') ? ' on' : '') + (t.classList.contains('in') ? ' in' : '') + (t.classList.contains('dim') ? ' dim' : ''));
+            line.classList.toggle('fnew', t.classList.contains('fnew'));
+        }
+    }
+
+    // focus by keys: an element lights when one of its data-k tokens is in the set; the rest step back to 0.55
+    function focusKeys(svg, keys, attr = 'k') {
+        const sel = `[data-${attr}]`;
+        svg.querySelectorAll(sel).forEach(e => { const toks = e.dataset[attr].split(' ');
+            const hit = !!keys && toks.some(t => keys.includes(t)); e.classList.toggle('dim', !!keys && !hit); e.classList.toggle('foc', hit); });
+        fixBars();
+    }
+    const qlab = (parent, x, y, s, cls, anchor = 'end') => {            // Q with a subscript, as one text
+        const t = txt(parent, x, y, '', cls, { style: `text-anchor:${anchor}` }); el('tspan', {}, t).textContent = 'Q';
+        el('tspan', { dy: 6, class: 'qsub' }, t).textContent = s; return t; };
+
+    // ============ BEAT 1 — THE SPECIFICATION ============
+    const SP = { box: { x: 470, y: 30, w: 300, h: 230 }, X0: 170, CW: 66, ROWS: { clr: 360, D: 410, TR: 460, tic: 510 }, HW: 15 };
+    const SPREAD = [ { keys: ['clr', 'D', 'TR', 'tic'], bands: [] }, { keys: ['clr', 'TR'], bands: [[0, 1, 'held at 0'], [12, 13, 'clr, then TR = 0']] },
+                     { keys: ['D', 'TR'], bands: [[2, 5, 'D = 4 clocks'], [6, 9, 'D = 4 clocks']] }, { keys: ['tic', 'TR'], bands: [[5, 5, 'tic'], [9, 9, 'tic']] } ];
+    function buildSpec(svg) {
+        const mk = injectMarkers(svg), S = { svg, mk, bands: el('g', {}, svg), wave: {}, cells: [] };
+        const b = SP.box, K = (e, k) => { e.setAttribute('data-k', k); return e; };
+        el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 16, class: 'bbox' }, svg);
+        txt(svg, b.x + b.w / 2, b.y + 100, 'Timer', 'bbox-t'); txt(svg, b.x + b.w / 2, b.y + 134, 'inside: not decided yet', 'bbox-s');
+        for (const [k, y, desc, bus] of [['clr', 90, 'hold the count at 0', false], ['D', 160, 'the period, 4-bit', true]]) {
+            K(el('line', { x1: 330, y1: y, x2: b.x - 2, y2: y, class: 'pin', 'marker-end': `url(#ahw-${mk})` }, svg), k);
+            K(txt(svg, 318, y + 9, k, 'pinl', { style: 'text-anchor:end' }), k); K(txt(svg, 60, y + 7, desc, 'pind', { style: 'text-anchor:start' }), k);
+            if (bus) { K(el('line', { x1: 392, y1: y + 10, x2: 408, y2: y - 10, class: 'pin' }, svg), k); K(txt(svg, 412, y - 12, '4', 'busl'), k); }
+        }
+        el('line', { x1: 330, y1: 230, x2: b.x, y2: 230, class: 'wire clk' }, svg); el('path', { d: `M${b.x},218 L${b.x + 16},230 L${b.x},242`, class: 'wire clk' }, svg);
+        txt(svg, 318, 236, 'CLK', 'clkl');
+        K(el('line', { x1: b.x + b.w, y1: 125, x2: 908, y2: 125, class: 'pin tic', 'marker-end': `url(#ahtic-${mk})` }, svg), 'tic');
+        K(txt(svg, 922, 134, 'tic', 'pinl tic', { style: 'text-anchor:start' }), 'tic'); K(txt(svg, 980, 132, 'once every D clocks', 'pind', { style: 'text-anchor:start' }), 'tic');
+        const X = (k) => SP.X0 + k * SP.CW, N = SPEC_N, top = 330, bot = 540;
+        txt(svg, SP.X0 - 20, 318, 'cycle', 'cycn', { style: 'text-anchor:end' });
+        for (let k = 0; k <= N; k++) el('line', { x1: X(k), y1: top, x2: X(k), y2: bot, class: 'grid' }, svg);
+        for (let k = 0; k < N; k++) txt(svg, X(k) + SP.CW / 2, 318, String(k), 'cycn');
+        for (const r of ['clr', 'tic']) { const y0 = SP.ROWS[r], pts = [];
+            for (let k = 0; k < N; k++) { const y = SPEC[k][r] ? y0 - SP.HW : y0 + SP.HW; pts.push([X(k), y], [X(k + 1), y]); }
+            S.wave[r] = K(el('polyline', { points: pts.map(p => p.join(',')).join(' '), class: 'wv' + (r === 'tic' ? ' tic' : ''), 'data-row': r }, svg), r);
+            K(txt(svg, SP.X0 - 20, y0 + 8, r, 'wvl' + (r === 'tic' ? ' tic' : '')), r); }
+        const busRow = (r, y0, val) => { const h = 15;
+            for (let k = 0; k < N; k++) { const x1 = X(k), x2 = X(k + 1);
+                K(el('path', { d: `M${x1 + 6},${y0 - h} L${x2 - 6},${y0 - h} L${x2},${y0} L${x2 - 6},${y0 + h} L${x1 + 6},${y0 + h} L${x1},${y0} Z`, class: 'wv' }, svg), r);
+                const t = K(txt(svg, (x1 + x2) / 2, y0 + 6, String(val(k)), 'busv', { 'data-cell': r + k }), r); if (r === 'TR') S.cells.push(t); }
+            K(txt(svg, SP.X0 - 20, y0 + 8, r, 'wvl'), r); };
+        busRow('D', SP.ROWS.D, () => SPEC_D); busRow('TR', SP.ROWS.TR, (k) => SPEC[k].TR);
+        txt(svg, 620, 630, 'D = 12 works the same way: one tic every 12 clocks.', 'bbox-s');
+        return S;
+    }
+    const D0 = buildSpec($('d0'));
+    function paintSpec() {
+        const R = SPREAD[sel1], X = (k) => SP.X0 + k * SP.CW;
+        focusKeys(D0.svg, sel1 ? R.keys : null);
+        D0.bands.innerHTML = '';
+        for (const [k0, k1, lab] of R.bands) { el('rect', { x: X(k0) + 2, y: 330, width: X(k1 + 1) - X(k0) - 4, height: 210, rx: 6, class: 'band' }, D0.bands);
+            txt(D0.bands, (X(k0) + X(k1 + 1)) / 2, 566, lab, 'bandl'); }
+        document.querySelectorAll('#p1 .rowcard').forEach(c => c.classList.toggle('on', +c.dataset.row === sel1));
+    }
+    // the spec, carried small onto beat 2
+    (function buildSpecMini(svg) {
+        const mk = injectMarkers(svg);
+        el('rect', { x: 170, y: 30, width: 180, height: 150, rx: 12, class: 'bbox' }, svg); txt(svg, 260, 112, 'Timer', 'bbox-t');
+        for (const [k, y] of [['clr', 75], ['D', 135]]) { el('line', { x1: 80, y1: y, x2: 168, y2: y, class: 'pin', 'marker-end': `url(#ahw-${mk})` }, svg); txt(svg, 70, y + 9, k, 'pinl', { style: 'text-anchor:end' }); }
+        el('line', { x1: 350, y1: 105, x2: 430, y2: 105, class: 'pin tic', 'marker-end': `url(#ahtic-${mk})` }, svg); txt(svg, 440, 114, 'tic', 'pinl tic', { style: 'text-anchor:start' });
+        txt(svg, 260, 228, 'one tic every D clocks', 'pind', { style: 'text-anchor:middle;font-size:22px' });
+    })($('dspec'));
+
+    // ============ BEAT 2 — THE FSMD ============
+    const FN = { COUNT: { x: 500, y: 240 } }, RF = 90;
+    const FEDGES = [ { id: 'COUNT>COUNT', from: 'COUNT', to: 'COUNT', loop: 270, label: '', bar: false, kind: '' } ];
+    const XFER = { zero: 'TR ← 0', inc: 'TR ← TR + 1' };
+    const REASONS2 = [
+        '<b>One state.</b> The timer only ever counts, so the FSMD needs a single state, COUNT.',
+        '<b>Two register transfers.</b> Either TR goes back to 0, or TR goes up by one.',
+        '<b>The conditions.</b> Back to 0 when <span class="mono">clr</span> is 1 or TR has reached D − 1 (that test is <span class="mono c-st">tc</span>). Otherwise add one.',
+        '<b>The output.</b> <span class="mono c-tic">tic</span> is simply <span class="mono c-st">tc</span>: 1 in the clock TR shows D − 1. The FSMD is complete.',
+    ];
+    function buildFsmd(svg) {
+        const mk = injectMarkers(svg), D = { svg, mk, groups: [[], [], [], []], nodes: {}, arcs: {}, tags: {}, lines: {} };
+        const G = (g, e, fk) => { D.groups[g].push(e); e.setAttribute('data-g', g); e.setAttribute('data-fk', fk); return e; };
+        const n = FN.COUNT;
+        G(0, el('path', { d: `M${n.x - RF - 160},${n.y} L${n.x - RF - 3},${n.y}`, class: 'rst', 'marker-end': `url(#ahw-${mk})` }, svg), 'reset');
+        G(0, txt(svg, n.x - RF - 160, n.y - 14, 'reset', 'rst-l', { style: 'text-anchor:start' }), 'reset');
+        // the one arc: COUNT loops on itself every clock
+        { const ed = FEDGES[0], g = bezArc(n, n, ed, RF); D.arcs[ed.id] = { path: G(0, el('path', { class: 'arc', d: g.d, 'data-id': ed.id, 'marker-end': `url(#ah-${mk})` }, svg), 'loop'), lab: null };
+          G(0, txt(svg, n.x + 70, n.y - RF - 70, 'every clock', 'pind', { style: 'text-anchor:start;font-size:20px' }), 'loop'); }
+        { const g = G(0, el('g', { class: 'sd-node', 'data-state': 'COUNT' }, svg), 'sCOUNT');
+          el('circle', { class: 'sdc', cx: n.x, cy: n.y, r: RF }, g); txt(g, n.x, n.y + 12, 'COUNT', 'sdname'); D.nodes.COUNT = g; }
+        // the two transfers
+        G(1, el('line', { x1: n.x, y1: n.y + RF + 4, x2: n.x, y2: 376, class: 'leader' }, svg), 'tagZ tagI');
+        D.tags.COUNT = G(1, el('rect', { x: n.x - 230, y: 380, width: 460, height: 110, rx: 12, class: 'xfer-box' }, svg), 'tagZ tagI');
+        const r0 = G(1, txt(svg, n.x - 205, 424, '', 'xfer sm', { style: 'text-anchor:start', 'data-in': 'tag' }), 'tagZ');
+        el('tspan', { class: 'cnd' }, r0).textContent = 'if clr + tc:'; el('tspan', { dx: 14 }, r0).textContent = XFER.zero;
+        const r1 = G(1, txt(svg, n.x - 205, 468, '', 'xfer sm', { style: 'text-anchor:start', 'data-in': 'tag' }), 'tagI');
+        el('tspan', { class: 'cnd' }, r1).textContent = 'otherwise:'; el('tspan', { dx: 38 }, r1).textContent = XFER.inc;
+        D.lines.zero = r0; D.lines.inc = r1;
+        // the condition and the output
+        G(2, txt(svg, n.x, 550, 'tc = (TR = D − 1)', 'cdef'), 'tcdef');
+        G(3, txt(svg, n.x, 592, 'tic = tc', 'cdef tic'), 'ticdef');
+        const p = G(3, txt(svg, n.x, 632, '', 'port'), 'ports');
+        el('tspan', { class: 'pk' }, p).textContent = 'in: '; el('tspan', { class: 'pv' }, p).textContent = 'clr, D (4-bit)';
+        el('tspan', { class: 'pk', dx: 14 }, p).textContent = 'out: '; el('tspan', { class: 'pv' }, p).textContent = 'tic';
+        el('tspan', { class: 'pk', dx: 14 }, p).textContent = 'register: '; el('tspan', { class: 'pv' }, p).textContent = 'TR';
+        return D;
+    }
+    const D1 = buildFsmd($('d1')), D2F = buildFsmd($('d2f')), D3F = buildFsmd($('d3f'));
+    function paintB2() {
+        D1.groups.forEach((els, g) => els.forEach(e => { e.classList.toggle('hid', g > build); e.classList.toggle('fnew', g === build && build > 0); }));
+        fixBars();
+        $('snum2').textContent = `BUILD ${build + 1} OF ${NBUILD + 1}`;
+        $('reason2').innerHTML = REASONS2[build];
+        $('nxt2').disabled = build >= NBUILD;
+    }
+
+    // ============ THE DATAPATH AND THE CONTROLLER ============
+    // Mike, 10-29: the FSM side on the LEFT, the datapath on the RIGHT; control runs left → right, status right → left.
+    // datapath, local frame 0..760: ports on the left (0..100), box 100..740
+    const DPB = { x: 100, y: 10, w: 640, h: 490 };
+    const BLK = {
+        cmp:  { x: 180, y: 70,  w: 200, h: 60, label: 'TR = D − 1 ?' },
+        add:  { x: 510, y: 165, w: 130, h: 50, label: 'TR + 1' },
+        zero: { x: 405, y: 175, w: 50,  h: 36, label: '0' },
+        mux:  { x: 380, y: 250, w: 240, h: 50, bot: 36 },                     // select zero: 1 = 0 (430), 0 = TR + 1 (575)
+        reg:  { x: 400, y: 332, w: 200, h: 76 },
+    };
+    const muxEdge = (y, right = false) => { const b = BLK.mux, t = (y - b.y) / b.h; return Math.round(right ? b.x + b.w - b.bot * t : b.x + b.bot * t); };
+    const Y_TC = 100, Y_Z = 275, DX_FULL = 860;
+    const DP_WIRES = (mode) => [
+        { id: 'din',   kind: 'data', k: 'cmp',      arrow: true,  pts: [[220, 10], [220, 70]] },
+        { id: 'rego',  kind: 'data', k: 'reg',      arrow: false, pts: [[500, 408], [500, 440]] },
+        { id: 'cbus',  kind: 'data', k: 'reg cmp',  arrow: true,  pts: [[500, 440], [700, 440], [700, 40], [340, 40], [340, 70]] },
+        { id: 'cadd',  kind: 'data', k: 'add',      arrow: true,  pts: [[700, 190], [640, 190]] },
+        { id: 'addo',  kind: 'data', k: 'add mux',  arrow: true,  pts: [[575, 215], [575, 250]] },
+        { id: 'zo',    kind: 'data', k: 'mux',      arrow: true,  pts: [[430, 211], [430, 250]] },
+        { id: 'muxo',  kind: 'data', k: 'mux reg',  arrow: true,  pts: [[500, 300], [500, 332]] },
+        { id: 'tco',   kind: 'st',   k: 'cmp tc',   arrow: mode !== 'full', pts: [[180, Y_TC], [0, Y_TC]] },
+        { id: 'zin',   kind: 'ctl',  k: 'mux zero', arrow: true,  pts: [[0, Y_Z], [muxEdge(Y_Z), Y_Z]] },
+    ];
+    // controller, local frame 0..860: box 90..760, ports on the right (760..860) toward the datapath; clr enters and tic
+    // leaves on the left. tc runs right → left and straight out as tic; a branch feeds the OR, whose output zero goes right.
+    const CTB = { x: 90, y: 10, w: 670, h: 490 };
+    const OG = { x: 530, y: 245, w: 70, h: 60 };                           // zero OR: tc (260), clr (290) → right at 275
+    const CT_WIRES = (mode) => [
+        { id: 'tcin',   kind: 'st',  k: 'tc zero tic', arrow: false, pts: [[860, Y_TC], [440, Y_TC]] },
+        { id: 'ticout', kind: 'tic', k: 'tic',         arrow: true,  pts: [[440, Y_TC], [0, Y_TC]] },
+        { id: 'tcor',   kind: 'st',  k: 'zero',        arrow: true,  pts: [[440, Y_TC], [440, 260], [OG.x, 260]] },
+        { id: 'clrin',  kind: 'data', k: 'zero clr',   arrow: true,  pts: [[0, 290], [OG.x, 290]] },
+        { id: 'zo2',    kind: 'ctl', k: 'zero',        arrow: mode !== 'full', pts: [[OG.x + OG.w, Y_Z], [860, Y_Z]] },
+    ];
+    const offset = (ws, ox) => ws.map(w => Object.assign({}, w, { pts: w.pts.map(([x, y]) => [x + ox, y]) }));
+    const muxPath = (b) => `M${b.x},${b.y} H${b.x + b.w} L${b.x + b.w - b.bot},${b.y + b.h} H${b.x + b.bot} Z`;
+    const orRightPath = (g) => `M${g.x},${g.y} Q${g.x + 14},${g.y + g.h / 2} ${g.x},${g.y + g.h} Q${g.x + g.w * 0.62},${g.y + g.h} ${g.x + g.w},${g.y + g.h / 2} Q${g.x + g.w * 0.62},${g.y} ${g.x},${g.y} Z`;
+    const WIRE_SETS = { dp: DP_WIRES('dp'), ctl: CT_WIRES('ctl'), full: CT_WIRES('full').concat(offset(DP_WIRES('full'), DX_FULL)) };
+
+    function buildDiagram(svg, mode) {
+        const mk = injectMarkers(svg), D = { svg, mk, mode, wires: {}, kinds: {}, blocks: {}, vals: {}, sig: {}, defs: WIRE_SETS[mode] };
+        const K = (e, k) => { if (k) e.setAttribute('data-k', k); return e; };
+        const hasDP = mode !== 'ctl', hasCT = mode !== 'dp', dx = mode === 'full' ? DX_FULL : 0, X = (x) => x + dx;
+        if (hasDP) { el('rect', { x: X(DPB.x), y: DPB.y, width: DPB.w, height: DPB.h, rx: 16, class: 'ct' }, svg);
+            txt(svg, X(120), 456, 'Datapath', 'ct-title'); txt(svg, X(120), 482, 'a counter and a comparator', 'ct-sub'); }
+        if (hasCT) { el('rect', { x: CTB.x, y: CTB.y, width: CTB.w, height: CTB.h, rx: 16, class: 'ct' }, svg);
+            txt(svg, 120, 380, 'Controller', 'ct-title'); K(txt(svg, 120, 410, 'one state: nothing to remember,', 'ct-sub'), 'state');
+            K(txt(svg, 120, 436, 'so no flip-flops — just one OR gate', 'ct-sub'), 'state'); }
+        for (const w of D.defs) {
+            const pts = w.arrow ? shorten(w.pts) : w.pts;
+            D.wires[w.id] = K(el('polyline', { points: pts.map(p => p.join(',')).join(' '), class: 'wire ' + w.kind, 'data-id': w.id }, svg), w.k);
+            D.kinds[w.id] = w.kind;
+        }
+        if (hasDP) {
+            K(el('circle', { cx: X(700), cy: 190, r: 6, class: 'dot' }, svg), 'add');
+            const KB = { cmp: 'cmp tc', add: 'add', zero: 'mux', reg: 'reg' };
+            for (const id of ['cmp', 'add', 'zero', 'reg']) { const b = BLK[id];
+                D.blocks[id] = K(el('rect', { x: X(b.x), y: b.y, width: b.w, height: b.h, rx: 8, class: 'blk' + (id === 'cmp' ? ' st' : ''), 'data-blk': id }, svg), KB[id]);
+                if (b.label) K(txt(svg, X(b.x + b.w / 2), b.y + b.h / 2 + 8, b.label, 'blk-l', { 'data-in': id }), KB[id]); }
+            const mb = Object.assign({}, BLK.mux, { x: X(BLK.mux.x) });
+            D.blocks.mux = K(el('path', { d: muxPath(mb), class: 'blk', 'data-blk': 'mux' }, svg), 'mux zero');
+            K(txt(svg, X(430), 271, '1', 'muxin', { 'data-in': 'mux' }), 'mux'); K(txt(svg, X(575), 271, '0', 'muxin', { 'data-in': 'mux' }), 'mux');
+            K(txt(svg, X(500), 292, 'mux', 'blk-l sm', { 'data-in': 'mux' }), 'mux');
+            const r = BLK.reg;
+            K(txt(svg, X(r.x + r.w / 2), r.y + 28, 'TR (4-bit)', 'blk-l sm', { 'data-in': 'reg' }), 'reg');
+            D.vals.reg = K(txt(svg, X(r.x + r.w / 2), r.y + 62, '', 'regval', { 'data-in': 'reg' }), 'reg');
+            K(el('path', { d: `M${X(r.x)},${r.y + 40} L${X(r.x + 14)},${r.y + 50} L${X(r.x)},${r.y + 60}`, class: 'wire clk', 'data-in': 'reg' }, svg), 'reg');
+            K(txt(svg, X(r.x - 10), r.y + 56, 'CLK', 'clkl'), 'reg');
+            D.vals.D = K(txt(svg, X(232), 32, 'D', 'sig data l', { 'data-in': 'din' }), 'cmp');
+            K(el('line', { x1: X(212), y1: 60, x2: X(228), y2: 44, class: 'wire data' }, svg), 'cmp'); K(txt(svg, X(236), 62, '4', 'busl'), 'cmp');
+            K(txt(svg, X(688), 380, 'TR', 'val dim', { style: 'text-anchor:end' }), 'reg');
+            D.vals.inc = K(txt(svg, X(688), 156, '', 'val', { style: 'text-anchor:end' }), 'add');
+            D.vals.muxo = K(txt(svg, X(512), 323, '', 'val', { style: 'text-anchor:start' }), 'mux');
+            D.vals.dm1 = K(txt(svg, X(190), 156, '', 'val dim', { style: 'text-anchor:start' }), 'cmp');
+        }
+        const gx = mode === 'dp' ? 50 : mode === 'ctl' ? 810 : DX_FULL;
+        D.sig.tc = K(txt(svg, gx, Y_TC - 14, '', 'sig st'), 'cmp tc');
+        D.sig.zero = K(txt(svg, gx, Y_Z - 14, '', 'sig ctl'), 'mux zero');
+        if (hasCT) {
+            D.blocks.or = K(el('path', { d: orRightPath(OG), class: 'gate' }, svg), 'zero');
+            K(el('circle', { cx: 440, cy: Y_TC, r: 6, class: 'dot' }, svg), 'zero');
+            K(txt(svg, 565, 340, 'zero = clr + tc', 'tict eq', { style: 'text-anchor:middle;font-size:22px;fill:#b8640a' }), 'zero');
+            K(txt(svg, 260, Y_TC - 14, 'tic = tc', 'tict eq', { style: 'text-anchor:middle;font-size:22px' }), 'tic');
+            D.sig.clr = K(txt(svg, 45, 276, '', 'sig data'), 'zero clr');
+            D.sig.tic = K(txt(svg, 45, Y_TC - 14, '', 'sig tic'), 'tic');
+        }
+        return D;
+    }
+    // v = derived row for the live picture, or null for the static (reading) pictures
+    function paintDiagram(D, v) {
+        const live = !!v, W = D.wires;
+        const onCls = (id, on) => { const w = W[id]; if (!w) return; const kind = D.kinds[id]; w.setAttribute('class', 'wire ' + kind + (on ? ' on' : ''));
+            if (D.defs.find(d => d.id === id).arrow) w.setAttribute('marker-end', `url(#ah${on ? (kind === 'data' ? 'on' : kind) : ''}-${D.mk})`); };
+        const sigText = (t, name, val) => { if (!t) return; t.innerHTML = ''; t.appendChild(document.createTextNode(live ? name + ' = ' : name)); if (live) { const s = el('tspan', { class: 'v' + (val ? '' : ' off') }, t); s.textContent = String(val); } };
+        onCls('tco', live && v.tc); onCls('zin', live && v.zero); onCls('tcin', live && v.tc); onCls('zo2', live && v.zero);
+        sigText(D.sig.tc, 'tc', live ? v.tc : 0); sigText(D.sig.zero, 'zero', live ? v.zero : 0);
+        if (D.mode !== 'ctl') {
+            onCls('addo', live && !v.zero); onCls('zo', live && v.zero); onCls('muxo', live);
+            for (const id of ['din', 'rego', 'cbus', 'cadd']) onCls(id, false);
+            D.blocks.cmp.setAttribute('class', 'blk st' + (live && v.tc ? ' on' : ''));
+            for (const id of ['add', 'zero', 'reg']) D.blocks[id].setAttribute('class', 'blk'); D.blocks.mux.setAttribute('class', 'blk');
+            if (live) { D.vals.inc.textContent = 'TR + 1 = ' + v.plus1; D.vals.inc.setAttribute('class', 'val' + (v.zero ? ' dim' : ''));
+                D.vals.muxo.textContent = String(v.nextC); D.vals.dm1.textContent = `D − 1 = ${v.dm1}`;
+                D.vals.D.textContent = 'D = ' + v.D; D.vals.reg.innerHTML = ''; D.vals.reg.appendChild(document.createTextNode(bin(v.TR)));
+                el('tspan', { class: 'dec' }, D.vals.reg).textContent = ' = ' + v.TR; }
+            else { for (const k of ['inc', 'muxo', 'dm1', 'reg']) D.vals[k].textContent = ''; D.vals.D.textContent = 'D'; }
+        }
+        if (D.mode !== 'dp') {
+            onCls('ticout', live && v.tic); onCls('tcor', live && v.tc); onCls('clrin', live && v.clr);
+            D.blocks.or.setAttribute('class', 'gate' + (live && v.zero ? ' on' : ''));
+            sigText(D.sig.clr, 'clr', live ? v.clr : 0); sigText(D.sig.tic, 'tic', live ? v.tic : 0);
+        }
+        fixBars();
+    }
+    const D2 = buildDiagram($('d2'), 'dp'), D3R = buildDiagram($('d3r'), 'dp'), D3 = buildDiagram($('d3'), 'ctl'), D4 = buildDiagram($('d4'), 'full');
+    // beat 3: what each reading reads in the FSMD and builds in the datapath
+    const B3 = [ { fk: ['tagZ', 'tagI'], dk: ['reg'] }, { fk: ['tagI'], dk: ['add'] }, { fk: ['tagZ', 'tagI'], dk: ['mux'] }, { fk: ['tcdef'], dk: ['cmp'] } ];
+    // beat 4: one state → no flip-flops; zero = clr + tc; tic = tc
+    const B4 = [ { ck: ['state'], fk: ['sCOUNT', 'loop', 'reset'], dk: null },
+                 { ck: ['zero'], fk: ['tagZ', 'tcdef'], dk: ['zero'] },
+                 { ck: ['tic'], fk: ['ticdef', 'tcdef'], dk: ['tc'] } ];
+    const showAll = (D) => D.svg.querySelectorAll('[data-g]').forEach(e => e.classList.remove('hid', 'fnew'));
+    function paintB3() { showAll(D2F); focusKeys(D2F.svg, B3[sel3].fk, 'fk'); paintDiagram(D2, null); focusKeys(D2.svg, B3[sel3].dk);
+        document.querySelectorAll('#p3 .rowcard').forEach(c => c.classList.toggle('on', +c.dataset.row === sel3)); }
+    function paintB4() { const r = B4[sel4]; showAll(D3F); focusKeys(D3F.svg, r.fk, 'fk'); paintDiagram(D3R, null); focusKeys(D3R.svg, r.dk);
+        paintDiagram(D3, null); focusKeys(D3.svg, r.ck);
+        $('snum4').textContent = `READING ${sel4 + 1} OF ${NROWS4}`; $('reason4').innerHTML = R4TEXT[sel4]; $('nxt4').disabled = sel4 >= NROWS4 - 1; }
+    const R4TEXT = [
+        '<b>One state, so no flip-flops.</b> With a single state there is nothing to remember.',
+        '<b><span class="mono c-ctl">zero</span> = clr + tc.</b> Back to 0 when clr is 1 or TR has reached D − 1: one OR gate.',
+        '<b><span class="mono c-tic">tic</span> = tc.</b> The output is just the comparator’s answer, a wire.',
+    ];
+
+    // ============ BEAT 5 — connected, running ============
+    const M = (s) => `<span class="mono">${s}</span>`;
+    function rows5() {                                     // every cycle so far (past inputs from the history) and the current one
+        const out = []; let m = RESET;
+        live.hist.forEach((h, k) => { out.push(Object.assign({ cyc: k }, derive(m, h.inp))); m = stepModel(m, h.inp); });
+        out.push(Object.assign({ cyc: live.cyc }, derive(live.m, panel)));
+        return out;
+    }
+    const WROWS = [
+        { id: 'clk', lab: 'CLK', kind: 'clk' },
+        { id: 'clr', lab: 'clr', kind: 'bit', cls: '', get: t => t.clr },
+        { id: 'TR', lab: 'TR', kind: 'bus', cls: 'on', get: t => hex(t.TR) },
+        { id: 'tc', lab: 'tc', kind: 'bit', cls: 'st', get: t => t.tc },
+        { id: 'tic', lab: 'tic', kind: 'bit', cls: 'tic', get: t => t.tic },
+    ];
+    const NW = 28, WV = { x0: 110, cw: 60, top: 18, rh: 44, hi: 8, lo: 36 };
+    function paintWaves(svg, rows, cur, opts = {}) {
+        svg.innerHTML = '';
+        const nw = opts.n || NW, first = opts.first !== undefined ? opts.first : Math.max(0, cur + 1 - nw), WX = (k) => WV.x0 + (k - first) * WV.cw, xEnd = WX(first + nw);
+        const rowsDef = opts.rows || WROWS, last = Math.min(cur, first + nw - 1);
+        rowsDef.forEach((r, i) => {
+            const y = WV.top + i * WV.rh, yh = y + WV.hi, yl = y + WV.lo, ym = (yh + yl) / 2;
+            el('line', { x1: WV.x0, y1: y + WV.rh, x2: xEnd, y2: y + WV.rh, class: 'wv-grid' }, svg);
+            txt(svg, WV.x0 - 12, ym + 7, r.lab, 'wv-lab ' + (r.kind === 'clk' ? 'clk' : r.cls || ''), { 'data-row': r.id });
+            if (r.kind === 'clk') { let d = '';
+                for (let k = first; k < first + nw; k++) { const x = WX(k); d += `${k > first ? 'L' : 'M'}${x},${yl} L${x},${yh} L${x + WV.cw / 2},${yh} L${x + WV.cw / 2},${yl} `; }
+                el('path', { d: d + `L${xEnd},${yl}`, class: 'wv-bit', 'data-row': 'clk' }, svg); return; }
+            let k = first;
+            while (k <= last) {
+                const v = r.get(rows[k]); let j = k; while (!opts.perCell && j + 1 <= last && r.get(rows[j + 1]) === v) j++;   // beat 6: one cell per clock, each labeled
+                const x1 = WX(k), x2 = WX(j + 1), lm = x1 + 5, rm = x2 - 5, lt = lm + 5, rt = rm - 5, bit = r.kind === 'bit';
+                const cls = (r.cls || '') + (bit && !v ? ' zero' : '');
+                el('path', { d: `M${lm},${ym} L${lt},${yh} L${rt},${yh} L${rm},${ym} L${rt},${yl} L${lt},${yl} Z`, class: 'wv-bus ' + cls, 'data-row': r.id, 'data-k': k, 'data-k2': j }, svg);
+                // the label sits in the middle of the longest stretch of the run that no cursor crosses (39's rule)
+                const cuts = opts.cursors === false ? [] : [WX(cur)].filter(x => x > x1 + 1 && x < x2 - 1), bnd = [x1, ...cuts, x2];
+                let lx = (x1 + x2) / 2, best = -1; for (let q = 0; q + 1 < bnd.length; q++) if (bnd[q + 1] - bnd[q] > best) { best = bnd[q + 1] - bnd[q]; lx = (bnd[q] + bnd[q + 1]) / 2; }
+                txt(svg, lx, ym + 7, String(v), 'wv-bt' + (bit && !v ? ' zero' : ''), { 'data-row': r.id, 'data-k': k });
+                k = j + 1;
+            }
+            if (opts.cursors !== false && last < first + nw - 1) el('line', { x1: WX(last + 1), y1: ym, x2: xEnd, y2: ym, class: 'wv-fut' }, svg);
+        });
+        const yb = WV.top + rowsDef.length * WV.rh;
+        for (let k = first; k < first + nw; k++) txt(svg, WX(k) + WV.cw / 2, yb + 20, String(k), 'wv-cyc' + (k === cur && opts.cursors !== false ? ' cur' : ''), { 'data-cyc': k });
+        txt(svg, WV.x0 - 12, yb + 20, 'cycle', 'wv-cyc', { 'text-anchor': 'end' });
+        if (opts.cursors === false) return { WX, yb };
+        const yc = yb + 28;
+        if (cur > first) { el('line', { x1: WX(cur), y1: WV.top - 4, x2: WX(cur), y2: yc, class: 'wv-cursor', 'data-cursor': cur }, svg); txt(svg, WX(cur) - 5, yb + 44, 'just taken', 'wv-curlab amber'); }
+        el('line', { x1: WX(cur + 1), y1: WV.top - 4, x2: WX(cur + 1), y2: yc, class: 'wv-next', 'data-cursor': cur + 1 }, svg);
+        txt(svg, WX(cur + 1) + 5, yb + 44, 'next', 'wv-curlab cyan');
+        return { WX, yb };
+    }
+    function paintB5() {
+        const all = rows5(), t = all[all.length - 1];
+        paintDiagram(D4, t);
+        paintWaves($('w5'), all, t.cyc);
+        const head = `<b>Cycle ${t.cyc}</b> &mdash; the count TR is ${t.TR}${t.tic ? `, and <b class="c-tic">tic = 1</b>` : ''}`;
+        const line = t.clr ? `clr is 1, so on the next clock TR goes back to 0.`
+                   : t.tc ? `TR reached D − 1, so tic is 1 and TR starts over.`
+                   : `On the next clock TR goes up to ${t.plus1}.`;
+        $('ro5').innerHTML = head + '<br>' + line;
+        document.querySelectorAll('#p5 .bit').forEach(b => b.classList.toggle('on', !!(panel.D >> +b.dataset.bit & 1)));
+        $('dval').textContent = `= ${panel.D}`;
+        $('btnClr').classList.toggle('on', panel.clr === 1); $('btnClr').innerHTML = `clr = ${panel.clr} <span class="kk">X</span>`;
+        $('clrNote').textContent = panel.clr ? 'holding the count at 0' : 'counting';
+    }
+
+    // ============ BEAT 6 — registering tic ============
+    // one flip-flop on tic: tic_r+ = tc. A labeled boundary separates the comparator (combinational) from the flip-flop
+    // (registered), so the D input (the next tic) and the Q output (tic_r) cannot be confused.
+    const BND = 520;
+    function buildR6(svg) {
+        const mk = injectMarkers(svg), D = { svg, mk };
+        const K = (e, k) => { e.setAttribute('data-k', k); return e; };
+        const cmp = { x: 60, y: 54, w: 230, h: 64 };
+        K(el('rect', { x: cmp.x, y: cmp.y, width: cmp.w, height: cmp.h, rx: 8, class: 'blk st' }, svg), 'comb');
+        K(txt(svg, cmp.x + cmp.w / 2, cmp.y + 40, 'TR = D − 1 ?', 'blk-l', { 'data-in': 'cmp' }), 'comb');
+        K(el('polyline', { points: `290,86 ${BND + 100},86`, class: 'wire st', 'marker-end': `url(#ahst-${mk})`, 'data-id': 'r6d' }, svg), 'comb');
+        K(txt(svg, 400, 72, 'tc = tic⁺', 'sig st', { style: 'font-size:22px' }), 'comb');
+        K(txt(svg, 400, 118, 'the next tic', 'pind', { style: 'text-anchor:middle;font-size:17px' }), 'comb');
+        K(el('line', { x1: BND, y1: 14, x2: BND, y2: 178, class: 'bnd' }, svg), 'both');
+        K(txt(svg, BND - 14, 172, 'combinational', 'bndl', { style: 'text-anchor:end' }), 'both');
+        K(txt(svg, BND + 14, 172, 'registered', 'bndl', { style: 'text-anchor:start' }), 'both');
+        const f = { x: BND + 100, y: 46, w: 92, h: 80 };
+        K(el('rect', { x: f.x, y: f.y, width: f.w, height: f.h, rx: 6, class: 'blk tic on' }, svg), 'reg');
+        K(txt(svg, f.x + 16, f.y + 46, 'D', 'blk-l', { 'data-in': 'ff', style: 'text-anchor:start;font-size:22px' }), 'reg');
+        K(txt(svg, f.x + f.w - 16, f.y + 46, 'Q', 'blk-l', { 'data-in': 'ff', style: 'text-anchor:end;font-size:22px' }), 'reg');
+        K(el('path', { d: `M${f.x},${f.y + 54} L${f.x + 12},${f.y + 62} L${f.x},${f.y + 70}`, class: 'wire clk' }, svg), 'reg');
+        K(el('polyline', { points: `${f.x - 40},${f.y + 62} ${f.x},${f.y + 62}`, class: 'wire clk', 'data-id': 'r6clk' }, svg), 'reg');
+        K(txt(svg, f.x - 44, f.y + 68, 'CLK', 'clkl'), 'reg');
+        K(el('polyline', { points: `${f.x + f.w},86 930,86`, class: 'wire tic on', 'marker-end': `url(#ahtic-${mk})`, 'data-id': 'r6q' }, svg), 'reg');
+        K(txt(svg, 880, 72, 'tic_r', 'sig tic', { style: 'font-size:24px' }), 'reg');
+        K(txt(svg, 60, 226, 'tic_r⁺ = tc', 'tict eq', { style: 'text-anchor:start;font-size:22px' }), 'comb');
+        K(txt(svg, 60, 268, 'tic_r comes straight off the flip-flop: no gates after it. The cost is one clock of delay.', 'pind', { style: 'text-anchor:start;font-size:20px' }), 'reg');
+        return D;
+    }
+    const D6 = buildR6($('d6'));
+    const W6ROWS = [
+        { id: 'clk', lab: 'CLK', kind: 'clk' },
+        { id: 'clr', lab: 'clr', kind: 'bit', cls: '', get: t => t.clr },
+        { id: 'TR', lab: 'TR', kind: 'bus', cls: 'on', get: t => hex(t.TR) },
+        { id: 'tic', lab: 'tic', kind: 'bit', cls: 'tic', get: t => t.tic },
+        { id: 'ticr', lab: 'tic_r', kind: 'bit', cls: 'tic', get: t => t.ticR },
+    ];
+    function paintB6() {
+        focusKeys(D6.svg, [['comb', 'both'], ['reg', 'both'], ['comb', 'both'], ['reg', 'both']][sel6]);
+        const svg = $('w6'), save = { ...WV }; Object.assign(WV, { x0: 140, cw: 66, rh: 50, hi: 9, lo: 41 });
+        const { WX, yb } = paintWaves(svg, R6, R6_N - 1, { rows: W6ROWS, n: R6_N, first: 0, cursors: false, perCell: true });
+        for (const k of R6.filter(r => r.tic).map(r => r.cyc)) { const r = el('rect', { x: WX(k) + 2, y: WV.top + WV.rh * 3 - 2, width: 2 * WV.cw - 4, height: WV.rh * 2 + 4, rx: 6, class: 'wv-same', 'data-same': k }, svg); svg.insertBefore(r, svg.firstChild); }
+        txt(svg, WX(6), yb + 44, 'tic_r = tic, one clock later', 'wv-samel');
+        Object.assign(WV, save);
+        $('nxt6').disabled = sel6 >= NROWS6 - 1;
+        document.querySelectorAll('#p6 .rowcard').forEach(c => c.classList.toggle('on', +c.dataset.row === sel6));
+    }
+
+    // ============ RENDER / NAV ============
+    function drawPage() { [null, paintSpec, paintB2, paintB3, paintB4, paintB5, paintB6][page](); paintBack(); }
+    function render() {
+        for (let i = 1; i <= NPAGES; i++) $('p' + i).classList.toggle('active', i === page);
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        document.querySelectorAll('[data-dot]').forEach(d => d.classList.toggle('on', +d.dataset.dot <= page));
+        $('pcNum').textContent = page;
+        drawPage();
+    }
+    const defsEl = $('defs'), defsBtn = $('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) { closeDefs(); page = Math.max(1, Math.min(NPAGES, n)); render(); }
+    const clampSel = (n, N) => Math.max(0, Math.min(N - 1, n));
+    function setSel(n, p = page) {
+        if (p === 1) sel1 = clampSel(n, NROWS1); else if (p === 2) build = clampSel(n, NBUILD + 1); else if (p === 3) sel3 = clampSel(n, NROWS3);
+        else if (p === 4) sel4 = clampSel(n, NROWS4); else if (p === 6) sel6 = clampSel(n, NROWS6);
+        if (page === p) drawPage();
+    }
+    const SELS = () => ({ 1: sel1, 2: build, 3: sel3, 4: sel4, 6: sel6 });
+    const NMAX = { 1: NROWS1, 2: NBUILD + 1, 3: NROWS3, 4: NROWS4, 6: NROWS6 };
+    function step() { const inp = { clr: panel.clr, D: panel.D }; live.hist.push({ m: live.m, inp, panel: Object.assign({}, panel) }); live.m = stepModel(live.m, inp); live.cyc++; }
+    function advance(dir = 1) {
+        if (page === 5) { if (dir > 0) step(); else { const h = live.hist.pop(); if (h) { live.m = h.m; live.cyc--; panel = Object.assign({}, h.panel); } } drawPage(); return; }
+        const cur = SELS()[page], N = NMAX[page];
+        if (dir > 0) setSel(cur + 1 >= N ? 0 : cur + 1); else setSel(cur - 1);
+    }
+    const stepIdx = () => page === 5 ? live.hist.length : SELS()[page];
+    function back() { if (stepIdx() > 0) advance(-1); }
+    function paintBack() { const b = $('bk' + page); if (b) b.disabled = stepIdx() === 0; }
+    function doReset() {
+        if (defsOpen()) return;
+        if (page === 5) { live = { m: RESET, cyc: 0, hist: [] }; panel = { clr: 0, D: panel.D }; drawPage(); return; }
+        setSel(0);
+    }
+    function setInputs(o) { if (o.clr !== undefined) panel.clr = +!!o.clr; if (o.D !== undefined) panel.D = o.D & MASK; if (page === 5) drawPage(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    for (let p = 1; p <= NPAGES; p++) $('bk' + p).addEventListener('click', e => { back(); e.currentTarget.blur(); });
+    for (const id of ['nxt1', 'nxt2', 'nxt3', 'nxt4', 'clk5', 'nxt6']) $(id).addEventListener('click', e => { advance(1); e.currentTarget.blur(); });
+    for (const p of [1, 3, 4, 6]) document.querySelectorAll(`#p${p} .rowcard`).forEach(c => c.addEventListener('click', () => setSel(+c.dataset.row, p)));
+    $('btnClr').addEventListener('click', e => { setInputs({ clr: !panel.clr }); e.currentTarget.blur(); });
+    document.querySelectorAll('#p5 .bit').forEach(b => b.addEventListener('click', e => { setInputs({ D: panel.D ^ (1 << +b.dataset.bit) }); e.currentTarget.blur(); }));
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) { if (k === 'Escape') closeDefs(); if (k === ' ' || 'rRcC'.includes(k)) e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'c': case 'C': case 'ArrowDown': advance(1); e.preventDefault(); break;
+            case 'ArrowUp': back(); e.preventDefault(); break;
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+            case 'x': case 'X': if (page === 5) { setInputs({ clr: !panel.clr }); e.preventDefault(); } break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = {
+        setPage, advance, step, back, stepIdx, setSel, setInputs, reset: doReset, openDefs, closeDefs, defsOpen,
+        getState: () => ({ page, sel1, build, sel3, sel4, sel6, live, panel }),
+        model: { derive, stepModel, run, RESET, FEDGES, XFER, BLK, WIRE_SETS },
+        shown: (id) => { const svg = $(id); return {
+            wiresOn: Array.from(svg.querySelectorAll('.wire.on')).map(p => p.dataset.id).filter(Boolean),
+            foc: svg.querySelectorAll('.foc').length, dim: svg.querySelectorAll('.dim').length,
+            visibleGroups: [...new Set(Array.from(svg.querySelectorAll('[data-g]:not(.hid)')).map(e => +e.dataset.g))].sort(),
+            reg: (svg.querySelector('.regval') || {}).textContent || '' }; },
+    };
+    {
+        const q = new URLSearchParams(location.search), b = q.get('beat') ? Math.max(1, Math.min(NPAGES, +q.get('beat'))) : 1;
+        page = b;
+        if (q.get('step') !== null) { const m = +q.get('step'); if (b === 5) { for (let i = 0; i < m; i++) step(); } else { const N = NMAX[b];
+            const v = Math.max(0, Math.min(N - 1, m)); if (b === 1) sel1 = v; else if (b === 2) build = v; else if (b === 3) sel3 = v; else if (b === 4) sel4 = v; else sel6 = v; } }
+        render();
+    }
+    // ============ IN-PAGE ASSERTIONS (house rule) ============
+    function runAssertions() {
+        const fails = [], S0 = { page, sel1, build, sel3, sel4, sel6 };
+        // 1) the period with clr released at cycle 2: TR = 0 in the first free clock, first tic D clocks later, then every D
+        for (let D = 0; D <= 15; D++) { const n = D || 16, rows = run(D, 2 + 3 * n + 4, (k) => +(k < 2)), tics = rows.filter(r => r.tic && r.cyc >= 2).map(r => r.cyc);
+            if (tics[0] !== 2 + n - 1) fails.push(`D=${D} first tic ${tics[0]}`);
+            tics.slice(1).forEach((t, i) => { if (t - tics[i] !== n) fails.push(`D=${D} gap ${t - tics[i]}`); });
+            if (rows[2].TR !== 0) fails.push(`D=${D} TR not 0 after clr`); }
+        // 2) 220 random runs against a reference written from the description, not the circuit: clr holds the count at 0;
+        //    after clr drops the stopwatch counts clocks j = 0, 1, …; TR = j mod n, tic = (TR = n − 1); tic_r = tic one clock later
+        let seed = 54; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+        let sawD1 = 0, sawD0 = 0, sawHold = 0;
+        for (let trial = 0; trial < 220; trial++) {
+            const D = trial % 17 === 0 ? 0 : trial % 13 === 0 ? 1 : 1 + Math.floor(rnd() * 15), n = D || 16; let m = RESET, j = 0, prevTic = 0;
+            if (D === 0) sawD0++; if (D === 1) sawD1++;
+            for (let k = 0; k < 70; k++) { const inp = { clr: +(rnd() < 0.08), D }, d = derive(m, inp), wantC = j % n, wantTic = +(wantC === n - 1);
+                if (inp.clr && m.TR === 0 && k) sawHold++;
+                if (d.TR !== wantC || d.tic !== wantTic || d.ticR !== prevTic) { fails.push(`rand ${trial} D=${D} at ${k}: TR ${d.TR}/${wantC} tic ${d.tic}/${wantTic} tic_r ${d.ticR}/${prevTic}`); break; }
+                j = inp.clr ? 0 : j + 1; prevTic = d.tic; m = stepModel(m, inp); }
+        }
+        if (!sawD0 || !sawD1 || !sawHold) fails.push('random runs missed D = 0, D = 1 or a held clr');
+        // 3) the controller's equations against the FSMD's transfers: zero = clr + tc names exactly the TR ← 0 cases, tic = tc
+        for (const clr of [0, 1]) for (const TR of [0, 2, 3, 15]) for (const D of [1, 4, 0]) { const d = derive({ TR }, { clr, D });
+            const fsmdZero = clr || TR === ((D - 1) & MASK) ? 1 : 0;
+            if (d.zero !== fsmdZero || d.nextC !== (fsmdZero ? 0 : (TR + 1) & MASK) || d.tic !== d.tc) fails.push(`eq clr=${clr} TR=${TR} D=${D}`); }
+        for (const svg of [$('d1'), $('d2f'), $('d3f')]) { const tags = Array.from(svg.querySelectorAll('.xfer')).map(t => t.textContent).join('|');
+            if (tags !== 'if clr + tc:TR ← 0|otherwise:TR ← TR + 1') fails.push('tag text ' + svg.id + ': ' + tags); }
+        if ($('d1').querySelectorAll('.sd-node').length !== 1) fails.push('the FSMD should have one state');
+        if ($('d3').querySelectorAll('.sd-node').length !== 0 || $('d3').querySelectorAll('.gate').length !== 1) fails.push('the controller should be one gate and no state');
+        // 4) geometry
+        const overlap = (a, b, pad = 0) => a.x < b.x + b.width + pad && a.x + a.width + pad > b.x && a.y < b.y + b.height + pad && a.y + a.height + pad > b.y;
+        const vbOf = (svg) => svg.getAttribute('viewBox').split(' ').map(Number);
+        const shownText = (svg) => Array.from(svg.querySelectorAll('text')).filter(t => !t.closest('.hid'));
+        const rectsOf = (blocks, ox = 0) => Object.values(blocks).map(b => ({ x: b.x + ox + (b.bot || 0), y: b.y, width: b.w - 2 * (b.bot || 0), height: b.h }));   // a mux by its inner rectangle: wires meet its slanted edges
+        function checkSvg(svg, tag, wires, rects, nodes = {}, nodeR = 0, minText = 6) {
+            const [vx, vy, vw, vh] = vbOf(svg); let measured = 0;
+            const segs = []; for (const w of wires) for (let i = 0; i + 1 < w.pts.length; i++) segs.push({ id: w.id, p: w.pts[i], q: w.pts[i + 1] });
+            for (const s of segs) for (const r of rects) { const a = { x: Math.min(s.p[0], s.q[0]) + 1, y: Math.min(s.p[1], s.q[1]) + 1, width: Math.max(Math.abs(s.q[0] - s.p[0]) - 2, 0.1), height: Math.max(Math.abs(s.q[1] - s.p[1]) - 2, 0.1) };
+                if (overlap(a, { x: r.x + 1, y: r.y + 1, width: r.width - 2, height: r.height - 2 })) fails.push(`${tag} wire ${s.id} through a block`); }
+            for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++) { const A = segs[i], B = segs[j]; if (A.id === B.id) continue;
+                const h = A.p[1] === A.q[1] ? A : B.p[1] === B.q[1] ? B : null, v = h === A ? B : A; if (!h || v.p[0] !== v.q[0]) continue;
+                const x = v.p[0], y = h.p[1]; if (x > Math.min(h.p[0], h.q[0]) + 1 && x < Math.max(h.p[0], h.q[0]) - 1 && y > Math.min(v.p[1], v.q[1]) + 1 && y < Math.max(v.p[1], v.q[1]) - 1) fails.push(`${tag} wires ${A.id} × ${B.id}`); }
+            const boxes = [];
+            for (const t of shownText(svg)) { const bb = t.getBBox(); if (!bb.width) continue; measured++; boxes.push({ t, bb });
+                if (bb.x < vx || bb.y < vy || bb.x + bb.width > vx + vw || bb.y + bb.height > vy + vh) fails.push(`${tag} text outside: ${t.textContent}`);
+                if (t.closest('.sd-node') || t.dataset.in) continue;
+                for (const r of rects) if (overlap(bb, r)) fails.push(`${tag} "${t.textContent}" on a block`);
+                for (const s of segs) { const a = { x: Math.min(s.p[0], s.q[0]) - 2, y: Math.min(s.p[1], s.q[1]) - 2, width: Math.abs(s.q[0] - s.p[0]) + 4, height: Math.abs(s.q[1] - s.p[1]) + 4 };
+                    if (overlap(bb, a)) fails.push(`${tag} "${t.textContent}" on wire ${s.id}`); }
+                for (const k in nodes) { const c = nodes[k], cx = Math.max(bb.x, Math.min(c.x, bb.x + bb.width)), cy = Math.max(bb.y, Math.min(c.y, bb.y + bb.height)); if (Math.hypot(cx - c.x, cy - c.y) < nodeR + 2) fails.push(`${tag} "${t.textContent}" on bubble ${k}`); } }
+            for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) { const A = boxes[i], B = boxes[j];
+                if (A.t.contains(B.t) || B.t.contains(A.t) || A.t.closest('.sd-node') && A.t.closest('.sd-node') === B.t.closest('.sd-node')) continue;
+                if (overlap(A.bb, B.bb, -2)) fails.push(`${tag} "${A.t.textContent}" on "${B.t.textContent}"`); }
+            if (measured < minText) fails.push(`${tag}: only ${measured} text boxes measured (hidden page?)`);
+            for (const { t, line } of BARS) if (t.closest('svg') === svg && !t.closest('.hid') && line.getAttribute('x1')) { const y = +line.getAttribute('y1'), bb = (t.closest('text') || t).getBBox();
+                if (!(y < bb.y + 0.5 * bb.height) || y < vy) fails.push(`${tag} bar misplaced`); }
+            for (const p of svg.querySelectorAll('path.arc')) { if (p.closest('.hid')) continue; const bb = p.getBBox(); if (bb.x < vx || bb.x + bb.width > vx + vw || bb.y < vy || bb.y + bb.height > vy + vh) fails.push(`${tag} arc outside`); }
+            return measured;
+        }
+        // contrast gate (v2, light, as in 40): every visible text on the active page reads >= 3:1 on white after blending its
+        // opacity; the not-yet-reached cycles of a timing diagram (.wv-fut) are the only exemption. Counted, with a floor.
+        const lum = (r, g, b) => { const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+        let contrasted = 0;
+        const contrastGate = (tag) => { let n = 0;
+            const els = Array.from(document.querySelectorAll('.page.active svg text, .page.active svg tspan, .defs.open text')).filter(t => !t.closest('.hid') && !t.closest('.wv-fut') && t.textContent.trim() && t.getBoundingClientRect().width);
+            for (const t of els) { const cs = getComputedStyle(t), m = cs.fill.match(/rgba?\(([^)]*)\)/); if (!m) continue; const [r, g, b, al = 1] = m[1].split(',').map(Number);
+                let op = al * +cs.fillOpacity; for (let q = t; q && q.nodeType === 1; q = q.parentNode) op *= +getComputedStyle(q).opacity;
+                const bl = (c) => c * op + 255 * (1 - op), L = lum(bl(r), bl(g), bl(b)), cr = 1.05 / (L + 0.05); n++; contrasted++;
+                if (cr < 3 - 1e-6) { fails.push(`${tag}: pale text "${t.textContent.slice(0, 14)}" ${cr.toFixed(2)}:1`); return; } }
+            if (n < 8) fails.push(tag + ': too few texts for the contrast gate'); };
+        const sweep = (tag) => {
+            contrastGate(tag);
+            const ds = $('designSurface'); if (ds.scrollHeight > 1080 + 1 || ds.scrollWidth > 1920 + 1) fails.push('overflow ' + tag);
+            document.querySelectorAll('.page.active .panel, .page.active .ro, .page.active .rowcard').forEach(p => { if (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1) fails.push('panel overflow ' + tag + ' ' + (p.className || '').split(' ').slice(0, 3).join('.')); });
+            const st = $('stage').getBoundingClientRect();
+            document.querySelectorAll('.page.active .panel, .page.active .rowcard').forEach(p => { const r = p.getBoundingClientRect(); if (r.width && (r.bottom > st.bottom + 1 || r.right > st.right + 1)) fails.push('off stage ' + tag); });
+        };
+        document.querySelectorAll('.tab').forEach(t => { if (t.scrollWidth > t.clientWidth + 1) fails.push('tab overflow ' + t.dataset.page); });
+        // beat 1
+        setPage(1);
+        for (let s = 0; s < NROWS1; s++) { sel1 = s; drawPage(); const lit = new Set(Array.from(D0.svg.querySelectorAll('[data-k]:not(.dim)')).map(e => e.dataset.k));
+            if (s > 0 && [...lit].sort().join() !== SPREAD[s].keys.slice().sort().join()) fails.push('spec lit ' + s);
+            if (D0.bands.querySelectorAll('rect').length !== SPREAD[s].bands.length) fails.push('spec bands ' + s);
+            checkSvg(D0.svg, 'spec' + s, [], [], {}, 0, 20); sweep('p1s' + s); }
+        for (const r of ['clr', 'tic']) { const p = D0.wave[r].getAttribute('points').split(' ').map(q => q.split(',').map(Number));
+            for (let k = 0; k < SPEC_N; k++) if ((p[2 * k][1] < SP.ROWS[r]) !== !!SPEC[k][r]) fails.push(`spec ${r} wave ${k}`); }
+        D0.cells.forEach((t, k) => { if (t.textContent !== String(SPEC[k].TR)) fails.push('spec TR cell ' + k); });
+        if (SPEC.filter(r => r.tic).map(r => r.cyc).join() !== '5,9') fails.push('spec tics ' + SPEC.filter(r => r.tic).map(r => r.cyc));
+        // beat 2
+        setPage(2);
+        for (let b = 0; b <= NBUILD; b++) { build = b; drawPage(); const sh = window.__api.shown('d1');
+            if (sh.visibleGroups.join() !== Array.from({ length: b + 1 }, (_, i) => i).join()) fails.push('b2 groups ' + b); sweep('p2b' + b); }
+        const tagRects = (D) => Object.values(D.tags).map(r => ({ x: +r.getAttribute('x'), y: +r.getAttribute('y'), width: +r.getAttribute('width'), height: +r.getAttribute('height') }));
+        checkSvg($('d1'), 'fsmd', [], tagRects(D1), FN, RF, 6);
+        checkSvg($('dspec'), 'specmini', [], [], {}, 0, 4);
+        // beat 3
+        setPage(3);
+        for (let s = 0; s < NROWS3; s++) { sel3 = s; drawPage();
+            const fl = new Set(Array.from(D2F.svg.querySelectorAll('[data-fk].foc')).flatMap(e => e.dataset.fk.split(' ')).filter(t => B3[s].fk.includes(t)));
+            if ([...fl].sort().join() !== B3[s].fk.slice().sort().join()) fails.push('b3 fsmd lit ' + s);
+            if (!D2.svg.querySelector('.foc') || !D2.svg.querySelector('.dim')) fails.push('b3 dp focus ' + s);
+            sweep('p3s' + s); checkSvg($('d2f'), 'fsmdref' + s, [], tagRects(D2F), FN, RF, 6); }
+        checkSvg($('d2'), 'dp', WIRE_SETS.dp, rectsOf(BLK), {}, 0, 10);
+        // beat 4: each reading lights exactly its part of the controller
+        setPage(4);
+        const lit4 = ['', 'tcor,zo2,clrin,tcin', 'tcin,ticout'].map(x => x.split(',').filter(Boolean).sort().join());
+        for (let s = 0; s < NROWS4; s++) { sel4 = s; drawPage();
+            const litW = Array.from(D3.svg.querySelectorAll('polyline.foc')).map(p => p.dataset.id).sort().join();
+            if (litW !== lit4[s]) fails.push(`b4 lit ${s}: ${litW}`);
+            sweep('p4s' + s); checkSvg($('d3f'), 'fsmd4ref' + s, [], tagRects(D3F), FN, RF, 6); }
+        const orRect = (ox) => [{ x: ox + OG.x, y: OG.y, width: OG.w, height: OG.h }];
+        checkSvg($('d3'), 'ctl', WIRE_SETS.ctl, orRect(0), {}, 0, 6); checkSvg($('d3r'), 'dpref', WIRE_SETS.dp, rectsOf(BLK), {}, 0, 10);
+        // beat 5: 30 clocks from reset (D = 12, clr = 0), then random free play with clr toggled
+        setPage(5); doReset(); panel.D = 12; drawPage();
+        checkSvg($('d4'), 'full', WIRE_SETS.full, rectsOf(BLK, DX_FULL).concat(orRect(0)), {}, 0, 14);
+        const want5 = (t) => { const w = [], on = (c, ...ids) => { if (c) w.push(...ids); };
+            on(t.tc, 'tco', 'tcin', 'tcor'); on(t.zero, 'zin', 'zo2', 'zo'); on(!t.zero, 'addo'); w.push('muxo'); on(t.tic, 'ticout'); on(t.clr, 'clrin');
+            return w.sort().join(); };
+        const check5 = (tag) => { const all = rows5(), t = all[all.length - 1], sh = window.__api.shown('d4');
+            if (sh.wiresOn.slice().sort().join() !== want5(t)) fails.push(tag + ' wires ' + sh.wiresOn.join('/'));
+            if (!sh.reg.startsWith(bin(t.TR))) fails.push(tag + ' reg');
+            const nx = $('w5').querySelector('.wv-next'); if (!nx || +nx.dataset.cursor !== t.cyc + 1) fails.push(tag + ' cyan cursor');
+            const am = $('w5').querySelector('.wv-cursor'); if (t.cyc > Math.max(0, t.cyc + 1 - NW) && (!am || +am.dataset.cursor !== t.cyc)) fails.push(tag + ' amber cursor');
+            const ro = $('ro5'), rg = document.createRange(); rg.selectNodeContents(ro); const k5 = ro.offsetHeight / ro.getBoundingClientRect().height;
+            if (rg.getBoundingClientRect().height * k5 > 2 * parseFloat(getComputedStyle(ro).lineHeight) + 4) fails.push(tag + ' readout over two lines'); };
+        const cursorClear = (tag) => { const am = $('w5').querySelector('.wv-cursor'); if (!am) return; const x = +am.getAttribute('x1');
+            $('w5').querySelectorAll('.wv-bt').forEach(t => { const bb = t.getBBox(); if (bb.x < x && bb.x + bb.width > x) fails.push(tag + ' cursor through label ' + t.textContent); }); };
+        for (let k = 0; k < 30; k++) { check5('c' + k); cursorClear('c' + k); if (k % 5 === 0) sweep('p5c' + k); if (k === 13) checkSvg($('w5'), 'wave', [], [], {}, 0, 20); step(); drawPage(); }
+        { const tics = rows5().filter(r => r.tic).map(r => r.cyc); if (tics.join() !== '11,23') fails.push('beat 5 run tics ' + tics.join()); }
+        doReset(); seed = 7;
+        for (let k = 0; k < 40; k++) { if (rnd() < 0.2) setInputs({ clr: !panel.clr }); if (rnd() < 0.1) setInputs({ D: Math.floor(rnd() * 16) }); check5('free' + k); step(); drawPage(); }
+        // beat 6
+        const R6BLK = [{ x: 60, y: 54, width: 230, height: 64 }, { x: BND + 100, y: 46, width: 92, height: 80 }];   // comparator, flip-flop
+        for (let s = 0; s < NROWS6; s++) { setPage(6); sel6 = s; drawPage(); sweep('p6s' + s); checkSvg($('d6'), 'r6_' + s, [{ id: 'boundary', pts: [[BND, 14], [BND, 150]] }], R6BLK, {}, 0, 6);
+            const w6 = $('w6'), cells = w6.querySelectorAll('.wv-bus');
+            if (cells.length !== (W6ROWS.length - 1) * R6_N) fails.push(`beat 6 cells ${cells.length}`);
+            cells.forEach(c => { const lab = w6.querySelector(`.wv-bt[data-row="${c.dataset.row}"][data-k="${c.dataset.k}"]`);
+                if (!lab || !lab.textContent.trim()) { fails.push(`beat 6 empty cell ${c.dataset.row} ${c.dataset.k}`); return; }
+                const bb = lab.getBBox(), p = w6.createSVGPoint(); p.x = bb.x + bb.width / 2; p.y = bb.y + bb.height / 2;
+                const q = p.matrixTransform(w6.getScreenCTM()), top = document.elementFromPoint(q.x, q.y);
+                if (top !== lab && !lab.contains(top)) fails.push(`beat 6 label covered ${c.dataset.row} ${c.dataset.k}`); }); }
+        R6.forEach((r, k) => { if (r.ticR !== (k ? R6[k - 1].tic : 0)) fails.push('beat 6 tic_r not tic delayed ' + k); });
+        if ($('w6').querySelectorAll('.wv-same').length !== R6.filter(r => r.tic).length) fails.push('beat 6 one-clock-later marks');
+        checkSvg($('w6'), 'w6', [], [], {}, 0, 20);
+        { const d6 = $('d6'); for (const t of d6.querySelectorAll('text')) { const bb = t.getBBox(); if (!bb.width) continue;
+            if (t.textContent === 'tic_r' && bb.x < BND) fails.push('tic_r label left of the boundary');
+            if (t.textContent === 'tc = tic⁺' && bb.x + bb.width > BND) fails.push('tic⁺ label right of the boundary'); } }
+        // no two datapath blocks within 8 units of each other (40's spacing rule)
+        { const bs = Object.entries(BLK).map(([k, b]) => ({ k, x: b.x, y: b.y, w: b.w, h: b.h }));
+          for (let i = 0; i < bs.length; i++) for (let j = i + 1; j < bs.length; j++) { const A = bs[i], B = bs[j];
+              const gx = Math.max(B.x - (A.x + A.w), A.x - (B.x + B.w)), gy = Math.max(B.y - (A.y + A.h), A.y - (B.y + B.h));
+              if (Math.max(gx, gy) < 8) fails.push(`blocks ${A.k} and ${B.k} closer than 8`); } }
+        // on-screen label size, for projection: block labels >= 16 px, port and value labels >= 14 px, in every datapath drawing
+        { let sized = 0;
+          for (const [p, id] of [[3, 'd2'], [4, 'd3r'], [5, 'd4'], [4, 'd3'], [5, 'd4']]) { setPage(p); if (p === 5) { doReset(); step(); drawPage(); }
+              const svg = $(id);
+              svg.querySelectorAll('text').forEach(t => { if (t.closest('.hid') || !t.textContent.trim()) return; const h = parseFloat(getComputedStyle(t).fontSize) * svg.getScreenCTM().a;
+                  const block = t.classList.contains('blk-l'), port = t.classList.contains('sig') || t.classList.contains('val') || t.classList.contains('regval') || t.classList.contains('muxin');
+                  if (!block && !port) return; sized++;
+                  if (block && h < 16 - 0.05) fails.push(`${id}: block label "${t.textContent}" ${h.toFixed(1)} px`);
+                  if (port && h < 14 - 0.05) fails.push(`${id}: label "${t.textContent}" ${h.toFixed(1)} px`); }); }
+          if (sized < 30) fails.push('label-size check measured too few'); }
+        // back restores the exact prior frame on every stepped beat; back is disabled at step 0
+        { const frame = () => document.querySelector('.page.active').innerHTML;
+          for (const p of [1, 2, 3, 4, 6]) { setPage(p); setSel(0, p); if (!$('bk' + p).disabled) fails.push('back enabled at 0, beat ' + p);
+              for (let k = 0; k + 1 < NMAX[p]; k++) { setSel(k, p); const A = frame(); advance(1); const B = frame(); back(); if (frame() !== A) fails.push(`back beat ${p} step ${k + 1}`); if (A === B) fails.push(`beat ${p} step ${k} changes nothing`); } }
+          setPage(5); doReset(); seed = 99;
+          for (let k = 0; k < 24; k++) { if (rnd() < 0.25) setInputs({ clr: !panel.clr }); if (rnd() < 0.15) setInputs({ D: 1 + Math.floor(rnd() * 15) }); const A = frame(), P = JSON.stringify(panel);
+              step(); drawPage(); back(); if (frame() !== A || JSON.stringify(panel) !== P) fails.push('free back ' + k); step(); drawPage(); } }
+        openDefs(); sweep('defs'); closeDefs();
+        page = S0.page; sel1 = S0.sel1; build = S0.build; sel3 = S0.sel3; sel4 = S0.sel4; sel6 = S0.sel6; live = { m: RESET, cyc: 0, hist: [] }; panel = { clr: 0, D: 12 }; render();
+        if (fails.length) document.title += ' — ASSERT FAIL: ' + [...new Set(fails)].slice(0, 12).join(', ');
+        else if (location.search.indexOf('verify') >= 0) document.title += ' — ASSERT PASS';
+    }
+    if (location.search.indexOf('verify') >= 0) { try { runAssertions(); } catch (e) { document.title = 'ERR ' + e.message; } }
+</script>
+</body>
+</html>
