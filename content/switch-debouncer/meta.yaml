@@ -1,0 +1,11 @@
+title: "Switch Debouncer"
+description: "Why mechanical switches bounce, and a three-state FSMD that accepts a new level only after it holds for N clocks, built from registers, an adder, a mux and comparators."
+chapter: rtl-design
+section: examples
+order: 50201
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the switch debouncer, narrated over the interactive: why contacts bounce, the three-state FSMD, its datapath and one-hot controller, and the Verilog"
+  02-interactive.html:
+    caption: "Interactive: see a bounce at clock scale, build the FSMD one idea at a time, split it into controller and datapath, then step a press, a dropout and a release at N = 4 or 8"
