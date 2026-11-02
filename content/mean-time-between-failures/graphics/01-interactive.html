@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mean Time Between Failures — How Long a Synchronizer Lasts</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: var(--surround); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9; max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0; transform-origin: top left;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* ======== VISUAL SYSTEM v2 (light) — copied from 40-switch-debouncer ========
+       surround #f6f6f4 · stage white · text #1c2433 · secondary #5b6472 · unfocused #858e99 (3.4:1) · hairline #d9dde3
+       accent #4a6fa5, emphasis #2f4f7f · control/CLK #b8640a · status #6b4fa8 (here: the window T0) · data #4a6fa5
+       output/accept #2e7d4f · hover (metastable) #b4472f. No glows, shadows or gradients; lit = accent stroke + pale tint;
+       unfocused = grey, not faded. SVG text sizes are set by attribute only (no CSS font-size on SVG text). */
+    :root { --surround: #f6f6f4; --stage: #ffffff; --ink: #1c2433; --ink2: #5b6472; --ink3: #3a4350; --mute: #858e99; --hair: #d9dde3;
+        --accent: #4a6fa5; --accent2: #2f4f7f; --ctl: #b8640a; --st: #6b4fa8; --ok: #2e7d4f; --raw: #b4472f; }
+    .viewport-container { background: var(--stage); }
+    .design-surface { background: var(--stage); color: var(--ink); }
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 1px solid var(--hair); border-radius: 6px; padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: var(--ink); font-size: 38px; font-weight: 600; line-height: 1.15; }
+    .titles h1 .sub { color: var(--ink2); font-size: 25px; font-weight: 400; }
+    .titles .subtitle { color: var(--ink2); font-size: 20px; margin-top: 4px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; flex-shrink: 0; border: 1px solid var(--hair); border-radius: 6px; padding: 8px 18px; font-size: 20px; font-weight: 500; }
+    .page-count { color: var(--ink2); } .page-count b { color: var(--ink); font-size: 26px; }
+    .defs-btn { display: inline-flex; align-items: center; gap: 10px; font-family: inherit; color: var(--ink); background: transparent; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k { border: 1px solid var(--hair); border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: var(--ink2); line-height: 26px; }
+    .defs-btn.on { border-color: var(--st); background: rgba(107,79,168,0.08); }
+
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(28,36,51,0.351); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1480px; background: #fff; border: 1px solid var(--hair); border-radius: 8px; padding: 16px 38px 22px; }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+    .defs-title { font-size: 34px; font-weight: 700; color: var(--ink); }
+    .defs-close { font-size: 20px; color: var(--ink2); }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 12px; align-items: baseline; }
+    .defs-list .ds { font-size: 25px; font-weight: 700; white-space: nowrap; color: var(--ink); }
+    .defs-list .dd { font-size: 21px; line-height: 1.3; color: var(--ink3); }
+    .defs-list .dd b { color: var(--ink); }
+
+    .tabstrip { display: flex; gap: 30px; margin: 14px 0 6px; border-bottom: 1px solid var(--hair); }
+    .tab { display: flex; align-items: center; gap: 12px; border-bottom: 3px solid transparent; padding: 8px 2px 10px; color: var(--ink2); cursor: pointer; }
+    .tab .tnum { width: 30px; height: 30px; flex-shrink: 0; border: 1px solid currentColor; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; }
+    .tab .tlabel { font-size: 21px; font-weight: 600; white-space: nowrap; }
+    .tab .tstep { font-size: 15px; font-weight: 500; color: var(--mute); margin-left: 4px; }
+    .tab.on { color: var(--accent2); border-bottom-color: var(--accent); }
+    .tab.on .tnum { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 14px; flex-direction: column; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .ov { text-decoration: overline; text-decoration-thickness: 2px; }
+
+    .panel { background: var(--stage); border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+    .panel.lit { outline: 2px solid var(--accent); outline-offset: -1px; background: rgba(74,111,165,0.035); }
+    .panel svg { display: block; }
+    .phead { white-space: nowrap; font-size: 22px; font-weight: 600; color: var(--ink); padding: 10px 22px 0; }
+    .phead .dimtxt { color: var(--ink2); font-weight: 500; }
+    .row { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .side { flex: 0 0 560px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .card { padding: 12px 22px 14px; font-size: 20px; line-height: 1.38; color: var(--ink3); }
+    .card b { color: var(--ink); }
+    .card .ct { font-size: 22px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+    .card.fill { flex: 1; min-height: 0; }
+    .card .rule { border-left: 3px solid var(--accent); padding-left: 14px; margin-top: 4px; color: var(--ink); }
+    .stepcard .snum { font-size: 17px; font-weight: 700; letter-spacing: 0.5px; color: var(--accent); }
+    .stepcard .reason { font-size: 22px; line-height: 1.4; color: var(--ink3); margin-top: 4px; min-height: 92px; }
+    .stepcard .reason b { color: var(--ink); }
+    .steprow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+    .btn { font-family: inherit; font-size: 19px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ink2);
+        border-radius: 6px; padding: 5px 14px; cursor: pointer; white-space: nowrap; }
+    .btn .kk { font-weight: 500; font-size: 17px; color: var(--ink2); }
+    .btn.nxt { border-color: var(--accent); color: var(--accent); }
+    .btn.bk { border-color: var(--mute); color: var(--ink3); }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+    .btn.tog { border-color: var(--hair); color: var(--ink2); }
+    .btn.tog.on { border-color: var(--accent); color: var(--accent2); background: rgba(74,111,165,0.09); }
+    .chip { display: inline-block; font-size: 19px; font-weight: 600; border-radius: 999px; padding: 4px 14px; border: 1px solid currentColor; white-space: nowrap; }
+
+    /* the formula */
+    .formula { display: flex; align-items: center; gap: 16px; font-size: 30px; color: var(--ink); padding: 10px 22px 4px; white-space: nowrap; }
+    .formula .lhs { font-weight: 600; }
+    .frac { display: inline-flex; flex-direction: column; align-items: center; }
+    .frac .num { padding: 0 10px 4px; }
+    .frac .den { padding: 4px 10px 0; border-top: 2px solid var(--ink); }
+    .formula i { font-family: 'Times New Roman', Times, serif; font-size: 1.12em; }
+    .formula sub, .formula sup { font-size: 0.62em; }
+    .fnote { padding: 2px 22px 12px; font-size: 20px; line-height: 1.38; color: var(--ink3); }
+    .fnote b { color: var(--ink); }
+    .fnote .acc { color: var(--accent2); font-weight: 700; }
+
+    /* beat 1 */
+    .strip svg { width: 100%; height: 370px; }
+    .halves { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .halves .panel { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .halves svg { width: 100%; height: 300px; }
+
+    /* beat 2 */
+    .meter2 svg { width: 100%; height: 380px; }
+    .low2 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .ctrl2 { flex: 0 0 900px; display: flex; flex-direction: column; }
+    .slrow { display: flex; align-items: center; gap: 16px; padding: 10px 22px 0; }
+    .slrow .sl { flex: 1; accent-color: #4a6fa5; height: 26px; }
+    .slrow .sll { font-size: 20px; color: var(--ink2); white-space: nowrap; }
+    .tiles { display: flex; gap: 12px; padding: 10px 22px 0; }
+    .tile { flex: 1; border: 1px solid var(--hair); border-radius: 6px; padding: 6px 14px 8px; min-width: 0; }
+    .tile .tk { font-size: 17px; color: var(--ink2); white-space: nowrap; }
+    .tile .tv { font-variant-numeric: tabular-nums; font-size: 25px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+    .tile.hi { border-color: var(--accent); background: rgba(74,111,165,0.07); } .tile.hi .tv { color: var(--accent2); }
+    .ctrl2 .reason { padding: 10px 22px 0; font-size: 21px; line-height: 1.38; color: var(--ink3); }
+    .ctrl2 .reason b { color: var(--ink); }
+    .ctrl2 .steprow { padding: 0 22px 12px; margin-top: auto; }
+    .fcard2 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+    /* beat 3 */
+    .top3 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .rows3 { flex: 0 0 1190px; } .rows3 svg { width: 100%; height: 470px; }
+    .rcol3 { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .meter3 svg { width: 100%; height: 262px; }
+    .mtab { padding: 6px 16px 10px; }
+    .mtab table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    .mtab th { font-size: 17px; font-weight: 600; color: var(--ink2); padding: 4px 8px 7px; text-align: center; border-bottom: 2px solid var(--hair); white-space: nowrap; }
+    .mtab td { font-size: 18px; padding: 7px 8px; border-bottom: 1px solid #e6e9ee; color: var(--ink); white-space: nowrap; text-align: center; }
+    .mtab th:first-child, .mtab td:first-child { text-align: left; }
+    .mtab td.mt { font-size: 18px; }
+    .mtab tr.hi td { background: rgba(74,111,165,0.09); color: var(--accent2); font-weight: 700; }
+    .mtab tr.mu td { color: var(--ink2); }
+    .mtab sub, .mtab sup { font-size: 0.7em; }
+
+    /* beat 4 */
+    .meter4 svg { width: 100%; height: 312px; }
+    .low4 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .tab4 { flex: 0 0 560px; }
+    .tab4 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    .tab4 th { font-size: 18px; font-weight: 600; color: var(--ink2); padding: 6px 10px 8px; text-align: center; border-bottom: 2px solid var(--hair); white-space: nowrap; }
+    .tab4 td { font-size: 19px; padding: 12px 10px; border-bottom: 1px solid #e6e9ee; color: var(--ink); white-space: nowrap; text-align: center; font-family: 'Menlo','Consolas',monospace; }
+    .tab4 td:first-child { text-align: left; font-family: inherit; color: var(--ink2); }
+    .tab4 td.hi { background: rgba(74,111,165,0.12); color: var(--accent2); font-weight: 700; outline: 2px solid var(--accent); outline-offset: -2px; }
+    .tab4 sup { font-size: 0.7em; }
+    .brk4 { flex: 1; min-width: 0; }
+    .brk4 .bl { display: grid; grid-template-columns: 250px 1fr; column-gap: 18px; row-gap: 6px; padding: 8px 22px 12px; font-size: 20px; line-height: 1.32; }
+    .brk4 .bk { color: var(--ink2); white-space: nowrap; }
+    .brk4 .bv { color: var(--ink); white-space: nowrap; }
+    .brk4 .bv .mono { font-size: 19px; }
+    .brk4 .bv.res { color: var(--accent2); font-weight: 700; }
+    .brk4 sub, .brk4 sup { font-size: 0.7em; }
+    .togcard .tt { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .togcard .tt .ct { margin: 0; }
+    .togcard .tline { margin-top: 6px; }
+
+    /* SVG classes (no font-size here: the code sets it) */
+    .lab { fill: var(--ink3); }
+    .lab.b { font-weight: 700; fill: var(--ink); }
+    .lab.mu { fill: var(--mute); }
+    .lab.ink2 { fill: var(--ink2); }
+    .lab.acc { fill: var(--accent2); font-weight: 700; }
+    .lab.raw { fill: var(--raw); }
+    .lab.st { fill: var(--st); }
+    .lab.ctl { fill: var(--ctl); }
+    .mono-s { font-family: 'Menlo','Consolas',monospace; }
+    .sig { font-family: 'Menlo','Consolas',monospace; font-weight: 700; }
+    .sig.ctl { fill: var(--ctl); } .sig.d { fill: var(--ink); } .sig.q { fill: var(--accent); }
+    .w { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+    .w.clk { stroke: var(--ctl); stroke-width: 1.75; }
+    .w.d { stroke: var(--ink); stroke-width: 1.75; }
+    .w.q { stroke: var(--accent); stroke-width: 2.25; }
+    .w.hov { stroke: var(--raw); stroke-width: 2.25; }
+    .win { fill: rgba(107,79,168,0.16); stroke: var(--st); stroke-width: 1; }
+    .grid { stroke: #eef0f3; stroke-width: 1; }
+    .rowline { stroke: #e6e9ee; stroke-width: 1; }
+    .axis { stroke: var(--ink2); stroke-width: 1.25; }
+    .tick { stroke: var(--ink2); stroke-width: 1; }
+    .tick.mn { stroke: #b8bfc8; }
+    .track { fill: #f3f5f8; stroke: var(--hair); stroke-width: 1; }
+    .fillbar { fill: rgba(74,111,165,0.18); }
+    .needle { stroke: var(--accent); stroke-width: 3; }
+    .needle.mu { stroke: #a9b1bb; stroke-width: 2.5; }
+    .needle.ghost { stroke: #a9b1bb; stroke-width: 2.5; stroke-dasharray: 6 4; }
+    .bub { fill: #fff; stroke: var(--accent); stroke-width: 1.5; }
+    .bub.mu { stroke: #b8bfc8; }
+    .lm { fill: var(--ink2); }
+    .lmk { fill: var(--ink); stroke: none; }
+    .leader { stroke: #b8bfc8; stroke-width: 1; stroke-dasharray: 3 4; }
+    .curve { fill: none; stroke: var(--raw); stroke-width: 2.25; }
+    .tr-line { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 6 4; }
+    .ff { fill: #fff; stroke: #6b7480; stroke-width: 1.5; }
+    .ff.on { stroke: var(--accent); stroke-width: 2.5; fill: rgba(74,111,165,0.08); }
+    .ffp { fill: var(--ink2); font-family: 'Menlo','Consolas',monospace; }
+    .wire { fill: none; stroke: #6b7480; stroke-width: 1.5; stroke-linejoin: round; }
+    .wire.clk { stroke: var(--ctl); }
+    .cloud { fill: #f3f5f8; stroke: #8a93a0; stroke-width: 1.25; }
+    .seg { stroke: #fff; stroke-width: 2; }
+    .seg.co, .seg.su { fill: #d9dde3; } .seg.lg { fill: #ecdcc6; } .seg.tr { fill: rgba(74,111,165,0.32); }
+    .rowbg { fill: transparent; }
+    .rowbg.on { fill: rgba(74,111,165,0.06); stroke: var(--accent); stroke-width: 2; }
+    .r3.mu text, .r3.mu tspan { fill: var(--mute) !important; }
+    .r3.mu .ff, .r3.mu .cloud { stroke: #bcc3cc; }
+    .r3.mu .seg.tr { fill: rgba(133,142,153,0.22); }
+    .r3.mu .seg.lg { fill: #efe8de; }
+    .r3.mu .wire { stroke: #bcc3cc; }
+    .bar { fill: #e6e9ee; stroke: none; }
+    .halo { paint-order: stroke; stroke: #fff; stroke-width: 5px; stroke-linejoin: round; }
+    .barwin { fill: var(--st); }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .pdot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--hair); }
+    .pdot.on { background: var(--ink); border-color: var(--ink); }
+    .controls { font-size: 20px; color: var(--ink2); }
+    .controls .k { border: 1px solid var(--hair); border-radius: 6px; padding: 1px 8px; font-family: 'Menlo','Consolas',monospace; color: var(--ink2); }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 52 H34 L42 31 C46 27 50 35 54 31 C58 27 62 35 66 31 C70 27 74 35 78 31 L86 10 H104" stroke="#b4472f" stroke-width="2.6"/>
+                <path d="M110 46 H146" stroke="#4a6fa5" stroke-width="3"/>
+                <path d="M128 46 L138 16" stroke="#4a6fa5" stroke-width="3"/>
+                <path d="M112 46 A18 18 0 0 1 146 46" stroke="#858e99" stroke-width="1.5"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Mean Time Between Failures <span class="sub">&mdash; how long a synchronizer lasts</span></h1>
+            <div class="subtitle">A flip-flop on an input that ignores the clock gets caught now and then. How often it fails depends on how long it is given to settle, and that time sits in an exponent.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Caught and Hovering</div><div class="tstep">two halves</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">The Exponent</div><div class="tstep">slide it</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">One Flip-Flop vs a Synchronizer</div><div class="tstep">four designs</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">What Makes It Worse</div><div class="tstep">two toggles</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 — caught, then hovering -->
+        <div class="page" id="p1">
+            <div class="row">
+                <div class="main">
+                    <div class="panel strip" id="pan1s">
+                        <div class="phead">One flip-flop on an input that ignores the clock <span class="dimtxt">&mdash; a 10 ns clock; the window is drawn wider than its 0.1 ns</span></div>
+                        <svg id="s1" viewBox="0 0 1240 370"></svg>
+                    </div>
+                    <div class="halves">
+                        <div class="panel" id="pan1a">
+                            <div class="phead">1. How often it is caught</div>
+                            <svg id="s1a" viewBox="0 0 612 300"></svg>
+                        </div>
+                        <div class="panel" id="pan1b">
+                            <div class="phead">2. How often a catch is still undecided</div>
+                            <svg id="s1b" viewBox="0 0 612 300"></svg>
+                        </div>
+                    </div>
+                </div>
+                <div class="side">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum1"></div>
+                        <div class="reason" id="reason1"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk1">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt1">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel" id="pan1f">
+                        <div class="phead">3. Together: the mean time between failures</div>
+                        <div class="formula"><span class="lhs">MTBF</span><span>=</span>
+                            <span class="frac"><span class="num"><i>e</i><sup><i>t</i><sub>r</sub>/<i>&tau;</i></sup></span><span class="den"><i>T</i><sub>0</sub> &middot; <i>f</i><sub>clk</sub> &middot; <i>f</i><sub>data</sub></span></span></div>
+                        <div class="fnote">For this flip-flop, <i>t</i><sub>r</sub> = 1 ns: <b>148 &divide; 10,000 per second</b> = <span class="acc" data-mtbf="b1" data-tr="1" data-fclk="100e6" data-units="1"></span>.</div>
+                    </div>
+                    <div class="panel card fill">
+                        <div class="ct">Where this picks up</div>
+                        <div><b data-topic="metastable-states">Metastable States</b> showed the hover: usually short, never predictable. <b data-topic="synchronizers">Synchronizers</b> gave it a clock period to settle and called the risk <b>negligible, not zero</b>. This topic puts a number on it.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 — the exponent -->
+        <div class="page" id="p2">
+            <div class="panel meter2">
+                <div class="phead">The MTBF meter <span class="dimtxt">&mdash; each mark on the bottom scale is ten times the one before; the top scale is the settling time</span></div>
+                <svg id="m2" viewBox="0 0 1816 380"></svg>
+            </div>
+            <div class="low2">
+                <div class="panel ctrl2">
+                    <div class="slrow"><span class="sll">Settling time <i>t</i><sub>r</sub></span><input type="range" class="sl" id="sl2" min="0" max="20" step="0.5" value="0"><span class="sll">0 &ndash; 20 ns</span></div>
+                    <div class="tiles">
+                        <div class="tile"><div class="tk">settling time <span class="mono">t<sub>r</sub></span></div><div class="tv" id="tv2tr"></div></div>
+                        <div class="tile"><div class="tk">e<sup>t<sub>r</sub>/&tau;</sup>, with &tau; = 0.2 ns</div><div class="tv" id="tv2e"></div></div>
+                        <div class="tile hi"><div class="tk">mean time between failures</div><div class="tv" id="tv2m"></div></div>
+                    </div>
+                    <div class="reason" id="reason2"></div>
+                    <div class="steprow">
+                        <button class="btn bk" id="bk2">&#9664; 1 ns less <span class="kk">&uarr;</span></button>
+                        <button class="btn nxt" id="nxt2">1 ns more <span class="kk">Space</span></button>
+                        <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                    </div>
+                </div>
+                <div class="panel fcard2">
+                    <div class="phead">The formula, with this example&rsquo;s numbers</div>
+                    <div class="formula"><span class="lhs">MTBF</span><span>=</span>
+                        <span class="frac"><span class="num"><i>e</i><sup><i>t</i><sub>r</sub>/<i>&tau;</i></sup></span><span class="den"><i>T</i><sub>0</sub> &middot; <i>f</i><sub>clk</sub> &middot; <i>f</i><sub>data</sub></span></span>
+                        <span>=</span><span class="frac"><span class="num" id="fx2num"></span><span class="den">10<sup>4</sup> per second</span></span></div>
+                    <div class="fnote">The bottom stays fixed: <b>10,000 catches a second</b> (0.1 ns &times; 100 MHz &times; 1 MHz). Only the top moves. One more nanosecond is five more &tau;, so the top grows by <b>e<sup>5</sup> &asymp; 148</b>. On a scale of tens, &times;148 is always the same distance: the needle slides in a straight line.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 — one flip-flop vs a synchronizer -->
+        <div class="page" id="p3">
+            <div class="top3">
+                <div class="panel rows3">
+                    <div class="phead">Four designs, one 100 MHz clock <span class="dimtxt">&mdash; each bar starts at the clock edge the first flip-flop acts on</span></div>
+                    <svg id="r3" viewBox="0 0 1190 470"></svg>
+                </div>
+                <div class="rcol3">
+                    <div class="panel mtab" id="tab3"></div>
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum3"></div>
+                        <div class="reason" id="reason3"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk3">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt3">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel card fill"><div class="rule">A synchronizer does not stop the first flip-flop from being caught. It gives it <b>a whole clock period</b> to settle.</div></div>
+                </div>
+            </div>
+            <div class="panel meter3">
+                <svg id="m3" viewBox="0 0 1816 262"></svg>
+            </div>
+        </div>
+
+        <!-- BEAT 4 — what makes it worse -->
+        <div class="page" id="p4">
+            <div class="row">
+                <div class="side">
+                    <div class="panel card togcard" id="tg4f">
+                        <div class="tt"><div class="ct">Faster clock</div><button class="btn tog" id="tgF">200 MHz <span class="kk">F</span></button></div>
+                        <div class="tline">The period halves to 5 ns, so the synchronizer&rsquo;s first flip-flop gets only 3 ns to settle, and the clock samples twice as often.</div>
+                    </div>
+                    <div class="panel card togcard" id="tg4u">
+                        <div class="tt"><div class="ct">Many units</div><button class="btn tog" id="tgU">10<sup>6</sup> copies <span class="kk">U</span></button></div>
+                        <div class="tline">A product shipped in a million copies fails <b>somewhere</b> a million times as often.</div>
+                    </div>
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum4"></div>
+                        <div class="reason" id="reason4"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk4">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt4">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel card fill">
+                        <div class="ct">The remedy is the same</div>
+                        <div class="rule">More settling time. A third flip-flop at 200 MHz gives <span style="white-space: nowrap">2 &times; (5 &minus; 2) = 6 ns</span>: about <b data-mtbf="r4" data-tr="6" data-fclk="200e6" data-units="1"></b>. Far better than 2.72 minutes, though not the 746,000 years of the slower clock.</div>
+                    </div>
+                </div>
+                <div class="main">
+                    <div class="panel meter4">
+                        <div class="phead">The synchronizer from beat 3 on the meter <span class="dimtxt">&mdash; the dashed needle is where it started: 100 MHz, one unit</span></div>
+                        <svg id="m4" viewBox="0 0 1242 312"></svg>
+                    </div>
+                    <div class="low4">
+                        <div class="panel tab4"><div class="phead">Synchronizer: time between failures</div><div class="mtab" id="t4"></div></div>
+                        <div class="panel brk4"><div class="phead">Where the number comes from</div><div class="bl" id="b4"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress"><div class="pdot" data-dot="1"></div><div class="pdot" data-dot="2"></div><div class="pdot" data-dot="3"></div><div class="pdot" data-dot="4"></div></div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> or <span class="k">&larr;</span><span class="k">&rarr;</span> beat
+            &middot; <span class="k">Space</span> or <span class="k">&darr;</span> next &middot; <span class="k">&#9664; back</span> or <span class="k">&uarr;</span> one step back
+            &middot; <span class="k">F</span> <span class="k">U</span> toggles (beat 4) &middot; <span class="k">R</span> reset &middot; <span class="k">D</span> definitions
+        </div>
+    </div>
+
+    <div class="defs" id="defs">
+        <div class="defs-card">
+            <div class="defs-head"><div class="defs-title">Definitions</div><div class="defs-close">D or Esc closes</div></div>
+            <div class="defs-list">
+                <div class="ds">MTBF</div><div class="dd"><b>Mean time between failures</b>: the average time from one synchronizer failure to the next. Failures are random, so this is a rate, not a date: a 746,000-year MTBF can still fail tomorrow, though that is very unlikely.</div>
+                <div class="ds">metastable state</div><div class="dd">The flip-flop&rsquo;s output hovers near halfway between 0 and 1, wobbling, for a while, then settles to one of them. See <b data-topic="metastable-states">Metastable States</b>.</div>
+                <div class="ds">caught</div><div class="dd">The input changed so close to a clock edge that the flip-flop could not cleanly decide, so it may hover. A catch is not yet a failure: it fails only if it is still hovering when the next flip-flop reads it.</div>
+                <div class="ds">window <span class="mono">T<sub>0</sub></span></div><div class="dd">How close to the edge a change must land to catch the flip-flop. Here 0.1 ns, far narrower than the setup-to-hold decision window: most changes inside that window still resolve at once.</div>
+                <div class="ds">settling time <span class="mono">t<sub>r</sub></span></div><div class="dd">How long the design lets a caught flip-flop settle before anything reads it: the clock period(s) minus <span class="mono">t<sub>co</sub> + t<sub>su</sub></span> (2 ns here) minus any logic in the path. A synchronizer&rsquo;s first flip-flop gets <span class="mono">10 &minus; 2 = 8 ns</span>. See <b data-topic="synchronizers">Synchronizers</b>.</div>
+                <div class="ds"><span class="mono">&tau;</span> (tau)</div><div class="dd">The settling time constant of the flip-flop. Every &tau; of waiting cuts the chance of still hovering by a factor of e &asymp; 2.7. Here 0.2 ns, a round, older-technology value; a modern part&rsquo;s &tau; is tens of picoseconds.</div>
+                <div class="ds"><span class="mono">f<sub>clk</sub>, f<sub>data</sub></span></div><div class="dd">How often the clock samples (100 MHz) and how often the input changes (1 MHz). All constants here are illustrative round values, not a data sheet. The full timing picture is in <b data-topic="practical-considerations-overview">Practical Considerations Overview</b>.</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALING ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const container = document.getElementById('viewportContainer'), surface = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * 16 / 9; } else { cw = vw; ch = cw * 9 / 16; }
+        container.style.width = cw + 'px'; container.style.height = ch + 'px';
+        surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    const $ = (id) => document.getElementById(id);
+
+    // ============ THE MODEL (one set of illustrative constants, used everywhere) ============
+    // MTBF = e^(t_r / tau) / (T0 * f_clk * f_data). Values python-checked (BRIEF iteration log 2026-11-01).
+    const TAU = 0.2, T0NS = 0.1, FCLK = 100e6, FDATA = 1e6, TCOSU = 2;      // ns, ns, Hz, Hz, ns
+    const YEAR = 365.25 * 86400;
+    const caughtPerSec = (fclk) => T0NS * 1e-9 * fclk * FDATA;
+    const mtbf = (tr, fclk = FCLK, units = 1) => Math.exp(tr / TAU) / caughtPerSec(fclk) / units;
+    // the four designs (beat 3). Each flip-flop stage loses its own t_co + t_su (2 ns): one flip-flop feeding logic gets T - 2 - logic;
+    // N flip-flops back to back get t_r = (N - 1) x (T - 2) (Mike, 2026-11-02: "fix 55 to use 16 ns for three flip-flops")
+    const DESIGNS = [
+        { n: 1, name: 'No settling time at all', short: 'no settling time', periods: 1, logic: 8, chain: 'logic', nff: 2, ar: '10 − 2 − 8 = 0 ns' },
+        { n: 2, name: 'One flip-flop, 7 ns of logic after it', short: '1 FF, 7 ns of logic', periods: 1, logic: 7, chain: 'logic', nff: 2, ar: '10 − 2 − 7 = 1 ns' },
+        { n: 3, name: 'Two-flip-flop synchronizer', short: 'synchronizer, 2 FFs', periods: 1, logic: 0, chain: 'sync2', nff: 2, ar: '10 − 2 = 8 ns' },
+        { n: 4, name: 'Three flip-flops (each loses its own 2 ns)', short: 'three FFs', periods: 2, logic: 0, chain: 'sync3', nff: 3, ar: '2 × (10 − 2) = 16 ns' },
+    ];
+    DESIGNS.forEach(d => { d.tr = d.logic ? 10 - TCOSU - d.logic : (d.nff - 1) * (10 - TCOSU); d.m = mtbf(d.tr); });
+    // beat 4: the synchronizer (t_r = T - 2) under the two toggles
+    const B4 = (fast, many) => { const fclk = fast ? 200e6 : 100e6, T = 1e9 / fclk, tr = T - TCOSU, units = many ? 1e6 : 1; return { fclk, T, tr, units, m: mtbf(tr, fclk, units), m1: mtbf(tr, fclk, 1) }; };
+    // landmarks on the meter (log10 seconds)
+    const LANDMARKS = [
+        { key: 'sec', name: '1 second', s: 1, row: 0 },
+        { key: 'day', name: '1 day', s: 86400, row: 1 },
+        { key: 'year', name: '1 year', s: YEAR, row: 0 },
+        { key: 'life', name: 'a human lifetime, 80 years', s: 80 * YEAR, row: 1 },
+        { key: 'univ', name: 'age of the universe', s: 4.4e17, row: 0 },
+    ];
+
+    // ============ FORMATTING ============
+    const SUP = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '.': '·' };
+    const sup = (s) => String(s).split('').map(c => SUP[c] || c).join('');
+    const sig = (x, n = 3) => { let s = Number(x).toPrecision(n); if (/e/.test(s)) s = String(Number(s)); if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, ''); return s; };
+    const sci = (x) => { const e = Math.floor(Math.log10(x) + 1e-12); let m = x / Math.pow(10, e); if (+m.toFixed(2) >= 10) return sci2(1, e + 1); return sci2(m, e); };
+    const sci2 = (m, e) => `${sig(m, 3)} × 10${sup(e)}`;
+    const grp = (x) => Number(sig(x, 3)).toLocaleString('en-US');
+    function fmtTime(s) {
+        if (s < 1e-3) return sig(s * 1e6) + ' µs';
+        if (s < 1) return sig(s * 1e3) + ' ms';
+        if (s < 60) return sig(s) + ' s';
+        if (s < 3600) return sig(s / 60) + ' minutes';
+        if (s < 86400) return sig(s / 3600) + ' hours';
+        if (s < YEAR) return sig(s / 86400) + ' days';
+        const y = s / YEAR;
+        if (y < 1e6) return grp(y) + ' years';
+        return sci(y) + ' years';
+    }
+    const fmtNum = (x) => x < 1000 ? sig(x) : sci(x);
+    const fmtExp = (tr) => { const k = tr / TAU; const ks = sig(k, 4); return k === 0 ? 'e⁰ = 1' : `e${sup(ks)} = ${fmtNum(Math.exp(k))}`; };
+
+    // ============ SVG HELPERS ============
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const f1 = (n) => +(+n).toFixed(2);
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
+    // text with light markup: _{sub} and ^{sup}; fs = font size (attribute only)
+    function tx(parent, x, y, s, cls, fs = 18, attrs = {}) {
+        const t = el('text', { x: f1(x), y: f1(y), class: cls, 'font-size': fs, ...attrs }, parent);
+        const parts = String(s).split(/(_\{[^}]*\}|\^\{[^}]*\})/).filter(p => p !== '');
+        if (parts.length === 1 && !/^[_^]\{/.test(parts[0])) { t.textContent = s; return t; }
+        let shift = 0;
+        for (const p of parts) {
+            const m = p.match(/^([_^])\{([^}]*)\}$/);
+            if (m) { const d = m[1] === '_' ? fs * 0.28 : -fs * 0.42; const ts = el('tspan', { 'font-size': f1(fs * 0.72), dy: f1(d - shift) }, t); ts.textContent = m[2]; shift = d; }
+            else { const ts = el('tspan', shift ? { dy: f1(-shift) } : {}, t); ts.textContent = p; shift = 0; }
+        }
+        return t;
+    }
+    // the flip-flop symbol (as graphics 50/51): D, ▷, Q and Q̄ pins; Q̄ is an unused stub here. Overbar placed from the measured glyph.
+    function ff(svg, x, y, w, h, on, name) {
+        const g = el('g', { 'data-ff': name || '' }, svg), fs = 16;
+        el('rect', { x, y, width: w, height: h, rx: 4, class: 'ff' + (on ? ' on' : '') }, g);
+        const dq = y + h * 0.3, qb = y + h * 0.74;
+        tx(g, x + 7, dq + 5.5, 'D', 'ffp', fs); tx(g, x + w - 7, dq + 5.5, 'Q', 'ffp', fs, { 'text-anchor': 'end' });
+        const qt = tx(g, x + w - 7, qb + 5.5, 'Q', 'ffp', fs, { 'text-anchor': 'end', 'data-ovt': 1 });
+        el('line', { 'data-ov': 1, x1: 0, y1: 0, x2: 0, y2: 0, stroke: '#5b6472', 'stroke-width': 1.5 }, g);
+        el('path', { d: `M${x} ${qb - 7} L${x + 10} ${qb} L${x} ${qb + 7}`, fill: 'none', stroke: '#b8640a', 'stroke-width': 1.5 }, g);
+        el('path', { d: `M${x + w} ${qb} h10`, class: 'wire' }, g);
+        if (name) tx(g, x + w / 2, y - 7, name, 'lab ink2 mono-s', 15, { 'text-anchor': 'middle' });
+        return { dq, qb, g };
+    }
+    function fixOverbars(svg) {
+        svg.querySelectorAll('line[data-ov]').forEach(ln => {
+            const t = ln.previousElementSibling; if (!t || !t.getBBox) return; const bb = t.getBBox(); if (!bb.width) return;
+            const y = +t.getAttribute('y') - 0.88 * +t.getAttribute('font-size');
+            ln.setAttribute('x1', f1(bb.x + 0.5)); ln.setAttribute('x2', f1(bb.x + bb.width - 0.5)); ln.setAttribute('y1', f1(y)); ln.setAttribute('y2', f1(y));
+        });
+    }
+    const clear = (svg) => { while (svg.firstChild) svg.removeChild(svg.firstChild); };
+
+    // ============ THE METER (log10 seconds, -6 .. 40) ============
+    const LMIN = -6, LMAX = 40;
+    function meter(svg, o) {
+        // o: { x0, x1, axisY, ruler (bool), rulerY, rowA, rowB, beyondRow }
+        clear(svg);
+        const X = (l) => o.x0 + (l - LMIN) * (o.x1 - o.x0) / (LMAX - LMIN), ay = o.axisY;
+        const M = { X, svg, o };
+        el('rect', { x: o.x0, y: ay - 34, width: o.x1 - o.x0, height: 34, class: 'track' }, svg);
+        M.fill = el('rect', { x: o.x0, y: ay - 34, width: 0, height: 34, class: 'fillbar', 'data-fill': 1 }, svg);
+        M.needles = el('g', {}, svg);      // under the scales, so every scale label paints over a needle
+        el('line', { x1: o.x0, y1: ay, x2: o.x1, y2: ay, class: 'axis' }, svg);
+        for (let l = LMIN; l <= LMAX; l++) {
+            const major = l % 5 === 0 || l === -6 || l === -3;
+            el('line', { x1: f1(X(l)), y1: ay, x2: f1(X(l)), y2: ay + (major ? 10 : 5), class: 'tick' + (major ? '' : ' mn') }, svg);
+            if (major) { const lab = l === -6 ? '1 µs' : l === -3 ? '1 ms' : l === 0 ? '1 s' : '10' + sup(l) + ' s';
+                if (l !== -5) tx(svg, X(l), ay + 30, lab, 'lab ink2', 16, { 'text-anchor': 'middle', 'data-dec': l }); }
+        }
+        // landmarks: a mark on the axis, a leader down to the label row
+        for (const lm of LANDMARKS) {
+            const l = Math.log10(lm.s), x = X(l), ly = lm.key === 'life' && o.rowC ? o.rowC : lm.row ? o.rowB : o.rowA;
+            el('path', { d: `M${f1(x)} ${ay - 6} l6 6 l-6 6 l-6 -6 Z`, class: 'lmk', 'data-lm': lm.key, 'data-l': l, 'data-x': f1(x) }, svg);
+            el('line', { x1: f1(x), y1: ay + (lm.row ? 40 : 40), x2: f1(x), y2: ly - 18, class: 'leader' }, svg);
+            tx(svg, x, ly, lm.name, 'lab b', 18, { 'text-anchor': 'middle', 'data-lml': lm.key });
+        }
+        tx(svg, X(Math.log10(4.4e17)) + 14, o.rowB, 'to the right: longer than the universe has existed →', 'lab ink2', 17, { 'data-beyond': 1 });
+        tx(svg, o.x0 - 14, ay - 11, 'MTBF', 'lab b', 18, { 'text-anchor': 'end' });
+        if (o.ruler) {
+            // the settling-time scale for 100 MHz, one unit: t_r = 0..20 ns, evenly spaced (x148 per ns)
+            const ry = o.rulerY;
+            el('line', { x1: f1(X(Math.log10(mtbf(0)))), y1: ry, x2: f1(X(Math.log10(mtbf(20)))), y2: ry, class: 'axis' }, svg);
+            for (let n = 0; n <= 20; n++) { const x = X(Math.log10(mtbf(n)));
+                el('line', { x1: f1(x), y1: ry, x2: f1(x), y2: ry + 8, class: 'tick', 'data-ns': n, 'data-x': f1(x) }, svg);
+                tx(svg, x, ry - 8, String(n), 'lab ink2 mono-s halo', 16, { 'text-anchor': 'middle' }); }
+            tx(svg, X(Math.log10(mtbf(0))) - 22, ry + 2, 't_{r}, ns', 'lab b', 18, { 'text-anchor': 'end' });
+        }
+        return M;
+    }
+    // a needle at log10(seconds); label in a bubble at by. cls: '' (lit) | 'mu' | 'ghost'
+    function needle(M, secs, label, by, cls = '', key = '') {
+        const l = Math.log10(secs), x = M.X(l), o = M.o, g = el('g', { 'data-needle': key, 'data-l': l, 'data-x': f1(x) }, M.needles);
+        el('line', { x1: f1(x), y1: by + 16, x2: f1(x), y2: o.axisY + 4, class: 'needle ' + cls }, g);
+        const t = tx(g, x, by + 6, label, cls ? 'lab ink2' : 'lab acc', 18, { 'text-anchor': 'middle' });
+        return { g, t, x, by };
+    }
+    // after the needles are on the (active) page: box each label and keep it inside the viewBox
+    function boxNeedles(M) {
+        const vb = M.svg.viewBox.baseVal;
+        M.needles.querySelectorAll('g[data-needle]').forEach(g => {
+            const t = g.querySelector('text'), bb0 = t.getBBox(); if (!bb0.width) return;
+            const x = +g.dataset.x; let cx = x;
+            const half = bb0.width / 2 + 12; cx = Math.max(vb.x + half + 2, Math.min(vb.x + vb.width - half - 2, cx));
+            t.setAttribute('x', f1(cx)); const bb = t.getBBox();
+            const r = el('rect', { x: f1(bb.x - 10), y: f1(bb.y - 4), width: f1(bb.width + 20), height: f1(bb.height + 8), rx: 5, class: 'bub' + (g.querySelector('.needle.mu, .needle.ghost') ? ' mu' : '') }, g);
+            g.insertBefore(r, t);
+            const ln = g.querySelector('line'); ln.setAttribute('y1', f1(bb.y + bb.height + 4));
+        });
+    }
+
+    // ============ BEAT 1 — caught, then hovering ============
+    const EDGES = [0, 10, 20, 30, 40, 50, 60];
+    // D changes [time ns, new value]; two land within T0/2 of an edge (19.97 and 39.98): those are the catches
+    const DCH = [[4, 1], [19.97, 0], [33, 1], [39.98, 0], [54, 1]];
+    // the two catches: [edge, settle time after the edge, what Q settles to]
+    const CATCH = [{ e: 20, settle: 2.0, to: 0 }, { e: 40, settle: 6.0, to: 1 }];
+    const dAt = (t) => { let v = 0; for (const [tt, nv] of DCH) if (tt <= t) v = nv; return v; };
+    function qEvents() {           // Q per edge: clean edges read D just before the edge; caught edges use CATCH
+        const ev = []; let q = 0;
+        for (const e of EDGES) {
+            const c = CATCH.find(k => k.e === e);
+            if (c) { ev.push({ e, from: q, to: c.to, hover: true, settle: c.settle }); q = c.to; continue; }
+            const nd = dAt(e - 0.5); if (nd !== q) { ev.push({ e, from: q, to: nd }); q = nd; }
+        }
+        return ev;
+    }
+    const REASONS1 = [
+        '<b>Usually nothing happens.</b> Now and then a change lands right at a clock edge: the flip-flop is caught, and its output hovers before it settles.',
+        '<b>Caught 10,000 times a second.</b> The window is 1/100 of each clock period, and the input changes a million times a second.',
+        '<b>Still undecided: 1 catch in 148.</b> The chance of still hovering drops by a factor of e, about 2.7, every 0.2 ns. This flip-flop gets 1 ns.',
+        '<b>Mean time between failures: 14.8 ms.</b> 10,000 catches a second, 1 in 148 still undecided: about 67 failures every second.',
+    ];
+    const NS1 = REASONS1.length - 1;
+    let s1 = 0;
+    const SX = (t) => 110 + (t + 4) * (1200 - 110) / 68;
+    function drawStrip() {
+        const svg = $('s1'); clear(svg);
+        const R = { clk: [44, 84], d: [140, 180], q: [236, 276] }, top = 34, bot = 292;
+        for (const e of EDGES) el('line', { x1: f1(SX(e)), y1: top, x2: f1(SX(e)), y2: bot, class: 'grid' }, svg);
+        // window bands at every edge (drawn 12 units wide, about 7x the 0.1 ns scale)
+        for (const e of EDGES) el('rect', { x: f1(SX(e) - 6), y: top, width: 12, height: bot - top, class: 'win', 'data-win': e }, svg);
+        tx(svg, SX(10) + 10, 24, 'window T_{0} at every clock edge', 'lab st', 17);
+        for (const [k, lab, cls] of [['clk', 'CLK', 'ctl'], ['d', 'D', 'd'], ['q', 'Q', 'q']]) tx(svg, 84, R[k][1] - 10, lab, 'sig ' + cls, 21, { 'text-anchor': 'end' });
+        tx(svg, 84, R.d[1] + 12, 'input', 'lab ink2', 15, { 'text-anchor': 'end' });
+        tx(svg, 84, R.q[1] + 12, 'FF output', 'lab ink2', 15, { 'text-anchor': 'end' });
+        // CLK
+        let d = `M${f1(SX(-4))} ${R.clk[1]}`;
+        for (const e of EDGES) d += ` L${f1(SX(e))} ${R.clk[1]} L${f1(SX(e) + 1.5)} ${R.clk[0]} L${f1(SX(e + 5))} ${R.clk[0]} L${f1(SX(e + 5) + 1.5)} ${R.clk[1]}`;
+        d += ` L${f1(SX(64))} ${R.clk[1]}`; el('path', { d, class: 'w clk' }, svg);
+        // D
+        const yD = (v) => v ? R.d[0] : R.d[1];
+        d = `M${f1(SX(-4))} ${yD(0)}`; let v = 0;
+        for (const [t, nv] of DCH) { d += ` L${f1(SX(t) - 1.2)} ${yD(v)} L${f1(SX(t) + 1.2)} ${yD(nv)}`; v = nv; }
+        d += ` L${f1(SX(64))} ${yD(v)}`; el('path', { d, class: 'w d', 'data-d': 1 }, svg);
+        // Q: clean = t_co (1 ns) after the edge; caught = to halfway by 1 ns, a small wobble about halfway, then a roll to the final value
+        const yQ = (lv) => R.q[1] - lv * (R.q[1] - R.q[0]);
+        const ev = qEvents(); let pts = [[-4, 0]], cur = 0; const hovers = [];
+        for (const x of ev) {
+            if (x.hover === undefined) { pts.push([x.e + 0.85, cur], [x.e + 1.15, x.to]); cur = x.to; continue; }
+            pts.push([x.e + 0.7, cur]); const hp = [[x.e + 0.7, cur]];
+            for (let t = x.e + 0.7; t <= x.e + 1.0 + 1e-9; t += 0.05) hp.push([t, cur + (0.5 - cur) * (t - x.e - 0.7) / 0.3]);
+            for (let t = x.e + 1.0; t <= x.e + x.settle + 1e-9; t += 0.025) { const ease = Math.min(1, (t - x.e - 1) / 0.15, (x.e + x.settle - t) / 0.15); hp.push([t, 0.5 + 0.08 * ease * Math.sin(2 * Math.PI * (t - x.e - 1) / 0.4)]); }
+            hp.push([x.e + x.settle + 0.3, x.to]); hovers.push({ x, hp });
+            pts.push([x.e + x.settle + 0.3, x.to]); cur = x.to;
+        }
+        pts.push([64, cur]);
+        // draw Q in pieces: blue clean runs, red hovers
+        // blue path: a new subpath after each hover (the red hover sits between hover start and settle + 0.3)
+        let qd = '';
+        for (let i = 0; i < pts.length; i++) { const [t, lv] = pts[i], afterHover = i > 0 && hovers.some(h => Math.abs(t - (h.x.e + h.x.settle + 0.3)) < 1e-9);
+            qd += (i === 0 || afterHover ? ' M' : ' L') + f1(SX(t)) + ' ' + f1(yQ(lv)); }
+        el('path', { d: qd.trim(), class: 'w q', 'data-q': 1 }, svg);
+        for (const h of hovers) el('path', { d: 'M' + h.hp.map(p => f1(SX(p[0])) + ' ' + f1(yQ(p[1]))).join(' L'), class: 'w hov', 'data-hover': h.x.e, 'data-settle': h.x.settle, 'data-to': h.x.to }, svg);
+        el('line', { x1: SX(-4), y1: yQ(0.5), x2: SX(64), y2: yQ(0.5), stroke: '#d9dde3', 'stroke-dasharray': '4 6', 'stroke-width': 1 }, svg);
+        // annotations
+        tx(svg, SX(21) + 64, R.q[0] - 8, 'caught: hovers 1 ns, then settles to 0', 'lab raw halo', 16, { 'data-note': 'c1' });
+        tx(svg, SX(41), R.q[1] + 24, 'caught: a rare long hover, then settles to 1', 'lab raw halo', 16, { 'data-note': 'c2' });
+        tx(svg, SX(33) + 8, R.d[0] - 10, 'far from an edge: no catch', 'lab ink2 halo', 16, { 'data-note': 'far' });
+        for (const e of EDGES) tx(svg, SX(e), 330, e + ' ns', 'lab ink2 mono-s', 15, { 'text-anchor': 'middle' });
+        tx(svg, SX(-4), 360, 'In this stretch two of five changes are caught. Really the input changes about once every 100 clocks, and only 1 change in 100 is caught.', 'lab ink2', 16);
+    }
+    function drawHalfA() {
+        const svg = $('s1a'); clear(svg);
+        const x0 = 40, x1 = 572, y = 64, pxns = (x1 - x0) / 10;
+        el('rect', { x: x0, y, width: x1 - x0, height: 30, class: 'bar' }, svg);
+        el('rect', { x: f1(x1 - T0NS * pxns), y: y - 6, width: f1(T0NS * pxns), height: 42, class: 'barwin', 'data-barwin': f1(T0NS * pxns) }, svg);
+        tx(svg, x0, y - 12, 'one clock period, 10 ns', 'lab ink2', 16);
+        tx(svg, x1, y - 12, 'T_{0} = 0.1 ns: 1/100 of it', 'lab st', 16, { 'text-anchor': 'end' });
+        const L = [['the input changes', '1,000,000 times a second', 'f_{data} = 1 MHz', 140],
+                   ['each change lands in a window', '1 time in 100', 'T_{0} · f_{clk} = 0.1 ns × 100 MHz', 186]];
+        for (const [a, b, c, yy] of L) { tx(svg, x0, yy, a, 'lab', 18); tx(svg, 330, yy, b, 'lab b', 18); tx(svg, x0, yy + 21, c, 'lab ink2 mono-s', 15); }
+        el('line', { x1: x0, y1: 226, x2: x1, y2: 226, class: 'rowline' }, svg);
+        tx(svg, x0, 266, 'caught', 'lab', 20); tx(svg, 330, 266, '10,000 times a second', 'lab acc', 22, { 'data-caught': caughtPerSec(FCLK) });
+    }
+    function drawHalfB() {
+        const svg = $('s1b'); clear(svg);
+        const x0 = 76, x1 = 580, y0 = 40, y1 = 226, X = (t) => x0 + t * (x1 - x0) / 2, Y = (p) => y1 - p * (y1 - y0);
+        for (const p of [0, 0.5, 1]) { el('line', { x1: x0, y1: Y(p), x2: x1, y2: Y(p), class: p ? 'grid' : 'axis' }, svg); tx(svg, x0 - 14, Y(p) + 6, (p * 100) + '%', 'lab ink2 mono-s', 15, { 'text-anchor': 'end' }); }
+        for (const t of [0, 0.5, 1, 1.5, 2]) tx(svg, X(t), y1 + 28, t + ' ns', 'lab ink2 mono-s', 15, { 'text-anchor': 'middle' });
+        tx(svg, x0, y1 + 56, 'time a caught flip-flop is given to settle', 'lab ink2', 16);
+        tx(svg, x0 + 6, y0 - 12, 'still hovering', 'lab ink2', 16);
+        let d = ''; for (let t = 0; t <= 2.0001; t += 0.02) d += (d ? ' L' : 'M') + f1(X(t)) + ' ' + f1(Y(Math.exp(-t / TAU)));
+        el('path', { d, class: 'curve', 'data-curve': 1 }, svg);
+        el('circle', { cx: f1(X(TAU)), cy: f1(Y(Math.exp(-1))), r: 5, fill: '#b4472f' }, svg);
+        tx(svg, X(TAU) + 12, Y(Math.exp(-1)) - 6, '37% after τ = 0.2 ns', 'lab raw', 16);
+        el('line', { x1: X(1), y1: y0 + 30, x2: X(1), y2: y1, class: 'tr-line' }, svg);
+        el('circle', { cx: f1(X(1)), cy: f1(Y(Math.exp(-5))), r: 5, fill: '#4a6fa5' }, svg);
+        tx(svg, X(1) + 10, y0 + 46, 't_{r} = 1 ns', 'lab acc', 18);
+        tx(svg, X(1) + 10, y0 + 78, 'e^{−5} = 1 in 148', 'lab acc', 18, { 'data-frac': Math.exp(-5) });
+    }
+    function paintB1() {
+        drawStrip(); drawHalfA(); drawHalfB();
+        $('snum1').textContent = `STEP ${s1 + 1} OF ${NS1 + 1}`; $('reason1').innerHTML = REASONS1[s1];
+        ['pan1s', 'pan1a', 'pan1b', 'pan1f'].forEach((id, i) => $(id).classList.toggle('lit', i === s1));
+        $('bk1').disabled = s1 === 0; $('nxt1').disabled = s1 === NS1;
+    }
+
+    // ============ BEAT 2 — the exponent ============
+    let tr2 = 0;
+    let M2 = null;
+    function paintB2() {
+        M2 = meter($('m2'), { x0: 110, x1: 1770, axisY: 210, ruler: true, rulerY: 116, rowA: 286, rowB: 322 });
+        const m = mtbf(tr2), l = Math.log10(m), x = M2.X(l);
+        M2.fill.setAttribute('width', f1(x - M2.o.x0));
+        const n = needle(M2, m, `t_{r} = ${sig(tr2)} ns:  ${fmtTime(m)}`, 30, '', 'b2');
+        n.t.setAttribute('data-mtbf', 'b2'); n.t.dataset.tr = tr2; n.t.dataset.fclk = FCLK; n.t.dataset.units = 1;
+        boxNeedles(M2);
+        $('sl2').value = tr2;
+        $('tv2tr').textContent = sig(tr2) + ' ns';
+        $('tv2e').textContent = fmtExp(tr2);
+        const tm = $('tv2m'); tm.textContent = fmtTime(m); tm.dataset.mtbf = 'b2t'; tm.dataset.tr = tr2; tm.dataset.fclk = FCLK; tm.dataset.units = 1;
+        $('fx2num').innerHTML = tr2 === 0 ? '1' : `e<sup>${sig(tr2 / TAU, 4)}</sup>`;
+        const hint = tr2 === 0 ? 'No settling time: every catch is a failure, 10,000 a second.'
+            : tr2 < 3 ? 'Each extra nanosecond multiplies the time between failures by 148.'
+            : l < Math.log10(4.4e17) ? 'Still the same step for each nanosecond: ×148, a fixed distance on the meter.'
+            : 'Already longer than the universe has existed, and each nanosecond still adds ×148.';
+        $('reason2').innerHTML = `<b>${sig(tr2)} ns to settle: ${fmtTime(m)}.</b> ${hint}`;
+        $('bk2').disabled = tr2 <= 0; $('nxt2').disabled = tr2 >= 20;
+    }
+
+    // ============ BEAT 3 — one flip-flop vs a synchronizer ============
+    let s3 = 0; const NS3 = 3;
+    const REASONS3 = [
+        '<b>No settling time: 100 µs.</b> The logic after the flip-flop uses the whole period, so every catch becomes a failure.',
+        '<b>1 ns to settle: 14.8 ms.</b> A single flip-flop feeding logic. 1 ns of slack is about 148 times better, and still fails 67 times a second.',
+        '<b>A synchronizer: about 746,000 years.</b> No logic between the two flip-flops, so the first one gets the period minus 2 ns: 8 ns to settle.',
+        '<b>Three flip-flops: 1.76 × 10²³ years.</b> Each flip-flop loses its own 2 ns, so two stages give 2 × 8 = 16 ns: far longer than the universe has existed.',
+    ];
+    function drawRows3() {
+        const svg = $('r3'); clear(svg);
+        const RH = 115, BX = 640, PX = 25;              // bar origin, px per ns
+        DESIGNS.forEach((ds, i) => {
+            const y0 = 6 + i * RH, on = i === s3, g = el('g', { class: 'r3' + (on ? '' : ' mu'), 'data-row': i }, svg);
+            el('rect', { x: 4, y: y0, width: 1182, height: RH - 8, rx: 6, class: 'rowbg' + (on ? ' on' : '') }, g);
+            tx(g, 20, y0 + 26, ds.n + ' · ' + ds.name, 'lab b', 19);
+            tx(g, 1170, y0 + 26, 't_{r} = ' + ds.ar, 'lab acc', 19, { 'text-anchor': 'end', 'data-tr3': ds.tr });
+            // circuit
+            const fy = y0 + 38, fw = 60, fh = 52, dq = fy + fh * 0.3, qb = fy + fh * 0.74, busY = y0 + RH - 14;
+            tx(g, 26, dq + 6, 'A', 'sig d', 18);
+            const parts = ds.chain === 'logic' ? ['ff', 'logic', 'ff'] : ds.chain === 'sync2' ? ['ff', 'ff', 'rest'] : ['ff', 'ff', 'ff', 'rest'];
+            let x = 64, prev = 44, nff = 0; const ffx = [];
+            for (const p of parts) {
+                if (p === 'ff') { el('path', { d: `M${prev} ${f1(dq)} H${x}`, class: 'wire' }, g); nff++; ff(g, x, fy, fw, fh, nff === 1 && on); ffx.push(x); prev = x + fw; x += fw + 50; }
+                else { const w = p === 'logic' ? 150 : 140; el('path', { d: `M${prev} ${f1(dq)} H${x}`, class: 'wire' }, g);
+                    el('rect', { x, y: fy + 2, width: w, height: fh - 14, rx: 18, class: 'cloud' }, g);
+                    tx(g, x + w / 2, fy + 27, p === 'logic' ? `logic, ${ds.logic} ns` : 'rest of circuit', 'lab', 16, { 'text-anchor': 'middle' });
+                    prev = x + w; x += w + 50; }
+            }
+            // one clock to every flip-flop
+            tx(g, 44, busY + 5, 'CLK', 'sig ctl', 14, { 'text-anchor': 'end' });
+            el('path', { d: `M48 ${busY} H${ffx[ffx.length - 1] - 14}`, class: 'wire clk' }, g);
+            for (const fx of ffx) el('path', { d: `M${fx - 14} ${busY} V${f1(qb)} H${fx}`, class: 'wire clk' }, g);
+            // the time bar from FF1's clock edge
+            const by = y0 + 46, bh = 28, segs = [];
+            for (let st = 0; st < ds.periods; st++) segs.push(['co', 1], ...(ds.logic ? [['lg', ds.logic]] : []), ['tr', ds.logic ? ds.tr : 10 - TCOSU], ['su', 1]);
+            let t = 0;
+            for (const [k, w] of segs) { if (w > 0) el('rect', { x: f1(BX + t * PX), y: by, width: f1(w * PX), height: bh, class: 'seg ' + k, 'data-seg': k, 'data-w': w }, g); t += w; }
+            for (let e = 0; e <= ds.periods; e++) el('line', { x1: BX + e * 10 * PX, y1: by - 6, x2: BX + e * 10 * PX, y2: by + bh + 6, stroke: '#b8640a', 'stroke-width': 2 }, g);
+            t = 0;
+            for (const [k, w] of segs) { const cx = BX + (t + w / 2) * PX;
+                if (k === 'lg') tx(g, cx, by + 20, `logic ${w} ns`, 'lab', 16, { 'text-anchor': 'middle' });
+                if (k === 'tr' && w >= 4) tx(g, cx, by + 20, `settle ${w} ns`, 'lab acc', 16, { 'text-anchor': 'middle' });
+                if (k === 'co') tx(g, cx, by + bh + 20, 't_{co}', 'lab ink2', 15, { 'text-anchor': 'middle' });
+                if (k === 'su') tx(g, cx, by + bh + 20, 't_{su}', 'lab ink2', 15, { 'text-anchor': 'middle' });
+                t += w; }
+            if (ds.tr < 4) tx(g, BX + (1 + ds.logic) * PX + ds.tr * PX / 2, by - 10, ds.tr ? `${ds.tr} ns` : 'none', 'lab acc', 15, { 'text-anchor': 'middle' });
+        });
+        fixOverbars(svg);
+    }
+    function tab3() {
+        const rows = DESIGNS.map((d, i) => `<tr class="${i === s3 ? 'hi' : 'mu'}"><td>${d.n} · ${d.short}</td><td>${d.tr} ns</td><td>${d.tr ? 'e<sup>' + d.tr / TAU + '</sup>' : '1'}</td><td class="mt" data-mtbf="t3-${i}" data-tr="${d.tr}" data-fclk="${FCLK}" data-units="1">${fmtTime(d.m)}</td></tr>`).join('');
+        $('tab3').innerHTML = `<table><tr><th>design</th><th>t<sub>r</sub></th><th>e<sup>t<sub>r</sub>/&tau;</sup></th><th>MTBF</th></tr>${rows}</table>`;
+    }
+    let M3 = null;
+    function paintB3() {
+        drawRows3(); tab3();
+        M3 = meter($('m3'), { x0: 110, x1: 1770, axisY: 168, ruler: true, rulerY: 92, rowA: 222, rowB: 252 });
+        // all four needles: the current one lit, the rest grey; bubbles carry the design number
+        DESIGNS.forEach((d, i) => needle(M3, d.m, String(d.n), 22, i === s3 ? '' : 'mu', 'd' + i));
+        const cur = DESIGNS[s3]; M3.fill.setAttribute('width', f1(M3.X(Math.log10(cur.m)) - M3.o.x0));
+        boxNeedles(M3);
+        $('snum3').textContent = `DESIGN ${s3 + 1} OF 4`; $('reason3').innerHTML = REASONS3[s3];
+        $('bk3').disabled = s3 === 0; $('nxt3').disabled = s3 === NS3;
+    }
+
+    // ============ BEAT 4 — what makes it worse ============
+    let fast = false, many = false;
+    const ORDER4 = [[false, false], [true, false], [false, true], [true, true]];
+    const idx4 = () => ORDER4.findIndex(([a, b]) => a === fast && b === many);
+    let M4 = null;
+    function paintB4() {
+        M4 = meter($('m4'), { x0: 80, x1: 1200, axisY: 172, ruler: false, rowA: 226, rowB: 258, rowC: 294 });
+        const base = B4(false, false), cur = B4(fast, many);
+        M4.fill.setAttribute('width', f1(M4.X(Math.log10(cur.m)) - M4.o.x0));
+        if (fast || many) needle(M4, base.m, 'before: ' + fmtTime(base.m), 78, 'ghost', 'base');
+        const n = needle(M4, cur.m, fmtTime(cur.m), 34, '', 'cur');
+        n.t.dataset.mtbf = 'b4n'; n.t.dataset.tr = cur.tr; n.t.dataset.fclk = cur.fclk; n.t.dataset.units = cur.units;
+        boxNeedles(M4);
+        $('tgF').classList.toggle('on', fast); $('tgU').classList.toggle('on', many);
+        $('tg4f').classList.toggle('lit', fast); $('tg4u').classList.toggle('lit', many);
+        const cell = (f, u) => { const b = B4(f, u); return `<td class="${f === fast && u === many ? 'hi' : ''}" data-mtbf="t4-${+f}${+u}" data-tr="${b.tr}" data-fclk="${b.fclk}" data-units="${b.units}">${fmtTime(b.m)}</td>`; };
+        $('t4').innerHTML = `<table><tr><th></th><th>100 MHz, t<sub>r</sub> = 8 ns</th><th>200 MHz, t<sub>r</sub> = 3 ns</th></tr>`
+            + `<tr><td>one unit</td>${cell(false, false)}${cell(true, false)}</tr><tr><td>10<sup>6</sup> units</td>${cell(false, true)}${cell(true, true)}</tr></table>`;
+        const k = cur.tr / TAU;
+        $('b4').innerHTML = [
+            ['clock', `<span class="mono">f<sub>clk</sub> = ${cur.fclk / 1e6} MHz</span>, period ${cur.T} ns`],
+            ['time to settle', `<span class="mono">t<sub>r</sub> = ${cur.T} &minus; 2 = ${cur.tr} ns</span>`],
+            ['still hovering then', `1 catch in e<sup>${k}</sup> = ${fmtNum(Math.exp(k))}`],
+            ['caught', `<span class="mono">T<sub>0</sub> &middot; f<sub>clk</sub> &middot; f<sub>data</sub></span> = ${grp(caughtPerSec(cur.fclk))} per second`],
+            ['one unit', `<span data-mtbf="b4one" data-tr="${cur.tr}" data-fclk="${cur.fclk}" data-units="1">${fmtTime(cur.m1)}</span>`],
+            ...(many ? [['somewhere in 10<sup>6</sup> units', `<span data-mtbf="b4all" data-tr="${cur.tr}" data-fclk="${cur.fclk}" data-units="1e6">${fmtTime(cur.m)}</span>`]] : []),
+        ].map(([a, b], i, arr) => `<div class="bk">${a}</div><div class="bv${i === arr.length - 1 ? ' res' : ''}">${b}</div>`).join('');
+        const R4 = [
+            '<b>The synchronizer at 100 MHz: about 746,000 years.</b> Turn on a faster clock, or ship a million of them.',
+            '<b>Twice the clock: 746,000 years → 2.72 minutes.</b> Speed hurts twice: twice the catches, and 5 ns less to settle, in the exponent.',
+            '<b>A million units: 746,000 years → 272 days.</b> &ldquo;Never&rdquo; on one board is every few months in the field.',
+            '<b>Both at once: one failure every 163 µs</b> somewhere in the fleet. The fix is the same: more settling time.',
+        ];
+        $('snum4').textContent = `CASE ${idx4() + 1} OF 4`; $('reason4').innerHTML = R4[idx4()];
+        $('bk4').disabled = idx4() === 0; $('nxt4').disabled = idx4() === 3;
+    }
+
+    // static MTBF texts outside the beats
+    function fillStatic() { document.querySelectorAll('[data-mtbf="b1"], [data-mtbf="r4"]').forEach(e => { e.textContent = fmtTime(mtbf(+e.dataset.tr, +e.dataset.fclk, +e.dataset.units)); }); }
+    fillStatic();
+
+    // ============ RENDER / NAV ============
+    const NPAGES = 4; let page = 1;
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    function drawPage() { [null, paintB1, paintB2, paintB3, paintB4][page](); }
+    function render() {
+        for (let i = 1; i <= NPAGES; i++) $('p' + i).classList.toggle('active', i === page);
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        document.querySelectorAll('[data-dot]').forEach(d => d.classList.toggle('on', +d.dataset.dot <= page));
+        $('pcNum').textContent = page;
+        drawPage();
+    }
+    const defsEl = $('defs'), defsBtn = $('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) { closeDefs(); page = Math.max(1, Math.min(NPAGES, n)); render(); }
+    function setTr(v) { tr2 = Math.max(0, Math.min(20, Math.round(v * 2) / 2)); if (page === 2) drawPage(); }
+    function setToggles(f, u) { fast = !!f; many = !!u; if (page === 4) drawPage(); }
+    function advance(dir = 1) {
+        if (page === 1) s1 = Math.max(0, Math.min(NS1, s1 + dir));
+        else if (page === 2) tr2 = Math.max(0, Math.min(20, tr2 + dir));
+        else if (page === 3) s3 = Math.max(0, Math.min(NS3, s3 + dir));
+        else if (page === 4) { const i = Math.max(0, Math.min(3, idx4() + dir)); [fast, many] = ORDER4[i]; }
+        drawPage();
+    }
+    function doReset() {
+        if (defsOpen()) return;
+        if (page === 1) s1 = 0; else if (page === 2) tr2 = 0; else if (page === 3) s3 = 0; else { fast = false; many = false; }
+        drawPage();
+    }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    for (const id of ['nxt1', 'nxt2', 'nxt3', 'nxt4']) $(id).addEventListener('click', e => { advance(1); e.currentTarget.blur(); });
+    for (const id of ['bk1', 'bk2', 'bk3', 'bk4']) $(id).addEventListener('click', e => { advance(-1); e.currentTarget.blur(); });
+    $('sl2').addEventListener('input', e => setTr(+e.target.value));
+    $('sl2').addEventListener('change', e => e.target.blur());
+    $('tgF').addEventListener('click', e => { setToggles(!fast, many); e.currentTarget.blur(); });
+    $('tgU').addEventListener('click', e => { setToggles(fast, !many); e.currentTarget.blur(); });
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) { if (k === 'Escape') closeDefs(); if (k === ' ' || 'rRfFuU'.includes(k)) e.preventDefault(); return; }
+        if (document.activeElement === $('sl2') && (k === 'ArrowLeft' || k === 'ArrowRight')) return;
+        switch (k) {
+            case ' ': case 'ArrowDown': advance(1); e.preventDefault(); break;
+            case 'ArrowUp': advance(-1); e.preventDefault(); break;
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
+            case 'f': case 'F': if (page === 4) { setToggles(!fast, many); e.preventDefault(); } break;
+            case 'u': case 'U': if (page === 4) { setToggles(fast, !many); e.preventDefault(); } break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = { setPage, advance, setTr, setToggles, reset: doReset, openDefs, closeDefs,
+        getState: () => ({ page, s1, tr2, s3, fast, many }), model: { mtbf, DESIGNS, B4, LANDMARKS, fmtTime } };
+    // ?beat=N&step=M — deep link (M = step on beats 1 and 3, t_r in ns on beat 2, case 0-3 on beat 4)
+    {
+        const q = new URLSearchParams(location.search);
+        const b = q.get('beat') ? Math.max(1, Math.min(NPAGES, +q.get('beat'))) : 1;
+        if (q.get('step') !== null) { const m = +q.get('step');
+            if (b === 1) s1 = Math.max(0, Math.min(NS1, m)); else if (b === 2) tr2 = Math.max(0, Math.min(20, m)); else if (b === 3) s3 = Math.max(0, Math.min(NS3, m)); else if (b === 4) [fast, many] = ORDER4[Math.max(0, Math.min(3, m))]; }
+        setPage(b);
+    }
+
+    // ============ IN-PAGE ASSERTIONS (?verify) ============
+    function runAssertions() {
+        const fails = [], S0 = { page, s1, tr2, s3, fast, many };
+        // 0) an independent restatement of the formula and the python reference values
+        const REF = (tr, fclk, units) => Math.exp(tr / 0.2) / (0.1e-9 * fclk * 1e6) / units;
+        const near = (a, b, rel = 1e-6) => Math.abs(a - b) <= rel * Math.abs(b);
+        const PY = [[0, 1e-4], [1, 0.01484131591025766], [2, 2.202646579480672], [8, 23538526683702.0], [16, 5.540622384393509e+30]];
+        for (const [tr, s] of PY) if (!near(mtbf(tr), s)) fails.push('model t_r ' + tr);
+        if (!near(caughtPerSec(FCLK), 1e4)) fails.push('caught rate');
+        if (!near(mtbf(1) / mtbf(0), 148.4131591025766)) fails.push('x148 per ns');
+        if (!near(B4(true, false).m, 163.45086862360554)) fails.push('200 MHz');
+        if (!near(B4(false, true).m / 86400, 272.4366514317361)) fails.push('fleet days');
+        if (!near(mtbf(6, 200e6), 534323729.07622313)) fails.push('remedy');
+        const WANT = { 0: '100 µs', 1: '14.8 ms', 2: '2.2 s', 8: '746,000 years', 16: '1.76 × 10²³ years' };
+        for (const k in WANT) if (fmtTime(mtbf(+k)) !== WANT[k]) fails.push(`fmt t_r ${k}: ${fmtTime(mtbf(+k))}`);
+        if (fmtTime(B4(true, false).m) !== '2.72 minutes') fails.push('fmt 200 MHz ' + fmtTime(B4(true, false).m));
+        if (fmtTime(B4(false, true).m) !== '272 days') fails.push('fmt fleet ' + fmtTime(B4(false, true).m));
+        if (fmtTime(B4(true, true).m) !== '163 µs') fails.push('fmt both ' + fmtTime(B4(true, true).m));
+        if (fmtTime(mtbf(6, 200e6)) !== '16.9 years') fails.push('fmt remedy');
+        // the per-stage rule: every multi-flip-flop t_r on the page = (N - 1) x (T - 2); the remedy line is the 200 MHz three-flip-flop case
+        const STAGE = (N, T) => (N - 1) * (T - 2);
+        DESIGNS.filter(d => !d.logic).forEach(d => { if (d.tr !== STAGE(d.nff, 10) || +d.ar.match(/= (\d+) ns$/)[1] !== d.tr) fails.push('stage rule design ' + d.n); });
+        if (DESIGNS[3].tr !== 16 || B4(false, false).tr !== STAGE(2, 10) || B4(true, false).tr !== STAGE(2, 5)) fails.push('stage rule 16/8/3');
+        { const r4 = document.querySelector('[data-mtbf="r4"]'); if (+r4.dataset.tr !== STAGE(3, 5) || !/2 × \(5 − 2\) = 6 ns/.test(r4.parentNode.textContent)) fails.push('stage rule remedy'); }
+        if (/\b18 ns|e⁹⁰|10²⁷|373,000/.test($("designSurface").textContent)) fails.push('old 18 ns values on the page');
+        // every MTBF on the active page: its text is the formula's value for its stated t_r, f_clk, units
+        let nm = 0;
+        function checkMtbf(tag) {
+            for (const e of Array.from(document.querySelectorAll('.page.active [data-mtbf], .page.active text[data-mtbf]'))) { nm++;
+                const v = REF(+e.dataset.tr, +e.dataset.fclk, +e.dataset.units), shown = e.textContent;
+                if (!shown.includes(fmtTime(v))) fails.push(`${tag}: ${e.dataset.mtbf} shows "${shown}" want ${fmtTime(v)}`); }
+        }
+        // geometry
+        const overlap = (a, b, pad = 0) => a.x < b.x + b.width + pad && a.x + a.width + pad > b.x && a.y < b.y + b.height + pad && a.y + a.height + pad > b.y;
+        let measured = 0;
+        function textsIn(svg, tag) { const vb = svg.viewBox.baseVal, out = [];
+            for (const t of Array.from(svg.querySelectorAll('text'))) { const bb = t.getBBox(); if (!bb.width) continue; out.push({ t, bb }); measured++;
+                if (bb.x < vb.x - 0.5 || bb.y < vb.y - 0.5 || bb.x + bb.width > vb.x + vb.width + 0.5 || bb.y + bb.height > vb.y + vb.height + 0.5) fails.push(`${tag} text outside: ` + t.textContent.slice(0, 24));
+                const px = +t.getAttribute('font-size') * svg.getScreenCTM().a / $('designSurface').getBoundingClientRect().width * 1920; if (px < 13.5) fails.push(`${tag} "${t.textContent.slice(0, 12)}" renders at ${px.toFixed(1)} px`); }
+            for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) if (overlap(out[i].bb, out[j].bb, -0.5)) fails.push(`${tag} texts overlap "${out[i].t.textContent.slice(0, 14)}" / "${out[j].t.textContent.slice(0, 14)}"`);
+            return out; }
+        const sweep = (tag) => { const ds = $('designSurface'); if (ds.scrollHeight > 1080 + 1 || ds.scrollWidth > 1920 + 1) fails.push('overflow ' + tag);
+            document.querySelectorAll('.page.active .bv, .page.active .bk').forEach(e => { const r = e.getBoundingClientRect(), pr = e.closest('.panel').getBoundingClientRect(); if (r.right > pr.right - 4) fails.push('text past its panel ' + tag + ' ' + e.textContent.slice(0, 16)); });
+            document.querySelectorAll('.page.active .panel, .page.active .reason, .page.active .tile, .page.active .tv').forEach(p => { if (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1) fails.push('panel overflow ' + tag + ' ' + (p.id || p.className)); });
+            const st = $('stage').getBoundingClientRect(); document.querySelectorAll('.page.active .panel').forEach(p => { const r = p.getBoundingClientRect(); if (r.bottom > st.bottom + 1 || r.right > st.right + 1) fails.push('panel past the stage ' + tag + ' ' + (p.id || p.className)); });
+            document.querySelectorAll('.page.active svg').forEach(s => textsIn(s, tag + ' ' + s.id)); };
+        let contrasted = 0;
+        const lum = (r, g, b) => { const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+        function contrastGate(tag) {
+            const els = Array.from(document.querySelectorAll('.page.active svg text, .page.active svg tspan')).filter(t => t.textContent.trim() && t.getBoundingClientRect().width);
+            for (const t of els) { const cs = getComputedStyle(t), m = cs.fill.match(/rgba?\(([^)]*)\)/); if (!m) continue; const [r, g, b, a = 1] = m[1].split(',').map(Number);
+                let op = a * +cs.fillOpacity; for (let n = t; n && n.nodeType === 1; n = n.parentNode) op *= +getComputedStyle(n).opacity;
+                const bl = (c) => c * op + 255 * (1 - op), cr = 1.05 / (lum(bl(r), bl(g), bl(b)) + 0.05); contrasted++;
+                if (cr < 3 - 1e-6) { fails.push(`${tag}: pale text "${t.textContent.slice(0, 14)}" ${cr.toFixed(2)}:1`); return; } }
+            const html = Array.from(document.querySelectorAll('.page.active .panel *')).filter(e => e.children.length === 0 && e.textContent.trim() && e.getBoundingClientRect().width && !(e instanceof SVGElement));
+            for (const e of html) { const m = getComputedStyle(e).color.match(/rgba?\(([^)]*)\)/); if (!m) continue; const [r, g, b] = m[1].split(',').map(Number); const cr = 1.05 / (lum(r, g, b) + 0.05); contrasted++;
+                if (cr < 4.5 - 1e-6 && !e.closest('button:disabled')) { fails.push(`${tag}: pale html text "${e.textContent.slice(0, 14)}" ${cr.toFixed(2)}:1`); return; } }
+        }
+        // the meter: landmarks at their decades, needle = log10(MTBF), the t_r scale evenly spaced and under the needle
+        const LMW = { sec: 0, day: Math.log10(86400), year: Math.log10(YEAR), life: Math.log10(80 * YEAR), univ: Math.log10(4.4e17) };
+        function checkMeter(M, tag) {
+            for (const k in LMW) { const e = M.svg.querySelector(`[data-lm="${k}"]`); if (!e) { fails.push(`${tag} landmark ${k} missing`); continue; }
+                if (Math.abs(+e.dataset.l - LMW[k]) > 1e-9 || Math.abs(+e.dataset.x - M.X(LMW[k])) > 0.02) fails.push(`${tag} landmark ${k} at ${e.dataset.l}`);
+                const lab = M.svg.querySelector(`[data-lml="${k}"]`), bb = lab.getBBox(); if (Math.abs(bb.x + bb.width / 2 - M.X(LMW[k])) > 1) fails.push(`${tag} landmark label ${k} off its mark`); }
+            if (Math.abs(LMW.day - 4.9365) > 1e-3 || Math.abs(LMW.year - 7.4991) > 1e-3 || Math.abs(LMW.univ - 17.6435) > 1e-3) fails.push('landmark decades');
+            for (const e of Array.from(M.svg.querySelectorAll('[data-dec]'))) { const l = +e.dataset.dec, bb = e.getBBox(); if (Math.abs(bb.x + bb.width / 2 - M.X(l)) > 1) fails.push(`${tag} decade label ${l} off its tick`); }
+            const ns = Array.from(M.svg.querySelectorAll('[data-ns]'));
+            if (M.o.ruler) { if (ns.length !== 21) fails.push(`${tag} ruler ticks ${ns.length}`);
+                const step = (+ns[20].dataset.x - +ns[0].dataset.x) / 20;
+                ns.forEach((e, n) => { if (Math.abs(+e.dataset.x - (+ns[0].dataset.x + n * step)) > 0.03) fails.push(`${tag} ruler not even at ${n}`); if (Math.abs(+e.dataset.x - M.X(Math.log10(REF(n, 100e6, 1)))) > 0.03) fails.push(`${tag} ruler ${n} ns off its MTBF`); });
+                if (Math.abs(step - M.X(Math.log10(148.4131591025766)) + M.X(0)) > 0.03) fails.push(`${tag} ruler step is not x148`); }
+            else if (ns.length) fails.push(`${tag} ruler shown`);
+        }
+        const needleAt = (M, key, secs, tag) => { const g = M.svg.querySelector(`[data-needle="${key}"]`); if (!g) { fails.push(`${tag} needle ${key} missing`); return; }
+            const ln = g.querySelector('line'), want = M.X(Math.log10(secs));
+            if (Math.abs(+ln.getAttribute('x1') - want) > 0.02 || Math.abs(+ln.getAttribute('x2') - want) > 0.02) fails.push(`${tag} needle ${key} at ${ln.getAttribute('x1')} want ${want.toFixed(2)}`);
+            if (Math.abs(+g.dataset.l - Math.log10(secs)) > 1e-9) fails.push(`${tag} needle ${key} log`);
+            const bub = g.querySelector('rect'), tb = g.querySelector('text').getBBox(); if (!bub || +bub.getAttribute('x') > tb.x || +bub.getAttribute('x') + +bub.getAttribute('width') < tb.x + tb.width) fails.push(`${tag} needle ${key} bubble`);
+            if (bub && (want < +bub.getAttribute('x') - 0.5 || want > +bub.getAttribute('x') + +bub.getAttribute('width') + 0.5)) fails.push(`${tag} needle ${key} line misses its bubble`); };
+
+        // beat 1
+        setPage(1);
+        for (let s = 0; s <= NS1; s++) { s1 = s; drawPage(); sweep('b1s' + s); contrastGate('b1s' + s); checkMtbf('b1s' + s);
+            const lit = ['pan1s', 'pan1a', 'pan1b', 'pan1f'].filter(id => $(id).classList.contains('lit')); if (lit.length !== 1 || lit[0] !== ['pan1s', 'pan1a', 'pan1b', 'pan1f'][s]) fails.push('b1 lit panel ' + s); }
+        {   // the catches are exactly the D changes within T0/2 of an edge; each hover starts at the edge and settles to the old or new D
+            const caught = DCH.filter(([t]) => EDGES.some(e => Math.abs(t - e) <= T0NS / 2 + 1e-9)).map(([t]) => EDGES.find(e => Math.abs(t - e) <= 0.05 + 1e-9));
+            const hov = Array.from($('s1').querySelectorAll('[data-hover]')).map(p => +p.dataset.hover);
+            if (caught.join() !== hov.join() || caught.join() !== '20,40') fails.push('b1 catches ' + hov.join());
+            for (const p of Array.from($('s1').querySelectorAll('[data-hover]'))) { const e = +p.dataset.hover, to = +p.dataset.to, oldD = dAt(e - 0.5), newD = dAt(e + 0.5); if (to !== oldD && to !== newD) fails.push('b1 settles to neither'); }
+            for (const [t] of DCH) { const e = EDGES.find(x => Math.abs(t - x) < 0.05 + 1e-9); if (!e && EDGES.some(x => Math.abs(t - x) < 0.5)) fails.push('b1 a clean change too near an edge'); }
+            // Q on the clean edges: the D value read just before the edge, t_co = 1 ns later
+            const ev = qEvents(); let q = 0; for (const x of ev) { if (x.hover === undefined && x.to !== dAt(x.e - 0.5)) fails.push('b1 Q at ' + x.e); if (x.from !== q) fails.push('b1 Q continuity ' + x.e); q = x.to; }
+            const wins = Array.from($('s1').querySelectorAll('[data-win]')); if (wins.length !== EDGES.length) fails.push('b1 windows');
+            for (const w of wins) if (Math.abs(+w.getAttribute('x') + 6 - SX(+w.dataset.win)) > 0.02) fails.push('b1 window off its edge');
+            const bw = $('s1a').querySelector('[data-barwin]'), barW = 532; if (Math.abs(+bw.dataset.barwin / barW - T0NS / 10) > 1e-3) fails.push('b1 window sliver not 1/100');
+            if (!near(+$('s1a').querySelector('[data-caught]').dataset.caught, 1e4)) fails.push('b1 caught readout');
+            if (Math.abs(+$('s1b').querySelector('[data-frac]').dataset.frac * 148.413 - 1) > 1e-4) fails.push('b1 1 in 148');
+        }
+        // beat 2: every slider stop
+        setPage(2);
+        for (let i = 0; i <= 40; i++) { const tr = i / 2; setTr(tr); const m = REF(tr, 100e6, 1);
+            needleAt(M2, 'b2', m, 'b2 t' + tr); checkMtbf('b2 t' + tr);
+            if (Math.abs(+M2.fill.getAttribute('width') - (M2.X(Math.log10(m)) - M2.o.x0)) > 0.02) fails.push('b2 fill ' + tr);
+            if ($('tv2m').textContent !== fmtTime(m)) fails.push('b2 tile ' + tr);
+            if (Number.isInteger(tr)) { const t = M2.svg.querySelector(`[data-ns="${tr}"]`); if (Math.abs(+t.dataset.x - M2.X(Math.log10(m))) > 0.03) fails.push('b2 ruler under needle ' + tr); }
+            if (+$('sl2').value !== tr) fails.push('b2 slider ' + tr);
+            if (i % 4 === 0) { sweep('b2 t' + tr); contrastGate('b2 t' + tr); } }
+        checkMeter(M2, 'b2');
+        {   // a fixed distance per ns: the needle's x is linear in t_r
+            const at = (n) => { setTr(n); const g = M2.svg.querySelector('[data-needle]'); return [+g.dataset.l, +g.querySelector('line').getAttribute('x1')]; };
+            const [l0, x0] = at(0), [l20, x20] = at(20), dl = (l20 - l0) / 20, dx = (x20 - x0) / 20;
+            if (Math.abs(dl - 5 / Math.LN10) > 1e-9) fails.push('b2 not 2.17 decades per ns');
+            for (let n = 1; n < 20; n++) { const [l, x] = at(n); if (Math.abs(l - (l0 + n * dl)) > 1e-9 || Math.abs(x - (x0 + n * dx)) > 0.02) fails.push('b2 needle not linear at ' + n); } }
+        // beat 3: table = rows = needles
+        setPage(3);
+        for (let s = 0; s <= NS3; s++) { s3 = s; drawPage(); sweep('b3s' + s); contrastGate('b3s' + s); checkMtbf('b3s' + s); checkMeter(M3, 'b3s' + s);
+            DESIGNS.forEach((d, i) => { needleAt(M3, 'd' + i, REF(d.tr, 100e6, 1), 'b3s' + s);
+                const g = M3.svg.querySelector(`[data-needle="d${i}"] line`); if (g.classList.contains('mu') !== (i !== s)) fails.push(`b3s${s} needle ${i} focus`);
+                const row = $('tab3').querySelectorAll('tr')[i + 1]; if (row.classList.contains('hi') !== (i === s)) fails.push(`b3s${s} table row ${i}`);
+                const segs = Array.from($('r3').querySelectorAll(`[data-row="${i}"] [data-seg]`)), total = segs.reduce((a, e) => a + +e.dataset.w, 0), trSum = segs.filter(e => e.dataset.seg === 'tr').reduce((a, e) => a + +e.dataset.w, 0);
+                if (total !== 10 * d.periods) fails.push(`b3 row ${i} bar is ${total} ns`); if (trSum !== d.tr) fails.push(`b3 row ${i} t_r segments sum to ${trSum}`);
+                if (+$('r3').querySelector(`[data-row="${i}"] [data-tr3]`).dataset.tr3 !== d.tr) fails.push(`b3 row ${i} t_r label`); });
+            if ($('r3').querySelectorAll('.r3:not(.mu)').length !== 1) fails.push('b3 focus rows');
+            // FF1 is lit only in the focused row; Q-bar bars drawn
+            if ($('r3').querySelectorAll('.ff.on').length !== 1) fails.push('b3 lit flip-flops');
+            for (const ln of Array.from($('r3').querySelectorAll('line[data-ov]'))) if (+ln.getAttribute('x2') - +ln.getAttribute('x1') < 4) fails.push('b3 overbar not placed'); }
+        const want3 = [[0, '100 µs'], [1, '14.8 ms'], [8, '746,000 years'], [16, '1.76 × 10²³ years']];
+        DESIGNS.forEach((d, i) => { if (d.tr !== want3[i][0] || fmtTime(d.m) !== want3[i][1]) fails.push('b3 design ' + i); if ($('tab3').querySelector(`[data-mtbf="t3-${i}"]`).textContent !== want3[i][1]) fails.push('b3 table ' + i); });
+        // beat 4: every case; base = beat 3's synchronizer row
+        setPage(4);
+        for (let c = 0; c < 4; c++) { [fast, many] = ORDER4[c]; drawPage(); const b = B4(fast, many); sweep('b4c' + c); contrastGate('b4c' + c); checkMtbf('b4c' + c); checkMeter(M4, 'b4c' + c);
+            needleAt(M4, 'cur', REF(b.tr, b.fclk, b.units), 'b4c' + c);
+            if (c) needleAt(M4, 'base', REF(8, 100e6, 1), 'b4c' + c); else if (M4.svg.querySelector('[data-needle="base"]')) fails.push('b4 ghost at case 0');
+            if ($('t4').querySelectorAll('td.hi').length !== 1 || $('t4').querySelector('td.hi').dataset.mtbf !== `t4-${+fast}${+many}`) fails.push('b4 lit cell ' + c);
+            if (b.tr !== (fast ? 3 : 8)) fails.push('b4 t_r'); }
+        if ($('t4').querySelector('[data-mtbf="t4-00"]').textContent !== $('tab3').querySelector('[data-mtbf="t3-2"]').textContent || DESIGNS[2].tr !== B4(false, false).tr) fails.push('b4 base is not beat 3 synchronizer');
+        // back restores the exact frame
+        const frame = () => $('p' + page).innerHTML;
+        setPage(1); for (let s = 0; s < NS1; s++) { s1 = s; drawPage(); const A = frame(); advance(1); advance(-1); if (s1 !== s || frame() !== A) fails.push('b1 back ' + s); }
+        s1 = 0; drawPage(); if (!$('bk1').disabled) fails.push('b1 back enabled at 0');
+        setPage(2); for (let n = 0; n < 20; n++) { setTr(n); const A = frame(); advance(1); advance(-1); if (tr2 !== n || frame() !== A) fails.push('b2 back ' + n); }
+        setPage(3); for (let s = 0; s < NS3; s++) { s3 = s; drawPage(); const A = frame(); advance(1); advance(-1); if (s3 !== s || frame() !== A) fails.push('b3 back ' + s); }
+        setPage(4); for (let c = 0; c < 3; c++) { [fast, many] = ORDER4[c]; drawPage(); const A = frame(); advance(1); advance(-1); if (idx4() !== c || frame() !== A) fails.push('b4 back ' + c); }
+        { setToggles(false, false); const A = frame(); setToggles(true, false); setToggles(false, false); if (frame() !== A) fails.push('b4 toggle back'); }
+        // reset
+        setPage(3); s3 = 2; doReset(); if (s3 !== 0) fails.push('reset b3'); setPage(2); setTr(7); doReset(); if (tr2 !== 0) fails.push('reset b2');
+        // definitions
+        setPage(1); openDefs(); { const c = document.querySelector('.defs-card').getBoundingClientRect(); if (c.height > 1080 || c.top < 0) fails.push('defs too tall'); } closeDefs();
+        if (document.querySelectorAll('.defs-list .ds').length !== 7) fails.push('defs entries');
+        if (nm < 120) fails.push('too few MTBF values checked: ' + nm);
+        if (contrasted < 300) fails.push('too few texts checked for contrast: ' + contrasted);
+        if (measured < 1000) fails.push('too few text boxes measured: ' + measured);
+        page = S0.page; s1 = S0.s1; tr2 = S0.tr2; s3 = S0.s3; fast = S0.fast; many = S0.many; render();
+        if (fails.length) document.title += ' — ASSERT FAIL (' + fails.length + '): ' + [...new Set(fails)].slice(0, 16).join(' | ');
+        else document.title += ' — ASSERT PASS (' + nm + ' MTBF values, ' + measured + ' text boxes, ' + contrasted + ' contrast checks)';
+    }
+    if (location.search.indexOf('verify') >= 0) {
+        try { runAssertions(); }
+        catch (e) { document.title += ' — ASSERT FAIL: exception in the checks: ' + e.message + ' ' + (e.stack || '').split('\n')[1]; }
+    }
+</script>
+</body>
+</html>

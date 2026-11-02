@@ -1,0 +1,9 @@
+title: "Traffic-Light-Controller"
+description: "A four-phase traffic-light controller built as an FSMD: one register counts the clocks in each phase, and the datapath is read straight off the FSMD."
+chapter: rtl-design
+section: examples
+order: 50202
+
+graphics:
+  01-interactive.html:
+    caption: "Interactive: two roads, four phases, one counter; build the FSMD, read the datapath off it, derive the one-hot controller, and step the timing one clock at a time"
