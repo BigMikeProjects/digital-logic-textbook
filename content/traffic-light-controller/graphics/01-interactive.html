@@ -272,7 +272,7 @@
     .tl-note { fill: #5b6472; }   /* no font-size here: the code sets it (txt() defaults it to 16) */
     .tl-edge { fill: none; stroke: #b4472f; stroke-width: 2; stroke-dasharray: 3 4; }
     .ms { fill: #5b6472; font-family: 'Menlo','Consolas',monospace; font-size: 17px; text-anchor: middle; }
-    .hid { display: none; }
+    .hid, .panel svg.hid, svg .hid { display: none !important; }   /* 11-02: '.panel svg { display: block }' was beating .hid on the nested controller FSM */
     .fnew { }
 
     .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
@@ -451,6 +451,11 @@
     .tl-bus.lr { fill: rgba(180,71,47,0.12); stroke: #b4472f; }
     .tl-bus.ctl1 { fill: rgba(184,100,10,0.10); stroke: #b8640a; }
     .tl-bus.sta.g { fill: rgba(46,125,79,0.12); stroke: #2e7d4f; } .tl-bus.sta.y { fill: rgba(224,160,0,0.16); stroke: #8a5f00; }
+    .xfer-box.otag { fill: rgba(184,100,10,0.06); stroke: #b8640a; stroke-width: 1.5; }
+    .otl { fill: #b8640a; font-family: 'Menlo','Consolas',monospace; font-size: 24px; font-weight: 700; text-anchor: middle; }
+    .eq.oeq { fill: #b8640a; }
+    .blk.reg { stroke: #4a6fa5; stroke-width: 2.5; fill: rgba(74,111,165,0.08); }
+    .blk-l.reg-n { fill: #2f4f7f; font-weight: 700; }
     .arc-l.xf { fill: #4a6fa5; } .arc-l.xf.on { fill: #2f4f7f; }
     .tl-lab.lg { fill: #2e7d4f; } .tl-lab.ly { fill: #8a5f00; } .tl-lab.lr { fill: #b4472f; }
 </style>
@@ -782,10 +787,17 @@
         return t;
     }
     // overbars drawn as measured lines (never a combining character), on the active page, after highlighting, 0.88 em above the baseline
+    // rendered = laid out with a nonzero box and no ancestor computed to display:none or visibility:hidden
+    function isRendered(e) {
+        const r = e.getBoundingClientRect(); if (!(r.width > 0 || r.height > 0)) return false;
+        for (let n = e; n && n.nodeType === 1; n = n.parentNode) { const cs = getComputedStyle(n); if (cs.display === 'none' || cs.visibility === 'hidden') return false; }
+        return true;
+    }
     function drawBars(svg) {
         svg.querySelectorAll(`line[data-bar][data-owner="${svg.id}"]`).forEach(b => b.remove());
         for (const [t, from, to] of (BARS.get(svg) || [])) {
-            if (t.closest('.hid') || t.classList.contains('hid') || !t.getBBox().width) continue;
+            // a bar goes on every label that is actually on screen (whatever hid it or not): never a complemented label without its bar
+            if (!isRendered(t)) continue;
             const a = t.getExtentOfChar(from), b = t.getExtentOfChar(to - 1), base = t.getStartPositionOfChar(from).y;
             let sp = null, n = 0; for (const s of t.querySelectorAll('tspan')) { if (n <= from && from < n + s.textContent.length) { sp = s; break; } n += s.textContent.length; }
             const cs = getComputedStyle(sp || t), em = parseFloat(cs.fontSize);
@@ -914,7 +926,7 @@
         cmp:  { x: 220, y: 240, w: 220, h: 60, key: 'cmp', label: 'TR = D − 1 ?' },
         zc:   { x: 465, y: 335, w: 50,  h: 36, key: 'zconst zmux', label: '0' },
         add:  { x: 580, y: 330, w: 130, h: 50, key: 'add', label: 'TR + 1' },
-        tr:   { x: 460, y: 480, w: 200, h: 70, key: 'tr' },
+        tr:   { x: 460, y: 480, w: 200, h: 86, key: 'tr' },
     };
     const DMUX = { x: 150, y: 110, w: 220, h: 50, bot: 30, key: 'dmux' }, ZMUX = { x: 440, y: 400, w: 240, h: 50, bot: 36, key: 'zmux' };
     const muxPath = (b) => `M${b.x},${b.y} H${b.x + b.w} L${b.x + b.w - b.bot},${b.y + b.h} H${b.x + b.bot} Z`;
@@ -928,7 +940,7 @@
         { id: 'z0w',    kind: 'data', k: 'zconst zmux',    arrow: true,  pts: [[490, 371], [490, 400]] },
         { id: 'addo',   kind: 'data', k: 'add zmux',       arrow: true,  pts: [[645, 380], [645, 400]] },
         { id: 'muxo',   kind: 'data', k: 'zmux tr',        arrow: true,  pts: [[560, 450], [560, 480]] },
-        { id: 'tbus',   kind: 'data', k: 'tr cmp',         arrow: true,  pts: [[560, 550], [560, 578], [900, 578], [900, 225], [400, 225], [400, 240]] },
+        { id: 'tbus',   kind: 'data', k: 'tr cmp',         arrow: true,  pts: [[560, 566], [560, 597], [900, 597], [900, 225], [400, 225], [400, 240]] },
         { id: 'tradd',  kind: 'data', k: 'tr add',         arrow: true,  pts: [[900, 355], [710, 355]] },
     ];
     // the mux inputs as drawn: [mux, label, x] — checked against the model and the listing
@@ -938,11 +950,11 @@
         const K = (e, k) => { if (k) e.setAttribute('data-k', k); return e; };
         el('rect', { x: DPF.x, y: DPF.y, width: DPF.w, height: DPF.h, rx: 16, class: 'ct', 'data-frame': 1 }, svg);
         txt(svg, 970, 44, 'Datapath', 'ct-title', { 'text-anchor': 'end' }); txt(svg, 970, 70, 'read off the FSMD', 'ct-sub', { 'text-anchor': 'end', style: 'font-size:20px' });
-        K(txt(svg, 144, 604, 'register, adder, mux, comparator: the same pattern as the Timer Circuit', 'tgl', { 'data-topic': 'timer-circuit' }), '');
+        K(txt(svg, 420, 108, 'register, adder, mux, comparator:', 'tgl'), ''); K(txt(svg, 420, 134, 'the same pattern as the Timer Circuit', 'tgl', { 'data-topic': 'timer-circuit' }), '');
         for (const w of DWIRES) D.wires[w.id] = K(el('polyline', { points: polyl(w.arrow ? shorten(w.pts) : w.pts), class: 'wire ' + w.kind, 'data-id': w.id, 'marker-end': `url(#ah${w.kind === 'ctl' ? 'ctl' : w.kind === 'st' ? 'st' : ''}-${mk})` }, svg), w.k);
         K(el('circle', { cx: 210, cy: 270, r: 5, class: 'dot' }, svg), 'zsel'); K(el('circle', { cx: 900, cy: 355, r: 5, class: 'dot' }, svg), 'tr add');
         for (const id in DBLK) { const b = DBLK[id];
-            D.blocks[id] = K(el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 8, class: 'blk' + (id === 'cmp' ? ' st' : ''), 'data-blk': id }, svg), b.key);
+            D.blocks[id] = K(el('rect', { x: b.x, y: b.y, width: b.w, height: b.h, rx: 8, class: 'blk' + (id === 'cmp' ? ' st' : id === 'tr' ? ' reg' : ''), 'data-blk': id, ...(id === 'tr' ? { 'data-keep': 1 } : {}) }, svg), b.key);
             if (b.label) K(txt(svg, b.x + b.w / 2, b.y + b.h / 2 + 8, b.label, 'blk-l', { 'data-in': id }), b.key); }
         K(rich(svg, svg, 185, 57, [['D'], ['G', 'sub'], [' = ' + DG]], 'blk-l', 22, { 'data-in': 'dG' }), 'dconst');
         K(rich(svg, svg, 335, 57, [['D'], ['Y', 'sub'], [' = ' + DY]], 'blk-l', 22, { 'data-in': 'dY' }), 'dconst');
@@ -951,10 +963,15 @@
         for (const [m, v, x] of MUXIN) { const b = m === 'dmux' ? DMUX : ZMUX; K(txt(svg, x, b.y + 20, v, 'muxin', { 'data-in': m, 'data-muxin': m + ':' + v }), b.key); }
         K(txt(svg, 260, 154, 'mux', 'muxin', { 'data-in': 'dmux' }), DMUX.key); K(txt(svg, 560, 444, 'mux', 'muxin', { 'data-in': 'zmux' }), ZMUX.key);
         const r = DBLK.tr;
-        K(txt(svg, r.x + r.w / 2, r.y + 27, 'TR (4-bit)', 'blk-l sm', { 'data-in': 'tr', style: 'font-size:20px' }), r.key);
-        D.vals.tr = K(txt(svg, r.x + r.w / 2, r.y + 58, '', 'regval', { 'data-in': 'tr' }), r.key);
-        K(el('path', { d: `M${r.x},${r.y + 34} L${r.x + 14},${r.y + 44} L${r.x},${r.y + 54}`, class: 'wire clk', 'data-in': 'tr' }, svg), r.key);
-        K(txt(svg, r.x - 8, r.y + 52, 'CLK', 'clkl', { style: 'font-size:20px' }), r.key);
+        // register TR: register styling always (never dimmed), bold name, width on a second line, CLK, live value on beat 4
+        K(txt(svg, r.x + r.w / 2, r.y + 29, 'TR', 'blk-l reg-n', { 'data-in': 'tr', 'data-keep': 1, 'data-trlabel': 1, style: 'font-size:26px' }), r.key);
+        K(txt(svg, r.x + r.w / 2, r.y + 50, '4-bit register', 'blk-l sm', { 'data-in': 'tr', 'data-keep': 1, style: 'font-size:17px' }), r.key);
+        D.vals.tr = K(txt(svg, r.x + r.w / 2, r.y + 76, '', 'regval', { 'data-in': 'tr', 'data-keep': 1, style: 'font-size:22px' }), r.key);
+        K(el('path', { d: `M${r.x},${r.y + 36} L${r.x + 14},${r.y + 46} L${r.x},${r.y + 56}`, class: 'wire clk', 'data-in': 'tr', 'data-keep': 1 }, svg), r.key);
+        K(txt(svg, r.x - 8, r.y + 54, 'CLK', 'clkl', { style: 'font-size:20px', 'data-keep': 1 }), r.key);
+        // its output wire, labeled where it leaves the register and where it reaches the comparator and the adder
+        for (const [x, y, anc] of [[572, 589, 'start'], [410, 216, 'start'], [805, 346, 'middle']])
+            K(txt(svg, x, y, 'TR', 'sig data', { 'data-trwire': 1, style: `font-size:20px;text-anchor:${anc}` }), 'tr');
         // signal names (live values on beat 4)
         D.vals.green = K(txt(svg, 6, 123, 'green', 'sig ctl l', { style: 'font-size:20px' }), 'green-in');
         D.vals.tc = K(txt(svg, 6, 258, 'tc', 'sig st l', { style: 'font-size:20px' }), 'tc-out');
@@ -984,6 +1001,8 @@
     function applyLit(root, lit, on, svgForMarkers) {
         for (const e of leaves(root)) {
             e.classList.remove('hl-s', 'hl-t', 'dim');
+            const keep = e.hasAttribute('data-keep');           // register TR: never drawn dimmed
+            if (keep) { if (keysOf(e, root).some(k => lit.has(k))) e.classList.add(e.tagName === 'text' ? 'hl-t' : 'hl-s'); continue; }
             if (e.tagName === 'text') {
                 const sps = Array.from(e.querySelectorAll('tspan')); sps.forEach(s => s.classList.remove('hl-t', 'dimt'));
                 const keyedSp = sps.filter(s => s.dataset.k);
@@ -1031,11 +1050,12 @@
     const F2 = makeFsmd($('f2')), DP2 = buildDP($('dp2'));
     $('f2').classList.add('hlz'); $('dp2').classList.add('hlz');
     const READ2 = [
-        { h: 'Read the datapath off the FSMD', l: 'Every transfer on TR and every comparison on an arc becomes a part. Five readings, one part each.', c: null, lit: {} },
-        { h: 'TR becomes a register', l: 'TR is written on every arc, so it is a 4-bit register that loads on every clock.', c: '#4a6fa5', lit: { A: ['xinc', 'xclr'], C: ['tr'] } },
+        { h: 'Read the datapath off the FSMD', l: 'Every transfer on TR and every comparison on an arc becomes a part. Six readings, one part each.', c: null, lit: {} },
+        { h: 'One register, TR', l: 'Every transfer in the FSMD writes TR (TR ← TR + 1, TR ← 0), so the datapath starts with a register named TR.', c: '#4a6fa5', lit: { A: ['xinc', 'xclr'], C: ['tr'] } },
         { h: 'TR ← TR + 1 becomes an adder', l: 'On every self-loop the register takes TR + 1, fed back from the adder.', c: '#4a6fa5', lit: { A: ['xinc'], C: ['add'] } },
         { h: 'TR ← 0 becomes a mux, picked by tc', l: 'The arcs that set TR ← 0 are the ones taken when tc = 1, so tc picks the constant 0.', c: '#b8640a', lit: { A: ['xclr'], C: ['zmux', 'zconst', 'zsel'] } },
-        { h: 'The two limits become one comparator', l: 'TR = D_G − 1 and TR = D_Y − 1 differ only in the limit, so a mux picks D (green = 1 picks D_G) and one comparator tests TR = D − 1.', c: '#6b4fa8', lit: { A: ['cond'], C: ['cmp', 'dmux', 'dconst', 'dwire', 'green-in'] } },
+        { h: 'TR = limit becomes a comparator', l: 'Every leaving arc tests TR against the state’s limit, D − 1: the comparator TR = D − 1 ? gives tc.', c: '#6b4fa8', lit: { A: ['cond'], C: ['cmp'] } },
+        { h: 'The limit comes from a mux on green', l: 'TR = D_G − 1 and TR = D_Y − 1 differ only in D, so a mux picks it: green = 1 (NSG, EWG) picks D_G.', c: '#b8640a', lit: { A: ['cond'], C: ['dmux', 'dconst', 'dwire', 'green-in'] } },
         { h: 'tc goes back to the controller', l: 'tc = 1 when TR equals this state’s limit: exactly the condition on every leaving arc.', c: '#6b4fa8', lit: { A: ['cond'], C: ['tc-out'] } },
     ];
     const NR2 = READ2.length - 1;
@@ -1052,58 +1072,103 @@
     }
 
     // ============ BEAT 3 — FSMD | controller | datapath ============
-    const SP = { A: { x: 0, w: 500 }, B: { x: 512, w: 530 }, C: { x: 1056, w: 760 }, H: 650 };
-    const DPS = 0.74, DPY = 60, XB = SP.B.x + SP.B.w, XC = SP.C.x + 10;
+    // Mike, 11-02: "we jump straight to FF and output equations, skipping the intermediate step of making the scalar FSM
+    // controller." Panel B now builds the controller in order: the FSMD stripped to a scalar FSM (conditions → tc / tc̄,
+    // transfers gone), its Moore outputs (orange tags), then the one-hot state register, the next-state equations read off
+    // the FSM's arcs, and the output equations read off its tags. Arc and tag layout match Lecture 29's tl-ctl-fsm.svg.
+    const SP = { A: { x: 0, w: 430 }, B: { x: 442, w: 610 }, C: { x: 1064, w: 752 }, H: 650 };
+    const DPS = 0.73, DPY = 60, XB = SP.B.x + SP.B.w, XC = SP.C.x + 10;
     const PORTY = { green: DPY + 135 * DPS, tc: DPY + 270 * DPS };
     const DS = { svg: $('dsp'), root: {} };
     $('dsp').classList.add('hlz');
+    // the controller FSM (viewBox 900 × 392): loop NSG → NSY → EWG → EWY; self-loops on the outer sides; tags above / below
+    const FSMN = { NSG: { x: 300, y: 120 }, NSY: { x: 600, y: 120 }, EWG: { x: 600, y: 280 }, EWY: { x: 300, y: 280 } }, RS = 46;
+    const CEDGES = [
+        { id: 'NSG>NSY', from: 'NSG', to: 'NSY', a: 0, b: 180, k: 40, eq: true, at: [450, 104, 'middle'] },
+        { id: 'NSY>EWG', from: 'NSY', to: 'EWG', a: 90, b: -90, k: 25, eq: true, at: [616, 210, 'start'] },
+        { id: 'EWG>EWY', from: 'EWG', to: 'EWY', a: 180, b: 0, k: 40, eq: true, at: [450, 310, 'middle'] },
+        { id: 'EWY>NSG', from: 'EWY', to: 'NSG', a: -90, b: 90, k: 25, eq: true, at: [284, 210, 'end'] },
+        { id: 'NSG>NSG', from: 'NSG', to: 'NSG', loop: 180, eq: false, at: [194, 130, 'end'] },
+        { id: 'EWY>EWY', from: 'EWY', to: 'EWY', loop: 180, eq: false, at: [194, 290, 'end'] },
+        { id: 'NSY>NSY', from: 'NSY', to: 'NSY', loop: 0, eq: false, at: [706, 130, 'start'] },
+        { id: 'EWG>EWG', from: 'EWG', to: 'EWG', loop: 0, eq: false, at: [706, 290, 'start'] },
+    ];
+    const OTAG = { NSG: [370, 18], NSY: [620, 18], EWG: [600, 340], EWY: [300, 340] }, OTH = 42;   // [center x, top y]
+    const tagWords = (s) => TAGLIGHTS[s].concat(OUTEQ.green.includes(s) ? ['green'] : []);
+    function makeCtlFsm(svg) {
+        const C = { svg, nodes: {}, arcs: {}, tags: {} }, mk = injectMarkers(svg);
+        el('path', { d: `M175,30 L${f1(FSMN.NSG.x - RS * 0.707 - 1)},${f1(FSMN.NSG.y - RS * 0.707 - 1)}`, class: 'rst', 'marker-end': `url(#ahw-${mk})`, 'data-k': 'fnode' }, svg);
+        txt(svg, 168, 26, 'reset', 'rst-l', { 'data-k': 'fnode', style: 'font-size:22px' });
+        for (const ed of CEDGES) {
+            const ge = bezArc(FSMN[ed.from], FSMN[ed.to], ed, RS), [cx, cy, anc] = ed.at;
+            const path = el('path', { class: 'arc', d: ge.d, 'data-id': ed.id, 'marker-end': `url(#ah-${mk})`, 'data-k': 'farc' }, svg);
+            const lab = rich(svg, svg, cx, cy, [['tc', ed.eq ? '' : 'bar']], 'arc-l', 26, { 'data-id': ed.id, 'data-fcond': ed.id, 'data-k': 'fcond', style: `font-size:26px;text-anchor:${anc}` });
+            C.arcs[ed.id] = { path, lab, ed };
+        }
+        for (const s of SN) {
+            const n = FSMN[s], gg = el('g', { class: 'sd-node', 'data-state': s }, svg);
+            el('circle', { class: 'sdc', cx: n.x, cy: n.y, r: RS, 'data-k': 'fnode' }, gg);
+            txt(gg, n.x, n.y + 9, s, 'sdname', { 'data-in': 'fnode' + s, 'data-k': 'fnode' });
+            C.nodes[s] = gg;
+            const words = tagWords(s), w = words.join(' ').length * 14.45 + 26, [cx, ty] = OTAG[s];
+            C.tags[s] = el('rect', { x: f1(cx - w / 2), y: ty, width: f1(w), height: OTH, rx: 8, class: 'xfer-box otag', 'data-otag': s, 'data-k': 'ftag' }, svg);
+            const t = el('text', { x: cx, y: ty + 29, class: 'otl', 'data-in': 'otag' + s, 'data-tagwords': s }, svg);
+            words.forEach((wd, i) => { if (i) el('tspan', {}, t).textContent = ' ';
+                el('tspan', { 'data-k': 'ftag' + (wd === 'NS_G' || wd === 'EW_G' ? ' safe' : '') + (wd === 'green' ? ' green' : ''), 'data-w': wd }, t).textContent = wd; });
+        }
+        return C;
+    }
     function buildSplit() {
         const svg = DS.svg, mk = injectMarkers(svg);
         const K = (e, k) => { if (k) e.setAttribute('data-k', k); return e; };
+        const RV = (e, g) => { e.setAttribute('data-g3', g); return e; };      // revealed from reading g on
         const TITLES = { A: ['FSMD', 'what happens'], B: ['Controller', 'tc in; green and the lights out'], C: ['Datapath', 'read off the FSMD'] };
         for (const p of ['A', 'B', 'C']) { const P = SP[p];
             el('rect', { x: P.x + 1, y: 1, width: P.w - 2, height: SP.H - 2, rx: 8, class: 'sp-frame', 'data-frame': 1 }, svg);
             const tt = txt(svg, P.x + 18, 32, TITLES[p][0], 'sp-title', { 'data-frame': 1 }); el('tspan', { class: 'sp-sub', dx: 12 }, tt).textContent = '— ' + TITLES[p][1];
             DS.root[p] = el('g', { 'data-panel': p }, svg); }
         DS.root.G = el('g', { 'data-panel': 'G' }, svg);
-        const sa = el('svg', { id: 'dspA', x: 6, y: 44, width: 488, height: 321, viewBox: '0 0 760 500' }, DS.root.A); DS.FA = makeFsmd(sa);
+        const sa = el('svg', { id: 'dspA', x: 6, y: 42, width: 418, height: 275, viewBox: '0 0 760 500' }, DS.root.A); DS.FA = makeFsmd(sa);
         const A = DS.root.A;
-        K(txt(A, 22, 410, 'states', 'lg-l'), ''); K(txt(A, 120, 410, 'NSG, NSY, EWG, EWY', 'lg-i'), 'node');
-        K(txt(A, 22, 450, 'input', 'lg-l'), ''); K(txt(A, 120, 450, 'tc', 'lg-i st'), 'cond'); txt(A, 152, 450, '= 1 when TR = the state’s limit', 'lg-l');
-        K(rich(svg, A, 120, 480, [['D'], ['G', 'sub'], [' − 1 in NSG, EWG; D'], ['Y', 'sub'], [' − 1 in NSY, EWY']], 'lg-l', 18, { style: 'font-size:18px' }), 'condG');
-        K(txt(A, 22, 520, 'outputs', 'lg-l'), ''); K(txt(A, 120, 520, 'six lights', 'lg-i'), 'lights');
-        txt(A, 22, 580, 'the next two panels pull this one diagram apart', 'lg-l', { style: 'font-size: 16px' });
-        // controller: four flip-flops, the next-state equations, the outputs
-        const B = DS.root.B, bx = SP.B.x + 22;
-        K(txt(B, bx, 72, 'state register: four flip-flops, one per state (one-hot)', 'eqh'), 'streg');
-        SN.forEach((s, i) => { const x = bx + i * 118;
-            K(el('rect', { x, y: 86, width: 100, height: 40, rx: 6, class: 'ffbox' }, B), 'streg');
-            K(rich(svg, B, x + 50, 113, Qs(s), 'eq', 19, { 'text-anchor': 'middle', 'data-in': 'ff' + s }), 'streg'); });
-        K(rich(svg, B, bx, 148, [['reset sets Q'], ['NSG', 'sub'], [' = 1, the others 0']], 'lg-l', 16, { style: 'font-size:16px' }), 'streg');
-        K(txt(B, bx, 190, 'next state: one term per arc into the state', 'eqh'), 'nxt');
+        txt(A, 18, 352, 'states', 'lg-l'); K(txt(A, 100, 352, 'NSG, NSY, EWG, EWY', 'lg-i'), 'node');
+        txt(A, 18, 394, 'input', 'lg-l'); K(txt(A, 100, 394, 'tc', 'lg-i st'), 'cond'); txt(A, 132, 394, '= 1 when TR = the state’s limit:', 'lg-l');
+        K(rich(svg, A, 100, 422, [['D'], ['G', 'sub'], [' − 1 in NSG and EWG,']], 'lg-l', 18, { style: 'font-size:18px' }), 'condG');
+        rich(svg, A, 100, 448, [['D'], ['Y', 'sub'], [' − 1 in NSY and EWY']], 'lg-l', 18, { style: 'font-size:18px' });
+        txt(A, 18, 492, 'outputs', 'lg-l'); K(txt(A, 100, 492, 'six lights', 'lg-i'), 'lights');
+        txt(A, 18, 600, 'the next two panels pull this diagram apart', 'lg-l', { style: 'font-size: 16px' });
+        // controller: the scalar FSM, then the one-hot register and the equations read off it
+        const B = DS.root.B, bx = SP.B.x + 18;
+        RV(txt(B, SP.B.x + SP.B.w / 2, 300, 'the controller is built here, one reading at a time', 'tl-note', { 'text-anchor': 'middle', 'font-size': 19, 'data-g3to': 0 }), 0);
+        const sf = RV(el('svg', { id: 'dspF', x: SP.B.x + 6, y: 40, width: 598, height: 260, viewBox: '0 0 900 392' }, B), 1); DS.CF = makeCtlFsm(sf);
+        for (const s of SN) { RV(DS.CF.tags[s], 2); RV(sf.querySelector(`[data-tagwords="${s}"]`), 2); }
+        RV(K(rich(svg, B, bx, 328, [['state register: four flip-flops, one-hot; reset sets Q'], ['NSG', 'sub'], [' = 1']], 'eqh', 17, { style: 'font-size:17px' }), 'streg'), 3);
+        RV(K(txt(B, bx, 364, 'next state: one term per arc of the FSM', 'eqh', { style: 'font-size:17px' }), 'nxt'), 4);
         DS.nxt = {};
         SN.forEach((s, i) => { const [[f0], [f1n]] = NEXTEQ[s];
-            DS.nxt[s] = K(rich(svg, B, bx, 226 + i * 36, [...Qs(s), ['+', 'sup'], [' = '], ...Qs(f0), ['·'], ['tc', 'bar', 'cond'], [' + '], ...Qs(f1n), ['·'], ['tc', '', 'cond']], 'eq', 20, { 'data-nxt': s }), 'nxt'); });
-        K(txt(B, bx, 386, 'outputs: all Moore', 'eqh'), 'outs');
+            DS.nxt[s] = RV(K(rich(svg, B, bx + (i % 2) * 290, 396 + Math.floor(i / 2) * 32, [...Qs(s), ['+', 'sup'], [' = '], ...Qs(f0), ['·'], ['tc', 'bar', 'cond'], [' + '], ...Qs(f1n), ['·'], ['tc', '', 'cond']], 'eq', 18, { 'data-nxt': s, style: 'font-size:18px' }), 'nxt'), 4); });
+        RV(K(txt(B, bx, 474, 'outputs: all Moore, read off the tags', 'eqh', { style: 'font-size:17px' }), 'outs'), 5);
         DS.outs = {};
-        const OL = [['green', bx, 420, 'green'], ['NS_G', bx, 456, 'lights safe'], ['EW_G', bx + 270, 456, 'lights safe'], ['NS_Y', bx, 490, 'lights'], ['EW_Y', bx + 270, 490, 'lights'], ['NS_R', bx, 524, 'lights'], ['EW_R', bx + 270, 524, 'lights']];
+        const OL = [['green', bx, 506, 'green'], ['NS_G', bx, 536, 'lights safe'], ['EW_G', bx + 290, 536, 'lights safe'], ['NS_Y', bx, 566, 'lights'], ['EW_Y', bx + 290, 566, 'lights'], ['NS_R', bx, 596, 'lights'], ['EW_R', bx + 290, 596, 'lights']];
         for (const [o, x, y, key] of OL) { const parts = [[o + ' = ']]; OUTEQ[o].forEach((s, i) => { if (i) parts.push([' + ']); parts.push(...Qs(s)); });
-            DS.outs[o] = K(rich(svg, B, x, y, parts, 'eq', 20, { 'data-out': o, ...(o === 'green' ? { fill: '#b8640a' } : {}) }), key); }
-        K(rich(svg, B, bx, 572, [['never both green: NS_G·EW_G = Q'], ['NSG', 'sub'], ['·Q'], ['EWG', 'sub'], [' = 0']], 'eq', 18), 'safe');
+            DS.outs[o] = RV(K(rich(svg, B, x, y, parts, 'eq oeq', 18, { 'data-out': o, style: 'font-size:18px' }), key), 5); }
+        RV(K(rich(svg, B, bx, 632, [['never both green: NS_G·EW_G = Q'], ['NSG', 'sub'], ['·Q'], ['EWG', 'sub'], [' = 0']], 'eq', 17, { style: 'font-size:17px' }), 'safe'), 5);
         // ports on the controller's right edge, the datapath scaled into panel C, the gap wires
         for (const [sg, kind] of [['green', 'ctl'], ['tc', 'st']]) {
-            const y = PORTY[sg], pts = kind === 'ctl' ? [[XB - 70, y], [XB, y]] : [[XB, y], [XB - 70, y]];
+            const y = PORTY[sg], pts = kind === 'ctl' ? [[XB - 64, y], [XB, y]] : [[XB, y], [XB - 64, y]];
             K(el('polyline', { points: polyl(kind === 'st' ? shorten(pts) : pts), class: 'wire ' + kind, 'data-w': 'port-' + sg, ...(kind === 'st' ? { 'marker-end': `url(#ahst-${mk})` } : {}) }, B), 'port-' + sg);
-            K(txt(B, XB - 36, y - 10, sg, 'sig ' + kind), 'port-' + sg); }
+            K(txt(B, XB - 40, y - 10, sg, 'sig ' + kind), 'port-' + sg); }
         const sc = el('svg', { id: 'dspC', x: XC, y: DPY, width: 1000 * DPS, height: 620 * DPS, viewBox: '0 0 1000 620' }, DS.root.C); DS.DC = buildDP(sc);
         for (const [sg, kind] of [['green', 'ctl'], ['tc', 'st']]) K(el('polyline', { points: polyl([[XB, PORTY[sg]], [XC, PORTY[sg]]]), class: 'wire ' + kind, 'data-w': 'g-' + sg }, DS.root.G), 'g-' + sg);
     }
     buildSplit();
+    const TCB = '<span class="ovb">tc</span>';
     const READ3 = [
-        { h: 'One machine, three views', l: 'The FSMD says what happens; the controller decides when; the datapath counts.', c: null, lit: {} },
-        { h: 'One flip-flop per state', l: 'One-hot: exactly one of Q_NSG, Q_NSY, Q_EWG, Q_EWY is 1. Reset sets Q_NSG.', c: '#4a6fa5', lit: { A: ['node'], B: ['streg'] } },
-        { h: 'Next state: one term per arc', l: 'Each state has two arcs in: its own loop (TR ≠ limit, tc = 0) and the arc from the phase before (TR = limit, tc = 1).', c: '#b8640a', lit: { A: ['arcs', 'cond'], B: ['nxt'] } },
-        { h: 'The lights are Moore outputs', l: 'Each light is one flip-flop, or the OR of two. Red is on in the two phases where the other road moves.', c: '#2e7d4f', lit: { A: ['lights'], B: ['outs', 'lights'] } },
+        { h: 'One machine, three views', l: 'The FSMD says what happens; the controller decides when; the datapath does the counting.', c: null, lit: {} },
+        { h: 'Strip the FSMD down to a controller', l: `TR = limit becomes tc, TR ≠ limit becomes ${TCB}; the transfers go to the datapath.`, c: '#6b4fa8', lit: { A: ['cond', 'xinc', 'xclr'], B: ['fcond'] } },
+        { h: 'An ordinary FSM: input tc, Moore outputs', l: 'Each state turns on its two lights, and NSG and EWG also assert green. Outputs are orange, as on every FSM.', c: '#b8640a', lit: { A: ['lights'], B: ['ftag'] } },
+        { h: 'One flip-flop per state', l: 'One-hot: exactly one of Q_NSG, Q_NSY, Q_EWG, Q_EWY is 1. Reset sets Q_NSG.', c: '#4a6fa5', lit: { B: ['streg', 'fnode'] } },
+        { h: 'Next state: one term per arc', l: `Read the FSM: each state has two arcs in, its own loop (${TCB}) and the arc from the phase before (tc).`, c: '#4a6fa5', lit: { B: ['nxt', 'farc', 'fcond'] } },
+        { h: 'Outputs: read off the tags', l: 'Each light is one flip-flop, or the OR of the two states whose tags list it; green = Q_NSG + Q_EWG.', c: '#b8640a', lit: { B: ['outs', 'lights', 'green', 'ftag'] } },
         { h: 'green picks the limit', l: 'The states whose arcs test TR = D_G − 1 are NSG and EWG, so green = Q_NSG + Q_EWG drives the D mux.', c: '#b8640a', lit: { A: ['condG'], B: ['green', 'port-green'], C: ['green-in', 'dmux', 'dconst', 'dwire'], G: ['g-green'] } },
         { h: 'Never both green, by construction', l: 'NS_G·EW_G = Q_NSG·Q_EWG, and one-hot never has two flip-flops at 1.', c: '#2e7d4f', lit: { A: ['safe'], B: ['safe'] } },
         { h: 'Wire the two boxes', l: 'green goes right, tc comes back. Beat 4 runs it one clock at a time.', c: '#4a6fa5', lit: { B: ['port-green', 'port-tc'], C: ['green-in', 'tc-out'], G: ['g-green', 'g-tc'] } },
@@ -1113,11 +1178,14 @@
     function paintB3() {
         const R = READ3[r3], on = r3 > 0;
         paintFsmd(DS.FA, null); paintDP(DS.DC, null);
-        hcColor(DS.svg, R.c); hcColor($('dspA'), R.c); hcColor($('dspC'), R.c);
+        hcColor(DS.svg, R.c); hcColor($('dspA'), R.c); hcColor($('dspC'), R.c); hcColor($('dspF'), R.c);
+        DS.svg.querySelectorAll('[data-g3]').forEach(e => { e.classList.remove('hid'); e.removeAttribute('display'); });
         DS.root.G.querySelectorAll('polyline').forEach(w => w.classList.remove('hid'));
         for (const p of ['A', 'B', 'C', 'G']) applyLit(DS.root[p], new Set((R.lit || {})[p] || []), on, p === 'A' ? $('dspA') : p === 'C' ? $('dspC') : DS.svg);
+        DS.svg.querySelectorAll('[data-g3]').forEach(e => { const to = e.dataset.g3to === undefined ? 99 : +e.dataset.g3to, off = !(+e.dataset.g3 <= r3 && r3 <= to);
+            e.classList.toggle('hid', off); if (off) e.setAttribute('display', 'none'); else e.removeAttribute('display'); });
         DS.root.G.querySelectorAll('polyline').forEach(w => w.classList.toggle('hid', r3 !== NR3 && !(R.lit.G || []).length));
-        drawBars($('dspA')); drawBars(DS.svg);
+        drawBars($('dspA')); drawBars($('dspF')); drawBars(DS.svg);
         $('snum3').textContent = `READING ${r3 + 1} OF ${NR3 + 1}`;
         $('head3').textContent = R.h; $('head3').style.color = R.c || '#1c2433'; $('line3').innerHTML = subify(R.l);
         $('bk3').disabled = r3 === 0; $('nxt3').disabled = r3 === NR3;
@@ -1422,6 +1490,26 @@
                 const a = t.getExtentOfChar(from), b = t.getExtentOfChar(to - 1), base = t.getStartPositionOfChar(from).y, y = +ln.getAttribute('y1');
                 if (!(y < base - 0.6 * a.height * 0.8) || y < a.y - 4) F(`${tag}: bar not just above "${t.textContent.slice(from, to)}" (y ${y}, base ${base})`);
                 if (Math.abs(+ln.getAttribute('x2') - (b.x + b.width)) > 0.6) F(`${tag}: bar width`); } }
+        // every complemented label on screen has its bar: for every registered overbar whose text is rendered, a visible line
+        // of the text's color sits within the label's x-extent, above its top; no bar sits over an un-complemented label
+        let barFrames = 0;
+        function allBars(tag) { barFrames++;
+            for (const e of Array.from(document.querySelectorAll('.page.active .hid'))) if (isRendered(e)) { F(`${tag}: a hidden part is on screen (${e.tagName} ${e.id || e.getAttribute('class')})`); break; }
+            for (const [svg, list] of BARS) for (const [t, from, to] of list) { if (!isRendered(t)) continue;
+                const bb = t.getBBox(), a = t.getExtentOfChar(from), b = t.getExtentOfChar(to - 1);
+                const ln = Array.from(t.parentNode.querySelectorAll('line[data-bar]')).find(l => +l.getAttribute('x1') > a.x - 0.6 && +l.getAttribute('x1') < a.x + 0.6 && +l.getAttribute('y1') < bb.y + bb.height * 0.5 && +l.getAttribute('y1') > bb.y - 10);
+                if (!ln || !isRendered(ln)) { F(`${tag}: "${t.textContent.slice(from, to)}" in ${svg.id} shown without its bar`); continue; }
+                if (+ln.getAttribute('x2') > b.x + b.width + 0.6 || +ln.getAttribute('x2') < b.x + b.width - 0.6) F(`${tag}: bar width over "${t.textContent}"`);
+                if (+ln.getAttribute('y1') >= bb.y + 4) F(`${tag}: bar not above "${t.textContent}"`);
+                const sp = Array.from(t.querySelectorAll('tspan')).find((s, i, arr) => { let n = 0; for (const x of arr) { if (x === s) break; n += x.textContent.length; } return n <= from && from < n + s.textContent.length; });
+                if (getComputedStyle(ln).stroke !== getComputedStyle(sp || t).fill) F(`${tag}: bar color over "${t.textContent}"`); }
+            // labels that must NOT carry a bar: the controller FSM's and the FSMD's arcs between two different states
+            for (const svg of [$('dspF'), F1.svg, $('f2'), $('f4'), $('dspA')]) for (const lab of Array.from(svg.querySelectorAll('[data-fcond], [data-cond]'))) {
+                const id = lab.dataset.fcond || lab.dataset.cond, ed = (lab.dataset.fcond ? CEDGES : FEDGES).find(e => e.id === id); if (!ed || ed.from === ed.to || !isRendered(lab)) continue;
+                const bb = lab.getBBox(); if (Array.from(lab.parentNode.querySelectorAll('line[data-bar]')).some(l => isRendered(l) && +l.getAttribute('x1') >= bb.x - 1 && +l.getAttribute('x2') <= bb.x + bb.width + 1 && +l.getAttribute('y1') > bb.y - 10 && +l.getAttribute('y1') < bb.y + bb.height)) F(`${tag}: bar over the ${id} label`); }
+            // and every controller-FSM / FSMD self-loop label that is on screen is registered for a bar (ctl FSM) or reads ≠ (FSMD)
+            for (const lab of Array.from($('dspF').querySelectorAll('[data-fcond]'))) { const ed = CEDGES.find(e => e.id === lab.dataset.fcond); if (ed.from === ed.to && isRendered(lab) && !(BARS.get($('dspF')) || []).some(b => b[0] === lab)) F(`${tag}: loop ${ed.id} has no bar registered`); }
+        }
         const lum = (r, g, b) => { const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
         function contrastGate(tag) {
             const svgT = Array.from(document.querySelectorAll('.page.active svg text, .page.active svg tspan')).filter(t => !t.closest('.hid') && !t.closest('.tl-unk') && !t.classList.contains('tl-unk') && Array.from(t.childNodes).some(n => n.nodeType === 3 && n.textContent.trim()) && t.getBoundingClientRect().width);
@@ -1453,7 +1541,7 @@
                 items.push(e); }
             for (const e of items) { const keys = e.tagName === 'tspan' ? (e.dataset.k || '').split(' ').filter(Boolean) : keysOf(e, root), should = keys.some(k => want.has(k)), is = e.classList.contains('hl-s') || e.classList.contains('hl-t');
                 if (should !== is) F(`${tag} ${keys.join('/') || e.tagName} ${is ? 'lit' : 'unlit'}`);
-                if (!is && on && !(e.classList.contains('dim') || e.classList.contains('dimt'))) F(`${tag} ${e.tagName} "${(e.textContent || '').slice(0, 10)}" neither lit nor grey`);
+                if (!is && on && !e.closest('[data-keep]') && !(e.classList.contains('dim') || e.classList.contains('dimt'))) F(`${tag} ${e.tagName} "${(e.textContent || '').slice(0, 10)}" neither lit nor grey`);
                 if (is && color && e.tagName !== 'g') { const cs = getComputedStyle(e), paint = (e.classList.contains('hl-t') ? cs.fill : cs.stroke); if (paint !== color) F(`${tag} ${keys[0]} color ${paint}`); } }
             for (const k of want) if (!items.some(e => (e.tagName === 'tspan' ? (e.dataset.k || '').split(' ') : keysOf(e, root)).includes(k))) F(`${tag}: nothing carries ${k}`);
         }
@@ -1462,7 +1550,7 @@
         // beat 1: each step shows exactly its pieces; geometry; the safety highlight only on step 3
         setPage(1);
         const NODES_AT = [0, 4, 4, 4, 4, 4], RING_AT = [0, 4, 4, 4, 4, 4], LOOPS_AT = [0, 0, 0, 0, 4, 4], LABS_AT = [0, 0, 0, 0, 8, 16], TAGS_AT = [0, 0, 4, 4, 4, 4];
-        for (let s = 0; s <= NS1; s++) { s1 = s; drawPage(); sweep('p1s' + s); contrastGate('p1s' + s);
+        for (let s = 0; s <= NS1; s++) { s1 = s; drawPage(); sweep('p1s' + s); allBars('b1 s' + s); contrastGate('p1s' + s);
             const vis = (sel) => Array.from(F1.svg.querySelectorAll(sel)).filter(e => !e.classList.contains('hid') && !e.closest('.hid'));
             const ring = vis('path.arc').filter(p => FEDGES.find(e => e.id === p.dataset.id).eq).length, loops = vis('path.arc').length - ring;
             const got = [vis('.sd-node').length, ring, loops, vis('text.arc-l').length, vis('rect.xfer-box').length].join(), want = [NODES_AT[s], RING_AT[s], LOOPS_AT[s], LABS_AT[s], TAGS_AT[s]].join();
@@ -1476,13 +1564,13 @@
         ph1 = 0; s1 = 0;
         // beat 2: readings light exactly their sets in their colors; geometry; the mux wiring
         setPage(2);
-        for (let r = 0; r <= NR2; r++) { r2 = r; drawPage(); sweep('p2r' + r); contrastGate('p2r' + r); const R = READ2[r];
+        for (let r = 0; r <= NR2; r++) { r2 = r; drawPage(); sweep('p2r' + r); allBars('b2 r' + r); contrastGate('p2r' + r); const R = READ2[r];
             litExact($('f2'), new Set((R.lit || {}).A || []), r > 0, `b2 r${r} fsmd`, rgb(R.c)); litExact($('dp2'), new Set((R.lit || {}).C || []), r > 0, `b2 r${r} dp`, rgb(R.c));
             if (r === 0 || r === NR2) { textsIn($('f2'), 'b2 fsmd'); labelsOffArcs($('f2'), 'b2 fsmd'); textsIn($('dp2'), 'b2 dp'); dpClear(DP2, 'b2 dp'); barsOk($('f2'), 'b2'); }
             if ($('bk2').disabled !== (r === 0) || $('nxt2').disabled !== (r === NR2)) F('b2 buttons ' + r); }
         // beat 3
         setPage(3); let m3 = 0;
-        for (let r = 0; r <= NR3; r++) { r3 = r; drawPage(); sweep('p3r' + r); contrastGate('p3r' + r); const R = READ3[r];
+        for (let r = 0; r <= NR3; r++) { r3 = r; drawPage(); sweep('p3r' + r); allBars('b3 r' + r); contrastGate('p3r' + r); const R = READ3[r];
             litExact(DS.root.A, new Set((R.lit || {}).A || []), r > 0, `b3 r${r} A`, rgb(R.c)); litExact(DS.root.B, new Set((R.lit || {}).B || []), r > 0, `b3 r${r} B`, rgb(R.c));
             litExact(DS.root.C, new Set((R.lit || {}).C || []), r > 0, `b3 r${r} C`, rgb(R.c));
             const gapOn = Array.from(DS.root.G.querySelectorAll('polyline')).filter(w => !w.classList.contains('hid')).length; if (gapOn !== ((R.lit.G || []).length || r === NR3 ? 2 : 0)) F(`b3 r${r} gap wires ${gapOn}`);
@@ -1493,18 +1581,48 @@
                     if (P && (bb.x < P.x + 2 || bb.x + bb.width > P.x + P.w - 2 || bb.y < 2 || bb.y + bb.height > SP.H - 2)) F(`b3 "${t.textContent.slice(0, 16)}" outside its panel`);
                     for (const sg of ['green', 'tc']) { const y = PORTY[sg]; if (bb.x + bb.width > XB - 72 && bb.x < XB && bb.y < y + 2 && bb.y + bb.height > y - 2) F(`b3 "${t.textContent.slice(0, 12)}" on the ${sg} port wire`); } } }
             if ($('head3').scrollWidth > $('head3').clientWidth + 1 || $('line3').scrollWidth > $('line3').clientWidth + 1) F(`b3 r${r} text too wide`);
-            if ($('bk3').disabled !== (r === 0) || $('nxt3').disabled !== (r === NR3)) F('b3 buttons ' + r);
-            { const n = $('mealy3'), nb = n.getBoundingClientRect(), cb = n.closest('.s3card').getBoundingClientRect(), sv = DS.svg.getBoundingClientRect();
-              if (!nb.width || getComputedStyle(n).display === 'none' || !/Is it Mealy\?.*clr = .*tc = tc/.test(n.textContent)) F('b3 Mealy note missing ' + r);
-              if (nb.left < cb.left || nb.right > cb.right || nb.top < cb.top || nb.bottom > cb.bottom || n.scrollHeight > n.clientHeight + 1) F('b3 Mealy note outside its card ' + r);
-              if (nb.top < sv.bottom) F('b3 Mealy note overlaps the panels ' + r); } }
+            if ($('bk3').disabled !== (r === 0) || $('nxt3').disabled !== (r === NR3)) F('b3 buttons ' + r); }
         if (m3 < 60) F('b3 too few texts measured ' + m3);
+        // register TR on every datapath copy: register styling (blue stroke, tint), never dimmed, bold "TR" label, output wire
+        // labeled "TR" three times (leaving the register, at the comparator, at the adder); lit on its own beat-2 reading
+        { const BLUE = 'rgb(74, 111, 165)', views = [[2, DP2, () => { r2 = 1; }], [2, DP2, () => { r2 = NR2; }], [3, DS.DC, () => { r3 = 0; }], [3, DS.DC, () => { r3 = NR3; }], [4, DP4, () => { cyc = 5; }]];
+          for (const [pg, D, set] of views) { setPage(pg); set(); drawPage(); const rect = D.blocks.tr, cs = getComputedStyle(rect), tag = `TR on beat ${pg}`;
+              if (!rect.classList.contains('reg') || rect.classList.contains('dim') || rect.closest('.hid')) F(tag + ': not drawn as a register');
+              if (!rect.classList.contains('hl-s') && cs.stroke !== BLUE) F(tag + ': stroke ' + cs.stroke);
+              if (!(parseFloat(cs.strokeWidth) >= 2.4) || cs.fill === 'none' || cs.fill === 'rgb(255, 255, 255)') F(tag + ': no register stroke / tint');
+              const lab = D.svg.querySelector('[data-trlabel]'); if (!lab || lab.textContent !== 'TR' || lab.classList.contains('dim') || getComputedStyle(lab).fontWeight < 600) F(tag + ': label');
+              const wl = Array.from(D.svg.querySelectorAll('[data-trwire]')).filter(t => t.textContent === 'TR'); if (wl.length !== 3) F(tag + ': output wire labels ' + wl.length);
+              const bb = rect.getBBox(), t0 = wl[0] && wl[0].getBBox(); if (!t0 || Math.abs(t0.x - (bb.x + bb.width / 2)) > 30 || t0.y < bb.y + bb.height || t0.y > bb.y + bb.height + 30) F(tag + ': no label where TR leaves the register'); }
+          setPage(2); for (let r = 0; r <= NR2; r++) { r2 = r; drawPage(); if (DP2.blocks.tr.classList.contains('hl-s') !== (r === 1)) F('beat 2 reading ' + r + ': TR lit ' + DP2.blocks.tr.classList.contains('hl-s')); }
+          r2 = 0; setPage(3); r3 = 0; drawPage(); }
+        // the scalar controller FSM: its arcs are the FSMD's arcs (same ends), conditions stripped to tc / tc̄ (bar on every loop);
+        // the arcs into each state are exactly NEXTEQ's terms; the tags are the Moore outputs; orange; it appears before any
+        // flip-flop or equation, and those appear in order (register, next state, outputs)
+        { if (CEDGES.length !== FEDGES.length) F('controller FSM arc count');
+          for (const ed of CEDGES) { const f = FEDGES.find(e => e.id === ed.id); if (!f || f.from !== ed.from || f.to !== ed.to || f.eq !== ed.eq) F('controller FSM arc ' + ed.id + ' is not an FSMD arc');
+              const lab = $('dspF').querySelector(`[data-fcond="${ed.id}"]`), barred = (BARS.get($('dspF')) || []).filter(b => b[0] === lab).map(b => lab.textContent.slice(b[1], b[2]));
+              if (lab.textContent !== 'tc' || barred.join() !== (ed.eq ? '' : 'tc')) F('controller FSM label ' + ed.id); }
+          for (const s of SN) { const into = CEDGES.filter(e => e.to === s).map(e => e.from + (e.eq ? 1 : 0)).sort().join(), eq = NEXTEQ[s].map(([f, t]) => f + t).sort().join();
+              if (into !== eq) F(`controller FSM arcs into ${s} ${into} vs equation ${eq}`);
+              const words = Array.from($('dspF').querySelectorAll(`[data-tagwords="${s}"] tspan[data-w]`)).map(t => t.dataset.w).sort().join(), q = SN.map(x => +(x === s));
+              const want = LIGHTS.concat(['green']).filter(o => outOf(q, o)).sort().join(); if (words !== want) F(`controller FSM tag ${s}: ${words} vs ${want}`);
+              if (words.includes('NS_G') && words.includes('EW_G')) F('controller FSM tag both green ' + s); }
+          const vis = (e) => isRendered(e);      // rendered on screen, not just classed (11-02: a CSS rule beat .hid)
+          const ORDER = [['dspF', 1], ['otag', 2], ['streg', 3], ['nxt', 4], ['outs', 5]];
+          for (let r = 0; r <= NR3; r++) { r3 = r; drawPage();
+              const shown = { dspF: vis($('dspF')), otag: Array.from($('dspF').querySelectorAll('rect.otag')).every(vis) && vis($('dspF')),
+                  streg: Array.from(DS.root.B.querySelectorAll('[data-k="streg"]')).some(vis), nxt: Object.values(DS.nxt).every(vis), outs: Object.values(DS.outs).every(vis) };
+              for (const [k, g] of ORDER) if (shown[k] !== (r >= g)) F(`b3 r${r}: ${k} ${shown[k] ? 'shown' : 'hidden'}`);
+              if (r >= 1) { textsIn($('dspF'), 'b3 ctl fsm r' + r); labelsOffArcs($('dspF'), 'b3 ctl fsm r' + r); barsOk($('dspF'), 'b3 ctl fsm r' + r); }
+              if (r === 2) for (const t of $('dspF').querySelectorAll('.otl tspan[data-w]')) if (getComputedStyle(t).fill !== 'rgb(184, 100, 10)') F('controller FSM tag not orange');
+              if (r === 5) for (const o of Object.keys(OUTEQ)) if (getComputedStyle(DS.outs[o]).fill !== 'rgb(184, 100, 10)') F('output equation not orange ' + o); }
+          r3 = 0; }
         // the gap wires meet the datapath's own port wires
         { const sc = DPS; for (const [sg, y0] of [['green', 135], ['tc', 270]]) if (Math.abs(DPY + y0 * sc - PORTY[sg]) > 0.01) F('b3 port ' + sg); }
         // beat 4: per cycle — lit state and arc, lamps, datapath values, timing runs, readout
         setPage(4);
         textsIn($('f4'), 'b4 fsmd'); labelsOffArcs($('f4'), 'b4 fsmd'); textsIn($('x4'), 'b4 intersection');
-        for (let k = 0; k < NCYC; k++) { cyc = k; drawPage(); const r = TRACE[k];
+        for (let k = 0; k < NCYC; k++) { cyc = k; drawPage(); allBars('b4 k' + k); const r = TRACE[k];
             const st = Array.from($('f4').querySelectorAll('.sd-node.on')).map(g => g.dataset.state).join(), arc = Array.from($('f4').querySelectorAll('path.arc.on')).map(p => p.dataset.id).join();
             if (st !== SN[r.st] || arc !== takenArc(r)) F(`b4 k${k} state/arc ${st} ${arc}`);
             if (r.tc && arc !== `${SN[r.st]}>${SN[(r.st + 1) % 4]}`) F('b4 tc arc ' + k);
@@ -1551,6 +1669,7 @@
         if (contrasted < 400) F('too few texts checked for contrast: ' + contrasted);
         if (arcLabs < 40) F('too few arc labels checked: ' + arcLabs);
         if (barsSeen < 8) F('too few overbars checked: ' + barsSeen);
+        if (barFrames < 9 + 7 + 6 + 26) F('bar gate ran on too few frames: ' + barFrames);
         if (measured < 500) F('too few text boxes measured: ' + measured);
         page = S0.page; s1 = S0.s1; ph1 = S0.ph1; r2 = S0.r2; r3 = S0.r3; cyc = S0.cyc; render();
         if (fails.length) document.title += ' — ASSERT FAIL (' + fails.length + '): ' + [...new Set(fails)].slice(0, 16).join(' | ');

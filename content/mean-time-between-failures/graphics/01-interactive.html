@@ -99,64 +99,79 @@
     .fnote b { color: var(--ink); }
     .fnote .acc { color: var(--accent2); font-weight: 700; }
 
-    /* beat 1 */
-    .strip svg { width: 100%; height: 370px; }
-    .halves { display: flex; gap: 14px; flex: 1; min-height: 0; }
-    .halves .panel { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    .halves svg { width: 100%; height: 300px; }
 
-    /* beat 2 */
-    .meter2 svg { width: 100%; height: 380px; }
-    .low2 { display: flex; gap: 14px; flex: 1; min-height: 0; }
-    .ctrl2 { flex: 0 0 900px; display: flex; flex-direction: column; }
-    .slrow { display: flex; align-items: center; gap: 16px; padding: 10px 22px 0; }
-    .slrow .sl { flex: 1; accent-color: #4a6fa5; height: 26px; }
-    .slrow .sll { font-size: 20px; color: var(--ink2); white-space: nowrap; }
-    .tiles { display: flex; gap: 12px; padding: 10px 22px 0; }
+    .tabstrip { gap: 26px; }
+    .tab .tlabel { font-size: 20px; }
+    .tiles { display: flex; gap: 12px; padding: 10px 22px 14px; }
     .tile { flex: 1; border: 1px solid var(--hair); border-radius: 6px; padding: 6px 14px 8px; min-width: 0; }
     .tile .tk { font-size: 17px; color: var(--ink2); white-space: nowrap; }
-    .tile .tv { font-variant-numeric: tabular-nums; font-size: 25px; font-weight: 700; color: var(--ink); white-space: nowrap; }
-    .tile.hi { border-color: var(--accent); background: rgba(74,111,165,0.07); } .tile.hi .tv { color: var(--accent2); }
-    .ctrl2 .reason { padding: 10px 22px 0; font-size: 21px; line-height: 1.38; color: var(--ink3); }
-    .ctrl2 .reason b { color: var(--ink); }
-    .ctrl2 .steprow { padding: 0 22px 12px; margin-top: auto; }
-    .fcard2 { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .tile .tv { font-variant-numeric: tabular-nums; font-size: 34px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+    .tile .tv small { font-size: 18px; font-weight: 500; color: var(--ink2); }
+    .tile.w .tv { color: var(--st); } .tile.c .tv { color: var(--raw); }
+    .btn.go { border-color: var(--accent); color: var(--accent); }
+    .btn.gu { border-color: var(--ok); color: var(--ok); }
+    .btn.gd { border-color: var(--raw); color: var(--raw); }
 
+    /* beat 1 */
+    .edge1 svg { width: 100%; height: 410px; }
+    .dots1 svg { width: 100%; height: 262px; }
+    /* beat 2 */
+    .hist2 svg, .surv2 svg { width: 100%; height: 330px; }
+    .key2 .big { font-size: 46px; font-weight: 700; color: var(--accent2); padding: 4px 22px 0; }
+    .key2 .formula { font-size: 28px; }
     /* beat 3 */
-    .top3 { display: flex; gap: 14px; flex: 1; min-height: 0; }
-    .rows3 { flex: 0 0 1190px; } .rows3 svg { width: 100%; height: 470px; }
-    .rcol3 { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
-    .meter3 svg { width: 100%; height: 262px; }
-    .mtab { padding: 6px 16px 10px; }
-    .mtab table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-    .mtab th { font-size: 17px; font-weight: 600; color: var(--ink2); padding: 4px 8px 7px; text-align: center; border-bottom: 2px solid var(--hair); white-space: nowrap; }
-    .mtab td { font-size: 18px; padding: 7px 8px; border-bottom: 1px solid #e6e9ee; color: var(--ink); white-space: nowrap; text-align: center; }
-    .mtab th:first-child, .mtab td:first-child { text-align: left; }
-    .mtab td.mt { font-size: 18px; }
-    .mtab tr.hi td { background: rgba(74,111,165,0.09); color: var(--accent2); font-weight: 700; }
-    .mtab tr.mu td { color: var(--ink2); }
-    .mtab sub, .mtab sup { font-size: 0.7em; }
-
+    .time3 svg { width: 100%; height: 470px; }
+    .low3 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .low3 .stepcard { flex: 0 0 900px; }
     /* beat 4 */
-    .meter4 svg { width: 100%; height: 312px; }
+    .form4 .formula { font-size: 52px; justify-content: center; padding: 14px 22px 18px; gap: 24px; }
+    .form4 .t { border-radius: 6px; padding: 0 6px; color: var(--ink); }
+    .form4 .t.mu { color: var(--mute); }
+    .form4 .t.on { color: var(--accent2); background: rgba(74,111,165,0.12); outline: 2px solid var(--accent); }
+    .form4 .frac .den { border-top: 3px solid var(--ink); }
+    .form4 .t.on .t.on { outline: none; background: none; }
     .low4 { display: flex; gap: 14px; flex: 1; min-height: 0; }
-    .tab4 { flex: 0 0 560px; }
-    .tab4 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-    .tab4 th { font-size: 18px; font-weight: 600; color: var(--ink2); padding: 6px 10px 8px; text-align: center; border-bottom: 2px solid var(--hair); white-space: nowrap; }
-    .tab4 td { font-size: 19px; padding: 12px 10px; border-bottom: 1px solid #e6e9ee; color: var(--ink); white-space: nowrap; text-align: center; font-family: 'Menlo','Consolas',monospace; }
-    .tab4 td:first-child { text-align: left; font-family: inherit; color: var(--ink2); }
-    .tab4 td.hi { background: rgba(74,111,165,0.12); color: var(--accent2); font-weight: 700; outline: 2px solid var(--accent); outline-offset: -2px; }
-    .tab4 sup { font-size: 0.7em; }
-    .brk4 { flex: 1; min-width: 0; }
-    .brk4 .bl { display: grid; grid-template-columns: 250px 1fr; column-gap: 18px; row-gap: 6px; padding: 8px 22px 12px; font-size: 20px; line-height: 1.32; }
-    .brk4 .bk { color: var(--ink2); white-space: nowrap; }
-    .brk4 .bv { color: var(--ink); white-space: nowrap; }
-    .brk4 .bv .mono { font-size: 19px; }
-    .brk4 .bv.res { color: var(--accent2); font-weight: 700; }
-    .brk4 sub, .brk4 sup { font-size: 0.7em; }
-    .togcard .tt { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .togcard .tt .ct { margin: 0; }
-    .togcard .tline { margin-top: 6px; }
+    .terms4 { flex: 0 0 1100px; }
+    .terms4 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    .terms4 td { font-size: 20px; padding: 8px 12px; border-bottom: 1px solid #e6e9ee; color: var(--ink3); white-space: nowrap; }
+    .terms4 td:first-child { font-weight: 700; color: var(--ink); width: 190px; }
+    .terms4 td:last-child { color: var(--ink); text-align: right; }
+    .terms4 tr.on td { background: rgba(74,111,165,0.09); color: var(--accent2); }
+    .terms4 tr.on td:first-child { box-shadow: inset 4px 0 0 var(--accent); }
+    .terms4 tr.res td { font-weight: 700; }
+    .terms4 sub, .terms4 sup { font-size: 0.7em; }
+    .cmp4 svg { width: 100%; height: 520px; }
+    .seg4 { stroke: #fff; stroke-width: 2; }
+    .segt { fill: #fff; font-weight: 700; }
+    .r4 { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .sync4 svg { width: 100%; height: 250px; }
+    /* beats 5, 6: the meter */
+    .meter svg { width: 100%; height: 300px; }
+    .low5 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .cards5 { flex: 0 0 1180px; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 14px; min-height: 0; }
+    .case { background: var(--stage); border: 1px solid var(--hair); border-radius: 6px; padding: 10px 18px; cursor: pointer; display: flex; flex-direction: column; overflow: hidden; }
+    .case.lit { outline: 2px solid var(--accent); outline-offset: -1px; background: rgba(74,111,165,0.035); }
+    .case .cn { font-size: 15px; font-weight: 700; color: var(--accent); letter-spacing: 0.5px; }
+    .case .ch { font-size: 21px; font-weight: 600; color: var(--ink); line-height: 1.25; margin-top: 2px; }
+    .case .cm { font-size: 17px; color: var(--ink2); margin-top: 4px; line-height: 1.3; }
+    .case .cr { margin-top: auto; font-size: 21px; font-weight: 700; white-space: nowrap; }
+    .case .cr.up { color: var(--ok); } .case .cr.dn { color: var(--raw); } .case .cr.q { color: var(--mute); }
+    .side5 { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .side5 .stepcard { flex: 1; }
+    .verdict { margin-top: 8px; font-size: 20px; color: var(--ink2); min-height: 28px; }
+    .low6 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .pic6 { flex: 0 0 640px; } .pic6 svg { width: 100%; height: 400px; }
+    .tab6 { flex: 0 0 520px; }
+    .tab6 table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; margin-top: 6px; }
+    .tab6 th { font-size: 18px; font-weight: 600; color: var(--ink2); padding: 6px 10px 8px; text-align: center; border-bottom: 2px solid var(--hair); white-space: nowrap; }
+    .tab6 td { font-size: 21px; padding: 14px 10px; border-bottom: 1px solid #e6e9ee; color: var(--ink); white-space: nowrap; text-align: center; }
+    .tab6 td:first-child { text-align: left; color: var(--ink2); }
+    .tab6 td.hi { background: rgba(74,111,165,0.12); color: var(--accent2); font-weight: 700; outline: 2px solid var(--accent); outline-offset: -2px; }
+    .tab6 sup { font-size: 0.7em; }
+    .tab6 .mnote { padding: 6px 16px 12px; font-size: 18px; color: var(--ink2); line-height: 1.35; }
+    .side6 { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .side6 .stepcard { flex: 1; }
+
 
     /* SVG classes (no font-size here: the code sets it) */
     .lab { fill: var(--ink3); }
@@ -218,6 +233,21 @@
     .pdot.on { background: var(--ink); border-color: var(--ink); }
     .controls { font-size: 20px; color: var(--ink2); }
     .controls .k { border: 1px solid var(--hair); border-radius: 6px; padding: 1px 8px; font-family: 'Menlo','Consolas',monospace; color: var(--ink2); }
+
+    .dot-c { fill: #8a93a0; } .dot-w { fill: var(--st); } .dot-x { fill: var(--raw); }
+    .dot-last { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+    .slice { fill: rgba(107,79,168,0.55); stroke: none; }
+    .hbar { fill: rgba(74,111,165,0.55); }
+    .hbar.mu { fill: rgba(133,142,153,0.35); }
+    .step { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+    .smooth { fill: none; stroke: var(--raw); stroke-width: 2; stroke-dasharray: 7 5; }
+    .tnode { fill: #fff; stroke: #8a93a0; stroke-width: 2; }
+    .tnode.on { fill: rgba(74,111,165,0.18); stroke: var(--accent); stroke-width: 3; }
+    .tline { stroke: var(--hair); stroke-width: 3; }
+    .t3.mu text, .t3.mu tspan { fill: var(--mute) !important; }
+    .board { fill: #fff; stroke: #6b7480; stroke-width: 1.5; }
+    .board.on { stroke: var(--accent); stroke-width: 2.5; fill: rgba(74,111,165,0.08); }
+    .sq { fill: #c9d3e2; } .sq.mu { fill: #e6e9ee; } .sq.x { fill: var(--raw); }
 </style>
 </head>
 <body>
@@ -235,38 +265,34 @@
         </div>
         <div class="titles">
             <h1>Mean Time Between Failures <span class="sub">&mdash; how long a synchronizer lasts</span></h1>
-            <div class="subtitle">A flip-flop on an input that ignores the clock gets caught now and then. How often it fails depends on how long it is given to settle, and that time sits in an exponent.</div>
+            <div class="subtitle">An input from outside ignores the clock, so now and then it catches a flip-flop. That cannot be prevented, but how often it causes a failure can be computed, and designed for.</div>
         </div>
         <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
-        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 6</div>
     </div>
 
     <div class="tabstrip" id="tabstrip">
-        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Caught and Hovering</div><div class="tstep">two halves</div></div>
-        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">The Exponent</div><div class="tstep">slide it</div></div>
-        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">One Flip-Flop vs a Synchronizer</div><div class="tstep">four designs</div></div>
-        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">What Makes It Worse</div><div class="tstep">two toggles</div></div>
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Catching an Edge</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Resolution Time</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">Why a Number?</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">The Formula</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">Longer or Shorter?</div></div>
+        <div class="tab" data-page="6"><div class="tnum">6</div><div class="tlabel">Make Millions</div></div>
     </div>
 
     <div class="stage" id="stage">
 
-        <!-- BEAT 1 — caught, then hovering -->
+        <!-- BEAT 1 — catching an edge -->
         <div class="page" id="p1">
             <div class="row">
                 <div class="main">
-                    <div class="panel strip" id="pan1s">
-                        <div class="phead">One flip-flop on an input that ignores the clock <span class="dimtxt">&mdash; a 10 ns clock; the window is drawn wider than its 0.1 ns</span></div>
-                        <svg id="s1" viewBox="0 0 1240 370"></svg>
+                    <div class="panel edge1" id="pan1e">
+                        <div class="phead">One clock edge, up close <span class="dimtxt">&mdash; the latest change on D, and what the flip-flop&rsquo;s output Q does</span></div>
+                        <svg id="e1" viewBox="0 0 1240 410"></svg>
                     </div>
-                    <div class="halves">
-                        <div class="panel" id="pan1a">
-                            <div class="phead">1. How often it is caught</div>
-                            <svg id="s1a" viewBox="0 0 612 300"></svg>
-                        </div>
-                        <div class="panel" id="pan1b">
-                            <div class="phead">2. How often a catch is still undecided</div>
-                            <svg id="s1b" viewBox="0 0 612 300"></svg>
-                        </div>
+                    <div class="panel dots1" id="pan1d">
+                        <div class="phead">Where every change landed <span class="dimtxt">&mdash; one dot per change, measured from the nearest clock edge</span></div>
+                        <svg id="d1" viewBox="0 0 1240 262"></svg>
                     </div>
                 </div>
                 <div class="side">
@@ -275,93 +301,98 @@
                         <div class="reason" id="reason1"></div>
                         <div class="steprow">
                             <button class="btn bk" id="bk1">&#9664; back <span class="kk">&uarr;</span></button>
-                            <button class="btn nxt" id="nxt1">next <span class="kk">Space</span></button>
+                            <button class="btn nxt" id="nxt1">next change <span class="kk">Space</span></button>
+                            <button class="btn go" id="run1">&times;100 <span class="kk">H</span></button>
                             <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
                         </div>
                     </div>
-                    <div class="panel" id="pan1f">
-                        <div class="phead">3. Together: the mean time between failures</div>
-                        <div class="formula"><span class="lhs">MTBF</span><span>=</span>
-                            <span class="frac"><span class="num"><i>e</i><sup><i>t</i><sub>r</sub>/<i>&tau;</i></sup></span><span class="den"><i>T</i><sub>0</sub> &middot; <i>f</i><sub>clk</sub> &middot; <i>f</i><sub>data</sub></span></span></div>
-                        <div class="fnote">For this flip-flop, <i>t</i><sub>r</sub> = 1 ns: <b>148 &divide; 10,000 per second</b> = <span class="acc" data-mtbf="b1" data-tr="1" data-fclk="100e6" data-units="1"></span>.</div>
+                    <div class="panel">
+                        <div class="phead">So far</div>
+                        <div class="tiles">
+                            <div class="tile"><div class="tk">changes</div><div class="tv" id="cn1"></div></div>
+                            <div class="tile w"><div class="tk">in the window</div><div class="tv" id="cw1"></div></div>
+                            <div class="tile c"><div class="tk">caught</div><div class="tv" id="cx1"></div></div>
+                        </div>
                     </div>
                     <div class="panel card fill">
-                        <div class="ct">Where this picks up</div>
-                        <div><b data-topic="metastable-states">Metastable States</b> showed the hover: usually short, never predictable. <b data-topic="synchronizers">Synchronizers</b> gave it a clock period to settle and called the risk <b>negligible, not zero</b>. This topic puts a number on it.</div>
+                        <div class="ct">What to notice</div>
+                        <div>About <b>15 changes in 100</b> land in the decision window, and almost all of those are decided at once. Only those in the thin slice right at the edge, about <b>1 in 100</b>, catch the flip-flop and make it hover. Why it hovers is in <b data-topic="metastable-states">Metastable States</b>.</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- BEAT 2 — the exponent -->
+        <!-- BEAT 2 — resolution time -->
         <div class="page" id="p2">
-            <div class="panel meter2">
-                <div class="phead">The MTBF meter <span class="dimtxt">&mdash; each mark on the bottom scale is ten times the one before; the top scale is the settling time</span></div>
-                <svg id="m2" viewBox="0 0 1816 380"></svg>
-            </div>
-            <div class="low2">
-                <div class="panel ctrl2">
-                    <div class="slrow"><span class="sll">Settling time <i>t</i><sub>r</sub></span><input type="range" class="sl" id="sl2" min="0" max="20" step="0.5" value="0"><span class="sll">0 &ndash; 20 ns</span></div>
-                    <div class="tiles">
-                        <div class="tile"><div class="tk">settling time <span class="mono">t<sub>r</sub></span></div><div class="tv" id="tv2tr"></div></div>
-                        <div class="tile"><div class="tk">e<sup>t<sub>r</sub>/&tau;</sup>, with &tau; = 0.2 ns</div><div class="tv" id="tv2e"></div></div>
-                        <div class="tile hi"><div class="tk">mean time between failures</div><div class="tv" id="tv2m"></div></div>
+            <div class="row">
+                <div class="main">
+                    <div class="panel hist2" id="pan2h">
+                        <div class="phead">How long 1,000 catches hovered <span class="dimtxt">&mdash; each bar counts the catches that settled in that tenth of a nanosecond</span></div>
+                        <svg id="h2" viewBox="0 0 1240 330"></svg>
                     </div>
-                    <div class="reason" id="reason2"></div>
+                    <div class="panel surv2" id="pan2s">
+                        <div class="phead">Still hovering after a given time <span class="dimtxt">&mdash; the same 1,000 catches</span></div>
+                        <svg id="v2" viewBox="0 0 1240 330"></svg>
+                    </div>
+                </div>
+                <div class="side">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum2"></div>
+                        <div class="reason" id="reason2"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk2">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt2">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel key2" id="pan2k">
+                        <div class="phead">Still undecided at the resolution time</div>
+                        <div class="formula"><span><i>e</i><sup>&minus;<i>t</i><sub>r</sub>/<i>&tau;</i></sup> = <i>e</i><sup>&minus;1/0.2</sup> = <i>e</i><sup>&minus;5</sup></span></div>
+                        <div class="big" id="big2">1 in 148</div>
+                        <div class="fnote" id="sim2"></div>
+                    </div>
+                    <div class="panel card fill">
+                        <div class="ct">Two names</div>
+                        <div><b>&tau;</b> (tau) belongs to the flip-flop: how fast a hover dies out. A faster flip-flop has a smaller &tau;.<br><b>t<sub>r</sub></b> belongs to the design: how long it waits before anything reads the flip-flop.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 — why a number? -->
+        <div class="page" id="p3">
+            <div class="panel time3" id="pan3t">
+                <div class="phead">Mean time between failures <span class="dimtxt">&mdash; where the number comes from, and where it is used today</span></div>
+                <svg id="t3" viewBox="0 0 1816 470"></svg>
+            </div>
+            <div class="low3">
+                <div class="panel card stepcard">
+                    <div class="snum" id="snum3"></div>
+                    <div class="reason" id="reason3"></div>
                     <div class="steprow">
-                        <button class="btn bk" id="bk2">&#9664; 1 ns less <span class="kk">&uarr;</span></button>
-                        <button class="btn nxt" id="nxt2">1 ns more <span class="kk">Space</span></button>
+                        <button class="btn bk" id="bk3">&#9664; back <span class="kk">&uarr;</span></button>
+                        <button class="btn nxt" id="nxt3">next <span class="kk">Space</span></button>
                         <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
                     </div>
                 </div>
-                <div class="panel fcard2">
-                    <div class="phead">The formula, with this example&rsquo;s numbers</div>
-                    <div class="formula"><span class="lhs">MTBF</span><span>=</span>
-                        <span class="frac"><span class="num"><i>e</i><sup><i>t</i><sub>r</sub>/<i>&tau;</i></sup></span><span class="den"><i>T</i><sub>0</sub> &middot; <i>f</i><sub>clk</sub> &middot; <i>f</i><sub>data</sub></span></span>
-                        <span>=</span><span class="frac"><span class="num" id="fx2num"></span><span class="den">10<sup>4</sup> per second</span></span></div>
-                    <div class="fnote">The bottom stays fixed: <b>10,000 catches a second</b> (0.1 ns &times; 100 MHz &times; 1 MHz). Only the top moves. One more nanosecond is five more &tau;, so the top grows by <b>e<sup>5</sup> &asymp; 148</b>. On a scale of tens, &times;148 is always the same distance: the needle slides in a straight line.</div>
+                <div class="panel card fill">
+                    <div class="ct">How it fits here</div>
+                    <div class="rule">A synchronizer makes the risk <b>negligible, not zero</b> (see <b data-topic="synchronizers">Synchronizers</b>). The mean time between failures says how negligible, in years, so a designer can show a system is reliable enough.</div>
                 </div>
             </div>
         </div>
 
-        <!-- BEAT 3 — one flip-flop vs a synchronizer -->
-        <div class="page" id="p3">
-            <div class="top3">
-                <div class="panel rows3">
-                    <div class="phead">Four designs, one 100 MHz clock <span class="dimtxt">&mdash; each bar starts at the clock edge the first flip-flop acts on</span></div>
-                    <svg id="r3" viewBox="0 0 1190 470"></svg>
-                </div>
-                <div class="rcol3">
-                    <div class="panel mtab" id="tab3"></div>
-                    <div class="panel card stepcard">
-                        <div class="snum" id="snum3"></div>
-                        <div class="reason" id="reason3"></div>
-                        <div class="steprow">
-                            <button class="btn bk" id="bk3">&#9664; back <span class="kk">&uarr;</span></button>
-                            <button class="btn nxt" id="nxt3">next <span class="kk">Space</span></button>
-                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
-                        </div>
-                    </div>
-                    <div class="panel card fill"><div class="rule">A synchronizer does not stop the first flip-flop from being caught. It gives it <b>a whole clock period</b> to settle.</div></div>
-                </div>
-            </div>
-            <div class="panel meter3">
-                <svg id="m3" viewBox="0 0 1816 262"></svg>
-            </div>
-        </div>
-
-        <!-- BEAT 4 — what makes it worse -->
+        <!-- BEAT 4 — the formula, one term at a time -->
         <div class="page" id="p4">
-            <div class="row">
-                <div class="side">
-                    <div class="panel card togcard" id="tg4f">
-                        <div class="tt"><div class="ct">Faster clock</div><button class="btn tog" id="tgF">200 MHz <span class="kk">F</span></button></div>
-                        <div class="tline">The period halves to 5 ns, so the synchronizer&rsquo;s first flip-flop gets only 3 ns to settle, and the clock samples twice as often.</div>
-                    </div>
-                    <div class="panel card togcard" id="tg4u">
-                        <div class="tt"><div class="ct">Many units</div><button class="btn tog" id="tgU">10<sup>6</sup> copies <span class="kk">U</span></button></div>
-                        <div class="tline">A product shipped in a million copies fails <b>somewhere</b> a million times as often.</div>
-                    </div>
+            <div class="panel form4" id="pan4f">
+                <div class="formula"><span class="lhs t" data-t="all">MTBF</span><span>=</span>
+                    <span class="frac"><span class="num"><span class="t" data-t="e"><i>e</i><sup><span class="t" data-t="tr"><i>t</i><sub>r</sub></span>/<span class="t" data-t="tau"><i>&tau;</i></span></sup></span></span>
+                    <span class="den"><span class="t" data-t="T0"><i>T</i><sub>0</sub></span> &middot; <span class="t" data-t="fclk"><i>f</i><sub>clk</sub></span> &middot; <span class="t" data-t="fdata"><i>f</i><sub>data</sub></span></span></span></div>
+            </div>
+            <div class="low4">
+                <div class="panel terms4 cmp4" id="pan4c" style="display: none"><div class="phead">Resolution time without and with a synchronizer <span class="dimtxt">&mdash; one 10 ns clock, t<sub>co</sub> = t<sub>su</sub> = 1 ns, 7 ns of logic</span></div><svg id="c4" viewBox="0 0 1100 520"></svg></div>
+                <div class="panel terms4" id="pan4t"><div class="phead">The terms, one at a time <span class="dimtxt">&mdash; this example&rsquo;s values</span></div><div class="mtab" id="terms4"></div></div>
+                <div class="r4">
                     <div class="panel card stepcard">
                         <div class="snum" id="snum4"></div>
                         <div class="reason" id="reason4"></div>
@@ -371,19 +402,59 @@
                             <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
                         </div>
                     </div>
-                    <div class="panel card fill">
-                        <div class="ct">The remedy is the same</div>
-                        <div class="rule">More settling time. A third flip-flop at 200 MHz gives <span style="white-space: nowrap">2 &times; (5 &minus; 2) = 6 ns</span>: about <b data-mtbf="r4" data-tr="6" data-fclk="200e6" data-units="1"></b>. Far better than 2.72 minutes, though not the 746,000 years of the slower clock.</div>
+                    <div class="panel sync4" id="pan4s">
+                        <div class="phead">The synchronizer at 100 MHz <span class="dimtxt">&mdash; each flip-flop loses its own 2 ns</span></div>
+                        <svg id="s4" viewBox="0 0 680 250"></svg>
                     </div>
                 </div>
-                <div class="main">
-                    <div class="panel meter4">
-                        <div class="phead">The synchronizer from beat 3 on the meter <span class="dimtxt">&mdash; the dashed needle is where it started: 100 MHz, one unit</span></div>
-                        <svg id="m4" viewBox="0 0 1242 312"></svg>
+            </div>
+        </div>
+
+        <!-- BEAT 5 — longer or shorter? -->
+        <div class="page" id="p5">
+            <div class="panel meter">
+                <div class="phead">The MTBF meter <span class="dimtxt">&mdash; each mark is ten times the one before; the dashed needle is the 100 MHz synchronizer</span></div>
+                <svg id="m5" viewBox="0 0 1816 300"></svg>
+            </div>
+            <div class="low5">
+                <div class="cards5" id="cards5"></div>
+                <div class="side5">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum5"></div>
+                        <div class="reason" id="reason5"></div>
+                        <div class="steprow">
+                            <button class="btn gu" id="gu5">&#8593; longer <span class="kk">L</span></button>
+                            <button class="btn gd" id="gd5">&#8595; shorter <span class="kk">S</span></button>
+                        </div>
+                        <div class="verdict" id="verd5"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk5">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt5">reveal <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
                     </div>
-                    <div class="low4">
-                        <div class="panel tab4"><div class="phead">Synchronizer: time between failures</div><div class="mtab" id="t4"></div></div>
-                        <div class="panel brk4"><div class="phead">Where the number comes from</div><div class="bl" id="b4"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 6 — make millions -->
+        <div class="page" id="p6">
+            <div class="panel meter">
+                <div class="phead">The synchronizer on the meter <span class="dimtxt">&mdash; the dashed needle is one board</span></div>
+                <svg id="m6" viewBox="0 0 1816 300"></svg>
+            </div>
+            <div class="low6">
+                <div class="panel pic6" id="pan6p"><div class="phead">One board, or a million</div><svg id="p6s" viewBox="0 0 640 400"></svg></div>
+                <div class="panel tab6"><div class="phead">Time between failures</div><div class="mtab" id="t6"></div><div class="mnote">A million boards fail somewhere a million times as often: MTBF &divide; 10<sup>6</sup>.</div></div>
+                <div class="side6">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum6"></div>
+                        <div class="reason" id="reason6"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk6">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt6">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -392,11 +463,11 @@
     </div>
 
     <div class="footer">
-        <div class="progress"><div class="pdot" data-dot="1"></div><div class="pdot" data-dot="2"></div><div class="pdot" data-dot="3"></div><div class="pdot" data-dot="4"></div></div>
+        <div class="progress"><div class="pdot" data-dot="1"></div><div class="pdot" data-dot="2"></div><div class="pdot" data-dot="3"></div><div class="pdot" data-dot="4"></div><div class="pdot" data-dot="5"></div><div class="pdot" data-dot="6"></div></div>
         <div class="controls">
-            <span class="k">1</span>&ndash;<span class="k">4</span> or <span class="k">&larr;</span><span class="k">&rarr;</span> beat
+            <span class="k">1</span>&ndash;<span class="k">6</span> or <span class="k">&larr;</span><span class="k">&rarr;</span> beat
             &middot; <span class="k">Space</span> or <span class="k">&darr;</span> next &middot; <span class="k">&#9664; back</span> or <span class="k">&uarr;</span> one step back
-            &middot; <span class="k">F</span> <span class="k">U</span> toggles (beat 4) &middot; <span class="k">R</span> reset &middot; <span class="k">D</span> definitions
+            &middot; <span class="k">H</span> &times;100 (beat 1) &middot; <span class="k">L</span> <span class="k">S</span> guess (beat 5) &middot; <span class="k">R</span> reset &middot; <span class="k">D</span> definitions
         </div>
     </div>
 
@@ -404,13 +475,14 @@
         <div class="defs-card">
             <div class="defs-head"><div class="defs-title">Definitions</div><div class="defs-close">D or Esc closes</div></div>
             <div class="defs-list">
-                <div class="ds">MTBF</div><div class="dd"><b>Mean time between failures</b>: the average time from one synchronizer failure to the next. Failures are random, so this is a rate, not a date: a 746,000-year MTBF can still fail tomorrow, though that is very unlikely.</div>
-                <div class="ds">metastable state</div><div class="dd">The flip-flop&rsquo;s output hovers near halfway between 0 and 1, wobbling, for a while, then settles to one of them. See <b data-topic="metastable-states">Metastable States</b>.</div>
-                <div class="ds">caught</div><div class="dd">The input changed so close to a clock edge that the flip-flop could not cleanly decide, so it may hover. A catch is not yet a failure: it fails only if it is still hovering when the next flip-flop reads it.</div>
-                <div class="ds">window <span class="mono">T<sub>0</sub></span></div><div class="dd">How close to the edge a change must land to catch the flip-flop. Here 0.1 ns, far narrower than the setup-to-hold decision window: most changes inside that window still resolve at once.</div>
-                <div class="ds">settling time <span class="mono">t<sub>r</sub></span></div><div class="dd">How long the design lets a caught flip-flop settle before anything reads it: the clock period(s) minus <span class="mono">t<sub>co</sub> + t<sub>su</sub></span> (2 ns here) minus any logic in the path. A synchronizer&rsquo;s first flip-flop gets <span class="mono">10 &minus; 2 = 8 ns</span>. See <b data-topic="synchronizers">Synchronizers</b>.</div>
-                <div class="ds"><span class="mono">&tau;</span> (tau)</div><div class="dd">The settling time constant of the flip-flop. Every &tau; of waiting cuts the chance of still hovering by a factor of e &asymp; 2.7. Here 0.2 ns, a round, older-technology value; a modern part&rsquo;s &tau; is tens of picoseconds.</div>
-                <div class="ds"><span class="mono">f<sub>clk</sub>, f<sub>data</sub></span></div><div class="dd">How often the clock samples (100 MHz) and how often the input changes (1 MHz). All constants here are illustrative round values, not a data sheet. The full timing picture is in <b data-topic="practical-considerations-overview">Practical Considerations Overview</b>.</div>
+                <div class="ds">external input</div><div class="dd">A signal from outside the circuit, such as a button or a sensor. It changes whenever it likes, with no regard for the clock.</div>
+                <div class="ds">decision window</div><div class="dd">From the setup time before a clock edge to the hold time after it (here &minus;1 to +0.5 ns). A change inside it is not guaranteed to be read cleanly.</div>
+                <div class="ds">caught, <span class="mono">T<sub>0</sub></span></div><div class="dd">A change so close to the edge that the flip-flop cannot decide at once. <span class="mono">T<sub>0</sub></span> is how wide that slice is: here 0.1 ns, a small part of the decision window.</div>
+                <div class="ds">hover</div><div class="dd">A caught flip-flop&rsquo;s output sits near halfway, wobbling, then settles to 0 or 1: a <b>metastable state</b>. See <b data-topic="metastable-states">Metastable States</b>.</div>
+                <div class="ds">resolution time <span class="mono">t<sub>r</sub></span></div><div class="dd">How long the design lets a caught flip-flop settle before anything reads it. Each flip-flop stage loses its own <span class="mono">t<sub>co</sub> + t<sub>su</sub></span> (2 ns here), so a synchronizer&rsquo;s first flip-flop gets <span class="mono">10 &minus; 2 = 8 ns</span>.</div>
+                <div class="ds"><span class="mono">&tau;</span> (tau)</div><div class="dd">The flip-flop&rsquo;s settling time constant: every &tau;, the chance of still hovering drops by e &asymp; 2.7. Here 0.2 ns; a faster flip-flop has a smaller &tau;.</div>
+                <div class="ds">MTBF</div><div class="dd"><b>Mean time between failures</b>: the average time from one failure to the next. A rate, not a date. See <b data-topic="synchronizers">Synchronizers</b>.</div>
+                <div class="ds"><span class="mono">f<sub>clk</sub>, f<sub>data</sub></span></div><div class="dd">How often the clock samples (100 MHz) and how often the input changes (1 MHz). All constants here are illustrative round values, not a data sheet.</div>
             </div>
         </div>
     </div>
@@ -434,23 +506,32 @@
     const $ = (id) => document.getElementById(id);
 
     // ============ THE MODEL (one set of illustrative constants, used everywhere) ============
-    // MTBF = e^(t_r / tau) / (T0 * f_clk * f_data). Values python-checked (BRIEF iteration log 2026-11-01).
+    // MTBF = e^(t_r / tau) / (T0 * f_clk * f_data). Every value python-checked (BRIEF iteration log 2026-11-02).
+    // Per-stage rule (Mike, 2026-11-02): each flip-flop stage loses its own t_co + t_su (2 ns): N flip-flops give t_r = (N - 1)(T - 2).
     const TAU = 0.2, T0NS = 0.1, FCLK = 100e6, FDATA = 1e6, TCOSU = 2;      // ns, ns, Hz, Hz, ns
     const YEAR = 365.25 * 86400;
-    const caughtPerSec = (fclk) => T0NS * 1e-9 * fclk * FDATA;
-    const mtbf = (tr, fclk = FCLK, units = 1) => Math.exp(tr / TAU) / caughtPerSec(fclk) / units;
-    // the four designs (beat 3). Each flip-flop stage loses its own t_co + t_su (2 ns): one flip-flop feeding logic gets T - 2 - logic;
-    // N flip-flops back to back get t_r = (N - 1) x (T - 2) (Mike, 2026-11-02: "fix 55 to use 16 ns for three flip-flops")
-    const DESIGNS = [
-        { n: 1, name: 'No settling time at all', short: 'no settling time', periods: 1, logic: 8, chain: 'logic', nff: 2, ar: '10 − 2 − 8 = 0 ns' },
-        { n: 2, name: 'One flip-flop, 7 ns of logic after it', short: '1 FF, 7 ns of logic', periods: 1, logic: 7, chain: 'logic', nff: 2, ar: '10 − 2 − 7 = 1 ns' },
-        { n: 3, name: 'Two-flip-flop synchronizer', short: 'synchronizer, 2 FFs', periods: 1, logic: 0, chain: 'sync2', nff: 2, ar: '10 − 2 = 8 ns' },
-        { n: 4, name: 'Three flip-flops (each loses its own 2 ns)', short: 'three FFs', periods: 2, logic: 0, chain: 'sync3', nff: 3, ar: '2 × (10 − 2) = 16 ns' },
+    const caughtPerSec = (fclk = FCLK, fdata = FDATA) => T0NS * 1e-9 * fclk * fdata;
+    const mtbfX = (o) => Math.exp(o.tr / (o.tau || TAU)) / caughtPerSec(o.fclk || FCLK, o.fdata || FDATA) / (o.units || 1);
+    const stageTr = (N, Tns) => (N - 1) * (Tns - TCOSU);
+    const SYNC = { tr: stageTr(2, 10), fclk: FCLK, fdata: FDATA, tau: TAU, units: 1 };   // the 100 MHz synchronizer: 8 ns
+    // beat 5: the L29 practice cases, each a change from SYNC
+    const CASES = [
+        { name: 'Add a third flip-flop', what: 'resolution time 8 → 16 ns', o: { ...SYNC, tr: stageTr(3, 10) }, ar: 't_r = 2 × (10 − 2) = 16 ns',
+          why: 'Each flip-flop loses its own 2 ns, so the time to settle doubles to 16 ns. The top of the formula grows by e⁴⁰.' },
+        { name: 'Clock 100 → 200 MHz', what: 'resolution time 8 → 3 ns, twice the catches', o: { ...SYNC, tr: stageTr(2, 5), fclk: 200e6 }, ar: 't_r = 5 − 2 = 3 ns',
+          why: 'The period halves, leaving only 3 ns to settle, and the clock samples twice as often. It hurts twice.' },
+        { name: 'The input changes twice as often', what: 'twice the catches', o: { ...SYNC, fdata: 2e6 }, ar: 'f_data = 2 MHz',
+          why: 'Twice as many changes means twice as many catches. Nothing else moves, so the time halves.' },
+        { name: '3 ns of logic between the two flip-flops', what: 'resolution time 8 → 5 ns', o: { ...SYNC, tr: 10 - TCOSU - 3 }, ar: 't_r = 10 − 2 − 3 = 5 ns',
+          why: 'The logic uses 3 ns of the time the first flip-flop had to settle. Only 5 ns are left.' },
+        { name: 'Faster flip-flops: τ 0.2 → 0.15 ns', what: 'the same 8 ns is more time constants', o: { ...SYNC, tau: 0.15 }, ar: 'τ = 0.15 ns',
+          why: 'A smaller time constant settles faster: the same 8 ns is now 53 time constants instead of 40.' },
+        { name: 'Clock 100 → 50 MHz', what: 'resolution time 8 → 18 ns, half the catches', o: { ...SYNC, tr: stageTr(2, 20), fclk: 50e6 }, ar: 't_r = 20 − 2 = 18 ns',
+          why: 'The period doubles, so the first flip-flop gets 18 ns to settle, and the clock samples half as often.' },
     ];
-    DESIGNS.forEach(d => { d.tr = d.logic ? 10 - TCOSU - d.logic : (d.nff - 1) * (10 - TCOSU); d.m = mtbf(d.tr); });
-    // beat 4: the synchronizer (t_r = T - 2) under the two toggles
-    const B4 = (fast, many) => { const fclk = fast ? 200e6 : 100e6, T = 1e9 / fclk, tr = T - TCOSU, units = many ? 1e6 : 1; return { fclk, T, tr, units, m: mtbf(tr, fclk, units), m1: mtbf(tr, fclk, 1) }; };
-    // landmarks on the meter (log10 seconds)
+    CASES.forEach(c => { c.m = mtbfX(c.o); c.dir = c.m > mtbfX(SYNC) ? 1 : -1; });
+    // beat 6: one board or a million, at 100 or 200 MHz
+    const FLEET = [[100e6, 1], [100e6, 1e6], [200e6, 1], [200e6, 1e6]].map(([f, u]) => { const T = 1e9 / f, o = { ...SYNC, tr: stageTr(2, T), fclk: f, units: u }; return { f, u, T, o, m: mtbfX(o) }; });
     const LANDMARKS = [
         { key: 'sec', name: '1 second', s: 1, row: 0 },
         { key: 'day', name: '1 day', s: 86400, row: 1 },
@@ -463,8 +544,8 @@
     const SUP = { '-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '.': '·' };
     const sup = (s) => String(s).split('').map(c => SUP[c] || c).join('');
     const sig = (x, n = 3) => { let s = Number(x).toPrecision(n); if (/e/.test(s)) s = String(Number(s)); if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, ''); return s; };
-    const sci = (x) => { const e = Math.floor(Math.log10(x) + 1e-12); let m = x / Math.pow(10, e); if (+m.toFixed(2) >= 10) return sci2(1, e + 1); return sci2(m, e); };
     const sci2 = (m, e) => `${sig(m, 3)} × 10${sup(e)}`;
+    const sci = (x) => { const e = Math.floor(Math.log10(x) + 1e-12); const m = x / Math.pow(10, e); if (+m.toFixed(2) >= 10) return sci2(1, e + 1); return sci2(m, e); };
     const grp = (x) => Number(sig(x, 3)).toLocaleString('en-US');
     function fmtTime(s) {
         if (s < 1e-3) return sig(s * 1e6) + ' µs';
@@ -478,13 +559,12 @@
         return sci(y) + ' years';
     }
     const fmtNum = (x) => x < 1000 ? sig(x) : sci(x);
-    const fmtExp = (tr) => { const k = tr / TAU; const ks = sig(k, 4); return k === 0 ? 'e⁰ = 1' : `e${sup(ks)} = ${fmtNum(Math.exp(k))}`; };
 
     // ============ SVG HELPERS ============
     const SVGNS = 'http://www.w3.org/2000/svg';
     const f1 = (n) => +(+n).toFixed(2);
     function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; }
-    // text with light markup: _{sub} and ^{sup}; fs = font size (attribute only)
+    // text with light markup: _{sub} and ^{sup}; fs = font size (attribute only, no CSS font-size on SVG text)
     function tx(parent, x, y, s, cls, fs = 18, attrs = {}) {
         const t = el('text', { x: f1(x), y: f1(y), class: cls, 'font-size': fs, ...attrs }, parent);
         const parts = String(s).split(/(_\{[^}]*\}|\^\{[^}]*\})/).filter(p => p !== '');
@@ -497,18 +577,17 @@
         }
         return t;
     }
-    // the flip-flop symbol (as graphics 50/51): D, ▷, Q and Q̄ pins; Q̄ is an unused stub here. Overbar placed from the measured glyph.
-    function ff(svg, x, y, w, h, on, name) {
-        const g = el('g', { 'data-ff': name || '' }, svg), fs = 16;
+    // the flip-flop symbol (as graphics 50/51): D, ▷, Q and Q̄ pins; Q̄ is an unused stub. Overbar placed from the measured glyph.
+    function ff(svg, x, y, w, h, on) {
+        const g = el('g', {}, svg), fs = 16;
         el('rect', { x, y, width: w, height: h, rx: 4, class: 'ff' + (on ? ' on' : '') }, g);
         const dq = y + h * 0.3, qb = y + h * 0.74;
         tx(g, x + 7, dq + 5.5, 'D', 'ffp', fs); tx(g, x + w - 7, dq + 5.5, 'Q', 'ffp', fs, { 'text-anchor': 'end' });
-        const qt = tx(g, x + w - 7, qb + 5.5, 'Q', 'ffp', fs, { 'text-anchor': 'end', 'data-ovt': 1 });
+        tx(g, x + w - 7, qb + 5.5, 'Q', 'ffp', fs, { 'text-anchor': 'end' });
         el('line', { 'data-ov': 1, x1: 0, y1: 0, x2: 0, y2: 0, stroke: '#5b6472', 'stroke-width': 1.5 }, g);
         el('path', { d: `M${x} ${qb - 7} L${x + 10} ${qb} L${x} ${qb + 7}`, fill: 'none', stroke: '#b8640a', 'stroke-width': 1.5 }, g);
         el('path', { d: `M${x + w} ${qb} h10`, class: 'wire' }, g);
-        if (name) tx(g, x + w / 2, y - 7, name, 'lab ink2 mono-s', 15, { 'text-anchor': 'middle' });
-        return { dq, qb, g };
+        return { dq, qb };
     }
     function fixOverbars(svg) {
         svg.querySelectorAll('line[data-ov]').forEach(ln => {
@@ -518,305 +597,378 @@
         });
     }
     const clear = (svg) => { while (svg.firstChild) svg.removeChild(svg.firstChild); };
+    // seeded generator (mulberry32), one stream per beat
+    function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
     // ============ THE METER (log10 seconds, -6 .. 40) ============
     const LMIN = -6, LMAX = 40;
     function meter(svg, o) {
-        // o: { x0, x1, axisY, ruler (bool), rulerY, rowA, rowB, beyondRow }
         clear(svg);
         const X = (l) => o.x0 + (l - LMIN) * (o.x1 - o.x0) / (LMAX - LMIN), ay = o.axisY;
         const M = { X, svg, o };
         el('rect', { x: o.x0, y: ay - 34, width: o.x1 - o.x0, height: 34, class: 'track' }, svg);
         M.fill = el('rect', { x: o.x0, y: ay - 34, width: 0, height: 34, class: 'fillbar', 'data-fill': 1 }, svg);
-        M.needles = el('g', {}, svg);      // under the scales, so every scale label paints over a needle
+        M.needles = el('g', {}, svg);
         el('line', { x1: o.x0, y1: ay, x2: o.x1, y2: ay, class: 'axis' }, svg);
         for (let l = LMIN; l <= LMAX; l++) {
             const major = l % 5 === 0 || l === -6 || l === -3;
             el('line', { x1: f1(X(l)), y1: ay, x2: f1(X(l)), y2: ay + (major ? 10 : 5), class: 'tick' + (major ? '' : ' mn') }, svg);
-            if (major) { const lab = l === -6 ? '1 µs' : l === -3 ? '1 ms' : l === 0 ? '1 s' : '10' + sup(l) + ' s';
-                if (l !== -5) tx(svg, X(l), ay + 30, lab, 'lab ink2', 16, { 'text-anchor': 'middle', 'data-dec': l }); }
+            if (major && l !== -5) tx(svg, X(l), ay + 30, l === -6 ? '1 µs' : l === -3 ? '1 ms' : l === 0 ? '1 s' : '10' + sup(l) + ' s', 'lab ink2', 16, { 'text-anchor': 'middle', 'data-dec': l });
         }
-        // landmarks: a mark on the axis, a leader down to the label row
         for (const lm of LANDMARKS) {
-            const l = Math.log10(lm.s), x = X(l), ly = lm.key === 'life' && o.rowC ? o.rowC : lm.row ? o.rowB : o.rowA;
+            const l = Math.log10(lm.s), x = X(l), ly = lm.row ? o.rowB : o.rowA;
             el('path', { d: `M${f1(x)} ${ay - 6} l6 6 l-6 6 l-6 -6 Z`, class: 'lmk', 'data-lm': lm.key, 'data-l': l, 'data-x': f1(x) }, svg);
-            el('line', { x1: f1(x), y1: ay + (lm.row ? 40 : 40), x2: f1(x), y2: ly - 18, class: 'leader' }, svg);
+            el('line', { x1: f1(x), y1: ay + 40, x2: f1(x), y2: ly - 18, class: 'leader' }, svg);
             tx(svg, x, ly, lm.name, 'lab b', 18, { 'text-anchor': 'middle', 'data-lml': lm.key });
         }
-        tx(svg, X(Math.log10(4.4e17)) + 14, o.rowB, 'to the right: longer than the universe has existed →', 'lab ink2', 17, { 'data-beyond': 1 });
+        tx(svg, X(Math.log10(4.4e17)) + 14, o.rowB, 'to the right: longer than the universe has existed →', 'lab ink2', 17);
         tx(svg, o.x0 - 14, ay - 11, 'MTBF', 'lab b', 18, { 'text-anchor': 'end' });
-        if (o.ruler) {
-            // the settling-time scale for 100 MHz, one unit: t_r = 0..20 ns, evenly spaced (x148 per ns)
-            const ry = o.rulerY;
-            el('line', { x1: f1(X(Math.log10(mtbf(0)))), y1: ry, x2: f1(X(Math.log10(mtbf(20)))), y2: ry, class: 'axis' }, svg);
-            for (let n = 0; n <= 20; n++) { const x = X(Math.log10(mtbf(n)));
-                el('line', { x1: f1(x), y1: ry, x2: f1(x), y2: ry + 8, class: 'tick', 'data-ns': n, 'data-x': f1(x) }, svg);
-                tx(svg, x, ry - 8, String(n), 'lab ink2 mono-s halo', 16, { 'text-anchor': 'middle' }); }
-            tx(svg, X(Math.log10(mtbf(0))) - 22, ry + 2, 't_{r}, ns', 'lab b', 18, { 'text-anchor': 'end' });
-        }
         return M;
     }
-    // a needle at log10(seconds); label in a bubble at by. cls: '' (lit) | 'mu' | 'ghost'
     function needle(M, secs, label, by, cls = '', key = '') {
         const l = Math.log10(secs), x = M.X(l), o = M.o, g = el('g', { 'data-needle': key, 'data-l': l, 'data-x': f1(x) }, M.needles);
         el('line', { x1: f1(x), y1: by + 16, x2: f1(x), y2: o.axisY + 4, class: 'needle ' + cls }, g);
         const t = tx(g, x, by + 6, label, cls ? 'lab ink2' : 'lab acc', 18, { 'text-anchor': 'middle' });
-        return { g, t, x, by };
+        return { g, t, x };
     }
-    // after the needles are on the (active) page: box each label and keep it inside the viewBox
     function boxNeedles(M) {
         const vb = M.svg.viewBox.baseVal;
         M.needles.querySelectorAll('g[data-needle]').forEach(g => {
             const t = g.querySelector('text'), bb0 = t.getBBox(); if (!bb0.width) return;
-            const x = +g.dataset.x; let cx = x;
-            const half = bb0.width / 2 + 12; cx = Math.max(vb.x + half + 2, Math.min(vb.x + vb.width - half - 2, cx));
+            const half = bb0.width / 2 + 12, cx = Math.max(vb.x + half + 2, Math.min(vb.x + vb.width - half - 2, +g.dataset.x));
             t.setAttribute('x', f1(cx)); const bb = t.getBBox();
             const r = el('rect', { x: f1(bb.x - 10), y: f1(bb.y - 4), width: f1(bb.width + 20), height: f1(bb.height + 8), rx: 5, class: 'bub' + (g.querySelector('.needle.mu, .needle.ghost') ? ' mu' : '') }, g);
             g.insertBefore(r, t);
-            const ln = g.querySelector('line'); ln.setAttribute('y1', f1(bb.y + bb.height + 4));
+            g.querySelector('line').setAttribute('y1', f1(bb.y + bb.height + 4));
         });
     }
+    const METER_O = { x0: 110, x1: 1770, axisY: 172, rowA: 230, rowB: 264 };
 
-    // ============ BEAT 1 — caught, then hovering ============
-    const EDGES = [0, 10, 20, 30, 40, 50, 60];
-    // D changes [time ns, new value]; two land within T0/2 of an edge (19.97 and 39.98): those are the catches
-    const DCH = [[4, 1], [19.97, 0], [33, 1], [39.98, 0], [54, 1]];
-    // the two catches: [edge, settle time after the edge, what Q settles to]
-    const CATCH = [{ e: 20, settle: 2.0, to: 0 }, { e: 40, settle: 6.0, to: 1 }];
-    const dAt = (t) => { let v = 0; for (const [tt, nv] of DCH) if (tt <= t) v = nv; return v; };
-    function qEvents() {           // Q per edge: clean edges read D just before the edge; caught edges use CATCH
-        const ev = []; let q = 0;
-        for (const e of EDGES) {
-            const c = CATCH.find(k => k.e === e);
-            if (c) { ev.push({ e, from: q, to: c.to, hover: true, settle: c.settle }); q = c.to; continue; }
-            const nd = dAt(e - 0.5); if (nd !== q) { ev.push({ e, from: q, to: nd }); q = nd; }
-        }
-        return ev;
+    // ============ BEAT 1 — catching an edge (a seeded simulation) ============
+    // each change: u = where it lands relative to the nearest clock edge (uniform, -5 .. +5 ns); caught when |u| <= T0/2;
+    // inside the decision window (-1 .. +0.5 ns) but not caught: decided at once, old or new value; caught: hovers for an
+    // exponential time with mean tau, then settles to the old or new value. Three draws per change, always.
+    const SEED1 = 8317, CAP1 = 1000, WIN = [-1, 0.5];
+    function simChanges(seed, n) {
+        const r = mulberry32(seed), out = [];
+        for (let i = 0; i < n; i++) { const u = r() * 10 - 5, a = r(), b = r();
+            const kind = Math.abs(u) <= T0NS / 2 ? 'caught' : (u > WIN[0] && u < WIN[1]) ? 'window' : 'clear';
+            out.push({ i: i + 1, u, kind, hover: kind === 'caught' ? -TAU * Math.log(1 - a) : 0, takesNew: b < 0.5 }); }
+        return out;
     }
-    const REASONS1 = [
-        '<b>Usually nothing happens.</b> Now and then a change lands right at a clock edge: the flip-flop is caught, and its output hovers before it settles.',
-        '<b>Caught 10,000 times a second.</b> The window is 1/100 of each clock period, and the input changes a million times a second.',
-        '<b>Still undecided: 1 catch in 148.</b> The chance of still hovering drops by a factor of e, about 2.7, every 0.2 ns. This flip-flop gets 1 ns.',
-        '<b>Mean time between failures: 14.8 ms.</b> 10,000 catches a second, 1 in 148 still undecided: about 67 failures every second.',
-    ];
-    const NS1 = REASONS1.length - 1;
-    let s1 = 0;
-    const SX = (t) => 110 + (t + 4) * (1200 - 110) / 68;
-    function drawStrip() {
-        const svg = $('s1'); clear(svg);
-        const R = { clk: [44, 84], d: [140, 180], q: [236, 276] }, top = 34, bot = 292;
-        for (const e of EDGES) el('line', { x1: f1(SX(e)), y1: top, x2: f1(SX(e)), y2: bot, class: 'grid' }, svg);
-        // window bands at every edge (drawn 12 units wide, about 7x the 0.1 ns scale)
-        for (const e of EDGES) el('rect', { x: f1(SX(e) - 6), y: top, width: 12, height: bot - top, class: 'win', 'data-win': e }, svg);
-        tx(svg, SX(10) + 10, 24, 'window T_{0} at every clock edge', 'lab st', 17);
-        for (const [k, lab, cls] of [['clk', 'CLK', 'ctl'], ['d', 'D', 'd'], ['q', 'Q', 'q']]) tx(svg, 84, R[k][1] - 10, lab, 'sig ' + cls, 21, { 'text-anchor': 'end' });
-        tx(svg, 84, R.d[1] + 12, 'input', 'lab ink2', 15, { 'text-anchor': 'end' });
-        tx(svg, 84, R.q[1] + 12, 'FF output', 'lab ink2', 15, { 'text-anchor': 'end' });
-        // CLK
-        let d = `M${f1(SX(-4))} ${R.clk[1]}`;
-        for (const e of EDGES) d += ` L${f1(SX(e))} ${R.clk[1]} L${f1(SX(e) + 1.5)} ${R.clk[0]} L${f1(SX(e + 5))} ${R.clk[0]} L${f1(SX(e + 5) + 1.5)} ${R.clk[1]}`;
-        d += ` L${f1(SX(64))} ${R.clk[1]}`; el('path', { d, class: 'w clk' }, svg);
+    const CH1 = simChanges(SEED1, CAP1);
+    let n1 = 0, stack1 = [];
+    const EX = (t) => 150 + (t + 3) * (1200 - 150) / 8;
+    function drawEdge() {
+        const svg = $('e1'); clear(svg);
+        const R = { clk: [62, 98], d: [138, 178], q: [244, 316] }, top = 50, bot = 330;
+        for (let t = -3; t <= 5; t++) { el('line', { x1: f1(EX(t)), y1: top, x2: f1(EX(t)), y2: bot, class: 'grid' }, svg); tx(svg, EX(t), 356, t === 0 ? 'clock edge' : (t > 0 ? '+' : '−') + Math.abs(t) + ' ns', 'lab ink2', 16, { 'text-anchor': 'middle' }); }
+        el('rect', { x: f1(EX(WIN[0])), y: top, width: f1(EX(WIN[1]) - EX(WIN[0])), height: bot - top, class: 'win', 'data-win': 1 }, svg);
+        el('rect', { x: f1(EX(-T0NS / 2)), y: top, width: f1(EX(T0NS / 2) - EX(-T0NS / 2)), height: bot - top, class: 'slice', 'data-slice': 1 }, svg);
+        tx(svg, EX(-0.25), 38, 'decision window', 'lab st', 17, { 'text-anchor': 'middle' });
+        tx(svg, EX(0.62), 38, '← catch slice T_{0} = 0.1 ns', 'lab st', 17);
+        for (const [k, lab, cls] of [['clk', 'CLK', 'ctl'], ['d', 'D', 'd'], ['q', 'Q', 'q']]) tx(svg, 120, R[k][1] - 10, lab, 'sig ' + cls, 21, { 'text-anchor': 'end' });
+        tx(svg, 120, R.d[1] + 14, 'input', 'lab ink2', 15, { 'text-anchor': 'end' });
+        tx(svg, 120, R.q[1] + 14, 'output', 'lab ink2', 15, { 'text-anchor': 'end' });
+        el('path', { d: `M${EX(-3)} ${R.clk[1]} H${EX(0)} L${f1(EX(0) + 2)} ${R.clk[0]} H${EX(5)}`, class: 'w clk' }, svg);
+        const c = n1 ? CH1[n1 - 1] : null, oldV = c ? (c.i - 1) % 2 : 0, newV = c ? c.i % 2 : 0;
+        const yD = (v) => v ? R.d[0] : R.d[1], yQ = (lv) => R.q[1] - lv * (R.q[1] - R.q[0]);
+        if (!c) { el('path', { d: `M${EX(-3)} ${yD(0)} H${EX(5)}`, class: 'w d' }, svg); el('path', { d: `M${EX(-3)} ${yQ(0)} H${EX(5)}`, class: 'w q' }, svg);
+            tx(svg, 1200, 226, 'no change yet', 'lab ink2', 18, { 'text-anchor': 'end', 'data-verdict': 'none' }); return; }
         // D
-        const yD = (v) => v ? R.d[0] : R.d[1];
-        d = `M${f1(SX(-4))} ${yD(0)}`; let v = 0;
-        for (const [t, nv] of DCH) { d += ` L${f1(SX(t) - 1.2)} ${yD(v)} L${f1(SX(t) + 1.2)} ${yD(nv)}`; v = nv; }
-        d += ` L${f1(SX(64))} ${yD(v)}`; el('path', { d, class: 'w d', 'data-d': 1 }, svg);
-        // Q: clean = t_co (1 ns) after the edge; caught = to halfway by 1 ns, a small wobble about halfway, then a roll to the final value
-        const yQ = (lv) => R.q[1] - lv * (R.q[1] - R.q[0]);
-        const ev = qEvents(); let pts = [[-4, 0]], cur = 0; const hovers = [];
-        for (const x of ev) {
-            if (x.hover === undefined) { pts.push([x.e + 0.85, cur], [x.e + 1.15, x.to]); cur = x.to; continue; }
-            pts.push([x.e + 0.7, cur]); const hp = [[x.e + 0.7, cur]];
-            for (let t = x.e + 0.7; t <= x.e + 1.0 + 1e-9; t += 0.05) hp.push([t, cur + (0.5 - cur) * (t - x.e - 0.7) / 0.3]);
-            for (let t = x.e + 1.0; t <= x.e + x.settle + 1e-9; t += 0.025) { const ease = Math.min(1, (t - x.e - 1) / 0.15, (x.e + x.settle - t) / 0.15); hp.push([t, 0.5 + 0.08 * ease * Math.sin(2 * Math.PI * (t - x.e - 1) / 0.4)]); }
-            hp.push([x.e + x.settle + 0.3, x.to]); hovers.push({ x, hp });
-            pts.push([x.e + x.settle + 0.3, x.to]); cur = x.to;
+        if (c.u <= -3) { el('path', { d: `M${EX(-3)} ${yD(newV)} H${EX(5)}`, class: 'w d', 'data-du': c.u }, svg); tx(svg, 140 + 22, R.d[0] - 12, `← D changed ${Math.abs(c.u).toFixed(1)} ns before the edge`, 'lab ink2 halo', 16); }
+        else el('path', { d: `M${EX(-3)} ${yD(oldV)} H${f1(EX(c.u) - 2)} L${f1(EX(c.u) + 2)} ${yD(newV)} H${EX(5)}`, class: 'w d', 'data-du': c.u }, svg);
+        if (c.u > -3) el('circle', { cx: f1(EX(c.u)), cy: (R.d[0] + R.d[1]) / 2, r: 6, class: c.kind === 'caught' ? 'dot-x' : c.kind === 'window' ? 'dot-w' : 'dot-c' }, svg);
+        // Q
+        let verdict, cls = 'lab ink2';
+        const reads = c.kind === 'caught' ? c.takesNew : c.kind === 'window' ? c.takesNew : c.u <= WIN[0];
+        const fin = reads ? newV : oldV;
+        if (c.kind !== 'caught') {
+            if (fin !== oldV) el('path', { d: `M${EX(-3)} ${yQ(oldV)} H${f1(EX(0.85))} L${f1(EX(1.15))} ${yQ(fin)} H${EX(5)}`, class: 'w q', 'data-qfin': fin }, svg);
+            else el('path', { d: `M${EX(-3)} ${yQ(oldV)} H${EX(5)}`, class: 'w q', 'data-qfin': fin }, svg);
+            verdict = c.kind === 'window' ? (reads ? 'in the window, decided at once: took the new value' : 'in the window, decided at once: kept the old value')
+                : (reads ? 'clear of the edge: read cleanly on this edge' : 'clear of the edge: read cleanly on the next edge');
+            if (c.kind === 'window') cls = 'lab st';
+        } else {
+            const h = c.hover, pts = [[-3, oldV], [0.7, oldV]];
+            for (let t = 0.7; t <= 1.0001; t += 0.05) pts.push([t, oldV + (0.5 - oldV) * (t - 0.7) / 0.3]);
+            for (let t = 1.0; t <= 1 + h + 1e-9; t += 0.02) { const e = Math.min(1, (t - 1) / 0.1, (1 + h - t) / 0.15); pts.push([t, 0.5 + 0.08 * Math.max(0, e) * Math.sin(2 * Math.PI * (t - 1) / 0.4)]); }
+            pts.push([1 + h + 0.3, fin]);
+            el('path', { d: `M${EX(-3)} ${yQ(oldV)} H${f1(EX(0.7))}`, class: 'w q' }, svg);
+            el('path', { d: 'M' + pts.slice(1).map(p => f1(EX(p[0])) + ' ' + f1(yQ(p[1]))).join(' L'), class: 'w hov', 'data-hover': h, 'data-qfin': fin }, svg);
+            el('path', { d: `M${f1(EX(1 + h + 0.3))} ${yQ(fin)} H${EX(5)}`, class: 'w q' }, svg);
+            verdict = `caught: Q hovers ${h.toFixed(2)} ns, then settles to the ${reads ? 'new' : 'old'} value`; cls = 'lab raw';
         }
-        pts.push([64, cur]);
-        // draw Q in pieces: blue clean runs, red hovers
-        // blue path: a new subpath after each hover (the red hover sits between hover start and settle + 0.3)
-        let qd = '';
-        for (let i = 0; i < pts.length; i++) { const [t, lv] = pts[i], afterHover = i > 0 && hovers.some(h => Math.abs(t - (h.x.e + h.x.settle + 0.3)) < 1e-9);
-            qd += (i === 0 || afterHover ? ' M' : ' L') + f1(SX(t)) + ' ' + f1(yQ(lv)); }
-        el('path', { d: qd.trim(), class: 'w q', 'data-q': 1 }, svg);
-        for (const h of hovers) el('path', { d: 'M' + h.hp.map(p => f1(SX(p[0])) + ' ' + f1(yQ(p[1]))).join(' L'), class: 'w hov', 'data-hover': h.x.e, 'data-settle': h.x.settle, 'data-to': h.x.to }, svg);
-        el('line', { x1: SX(-4), y1: yQ(0.5), x2: SX(64), y2: yQ(0.5), stroke: '#d9dde3', 'stroke-dasharray': '4 6', 'stroke-width': 1 }, svg);
-        // annotations
-        tx(svg, SX(21) + 64, R.q[0] - 8, 'caught: hovers 1 ns, then settles to 0', 'lab raw halo', 16, { 'data-note': 'c1' });
-        tx(svg, SX(41), R.q[1] + 24, 'caught: a rare long hover, then settles to 1', 'lab raw halo', 16, { 'data-note': 'c2' });
-        tx(svg, SX(33) + 8, R.d[0] - 10, 'far from an edge: no catch', 'lab ink2 halo', 16, { 'data-note': 'far' });
-        for (const e of EDGES) tx(svg, SX(e), 330, e + ' ns', 'lab ink2 mono-s', 15, { 'text-anchor': 'middle' });
-        tx(svg, SX(-4), 360, 'In this stretch two of five changes are caught. Really the input changes about once every 100 clocks, and only 1 change in 100 is caught.', 'lab ink2', 16);
+        el('line', { x1: EX(-3), y1: yQ(0.5), x2: EX(5), y2: yQ(0.5), stroke: '#b8bfc8', 'stroke-dasharray': '4 6', 'stroke-width': 1 }, svg);
+        tx(svg, EX(5) + 4, yQ(0.5) + 5, 'half', 'lab ink2', 14);
+        tx(svg, 1200, 226, verdict, cls + ' halo', 18, { 'text-anchor': 'end', 'data-verdict': c.kind });
+        tx(svg, 150, 392, 'Each change lands at a random moment. Only the thin slice right at the edge catches the flip-flop.', 'lab ink2', 16);
     }
-    function drawHalfA() {
-        const svg = $('s1a'); clear(svg);
-        const x0 = 40, x1 = 572, y = 64, pxns = (x1 - x0) / 10;
-        el('rect', { x: x0, y, width: x1 - x0, height: 30, class: 'bar' }, svg);
-        el('rect', { x: f1(x1 - T0NS * pxns), y: y - 6, width: f1(T0NS * pxns), height: 42, class: 'barwin', 'data-barwin': f1(T0NS * pxns) }, svg);
-        tx(svg, x0, y - 12, 'one clock period, 10 ns', 'lab ink2', 16);
-        tx(svg, x1, y - 12, 'T_{0} = 0.1 ns: 1/100 of it', 'lab st', 16, { 'text-anchor': 'end' });
-        const L = [['the input changes', '1,000,000 times a second', 'f_{data} = 1 MHz', 140],
-                   ['each change lands in a window', '1 time in 100', 'T_{0} · f_{clk} = 0.1 ns × 100 MHz', 186]];
-        for (const [a, b, c, yy] of L) { tx(svg, x0, yy, a, 'lab', 18); tx(svg, 330, yy, b, 'lab b', 18); tx(svg, x0, yy + 21, c, 'lab ink2 mono-s', 15); }
-        el('line', { x1: x0, y1: 226, x2: x1, y2: 226, class: 'rowline' }, svg);
-        tx(svg, x0, 266, 'caught', 'lab', 20); tx(svg, 330, 266, '10,000 times a second', 'lab acc', 22, { 'data-caught': caughtPerSec(FCLK) });
-    }
-    function drawHalfB() {
-        const svg = $('s1b'); clear(svg);
-        const x0 = 76, x1 = 580, y0 = 40, y1 = 226, X = (t) => x0 + t * (x1 - x0) / 2, Y = (p) => y1 - p * (y1 - y0);
-        for (const p of [0, 0.5, 1]) { el('line', { x1: x0, y1: Y(p), x2: x1, y2: Y(p), class: p ? 'grid' : 'axis' }, svg); tx(svg, x0 - 14, Y(p) + 6, (p * 100) + '%', 'lab ink2 mono-s', 15, { 'text-anchor': 'end' }); }
-        for (const t of [0, 0.5, 1, 1.5, 2]) tx(svg, X(t), y1 + 28, t + ' ns', 'lab ink2 mono-s', 15, { 'text-anchor': 'middle' });
-        tx(svg, x0, y1 + 56, 'time a caught flip-flop is given to settle', 'lab ink2', 16);
-        tx(svg, x0 + 6, y0 - 12, 'still hovering', 'lab ink2', 16);
-        let d = ''; for (let t = 0; t <= 2.0001; t += 0.02) d += (d ? ' L' : 'M') + f1(X(t)) + ' ' + f1(Y(Math.exp(-t / TAU)));
-        el('path', { d, class: 'curve', 'data-curve': 1 }, svg);
-        el('circle', { cx: f1(X(TAU)), cy: f1(Y(Math.exp(-1))), r: 5, fill: '#b4472f' }, svg);
-        tx(svg, X(TAU) + 12, Y(Math.exp(-1)) - 6, '37% after τ = 0.2 ns', 'lab raw', 16);
-        el('line', { x1: X(1), y1: y0 + 30, x2: X(1), y2: y1, class: 'tr-line' }, svg);
-        el('circle', { cx: f1(X(1)), cy: f1(Y(Math.exp(-5))), r: 5, fill: '#4a6fa5' }, svg);
-        tx(svg, X(1) + 10, y0 + 46, 't_{r} = 1 ns', 'lab acc', 18);
-        tx(svg, X(1) + 10, y0 + 78, 'e^{−5} = 1 in 148', 'lab acc', 18, { 'data-frac': Math.exp(-5) });
+    const DX = (u) => 70 + (u + 5) * (1200 - 70) / 10;
+    function drawDots() {
+        const svg = $('d1'); clear(svg);
+        const base = 200, top = 34;
+        el('rect', { x: f1(DX(WIN[0])), y: top, width: f1(DX(WIN[1]) - DX(WIN[0])), height: base - top, class: 'win' }, svg);
+        el('rect', { x: f1(DX(-T0NS / 2)), y: top, width: f1(DX(T0NS / 2) - DX(-T0NS / 2)), height: base - top, class: 'slice' }, svg);
+        el('line', { x1: DX(-5), y1: base, x2: DX(5), y2: base, class: 'axis' }, svg);
+        for (let u = -5; u <= 5; u++) { el('line', { x1: f1(DX(u)), y1: base, x2: f1(DX(u)), y2: base + 6, class: 'tick' }, svg);
+            tx(svg, DX(u), base + 26, u === 0 ? 'edge' : (u > 0 ? '+' : '−') + Math.abs(u) + (Math.abs(u) === 5 ? ' ns' : ''), 'lab ink2', 16, { 'text-anchor': 'middle' }); }
+        const cols = new Map(), g = el('g', {}, svg);
+        for (let k = 0; k < n1; k++) { const c = CH1[k], col = Math.floor((c.u + 5) / 0.1), h = cols.get(col) || 0; cols.set(col, h + 1);
+            const cy = base - 6 - Math.min(h, 16) * 9.5, cx = DX(-5 + (col + 0.5) * 0.1);
+            el('circle', { cx: f1(cx), cy: f1(cy), r: 4, class: c.kind === 'caught' ? 'dot-x' : c.kind === 'window' ? 'dot-w' : 'dot-c', 'data-kind': c.kind }, g);
+            if (k === n1 - 1) el('circle', { cx: f1(cx), cy: f1(cy), r: 8, class: 'dot-last' }, svg); }
+        tx(svg, DX(-5), 250, 'grey: clear of the edge', 'lab ink2', 16);
+        tx(svg, DX(-2.2), 250, 'violet: in the decision window, decided at once', 'lab st', 16);
+        tx(svg, DX(2.6), 250, 'red: caught, hovered', 'lab raw', 16);
     }
     function paintB1() {
-        drawStrip(); drawHalfA(); drawHalfB();
-        $('snum1').textContent = `STEP ${s1 + 1} OF ${NS1 + 1}`; $('reason1').innerHTML = REASONS1[s1];
-        ['pan1s', 'pan1a', 'pan1b', 'pan1f'].forEach((id, i) => $(id).classList.toggle('lit', i === s1));
-        $('bk1').disabled = s1 === 0; $('nxt1').disabled = s1 === NS1;
+        drawEdge(); drawDots();
+        const seen = CH1.slice(0, n1), W = seen.filter(c => c.kind !== 'clear').length, K = seen.filter(c => c.kind === 'caught').length;
+        $('cn1').textContent = n1.toLocaleString('en-US');
+        $('cw1').innerHTML = W + (n1 ? ` <small>${Math.round(100 * W / n1)}%</small>` : '');
+        $('cx1').innerHTML = K + (n1 ? ` <small>${(100 * K / n1).toFixed(1)}%</small>` : '');
+        const c = n1 ? CH1[n1 - 1] : null, batch = stack1.length && n1 - stack1[stack1.length - 1] === 100;
+        $('snum1').textContent = n1 ? `CHANGE ${n1.toLocaleString('en-US')}` : 'START';
+        $('reason1').innerHTML = !c ? '<b>An input from outside ignores the clock.</b> Press next to send it a change, at a random moment.'
+            : batch ? `<b>${n1.toLocaleString('en-US')} changes so far.</b> About 15 in 100 land in the window; only about 1 in 100 is caught.`
+            : c.kind === 'caught' ? `<b>Change ${n1}: caught.</b> It landed right at the edge. Q hovers near halfway, then settles.`
+            : c.kind === 'window' ? `<b>Change ${n1}: inside the decision window.</b> Still decided at once: the flip-flop took the ${c.takesNew ? 'new' : 'old'} value.`
+            : `<b>Change ${n1}: clear of the edge.</b> The flip-flop reads it cleanly, on this edge or the next.`;
+        $('bk1').disabled = !stack1.length; $('nxt1').disabled = n1 >= CAP1; $('run1').disabled = n1 + 100 > CAP1;
     }
+    function push1(k) { if (n1 + k > CAP1) return; stack1.push(n1); n1 += k; }
 
-    // ============ BEAT 2 — the exponent ============
-    let tr2 = 0;
-    let M2 = null;
-    function paintB2() {
-        M2 = meter($('m2'), { x0: 110, x1: 1770, axisY: 210, ruler: true, rulerY: 116, rowA: 286, rowB: 322 });
-        const m = mtbf(tr2), l = Math.log10(m), x = M2.X(l);
-        M2.fill.setAttribute('width', f1(x - M2.o.x0));
-        const n = needle(M2, m, `t_{r} = ${sig(tr2)} ns:  ${fmtTime(m)}`, 30, '', 'b2');
-        n.t.setAttribute('data-mtbf', 'b2'); n.t.dataset.tr = tr2; n.t.dataset.fclk = FCLK; n.t.dataset.units = 1;
-        boxNeedles(M2);
-        $('sl2').value = tr2;
-        $('tv2tr').textContent = sig(tr2) + ' ns';
-        $('tv2e').textContent = fmtExp(tr2);
-        const tm = $('tv2m'); tm.textContent = fmtTime(m); tm.dataset.mtbf = 'b2t'; tm.dataset.tr = tr2; tm.dataset.fclk = FCLK; tm.dataset.units = 1;
-        $('fx2num').innerHTML = tr2 === 0 ? '1' : `e<sup>${sig(tr2 / TAU, 4)}</sup>`;
-        const hint = tr2 === 0 ? 'No settling time: every catch is a failure, 10,000 a second.'
-            : tr2 < 3 ? 'Each extra nanosecond multiplies the time between failures by 148.'
-            : l < Math.log10(4.4e17) ? 'Still the same step for each nanosecond: ×148, a fixed distance on the meter.'
-            : 'Already longer than the universe has existed, and each nanosecond still adds ×148.';
-        $('reason2').innerHTML = `<b>${sig(tr2)} ns to settle: ${fmtTime(m)}.</b> ${hint}`;
-        $('bk2').disabled = tr2 <= 0; $('nxt2').disabled = tr2 >= 20;
+    // ============ BEAT 2 — resolution time ============
+    const SEED2 = 55, NC2 = 1000;
+    const HOV2 = (() => { const r = mulberry32(SEED2), h = []; for (let i = 0; i < NC2; i++) h.push(-TAU * Math.log(1 - r())); return h; })();
+    const BINS2 = (() => { const b = new Array(15).fill(0); for (const h of HOV2) { const k = Math.floor(h / 0.1); if (k < 15) b[k]++; } return b; })();
+    const PAST2 = HOV2.filter(h => h > 1.5).length, AT1 = HOV2.filter(h => h > 1).length;
+    let s2 = 0; const NS2 = 3;
+    const HX = (t) => 90 + t * (1200 - 90) / 1.5;
+    function drawHist() {
+        const svg = $('h2'); clear(svg);
+        const base = 270, top = 40, ymax = Math.ceil(Math.max(...BINS2) / 100) * 100, Y = (c) => base - c * (base - top) / ymax;
+        for (let c = 0; c <= ymax; c += 100) { el('line', { x1: HX(0), y1: f1(Y(c)), x2: HX(1.5), y2: f1(Y(c)), class: c ? 'grid' : 'axis' }, svg); tx(svg, HX(0) - 12, Y(c) + 6, String(c), 'lab ink2', 15, { 'text-anchor': 'end' }); }
+        BINS2.forEach((n, k) => { const x0 = HX(k * 0.1) + 1.5, w = HX(0.1) - HX(0) - 3;
+            if (n) el('rect', { x: f1(x0), y: f1(Y(n)), width: f1(w), height: f1(base - Y(n)), rx: 2, class: 'hbar', 'data-bin': k, 'data-n': n }, svg);
+            tx(svg, x0 + w / 2, Y(n) - 7, String(n), 'lab ink2', 15, { 'text-anchor': 'middle', 'data-binl': k }); });
+        for (let k = 0; k <= 15; k += 1) tx(svg, HX(k * 0.1), base + 24, k === 0 ? '0' : sig(k * 0.1) + (k === 15 ? ' ns' : ''), 'lab ink2', 15, { 'text-anchor': 'middle' });
+        tx(svg, HX(0), base + 52, 'how long it hovered before settling', 'lab ink2', 16);
+        tx(svg, HX(0.75), 70, 'most settle within a few tenths of a nanosecond', 'lab b', 18);
+        tx(svg, HX(0.75), 96, `a few take much longer${PAST2 ? '' : '; none of these 1,000 went past 1.5 ns'}`, 'lab ink2', 17);
     }
-
-    // ============ BEAT 3 — one flip-flop vs a synchronizer ============
-    let s3 = 0; const NS3 = 3;
-    const REASONS3 = [
-        '<b>No settling time: 100 µs.</b> The logic after the flip-flop uses the whole period, so every catch becomes a failure.',
-        '<b>1 ns to settle: 14.8 ms.</b> A single flip-flop feeding logic. 1 ns of slack is about 148 times better, and still fails 67 times a second.',
-        '<b>A synchronizer: about 746,000 years.</b> No logic between the two flip-flops, so the first one gets the period minus 2 ns: 8 ns to settle.',
-        '<b>Three flip-flops: 1.76 × 10²³ years.</b> Each flip-flop loses its own 2 ns, so two stages give 2 × 8 = 16 ns: far longer than the universe has existed.',
+    function drawSurv() {
+        const svg = $('v2'); clear(svg);
+        const base = 270, top = 40, Y = (p) => base - p * (base - top);
+        for (const p of [0, 0.25, 0.5, 0.75, 1]) { el('line', { x1: HX(0), y1: f1(Y(p)), x2: HX(1.5), y2: f1(Y(p)), class: p ? 'grid' : 'axis' }, svg); tx(svg, HX(0) - 12, Y(p) + 6, (p * 100) + '%', 'lab ink2', 15, { 'text-anchor': 'end' }); }
+        for (let k = 0; k <= 15; k++) tx(svg, HX(k * 0.1), base + 24, k === 0 ? '0' : sig(k * 0.1) + (k === 15 ? ' ns' : ''), 'lab ink2', 15, { 'text-anchor': 'middle' });
+        tx(svg, HX(0), base + 52, 'time since the catch', 'lab ink2', 16);
+        // the step curve from the simulated catches, and the smooth e^(-t/tau)
+        const sorted = HOV2.slice().sort((a, b) => a - b); let d = `M${HX(0)} ${Y(1)}`, left = NC2;
+        for (const h of sorted) { if (h > 1.5) break; d += ` H${f1(HX(h))} V${f1(Y((left - 1) / NC2))}`; left--; }
+        d += ` H${HX(1.5)}`; el('path', { d, class: 'step', 'data-step': 1 }, svg);
+        let sm = ''; for (let t = 0; t <= 1.5001; t += 0.01) sm += (sm ? ' L' : 'M') + f1(HX(t)) + ' ' + f1(Y(Math.exp(-t / TAU)));
+        el('path', { d: sm, class: 'smooth' }, svg);
+        tx(svg, HX(0.55), 110, 'the 1,000 catches', 'lab acc', 17); el('line', { x1: HX(0.55) - 34, y1: 104, x2: HX(0.55) - 8, y2: 104, class: 'step' }, svg);
+        tx(svg, HX(0.55), 136, 'smooth curve: e^{−t/τ}', 'lab raw', 17); el('line', { x1: HX(0.55) - 34, y1: 130, x2: HX(0.55) - 8, y2: 130, class: 'smooth' }, svg);
+        if (s2 >= 2) for (const [k, lab] of [[1, '37% after τ = 0.2 ns'], [2, '13.5% after 2τ = 0.4 ns']]) {
+            const x = HX(k * TAU), y = Y(Math.exp(-k)); el('circle', { cx: f1(x), cy: f1(y), r: 5.5, fill: '#b4472f', 'data-tau': k }, svg);
+            tx(svg, x + 12, y - 8, lab, 'lab raw halo', 17); }
+        if (s2 >= 3) { const x = HX(1); el('line', { x1: x, y1: top + 4, x2: x, y2: base, class: 'tr-line' }, svg);
+            el('circle', { cx: f1(x), cy: f1(Y(Math.exp(-5))), r: 5.5, fill: '#4a6fa5' }, svg);
+            tx(svg, x + 12, top + 92, 't_{r} = 1 ns', 'lab acc', 19, { 'data-tr': 1 });
+            tx(svg, x + 12, top + 124, 'still hovering: 1 in 148', 'lab acc', 19); }
+    }
+    const REASONS2 = [
+        '<b>Once caught, how long does it hover?</b> Here are 1,000 catches. Most settle almost at once; a few take much longer.',
+        '<b>How many are still hovering?</b> Count the catches not yet settled at each moment. The count falls fast, then keeps falling.',
+        '<b>It falls by the same factor every τ.</b> Every 0.2 ns, the share still hovering drops by e, about 2.7. A faster flip-flop has a smaller τ.',
+        '<b>The design gives it time to settle.</b> Wait 1 ns before reading it, and only 1 catch in 148 is still undecided.',
     ];
-    function drawRows3() {
-        const svg = $('r3'); clear(svg);
-        const RH = 115, BX = 640, PX = 25;              // bar origin, px per ns
-        DESIGNS.forEach((ds, i) => {
-            const y0 = 6 + i * RH, on = i === s3, g = el('g', { class: 'r3' + (on ? '' : ' mu'), 'data-row': i }, svg);
-            el('rect', { x: 4, y: y0, width: 1182, height: RH - 8, rx: 6, class: 'rowbg' + (on ? ' on' : '') }, g);
-            tx(g, 20, y0 + 26, ds.n + ' · ' + ds.name, 'lab b', 19);
-            tx(g, 1170, y0 + 26, 't_{r} = ' + ds.ar, 'lab acc', 19, { 'text-anchor': 'end', 'data-tr3': ds.tr });
-            // circuit
-            const fy = y0 + 38, fw = 60, fh = 52, dq = fy + fh * 0.3, qb = fy + fh * 0.74, busY = y0 + RH - 14;
-            tx(g, 26, dq + 6, 'A', 'sig d', 18);
-            const parts = ds.chain === 'logic' ? ['ff', 'logic', 'ff'] : ds.chain === 'sync2' ? ['ff', 'ff', 'rest'] : ['ff', 'ff', 'ff', 'rest'];
-            let x = 64, prev = 44, nff = 0; const ffx = [];
-            for (const p of parts) {
-                if (p === 'ff') { el('path', { d: `M${prev} ${f1(dq)} H${x}`, class: 'wire' }, g); nff++; ff(g, x, fy, fw, fh, nff === 1 && on); ffx.push(x); prev = x + fw; x += fw + 50; }
-                else { const w = p === 'logic' ? 150 : 140; el('path', { d: `M${prev} ${f1(dq)} H${x}`, class: 'wire' }, g);
-                    el('rect', { x, y: fy + 2, width: w, height: fh - 14, rx: 18, class: 'cloud' }, g);
-                    tx(g, x + w / 2, fy + 27, p === 'logic' ? `logic, ${ds.logic} ns` : 'rest of circuit', 'lab', 16, { 'text-anchor': 'middle' });
-                    prev = x + w; x += w + 50; }
-            }
-            // one clock to every flip-flop
-            tx(g, 44, busY + 5, 'CLK', 'sig ctl', 14, { 'text-anchor': 'end' });
-            el('path', { d: `M48 ${busY} H${ffx[ffx.length - 1] - 14}`, class: 'wire clk' }, g);
-            for (const fx of ffx) el('path', { d: `M${fx - 14} ${busY} V${f1(qb)} H${fx}`, class: 'wire clk' }, g);
-            // the time bar from FF1's clock edge
-            const by = y0 + 46, bh = 28, segs = [];
-            for (let st = 0; st < ds.periods; st++) segs.push(['co', 1], ...(ds.logic ? [['lg', ds.logic]] : []), ['tr', ds.logic ? ds.tr : 10 - TCOSU], ['su', 1]);
-            let t = 0;
-            for (const [k, w] of segs) { if (w > 0) el('rect', { x: f1(BX + t * PX), y: by, width: f1(w * PX), height: bh, class: 'seg ' + k, 'data-seg': k, 'data-w': w }, g); t += w; }
-            for (let e = 0; e <= ds.periods; e++) el('line', { x1: BX + e * 10 * PX, y1: by - 6, x2: BX + e * 10 * PX, y2: by + bh + 6, stroke: '#b8640a', 'stroke-width': 2 }, g);
-            t = 0;
-            for (const [k, w] of segs) { const cx = BX + (t + w / 2) * PX;
-                if (k === 'lg') tx(g, cx, by + 20, `logic ${w} ns`, 'lab', 16, { 'text-anchor': 'middle' });
-                if (k === 'tr' && w >= 4) tx(g, cx, by + 20, `settle ${w} ns`, 'lab acc', 16, { 'text-anchor': 'middle' });
-                if (k === 'co') tx(g, cx, by + bh + 20, 't_{co}', 'lab ink2', 15, { 'text-anchor': 'middle' });
-                if (k === 'su') tx(g, cx, by + bh + 20, 't_{su}', 'lab ink2', 15, { 'text-anchor': 'middle' });
-                t += w; }
-            if (ds.tr < 4) tx(g, BX + (1 + ds.logic) * PX + ds.tr * PX / 2, by - 10, ds.tr ? `${ds.tr} ns` : 'none', 'lab acc', 15, { 'text-anchor': 'middle' });
-        });
+    function paintB2() {
+        drawHist(); drawSurv();
+        $('snum2').textContent = `STEP ${s2 + 1} OF ${NS2 + 1}`; $('reason2').innerHTML = REASONS2[s2];
+        $('pan2h').classList.toggle('lit', s2 === 0); $('pan2s').classList.toggle('lit', s2 === 1 || s2 === 2); $('pan2k').classList.toggle('lit', s2 === 3);
+        $('sim2').innerHTML = `In this run, <b>${AT1} of the 1,000</b> were still hovering at 1 ns (the curve predicts ${sig(NC2 * Math.exp(-5), 2)}).`;
+        $('bk2').disabled = s2 === 0; $('nxt2').disabled = s2 === NS2;
+    }
+
+    // ============ BEAT 3 — why a number? ============
+    let s3 = 0; const NS3 = 3;
+    const NODES3 = [
+        { x: 310, head: 'A standard measure', sub: 'reliability engineering', lines: ['Reliability engineering rates how dependable', 'a product is by its mean time between', 'failures: the average time from one', 'failure to the next.'] },
+        { x: 908, head: 'Early 1970s', sub: 'the problem becomes known', lines: ['Synchronizer and arbiter failure from', 'metastability was demonstrated and widely', 'discussed, after it had caused hard-to-trace', 'failures in computers.'],
+          ref: ['Chaney and Molnar, “Anomalous behavior of', 'synchronizer and arbiter circuits,” IEEE', 'Transactions on Computers, 1973.'] },
+        { x: 1506, head: 'Today', sub: 'how it is used', lines: ['Flip-flops are characterized by parameters', 'like τ and T_{0}, and FPGA design tools', 'report the MTBF of synchronizer chains.'] },
+    ];
+    function drawTime3() {
+        const svg = $('t3'); clear(svg);
+        el('line', { x1: 120, y1: 130, x2: 1696, y2: 130, class: 'tline' }, svg);
+        NODES3.forEach((n, i) => { const on = s3 === i + 1, g = el('g', { class: 't3' + (on || s3 === 0 ? '' : ' mu'), 'data-node': i }, svg);
+            el('circle', { cx: n.x, cy: 130, r: 16, class: 'tnode' + (on ? ' on' : '') }, g);
+            tx(g, n.x, 76, n.head, 'lab b', 26, { 'text-anchor': 'middle' }); tx(g, n.x, 104, n.sub, 'lab ink2', 18, { 'text-anchor': 'middle' });
+            n.lines.forEach((l, k) => tx(g, n.x - 270, 196 + k * 30, l, 'lab', 20));
+            if (n.ref) n.ref.forEach((l, k) => tx(g, n.x - 270, 196 + (n.lines.length + 0.6) * 30 + k * 26, l, 'lab ink2', 17, { 'font-style': 'italic' })); });
+    }
+    const REASONS3 = [
+        '<b>Designers need a number.</b> A catch cannot be prevented, so a reliable design has to show how rare a failure is: analytic backing, not hope.',
+        '<b>A standard measure.</b> Reliability engineering already had one: the mean time between failures.',
+        '<b>The problem becomes known.</b> In the early 1970s, synchronizer failure was demonstrated and widely discussed, after it had caused failures that were hard to trace.',
+        '<b>How it is used now.</b> Flip-flops come with settling parameters, and design tools report the MTBF of every synchronizer chain. The next beat builds that formula.',
+    ];
+    function paintB3() { drawTime3(); $('snum3').textContent = `STEP ${s3 + 1} OF ${NS3 + 1}`; $('reason3').innerHTML = REASONS3[s3]; $('bk3').disabled = s3 === 0; $('nxt3').disabled = s3 === NS3; }
+
+    // ============ BEAT 4 — the formula, one term at a time ============
+    let s4 = 0; const NS4 = 7;
+    const ROW4 = [0, 1, 2, 3, 4, 4, 5, 6];        // the terms-table row each step lights; step 5 is the stack comparison (Mike, 11-02)
+    const S4M = mtbfX(SYNC), S4E = Math.exp(SYNC.tr / TAU);
+    const LIT4 = [['fdata'], ['fclk'], ['T0'], ['T0', 'fclk', 'fdata'], ['tr', 'tau'], ['tr'], ['e', 'tr', 'tau'], ['all', 'e', 'tr', 'tau', 'T0', 'fclk', 'fdata']];
+    const TERMS4 = [
+        ['f<sub>data</sub>', 'how often the input changes', '1 MHz: a million times a second'],
+        ['f<sub>clk</sub>', 'how often the clock samples', '100 MHz: an edge every 10 ns'],
+        ['T<sub>0</sub>', 'the catch slice at each edge', '0.1 ns'],
+        ['T<sub>0</sub> &middot; f<sub>clk</sub> &middot; f<sub>data</sub>', 'how often it is caught', `0.1 ns &times; 100 MHz &times; 1 MHz = <b data-n4="caught">${grp(caughtPerSec())}</b> a second`],
+        ['t<sub>r</sub>, &tau;', 'time to settle; time constant', `t<sub>r</sub> = 10 &minus; 2 = <b data-n4="tr">${SYNC.tr}</b> ns; &tau; = 0.2 ns`],
+        ['e<sup>t<sub>r</sub>/&tau;</sup>', '1 catch in this many still hovers', `e<sup>${SYNC.tr / TAU}</sup> = <b data-n4="e">${fmtNum(S4E)}</b>`],
+        ['MTBF', 'the top divided by the bottom', `${fmtNum(S4M)} s &asymp; <b data-mtbf="b4" data-o='${JSON.stringify(SYNC)}'>${fmtTime(S4M)}</b>`],
+    ];
+    const REASONS4 = [
+        '<b>How often the input changes.</b> Here a million times a second.',
+        '<b>How often the clock samples.</b> 100 MHz: a clock edge every 10 ns.',
+        '<b>How close a change must land to catch the flip-flop.</b> The catch slice is 0.1 ns wide.',
+        '<b>Multiply them: how often it is caught.</b> 10,000 catches every second.',
+        '<b>The two times from Resolution Time.</b> The synchronizer&rsquo;s first flip-flop gets 10 &minus; 2 = 8 ns to settle; the time constant is 0.2 ns.',
+        '<b>Without and with a synchronizer.</b> After 7 ns of logic, one flip-flop has 1 ns left to settle; a synchronizer gives its first flip-flop 8 ns.',
+        '<b>How rare a failed catch is.</b> 8 ns is 40 time constants: only 1 catch in 2.35 &times; 10<sup>17</sup> is still hovering.',
+        '<b>Divide: about 746,000 years.</b> 2.35 &times; 10<sup>17</sup> &divide; 10,000 a second = 2.35 &times; 10<sup>13</sup> seconds between failures.',
+    ];
+    function drawSync4() {
+        const svg = $('s4'); clear(svg);
+        const fy = 34, fw = 60, fh = 52, on = s4 === 4, dq = fy + fh * 0.3, qb = fy + fh * 0.74, busY = 112;
+        tx(svg, 26, dq + 6, 'A', 'sig d', 18);
+        el('path', { d: `M44 ${f1(dq)} H90`, class: 'wire' }, svg); ff(svg, 90, fy, fw, fh, on);
+        el('path', { d: `M150 ${f1(dq)} H260`, class: 'wire' }, svg); ff(svg, 260, fy, fw, fh, false);
+        el('path', { d: `M320 ${f1(dq)} H400`, class: 'wire' }, svg);
+        el('rect', { x: 400, y: fy + 2, width: 150, height: fh - 14, rx: 18, class: 'cloud' }, svg);
+        tx(svg, 475, fy + 27, 'rest of circuit', 'lab', 16, { 'text-anchor': 'middle' });
+        tx(svg, 44, busY + 5, 'CLK', 'sig ctl', 14, { 'text-anchor': 'end' });
+        el('path', { d: `M48 ${busY} H246`, class: 'wire clk' }, svg);
+        for (const fx of [90, 260]) el('path', { d: `M${fx - 14} ${busY} V${f1(qb)} H${fx}`, class: 'wire clk' }, svg);
+        const BX = 70, PX = 50, by = 150, bh = 30; let t = 0;
+        for (const [k, w] of [['co', 1], ['tr', SYNC.tr], ['su', 1]]) { el('rect', { x: BX + t * PX, y: by, width: w * PX, height: bh, class: 'seg ' + k, 'data-seg': k, 'data-w': w }, svg); t += w; }
+        for (const e of [0, 10]) el('line', { x1: BX + e * PX, y1: by - 6, x2: BX + e * PX, y2: by + bh + 6, stroke: '#b8640a', 'stroke-width': 2 }, svg);
+        tx(svg, BX + 5 * PX, by + 21, `settle ${SYNC.tr} ns`, 'lab acc', 17, { 'text-anchor': 'middle' });
+        tx(svg, BX + 0.5 * PX, by + bh + 20, 't_{co}', 'lab ink2', 15, { 'text-anchor': 'middle' }); tx(svg, BX + 9.5 * PX, by + bh + 20, 't_{su}', 'lab ink2', 15, { 'text-anchor': 'middle' });
+        tx(svg, BX, by + bh + 50, 'one clock period, 10 ns: t_{r} = 10 − 2 = 8 ns', 'lab b', 17, { 'data-tr4': SYNC.tr });
         fixOverbars(svg);
     }
-    function tab3() {
-        const rows = DESIGNS.map((d, i) => `<tr class="${i === s3 ? 'hi' : 'mu'}"><td>${d.n} · ${d.short}</td><td>${d.tr} ns</td><td>${d.tr ? 'e<sup>' + d.tr / TAU + '</sup>' : '1'}</td><td class="mt" data-mtbf="t3-${i}" data-tr="${d.tr}" data-fclk="${FCLK}" data-units="1">${fmtTime(d.m)}</td></tr>`).join('');
-        $('tab3').innerHTML = `<table><tr><th>design</th><th>t<sub>r</sub></th><th>e<sup>t<sub>r</sub>/&tau;</sup></th><th>MTBF</th></tr>${rows}</table>`;
+    // the L29 deck's stacks (Lectures/PrepLectures/mwf-29-11-02-26/figs.py stack_fig): t_co 1, t_pd 7, t_su 1 on a 10 ns clock
+    const TCO4 = 1, TPD4 = 7, TSU4 = 1, SEGC4 = { co: '#b8640a', pd: '#4a6fa5', tr: '#2e7d4f', su: '#6b4fa8', sl: '#d9dde3' };   // sl = slack left over after the logic in period 2, unlabeled
+    const STACKS4 = [
+        { key: 'one', head: 'Without a synchronizer', rows: [['FF → logic → FF', [['co', 0, TCO4], ['pd', TCO4, TCO4 + TPD4], ['tr', TCO4 + TPD4, 10 - TSU4], ['su', 10 - TSU4, 10]]]] },
+        { key: 'sync', head: 'With a two-flip-flop synchronizer', rows: [['FF1 → FF2', [['co', 0, TCO4], ['tr', TCO4, 10 - TSU4], ['su', 10 - TSU4, 10]]],
+                                                                          ['FF2 → logic → FF', [['co', 10, 10 + TCO4], ['pd', 10 + TCO4, 10 + TCO4 + TPD4], ['sl', 10 + TCO4 + TPD4, 20 - TSU4], ['su', 20 - TSU4, 20]]]] },
+    ];
+    STACKS4.forEach(st => { st.tr = st.rows.reduce((a, r) => a + r[1].filter(sg => sg[0] === 'tr').reduce((b, sg) => b + sg[2] - sg[1], 0), 0); st.o = { ...SYNC, tr: st.tr }; st.m = mtbfX(st.o); });
+    function drawCmp4() {
+        const svg = $('c4'); clear(svg);
+        const X = (t) => 210 + t * 35, bot = 392;
+        let d = `M${X(0) - 20} 74 H${X(0)}`; for (let k = 0; k < 2; k++) d += ` V40 H${X(k * 10 + 5)} V74 H${X((k + 1) * 10)}`;
+        el('path', { d: d + ` V40 H${X(20) + 10}`, fill: 'none', stroke: '#b8640a', 'stroke-width': 2 }, svg);
+        tx(svg, X(0) - 30, 66, 'CLK', 'sig ctl', 18, { 'text-anchor': 'end' });
+        for (let k = 0; k <= 2; k++) { el('line', { x1: X(k * 10), y1: 40, x2: X(k * 10), y2: bot, stroke: '#c9d3e0', 'stroke-width': 1.5, 'stroke-dasharray': '6 6' }, svg); tx(svg, X(k * 10), bot + 22, k * 10 + ' ns', 'lab ink2', 16, { 'text-anchor': 'middle' }); }
+        for (let k = 0; k < 2; k++) tx(svg, X(k * 10 + 5), 100, `period ${k + 1}: 10 ns`, 'lab ctl', 16, { 'text-anchor': 'middle' });
+        let y = 136;
+        STACKS4.forEach((st, si) => { tx(svg, 20, y, st.head, 'lab b', 19);
+            tx(svg, 1085, y, 'MTBF', 'lab ink2', 16, { 'text-anchor': 'end' });
+            st.rows.forEach(([lab, segs], ri) => { const yy = y + 12 + ri * 54;
+                tx(svg, X(0) - 14, yy + 28, lab, 'lab', 17, { 'text-anchor': 'end' });
+                for (const [k, t0, t1] of segs) { el('rect', { x: f1(X(t0) + 1), y: yy, width: f1((t1 - t0) * 35 - 2), height: 42, rx: 5, fill: SEGC4[k], class: 'seg4', 'data-stack': st.key, 'data-k': k, 'data-t0': t0, 'data-t1': t1 }, svg);
+                    if (k === 'sl') continue;
+                    const w = (t1 - t0) * 35, lab2 = k === 'co' ? 't_{co}' : k === 'su' ? 't_{su}' : k === 'pd' ? 't_{pd} = 7 ns' : (w > 120 ? `t_{r} = ${t1 - t0} ns: settle` : 't_{r}');
+                    tx(svg, X((t0 + t1) / 2), yy + 27, lab2, 'segt', k === 'co' || k === 'su' || w < 60 ? 15 : 17, { 'text-anchor': 'middle' }); }
+                if (ri === 0) tx(svg, 1085, yy + 28, fmtTime(st.m), 'lab acc', 19, { 'text-anchor': 'end', 'data-mtbf': 'cmp-' + st.key, 'data-o': JSON.stringify(st.o) }); });
+            y += 22 + st.rows.length * 54 + 34; });
+        const fac = STACKS4[1].m / STACKS4[0].m, dk = (STACKS4[1].tr - STACKS4[0].tr) / TAU;
+        tx(svg, 20, 456, `t_{r} 1 ns → 8 ns: 7 more nanoseconds = ${dk} more time constants, so the MTBF grows by e^{${dk}} ≈ ${fmtNum(fac)}`, 'lab b', 19, { 'data-factor': fac });
+        tx(svg, 20, 490, 'Settling time sits in the exponent, so it dominates; the synchronizer’s whole job is to buy it.', 'lab acc', 19);
     }
-    let M3 = null;
-    function paintB3() {
-        drawRows3(); tab3();
-        M3 = meter($('m3'), { x0: 110, x1: 1770, axisY: 168, ruler: true, rulerY: 92, rowA: 222, rowB: 252 });
-        // all four needles: the current one lit, the rest grey; bubbles carry the design number
-        DESIGNS.forEach((d, i) => needle(M3, d.m, String(d.n), 22, i === s3 ? '' : 'mu', 'd' + i));
-        const cur = DESIGNS[s3]; M3.fill.setAttribute('width', f1(M3.X(Math.log10(cur.m)) - M3.o.x0));
-        boxNeedles(M3);
-        $('snum3').textContent = `DESIGN ${s3 + 1} OF 4`; $('reason3').innerHTML = REASONS3[s3];
-        $('bk3').disabled = s3 === 0; $('nxt3').disabled = s3 === NS3;
-    }
-
-    // ============ BEAT 4 — what makes it worse ============
-    let fast = false, many = false;
-    const ORDER4 = [[false, false], [true, false], [false, true], [true, true]];
-    const idx4 = () => ORDER4.findIndex(([a, b]) => a === fast && b === many);
-    let M4 = null;
     function paintB4() {
-        M4 = meter($('m4'), { x0: 80, x1: 1200, axisY: 172, ruler: false, rowA: 226, rowB: 258, rowC: 294 });
-        const base = B4(false, false), cur = B4(fast, many);
-        M4.fill.setAttribute('width', f1(M4.X(Math.log10(cur.m)) - M4.o.x0));
-        if (fast || many) needle(M4, base.m, 'before: ' + fmtTime(base.m), 78, 'ghost', 'base');
-        const n = needle(M4, cur.m, fmtTime(cur.m), 34, '', 'cur');
-        n.t.dataset.mtbf = 'b4n'; n.t.dataset.tr = cur.tr; n.t.dataset.fclk = cur.fclk; n.t.dataset.units = cur.units;
-        boxNeedles(M4);
-        $('tgF').classList.toggle('on', fast); $('tgU').classList.toggle('on', many);
-        $('tg4f').classList.toggle('lit', fast); $('tg4u').classList.toggle('lit', many);
-        const cell = (f, u) => { const b = B4(f, u); return `<td class="${f === fast && u === many ? 'hi' : ''}" data-mtbf="t4-${+f}${+u}" data-tr="${b.tr}" data-fclk="${b.fclk}" data-units="${b.units}">${fmtTime(b.m)}</td>`; };
-        $('t4').innerHTML = `<table><tr><th></th><th>100 MHz, t<sub>r</sub> = 8 ns</th><th>200 MHz, t<sub>r</sub> = 3 ns</th></tr>`
-            + `<tr><td>one unit</td>${cell(false, false)}${cell(true, false)}</tr><tr><td>10<sup>6</sup> units</td>${cell(false, true)}${cell(true, true)}</tr></table>`;
-        const k = cur.tr / TAU;
-        $('b4').innerHTML = [
-            ['clock', `<span class="mono">f<sub>clk</sub> = ${cur.fclk / 1e6} MHz</span>, period ${cur.T} ns`],
-            ['time to settle', `<span class="mono">t<sub>r</sub> = ${cur.T} &minus; 2 = ${cur.tr} ns</span>`],
-            ['still hovering then', `1 catch in e<sup>${k}</sup> = ${fmtNum(Math.exp(k))}`],
-            ['caught', `<span class="mono">T<sub>0</sub> &middot; f<sub>clk</sub> &middot; f<sub>data</sub></span> = ${grp(caughtPerSec(cur.fclk))} per second`],
-            ['one unit', `<span data-mtbf="b4one" data-tr="${cur.tr}" data-fclk="${cur.fclk}" data-units="1">${fmtTime(cur.m1)}</span>`],
-            ...(many ? [['somewhere in 10<sup>6</sup> units', `<span data-mtbf="b4all" data-tr="${cur.tr}" data-fclk="${cur.fclk}" data-units="1e6">${fmtTime(cur.m)}</span>`]] : []),
-        ].map(([a, b], i, arr) => `<div class="bk">${a}</div><div class="bv${i === arr.length - 1 ? ' res' : ''}">${b}</div>`).join('');
-        const R4 = [
-            '<b>The synchronizer at 100 MHz: about 746,000 years.</b> Turn on a faster clock, or ship a million of them.',
-            '<b>Twice the clock: 746,000 years → 2.72 minutes.</b> Speed hurts twice: twice the catches, and 5 ns less to settle, in the exponent.',
-            '<b>A million units: 746,000 years → 272 days.</b> &ldquo;Never&rdquo; on one board is every few months in the field.',
-            '<b>Both at once: one failure every 163 µs</b> somewhere in the fleet. The fix is the same: more settling time.',
-        ];
-        $('snum4').textContent = `CASE ${idx4() + 1} OF 4`; $('reason4').innerHTML = R4[idx4()];
-        $('bk4').disabled = idx4() === 0; $('nxt4').disabled = idx4() === 3;
+        const lit = new Set(LIT4[s4]);
+        document.querySelectorAll('#pan4f .t').forEach(sp => { const k = sp.dataset.t, inLit = sp.parentElement.closest('.t.on'); sp.classList.toggle('on', lit.has(k)); sp.classList.toggle('mu', !lit.has(k)); });
+        const row = ROW4[s4];
+        $('pan4t').style.display = s4 === 5 ? 'none' : ''; $('pan4c').style.display = s4 === 5 ? '' : 'none'; if (s4 === 5) drawCmp4();
+        $('terms4').innerHTML = '<table>' + TERMS4.slice(0, row + 1).map((r, i) => `<tr class="${i === row ? 'on' : ''}${i === 6 ? ' res' : ''}"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('') + '</table>';
+        drawSync4(); $('pan4s').classList.toggle('lit', s4 === 4);
+        $('snum4').textContent = `TERM ${s4 + 1} OF ${NS4 + 1}`; $('reason4').innerHTML = REASONS4[s4];
+        $('bk4').disabled = s4 === 0; $('nxt4').disabled = s4 === NS4;
     }
 
-    // static MTBF texts outside the beats
-    function fillStatic() { document.querySelectorAll('[data-mtbf="b1"], [data-mtbf="r4"]').forEach(e => { e.textContent = fmtTime(mtbf(+e.dataset.tr, +e.dataset.fclk, +e.dataset.units)); }); }
-    fillStatic();
+    // ============ BEAT 5 — longer or shorter? ============
+    let c5 = 0, rv5 = 0, g5 = 0;           // case, revealed, guess (+1 longer, -1 shorter, 0 none)
+    let M5 = null;
+    function paintB5() {
+        M5 = meter($('m5'), METER_O);
+        const base = mtbfX(SYNC), cs = CASES[c5];
+        needle(M5, base, 'synchronizer: ' + fmtTime(base), 70, 'ghost', 'base');
+        M5.fill.setAttribute('width', f1(M5.X(Math.log10(rv5 ? cs.m : base)) - M5.o.x0));
+        if (rv5) { const n = needle(M5, cs.m, fmtTime(cs.m), 24, '', 'case'); n.t.setAttribute('data-mtbf', 'b5n'); n.t.setAttribute('data-o', JSON.stringify(cs.o)); }
+        boxNeedles(M5);
+        $('cards5').innerHTML = CASES.map((c, i) => { const shown = i < c5 || (i === c5 && rv5);
+            return `<div class="case${i === c5 ? ' lit' : ''}" data-case="${i}"><div class="cn">CASE ${i + 1}</div><div class="ch">${c.name}</div>`
+                + `<div class="cm">${shown ? c.what : '&nbsp;'}</div>`
+                + (shown ? `<div class="cr ${c.dir > 0 ? 'up' : 'dn'}" data-dir="${c.dir}">${c.dir > 0 ? '&#8593; longer' : '&#8595; shorter'}: <span data-mtbf="c5-${i}" data-o='${JSON.stringify(c.o)}'>${fmtTime(c.m)}</span></div>` : '<div class="cr q">longer or shorter?</div>') + '</div>'; }).join('');
+        document.querySelectorAll('#cards5 .case').forEach(e => e.addEventListener('click', () => { c5 = +e.dataset.case; rv5 = 0; g5 = 0; drawPage(); }));
+        $('snum5').textContent = `CASE ${c5 + 1} OF 6`;
+        $('reason5').innerHTML = !rv5 ? `<b>${cs.name}.</b> Starting from the synchronizer&rsquo;s 746,000 years: does the time between failures get longer or shorter?`
+            : `<b>${cs.dir > 0 ? 'Longer' : 'Shorter'}: about ${fmtTime(cs.m)}.</b> ${cs.why}`;
+        $('verd5').innerHTML = !rv5 ? 'Guess, then reveal.' : g5 ? (g5 === cs.dir ? `You said ${g5 > 0 ? 'longer' : 'shorter'}: right.` : `You said ${g5 > 0 ? 'longer' : 'shorter'}: not this time.`) : '&nbsp;';
+        $('gu5').disabled = $('gd5').disabled = !!rv5;
+        $('bk5').disabled = c5 === 0 && !rv5; $('nxt5').disabled = c5 === 5 && rv5;
+        $('nxt5').innerHTML = (rv5 ? 'next case' : 'reveal') + ' <span class="kk">Space</span>';
+    }
+    function guess5(d) { if (rv5) return; g5 = d; rv5 = 1; drawPage(); }
+
+    // ============ BEAT 6 — make millions of these ============
+    let s6 = 0; const NS6 = 4; let M6 = null;
+    const REASONS6 = [
+        '<b>One board: about 746,000 years.</b> This synchronizer will almost surely never fail in the board&rsquo;s lifetime.',
+        '<b>A million boards: a failure every 272 days.</b> Each board is as safe as before, but somewhere in the field one fails every few months.',
+        '<b>A faster clock, one board: 2.72 minutes.</b> At 200 MHz the first flip-flop has only 3 ns to settle, and it is caught twice as often.',
+        '<b>A faster clock, a million boards: every 163 µs.</b> About 6,000 failures a second, somewhere in the field.',
+        '<b>The remedy is more settling time.</b> Add a flip-flop, or slow the clock the synchronizer runs on, until the whole field is safe.',
+    ];
+    function drawPic6(k) {
+        const svg = $('p6s'); clear(svg);
+        const one = k === 0 || k === 2;
+        el('rect', { x: 40, y: 110, width: 150, height: 104, rx: 8, class: 'board' + (one ? ' on' : '') }, svg);
+        el('rect', { x: 86, y: 140, width: 58, height: 44, rx: 3, fill: one ? '#4a6fa5' : '#b8bfc8' }, svg);
+        tx(svg, 115, 248, 'one board', one ? 'lab b' : 'lab mu', 19, { 'text-anchor': 'middle' });
+        const gx = 230, gy = 50, n = 40, m = 25, sz = 8, gap = 2, g = el('g', {}, svg);
+        for (let r = 0; r < m; r++) for (let c = 0; c < n; c++) el('rect', { x: gx + c * (sz + gap), y: gy + r * (sz + gap), width: sz, height: sz, class: 'sq' + (one ? ' mu' : '') + (!one && r === 11 && c === 27 ? ' x' : '') }, g);
+        tx(svg, gx + 200, gy + m * (sz + gap) + 30, 'a million boards: each square is 1,000', one ? 'lab mu' : 'lab b', 19, { 'text-anchor': 'middle' });
+        if (!one) tx(svg, gx + 200, gy + m * (sz + gap) + 58, 'red: a failure somewhere in the field', 'lab raw', 17, { 'text-anchor': 'middle' });
+    }
+    function paintB6() {
+        const k = Math.min(s6, 3), cur = FLEET[k];
+        M6 = meter($('m6'), METER_O);
+        const oneB = FLEET[k - (k % 2)];
+        if (k % 2) needle(M6, oneB.m, 'one board: ' + fmtTime(oneB.m), 70, 'ghost', 'one');
+        const n = needle(M6, cur.m, fmtTime(cur.m), 24, '', 'cur'); n.t.setAttribute('data-mtbf', 'b6n'); n.t.setAttribute('data-o', JSON.stringify(cur.o));
+        M6.fill.setAttribute('width', f1(M6.X(Math.log10(cur.m)) - M6.o.x0));
+        boxNeedles(M6);
+        drawPic6(k);
+        const cell = (i) => `<td class="${i === k ? 'hi' : ''}" data-mtbf="t6-${i}" data-o='${JSON.stringify(FLEET[i].o)}'>${fmtTime(FLEET[i].m)}</td>`;
+        $('t6').innerHTML = `<table><tr><th></th><th>100 MHz</th><th>200 MHz</th></tr><tr><td>one board</td>${cell(0)}${cell(2)}</tr><tr><td>10<sup>6</sup> boards</td>${cell(1)}${cell(3)}</tr></table>`;
+        $('snum6').textContent = `STEP ${s6 + 1} OF ${NS6 + 1}`; $('reason6').innerHTML = REASONS6[s6];
+        $('bk6').disabled = s6 === 0; $('nxt6').disabled = s6 === NS6;
+    }
 
     // ============ RENDER / NAV ============
-    const NPAGES = 4; let page = 1;
+    const NPAGES = 6; let page = 1;
     const tabs = Array.from(document.querySelectorAll('.tab'));
-    function drawPage() { [null, paintB1, paintB2, paintB3, paintB4][page](); }
+    function drawPage() { [null, paintB1, paintB2, paintB3, paintB4, paintB5, paintB6][page](); }
     function render() {
         for (let i = 1; i <= NPAGES; i++) $('p' + i).classList.toggle('active', i === page);
         tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
@@ -832,210 +984,205 @@
     defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
     defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
     function setPage(n) { closeDefs(); page = Math.max(1, Math.min(NPAGES, n)); render(); }
-    function setTr(v) { tr2 = Math.max(0, Math.min(20, Math.round(v * 2) / 2)); if (page === 2) drawPage(); }
-    function setToggles(f, u) { fast = !!f; many = !!u; if (page === 4) drawPage(); }
     function advance(dir = 1) {
-        if (page === 1) s1 = Math.max(0, Math.min(NS1, s1 + dir));
-        else if (page === 2) tr2 = Math.max(0, Math.min(20, tr2 + dir));
+        if (page === 1) { if (dir > 0) push1(1); else if (stack1.length) n1 = stack1.pop(); }
+        else if (page === 2) s2 = Math.max(0, Math.min(NS2, s2 + dir));
         else if (page === 3) s3 = Math.max(0, Math.min(NS3, s3 + dir));
-        else if (page === 4) { const i = Math.max(0, Math.min(3, idx4() + dir)); [fast, many] = ORDER4[i]; }
+        else if (page === 4) s4 = Math.max(0, Math.min(NS4, s4 + dir));
+        else if (page === 5) { if (dir > 0) { if (!rv5) rv5 = 1; else if (c5 < 5) { c5++; rv5 = 0; g5 = 0; } }
+                               else { if (rv5) { rv5 = 0; g5 = 0; } else if (c5 > 0) { c5--; rv5 = 1; g5 = 0; } } }
+        else if (page === 6) s6 = Math.max(0, Math.min(NS6, s6 + dir));
         drawPage();
     }
     function doReset() {
         if (defsOpen()) return;
-        if (page === 1) s1 = 0; else if (page === 2) tr2 = 0; else if (page === 3) s3 = 0; else { fast = false; many = false; }
+        if (page === 1) { n1 = 0; stack1 = []; } else if (page === 2) s2 = 0; else if (page === 3) s3 = 0; else if (page === 4) s4 = 0;
+        else if (page === 5) { c5 = 0; rv5 = 0; g5 = 0; } else s6 = 0;
         drawPage();
     }
     tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
     document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
-    for (const id of ['nxt1', 'nxt2', 'nxt3', 'nxt4']) $(id).addEventListener('click', e => { advance(1); e.currentTarget.blur(); });
-    for (const id of ['bk1', 'bk2', 'bk3', 'bk4']) $(id).addEventListener('click', e => { advance(-1); e.currentTarget.blur(); });
-    $('sl2').addEventListener('input', e => setTr(+e.target.value));
-    $('sl2').addEventListener('change', e => e.target.blur());
-    $('tgF').addEventListener('click', e => { setToggles(!fast, many); e.currentTarget.blur(); });
-    $('tgU').addEventListener('click', e => { setToggles(fast, !many); e.currentTarget.blur(); });
+    for (let i = 1; i <= 6; i++) { $('nxt' + i).addEventListener('click', e => { advance(1); e.currentTarget.blur(); }); $('bk' + i).addEventListener('click', e => { advance(-1); e.currentTarget.blur(); }); }
+    $('run1').addEventListener('click', e => { push1(100); drawPage(); e.currentTarget.blur(); });
+    $('gu5').addEventListener('click', e => { guess5(1); e.currentTarget.blur(); });
+    $('gd5').addEventListener('click', e => { guess5(-1); e.currentTarget.blur(); });
     document.addEventListener('keydown', (e) => {
         const k = e.key;
         if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
         if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
-        if (defsOpen()) { if (k === 'Escape') closeDefs(); if (k === ' ' || 'rRfFuU'.includes(k)) e.preventDefault(); return; }
-        if (document.activeElement === $('sl2') && (k === 'ArrowLeft' || k === 'ArrowRight')) return;
+        if (defsOpen()) { if (k === 'Escape') closeDefs(); if (k === ' ' || 'rRhHlLsS'.includes(k)) e.preventDefault(); return; }
         switch (k) {
             case ' ': case 'ArrowDown': advance(1); e.preventDefault(); break;
             case 'ArrowUp': advance(-1); e.preventDefault(); break;
             case 'ArrowRight': setPage(page + 1); e.preventDefault(); break;
             case 'ArrowLeft': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
-            case 'f': case 'F': if (page === 4) { setToggles(!fast, many); e.preventDefault(); } break;
-            case 'u': case 'U': if (page === 4) { setToggles(fast, !many); e.preventDefault(); } break;
+            case 'h': case 'H': if (page === 1) { push1(100); drawPage(); e.preventDefault(); } break;
+            case 'l': case 'L': if (page === 5) { guess5(1); e.preventDefault(); } break;
+            case 's': case 'S': if (page === 5) { guess5(-1); e.preventDefault(); } break;
             case 'r': case 'R': doReset(); e.preventDefault(); break;
         }
     });
 
     // ============ SELF-TEST API ============
-    window.__api = { setPage, advance, setTr, setToggles, reset: doReset, openDefs, closeDefs,
-        getState: () => ({ page, s1, tr2, s3, fast, many }), model: { mtbf, DESIGNS, B4, LANDMARKS, fmtTime } };
-    // ?beat=N&step=M — deep link (M = step on beats 1 and 3, t_r in ns on beat 2, case 0-3 on beat 4)
+    window.__api = { setPage, advance, reset: doReset, openDefs, closeDefs, getState: () => ({ page, n1, s2, s3, s4, c5, rv5, g5, s6 }),
+        model: { mtbfX, CASES, FLEET, SYNC, CH1, HOV2, fmtTime } };
+    // ?beat=N&step=M — deep link (beat 1: M changes, one press each; beat 5: step = 2 x case + revealed)
     {
         const q = new URLSearchParams(location.search);
         const b = q.get('beat') ? Math.max(1, Math.min(NPAGES, +q.get('beat'))) : 1;
         if (q.get('step') !== null) { const m = +q.get('step');
-            if (b === 1) s1 = Math.max(0, Math.min(NS1, m)); else if (b === 2) tr2 = Math.max(0, Math.min(20, m)); else if (b === 3) s3 = Math.max(0, Math.min(NS3, m)); else if (b === 4) [fast, many] = ORDER4[Math.max(0, Math.min(3, m))]; }
+            if (b === 1) { for (let i = 0; i < Math.min(m, 10); i++) push1(1); if (m > 10) push1(Math.min(CAP1, m) - n1); }
+            else if (b === 2) s2 = Math.max(0, Math.min(NS2, m)); else if (b === 3) s3 = Math.max(0, Math.min(NS3, m)); else if (b === 4) s4 = Math.max(0, Math.min(NS4, m));
+            else if (b === 5) { c5 = Math.max(0, Math.min(5, m >> 1)); rv5 = m & 1; } else if (b === 6) s6 = Math.max(0, Math.min(NS6, m)); }
         setPage(b);
     }
 
     // ============ IN-PAGE ASSERTIONS (?verify) ============
     function runAssertions() {
-        const fails = [], S0 = { page, s1, tr2, s3, fast, many };
-        // 0) an independent restatement of the formula and the python reference values
-        const REF = (tr, fclk, units) => Math.exp(tr / 0.2) / (0.1e-9 * fclk * 1e6) / units;
+        const fails = [], S0 = { page, n1, stack1: stack1.slice(), s2, s3, s4, c5, rv5, g5, s6 };
+        // 0) an independent restatement of the formula, and the python3 reference values (BRIEF log 2026-11-02)
+        const REF = (o) => Math.exp(o.tr / (o.tau || 0.2)) / (0.1e-9 * (o.fclk || 100e6) * (o.fdata || 1e6)) / (o.units || 1);
         const near = (a, b, rel = 1e-6) => Math.abs(a - b) <= rel * Math.abs(b);
-        const PY = [[0, 1e-4], [1, 0.01484131591025766], [2, 2.202646579480672], [8, 23538526683702.0], [16, 5.540622384393509e+30]];
-        for (const [tr, s] of PY) if (!near(mtbf(tr), s)) fails.push('model t_r ' + tr);
-        if (!near(caughtPerSec(FCLK), 1e4)) fails.push('caught rate');
-        if (!near(mtbf(1) / mtbf(0), 148.4131591025766)) fails.push('x148 per ns');
-        if (!near(B4(true, false).m, 163.45086862360554)) fails.push('200 MHz');
-        if (!near(B4(false, true).m / 86400, 272.4366514317361)) fails.push('fleet days');
-        if (!near(mtbf(6, 200e6), 534323729.07622313)) fails.push('remedy');
-        const WANT = { 0: '100 µs', 1: '14.8 ms', 2: '2.2 s', 8: '746,000 years', 16: '1.76 × 10²³ years' };
-        for (const k in WANT) if (fmtTime(mtbf(+k)) !== WANT[k]) fails.push(`fmt t_r ${k}: ${fmtTime(mtbf(+k))}`);
-        if (fmtTime(B4(true, false).m) !== '2.72 minutes') fails.push('fmt 200 MHz ' + fmtTime(B4(true, false).m));
-        if (fmtTime(B4(false, true).m) !== '272 days') fails.push('fmt fleet ' + fmtTime(B4(false, true).m));
-        if (fmtTime(B4(true, true).m) !== '163 µs') fails.push('fmt both ' + fmtTime(B4(true, true).m));
-        if (fmtTime(mtbf(6, 200e6)) !== '16.9 years') fails.push('fmt remedy');
-        // the per-stage rule: every multi-flip-flop t_r on the page = (N - 1) x (T - 2); the remedy line is the 200 MHz three-flip-flop case
+        const PY = { base: 23538526683702.0, c: [5.540622384393509e+30, 163.45086862360554, 11769263341851.0, 7200489.933738588, 1.45335720565929e+19, 2.440806588635682e+35],
+                     fleet: [23538526683702.0, 23538526.683702, 163.45086862360554, 0.00016345086862360554] };
+        if (!near(REF(SYNC), PY.base) || SYNC.tr !== 8) fails.push('synchronizer value');
+        CASES.forEach((c, i) => { if (!near(c.m, PY.c[i]) || !near(REF(c.o), PY.c[i])) fails.push('case ' + (i + 1) + ' value'); });
+        FLEET.forEach((f, i) => { if (!near(f.m, PY.fleet[i])) fails.push('fleet ' + i); });
+        const WANTC = ['1.76 × 10²³ years', '2.72 minutes', '373,000 years', '83.3 days', '4.61 × 10¹¹ years', '7.73 × 10²⁷ years'], DIRS = [1, -1, -1, -1, 1, 1];
+        CASES.forEach((c, i) => { if (fmtTime(c.m) !== WANTC[i]) fails.push(`case ${i + 1} shows ${fmtTime(c.m)}`); if (c.dir !== DIRS[i]) fails.push(`case ${i + 1} direction`); });
+        if (['746,000 years', '272 days', '2.72 minutes', '163 µs'].join() !== FLEET.map(f => fmtTime(f.m)).join()) fails.push('fleet text ' + FLEET.map(f => fmtTime(f.m)).join('/'));
+        // the per-stage rule: every multi-flip-flop t_r = (N - 1)(T - 2)
         const STAGE = (N, T) => (N - 1) * (T - 2);
-        DESIGNS.filter(d => !d.logic).forEach(d => { if (d.tr !== STAGE(d.nff, 10) || +d.ar.match(/= (\d+) ns$/)[1] !== d.tr) fails.push('stage rule design ' + d.n); });
-        if (DESIGNS[3].tr !== 16 || B4(false, false).tr !== STAGE(2, 10) || B4(true, false).tr !== STAGE(2, 5)) fails.push('stage rule 16/8/3');
-        { const r4 = document.querySelector('[data-mtbf="r4"]'); if (+r4.dataset.tr !== STAGE(3, 5) || !/2 × \(5 − 2\) = 6 ns/.test(r4.parentNode.textContent)) fails.push('stage rule remedy'); }
-        if (/\b18 ns|e⁹⁰|10²⁷|373,000/.test($("designSurface").textContent)) fails.push('old 18 ns values on the page');
-        // every MTBF on the active page: its text is the formula's value for its stated t_r, f_clk, units
-        let nm = 0;
-        function checkMtbf(tag) {
-            for (const e of Array.from(document.querySelectorAll('.page.active [data-mtbf], .page.active text[data-mtbf]'))) { nm++;
-                const v = REF(+e.dataset.tr, +e.dataset.fclk, +e.dataset.units), shown = e.textContent;
-                if (!shown.includes(fmtTime(v))) fails.push(`${tag}: ${e.dataset.mtbf} shows "${shown}" want ${fmtTime(v)}`); }
-        }
-        // geometry
+        if (SYNC.tr !== STAGE(2, 10) || CASES[0].o.tr !== STAGE(3, 10) || CASES[1].o.tr !== STAGE(2, 5) || CASES[5].o.tr !== STAGE(2, 20) || CASES[3].o.tr !== STAGE(2, 10) - 3) fails.push('stage rule cases');
+        FLEET.forEach(f => { if (f.o.tr !== STAGE(2, f.T)) fails.push('stage rule fleet'); });
+        CASES.forEach(c => { const m = c.ar.match(/^t_r = .* = (\d+) ns$/); if (m && +m[1] !== c.o.tr) fails.push('case arithmetic ' + c.ar); });
+        // 1) beat 1's simulation replayed independently (same generator, same three draws per change)
+        { let a = SEED1 >>> 0; const rnd = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+          for (let i = 0; i < CAP1; i++) { const u = rnd() * 10 - 5, x = rnd(), y = rnd(), kind = Math.abs(u) <= 0.05 ? 'caught' : (u > -1 && u < 0.5 ? 'window' : 'clear');
+              const c = CH1[i]; if (Math.abs(c.u - u) > 1e-12 || c.kind !== kind || (kind === 'caught' && Math.abs(c.hover + 0.2 * Math.log(1 - x)) > 1e-12) || c.takesNew !== (y < 0.5)) { fails.push('b1 replay ' + i); break; } }
+          const kinds = CH1.slice(0, 4).map(c => c.kind).join(); if (kinds !== 'clear,window,clear,caught') fails.push('b1 seeded opening ' + kinds);
+          const W = CH1.filter(c => c.kind !== 'clear').length, K = CH1.filter(c => c.kind === 'caught').length; if (W < 100 || W > 200 || K < 3 || K > 20) fails.push(`b1 rates over ${CAP1}: ${W} / ${K}`); }
+        // 2) beat 2's catches
+        { let a = SEED2 >>> 0; const rnd = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+          for (let i = 0; i < NC2; i++) if (Math.abs(HOV2[i] + 0.2 * Math.log(1 - rnd())) > 1e-12) { fails.push('b2 replay ' + i); break; }
+          const b = new Array(15).fill(0); HOV2.forEach(h => { if (h < 1.5) b[Math.floor(h / 0.1)]++; }); if (b.join() !== BINS2.join()) fails.push('b2 bins');
+          if (AT1 !== HOV2.filter(h => h > 1).length || Math.abs(AT1 - 1000 * Math.exp(-5)) > 8) fails.push('b2 at 1 ns ' + AT1);
+          if (!near(Math.exp(-5) * 148.4131591025766, 1)) fails.push('1 in 148'); }
+
+        // geometry and contrast helpers (measured on the active page)
+        let measured = 0, nm = 0, contrasted = 0;
         const overlap = (a, b, pad = 0) => a.x < b.x + b.width + pad && a.x + a.width + pad > b.x && a.y < b.y + b.height + pad && a.y + a.height + pad > b.y;
-        let measured = 0;
+        const scale = () => $('designSurface').getBoundingClientRect().width / 1920;
         function textsIn(svg, tag) { const vb = svg.viewBox.baseVal, out = [];
             for (const t of Array.from(svg.querySelectorAll('text'))) { const bb = t.getBBox(); if (!bb.width) continue; out.push({ t, bb }); measured++;
                 if (bb.x < vb.x - 0.5 || bb.y < vb.y - 0.5 || bb.x + bb.width > vb.x + vb.width + 0.5 || bb.y + bb.height > vb.y + vb.height + 0.5) fails.push(`${tag} text outside: ` + t.textContent.slice(0, 24));
-                const px = +t.getAttribute('font-size') * svg.getScreenCTM().a / $('designSurface').getBoundingClientRect().width * 1920; if (px < 13.5) fails.push(`${tag} "${t.textContent.slice(0, 12)}" renders at ${px.toFixed(1)} px`); }
+                const px = +t.getAttribute('font-size') * svg.getScreenCTM().a / scale(); if (px < 13.5) fails.push(`${tag} "${t.textContent.slice(0, 12)}" renders at ${px.toFixed(1)} px`); }
             for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) if (overlap(out[i].bb, out[j].bb, -0.5)) fails.push(`${tag} texts overlap "${out[i].t.textContent.slice(0, 14)}" / "${out[j].t.textContent.slice(0, 14)}"`);
             return out; }
         const sweep = (tag) => { const ds = $('designSurface'); if (ds.scrollHeight > 1080 + 1 || ds.scrollWidth > 1920 + 1) fails.push('overflow ' + tag);
-            document.querySelectorAll('.page.active .bv, .page.active .bk').forEach(e => { const r = e.getBoundingClientRect(), pr = e.closest('.panel').getBoundingClientRect(); if (r.right > pr.right - 4) fails.push('text past its panel ' + tag + ' ' + e.textContent.slice(0, 16)); });
-            document.querySelectorAll('.page.active .panel, .page.active .reason, .page.active .tile, .page.active .tv').forEach(p => { if (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1) fails.push('panel overflow ' + tag + ' ' + (p.id || p.className)); });
-            const st = $('stage').getBoundingClientRect(); document.querySelectorAll('.page.active .panel').forEach(p => { const r = p.getBoundingClientRect(); if (r.bottom > st.bottom + 1 || r.right > st.right + 1) fails.push('panel past the stage ' + tag + ' ' + (p.id || p.className)); });
+            document.querySelectorAll('.page.active .panel, .page.active .reason, .page.active .tile, .page.active .case, .page.active td').forEach(p => { if (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1) fails.push('overflow ' + tag + ' ' + (p.id || p.className || p.tagName) + ' ' + p.textContent.slice(0, 20)); });
+            const st = $('stage').getBoundingClientRect(); document.querySelectorAll('.page.active .panel, .page.active .case').forEach(p => { const r = p.getBoundingClientRect(); if (r.bottom > st.bottom + 1 || r.right > st.right + 1) fails.push('past the stage ' + tag + ' ' + (p.id || p.className)); });
+            document.querySelectorAll('.page.active td, .page.active .cr').forEach(e => { const r = e.getBoundingClientRect(), pr = e.closest('.panel, .case').getBoundingClientRect(); if (r.right > pr.right + 0.5) fails.push('text past its panel ' + tag + ' ' + e.textContent.slice(0, 16)); });
             document.querySelectorAll('.page.active svg').forEach(s => textsIn(s, tag + ' ' + s.id)); };
-        let contrasted = 0;
         const lum = (r, g, b) => { const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
         function contrastGate(tag) {
-            const els = Array.from(document.querySelectorAll('.page.active svg text, .page.active svg tspan')).filter(t => t.textContent.trim() && t.getBoundingClientRect().width);
-            for (const t of els) { const cs = getComputedStyle(t), m = cs.fill.match(/rgba?\(([^)]*)\)/); if (!m) continue; const [r, g, b, a = 1] = m[1].split(',').map(Number);
+            // white labels on the stack segments are checked against their segment color below, not against the white page
+            for (const t of Array.from(document.querySelectorAll('.page.active svg text, .page.active svg tspan')).filter(t => t.textContent.trim() && t.getBoundingClientRect().width && !t.closest('.segt'))) {
+                const cs = getComputedStyle(t), m = cs.fill.match(/rgba?\(([^)]*)\)/); if (!m) continue; const [r, g, b, a = 1] = m[1].split(',').map(Number);
                 let op = a * +cs.fillOpacity; for (let n = t; n && n.nodeType === 1; n = n.parentNode) op *= +getComputedStyle(n).opacity;
                 const bl = (c) => c * op + 255 * (1 - op), cr = 1.05 / (lum(bl(r), bl(g), bl(b)) + 0.05); contrasted++;
                 if (cr < 3 - 1e-6) { fails.push(`${tag}: pale text "${t.textContent.slice(0, 14)}" ${cr.toFixed(2)}:1`); return; } }
-            const html = Array.from(document.querySelectorAll('.page.active .panel *')).filter(e => e.children.length === 0 && e.textContent.trim() && e.getBoundingClientRect().width && !(e instanceof SVGElement));
-            for (const e of html) { const m = getComputedStyle(e).color.match(/rgba?\(([^)]*)\)/); if (!m) continue; const [r, g, b] = m[1].split(',').map(Number); const cr = 1.05 / (lum(r, g, b) + 0.05); contrasted++;
-                if (cr < 4.5 - 1e-6 && !e.closest('button:disabled')) { fails.push(`${tag}: pale html text "${e.textContent.slice(0, 14)}" ${cr.toFixed(2)}:1`); return; } }
+            for (const e of Array.from(document.querySelectorAll('.page.active .panel *, .page.active .case *')).filter(e => e.children.length === 0 && e.textContent.trim() && e.getBoundingClientRect().width && !(e instanceof SVGElement))) {
+                const m = getComputedStyle(e).color.match(/rgba?\(([^)]*)\)/); if (!m) continue; const [r, g, b] = m[1].split(',').map(Number), cr = 1.05 / (lum(r, g, b) + 0.05); contrasted++;
+                const muted = e.closest('.t.mu') || e.closest('.cr.q');
+                if (cr < (muted ? 3 : 4.5) - 1e-6 && !e.closest('button:disabled')) { fails.push(`${tag}: pale html text "${e.textContent.slice(0, 14)}" ${cr.toFixed(2)}:1`); return; } }
         }
-        // the meter: landmarks at their decades, needle = log10(MTBF), the t_r scale evenly spaced and under the needle
+        // every MTBF on the active page: its text is the formula's value for its stated parameters
+        function checkMtbf(tag) { for (const e of Array.from(document.querySelectorAll('.page.active [data-mtbf]'))) { nm++; const o = JSON.parse(e.dataset.o), want = fmtTime(REF(o));
+            if (!e.textContent.includes(want)) fails.push(`${tag}: ${e.dataset.mtbf} shows "${e.textContent}" want ${want}`); } }
         const LMW = { sec: 0, day: Math.log10(86400), year: Math.log10(YEAR), life: Math.log10(80 * YEAR), univ: Math.log10(4.4e17) };
         function checkMeter(M, tag) {
-            for (const k in LMW) { const e = M.svg.querySelector(`[data-lm="${k}"]`); if (!e) { fails.push(`${tag} landmark ${k} missing`); continue; }
-                if (Math.abs(+e.dataset.l - LMW[k]) > 1e-9 || Math.abs(+e.dataset.x - M.X(LMW[k])) > 0.02) fails.push(`${tag} landmark ${k} at ${e.dataset.l}`);
-                const lab = M.svg.querySelector(`[data-lml="${k}"]`), bb = lab.getBBox(); if (Math.abs(bb.x + bb.width / 2 - M.X(LMW[k])) > 1) fails.push(`${tag} landmark label ${k} off its mark`); }
-            if (Math.abs(LMW.day - 4.9365) > 1e-3 || Math.abs(LMW.year - 7.4991) > 1e-3 || Math.abs(LMW.univ - 17.6435) > 1e-3) fails.push('landmark decades');
-            for (const e of Array.from(M.svg.querySelectorAll('[data-dec]'))) { const l = +e.dataset.dec, bb = e.getBBox(); if (Math.abs(bb.x + bb.width / 2 - M.X(l)) > 1) fails.push(`${tag} decade label ${l} off its tick`); }
-            const ns = Array.from(M.svg.querySelectorAll('[data-ns]'));
-            if (M.o.ruler) { if (ns.length !== 21) fails.push(`${tag} ruler ticks ${ns.length}`);
-                const step = (+ns[20].dataset.x - +ns[0].dataset.x) / 20;
-                ns.forEach((e, n) => { if (Math.abs(+e.dataset.x - (+ns[0].dataset.x + n * step)) > 0.03) fails.push(`${tag} ruler not even at ${n}`); if (Math.abs(+e.dataset.x - M.X(Math.log10(REF(n, 100e6, 1)))) > 0.03) fails.push(`${tag} ruler ${n} ns off its MTBF`); });
-                if (Math.abs(step - M.X(Math.log10(148.4131591025766)) + M.X(0)) > 0.03) fails.push(`${tag} ruler step is not x148`); }
-            else if (ns.length) fails.push(`${tag} ruler shown`);
-        }
-        const needleAt = (M, key, secs, tag) => { const g = M.svg.querySelector(`[data-needle="${key}"]`); if (!g) { fails.push(`${tag} needle ${key} missing`); return; }
+            for (const k in LMW) { const e = M.svg.querySelector(`[data-lm="${k}"]`); if (!e || Math.abs(+e.dataset.l - LMW[k]) > 1e-9 || Math.abs(+e.dataset.x - M.X(LMW[k])) > 0.02) fails.push(`${tag} landmark ${k}`);
+                const bb = M.svg.querySelector(`[data-lml="${k}"]`).getBBox(); if (Math.abs(bb.x + bb.width / 2 - M.X(LMW[k])) > 1) fails.push(`${tag} landmark label ${k} off its mark`); }
+            for (const e of Array.from(M.svg.querySelectorAll('[data-dec]'))) { const bb = e.getBBox(); if (Math.abs(bb.x + bb.width / 2 - M.X(+e.dataset.dec)) > 1) fails.push(`${tag} decade ${e.dataset.dec}`); } }
+        function needleAt(M, key, secs, tag) { const g = M.svg.querySelector(`[data-needle="${key}"]`); if (!g) { fails.push(`${tag} needle ${key} missing`); return; }
             const ln = g.querySelector('line'), want = M.X(Math.log10(secs));
-            if (Math.abs(+ln.getAttribute('x1') - want) > 0.02 || Math.abs(+ln.getAttribute('x2') - want) > 0.02) fails.push(`${tag} needle ${key} at ${ln.getAttribute('x1')} want ${want.toFixed(2)}`);
-            if (Math.abs(+g.dataset.l - Math.log10(secs)) > 1e-9) fails.push(`${tag} needle ${key} log`);
-            const bub = g.querySelector('rect'), tb = g.querySelector('text').getBBox(); if (!bub || +bub.getAttribute('x') > tb.x || +bub.getAttribute('x') + +bub.getAttribute('width') < tb.x + tb.width) fails.push(`${tag} needle ${key} bubble`);
-            if (bub && (want < +bub.getAttribute('x') - 0.5 || want > +bub.getAttribute('x') + +bub.getAttribute('width') + 0.5)) fails.push(`${tag} needle ${key} line misses its bubble`); };
-
-        // beat 1
-        setPage(1);
-        for (let s = 0; s <= NS1; s++) { s1 = s; drawPage(); sweep('b1s' + s); contrastGate('b1s' + s); checkMtbf('b1s' + s);
-            const lit = ['pan1s', 'pan1a', 'pan1b', 'pan1f'].filter(id => $(id).classList.contains('lit')); if (lit.length !== 1 || lit[0] !== ['pan1s', 'pan1a', 'pan1b', 'pan1f'][s]) fails.push('b1 lit panel ' + s); }
-        {   // the catches are exactly the D changes within T0/2 of an edge; each hover starts at the edge and settles to the old or new D
-            const caught = DCH.filter(([t]) => EDGES.some(e => Math.abs(t - e) <= T0NS / 2 + 1e-9)).map(([t]) => EDGES.find(e => Math.abs(t - e) <= 0.05 + 1e-9));
-            const hov = Array.from($('s1').querySelectorAll('[data-hover]')).map(p => +p.dataset.hover);
-            if (caught.join() !== hov.join() || caught.join() !== '20,40') fails.push('b1 catches ' + hov.join());
-            for (const p of Array.from($('s1').querySelectorAll('[data-hover]'))) { const e = +p.dataset.hover, to = +p.dataset.to, oldD = dAt(e - 0.5), newD = dAt(e + 0.5); if (to !== oldD && to !== newD) fails.push('b1 settles to neither'); }
-            for (const [t] of DCH) { const e = EDGES.find(x => Math.abs(t - x) < 0.05 + 1e-9); if (!e && EDGES.some(x => Math.abs(t - x) < 0.5)) fails.push('b1 a clean change too near an edge'); }
-            // Q on the clean edges: the D value read just before the edge, t_co = 1 ns later
-            const ev = qEvents(); let q = 0; for (const x of ev) { if (x.hover === undefined && x.to !== dAt(x.e - 0.5)) fails.push('b1 Q at ' + x.e); if (x.from !== q) fails.push('b1 Q continuity ' + x.e); q = x.to; }
-            const wins = Array.from($('s1').querySelectorAll('[data-win]')); if (wins.length !== EDGES.length) fails.push('b1 windows');
-            for (const w of wins) if (Math.abs(+w.getAttribute('x') + 6 - SX(+w.dataset.win)) > 0.02) fails.push('b1 window off its edge');
-            const bw = $('s1a').querySelector('[data-barwin]'), barW = 532; if (Math.abs(+bw.dataset.barwin / barW - T0NS / 10) > 1e-3) fails.push('b1 window sliver not 1/100');
-            if (!near(+$('s1a').querySelector('[data-caught]').dataset.caught, 1e4)) fails.push('b1 caught readout');
-            if (Math.abs(+$('s1b').querySelector('[data-frac]').dataset.frac * 148.413 - 1) > 1e-4) fails.push('b1 1 in 148');
-        }
-        // beat 2: every slider stop
-        setPage(2);
-        for (let i = 0; i <= 40; i++) { const tr = i / 2; setTr(tr); const m = REF(tr, 100e6, 1);
-            needleAt(M2, 'b2', m, 'b2 t' + tr); checkMtbf('b2 t' + tr);
-            if (Math.abs(+M2.fill.getAttribute('width') - (M2.X(Math.log10(m)) - M2.o.x0)) > 0.02) fails.push('b2 fill ' + tr);
-            if ($('tv2m').textContent !== fmtTime(m)) fails.push('b2 tile ' + tr);
-            if (Number.isInteger(tr)) { const t = M2.svg.querySelector(`[data-ns="${tr}"]`); if (Math.abs(+t.dataset.x - M2.X(Math.log10(m))) > 0.03) fails.push('b2 ruler under needle ' + tr); }
-            if (+$('sl2').value !== tr) fails.push('b2 slider ' + tr);
-            if (i % 4 === 0) { sweep('b2 t' + tr); contrastGate('b2 t' + tr); } }
-        checkMeter(M2, 'b2');
-        {   // a fixed distance per ns: the needle's x is linear in t_r
-            const at = (n) => { setTr(n); const g = M2.svg.querySelector('[data-needle]'); return [+g.dataset.l, +g.querySelector('line').getAttribute('x1')]; };
-            const [l0, x0] = at(0), [l20, x20] = at(20), dl = (l20 - l0) / 20, dx = (x20 - x0) / 20;
-            if (Math.abs(dl - 5 / Math.LN10) > 1e-9) fails.push('b2 not 2.17 decades per ns');
-            for (let n = 1; n < 20; n++) { const [l, x] = at(n); if (Math.abs(l - (l0 + n * dl)) > 1e-9 || Math.abs(x - (x0 + n * dx)) > 0.02) fails.push('b2 needle not linear at ' + n); } }
-        // beat 3: table = rows = needles
-        setPage(3);
-        for (let s = 0; s <= NS3; s++) { s3 = s; drawPage(); sweep('b3s' + s); contrastGate('b3s' + s); checkMtbf('b3s' + s); checkMeter(M3, 'b3s' + s);
-            DESIGNS.forEach((d, i) => { needleAt(M3, 'd' + i, REF(d.tr, 100e6, 1), 'b3s' + s);
-                const g = M3.svg.querySelector(`[data-needle="d${i}"] line`); if (g.classList.contains('mu') !== (i !== s)) fails.push(`b3s${s} needle ${i} focus`);
-                const row = $('tab3').querySelectorAll('tr')[i + 1]; if (row.classList.contains('hi') !== (i === s)) fails.push(`b3s${s} table row ${i}`);
-                const segs = Array.from($('r3').querySelectorAll(`[data-row="${i}"] [data-seg]`)), total = segs.reduce((a, e) => a + +e.dataset.w, 0), trSum = segs.filter(e => e.dataset.seg === 'tr').reduce((a, e) => a + +e.dataset.w, 0);
-                if (total !== 10 * d.periods) fails.push(`b3 row ${i} bar is ${total} ns`); if (trSum !== d.tr) fails.push(`b3 row ${i} t_r segments sum to ${trSum}`);
-                if (+$('r3').querySelector(`[data-row="${i}"] [data-tr3]`).dataset.tr3 !== d.tr) fails.push(`b3 row ${i} t_r label`); });
-            if ($('r3').querySelectorAll('.r3:not(.mu)').length !== 1) fails.push('b3 focus rows');
-            // FF1 is lit only in the focused row; Q-bar bars drawn
-            if ($('r3').querySelectorAll('.ff.on').length !== 1) fails.push('b3 lit flip-flops');
-            for (const ln of Array.from($('r3').querySelectorAll('line[data-ov]'))) if (+ln.getAttribute('x2') - +ln.getAttribute('x1') < 4) fails.push('b3 overbar not placed'); }
-        const want3 = [[0, '100 µs'], [1, '14.8 ms'], [8, '746,000 years'], [16, '1.76 × 10²³ years']];
-        DESIGNS.forEach((d, i) => { if (d.tr !== want3[i][0] || fmtTime(d.m) !== want3[i][1]) fails.push('b3 design ' + i); if ($('tab3').querySelector(`[data-mtbf="t3-${i}"]`).textContent !== want3[i][1]) fails.push('b3 table ' + i); });
-        // beat 4: every case; base = beat 3's synchronizer row
-        setPage(4);
-        for (let c = 0; c < 4; c++) { [fast, many] = ORDER4[c]; drawPage(); const b = B4(fast, many); sweep('b4c' + c); contrastGate('b4c' + c); checkMtbf('b4c' + c); checkMeter(M4, 'b4c' + c);
-            needleAt(M4, 'cur', REF(b.tr, b.fclk, b.units), 'b4c' + c);
-            if (c) needleAt(M4, 'base', REF(8, 100e6, 1), 'b4c' + c); else if (M4.svg.querySelector('[data-needle="base"]')) fails.push('b4 ghost at case 0');
-            if ($('t4').querySelectorAll('td.hi').length !== 1 || $('t4').querySelector('td.hi').dataset.mtbf !== `t4-${+fast}${+many}`) fails.push('b4 lit cell ' + c);
-            if (b.tr !== (fast ? 3 : 8)) fails.push('b4 t_r'); }
-        if ($('t4').querySelector('[data-mtbf="t4-00"]').textContent !== $('tab3').querySelector('[data-mtbf="t3-2"]').textContent || DESIGNS[2].tr !== B4(false, false).tr) fails.push('b4 base is not beat 3 synchronizer');
-        // back restores the exact frame
+            if (Math.abs(+ln.getAttribute('x1') - want) > 0.02 || Math.abs(+ln.getAttribute('x2') - want) > 0.02 || Math.abs(+g.dataset.l - Math.log10(secs)) > 1e-9) fails.push(`${tag} needle ${key} at ${ln.getAttribute('x1')}, want ${want.toFixed(2)}`);
+            const bub = g.querySelector('rect'); if (!bub || want < +bub.getAttribute('x') - 0.5 || want > +bub.getAttribute('x') + +bub.getAttribute('width') + 0.5) fails.push(`${tag} needle ${key} misses its bubble`); }
         const frame = () => $('p' + page).innerHTML;
-        setPage(1); for (let s = 0; s < NS1; s++) { s1 = s; drawPage(); const A = frame(); advance(1); advance(-1); if (s1 !== s || frame() !== A) fails.push('b1 back ' + s); }
-        s1 = 0; drawPage(); if (!$('bk1').disabled) fails.push('b1 back enabled at 0');
-        setPage(2); for (let n = 0; n < 20; n++) { setTr(n); const A = frame(); advance(1); advance(-1); if (tr2 !== n || frame() !== A) fails.push('b2 back ' + n); }
-        setPage(3); for (let s = 0; s < NS3; s++) { s3 = s; drawPage(); const A = frame(); advance(1); advance(-1); if (s3 !== s || frame() !== A) fails.push('b3 back ' + s); }
-        setPage(4); for (let c = 0; c < 3; c++) { [fast, many] = ORDER4[c]; drawPage(); const A = frame(); advance(1); advance(-1); if (idx4() !== c || frame() !== A) fails.push('b4 back ' + c); }
-        { setToggles(false, false); const A = frame(); setToggles(true, false); setToggles(false, false); if (frame() !== A) fails.push('b4 toggle back'); }
-        // reset
-        setPage(3); s3 = 2; doReset(); if (s3 !== 0) fails.push('reset b3'); setPage(2); setTr(7); doReset(); if (tr2 !== 0) fails.push('reset b2');
-        // definitions
-        setPage(1); openDefs(); { const c = document.querySelector('.defs-card').getBoundingClientRect(); if (c.height > 1080 || c.top < 0) fails.push('defs too tall'); } closeDefs();
-        if (document.querySelectorAll('.defs-list .ds').length !== 7) fails.push('defs entries');
-        if (nm < 120) fails.push('too few MTBF values checked: ' + nm);
-        if (contrasted < 300) fails.push('too few texts checked for contrast: ' + contrasted);
-        if (measured < 1000) fails.push('too few text boxes measured: ' + measured);
-        page = S0.page; s1 = S0.s1; tr2 = S0.tr2; s3 = S0.s3; fast = S0.fast; many = S0.many; render();
+
+        // beat 1: every press up to 12, then batches; counts, dots, verdicts; back undoes exactly one press
+        setPage(1); doReset();
+        const check1 = (tag) => { const seen = CH1.slice(0, n1), W = seen.filter(c => c.kind !== 'clear').length, K = seen.filter(c => c.kind === 'caught').length;
+            if ($('cn1').textContent !== n1.toLocaleString('en-US') || !$('cw1').textContent.startsWith(String(W)) || !$('cx1').textContent.startsWith(String(K))) fails.push(tag + ' tiles');
+            const dots = Array.from($('d1').querySelectorAll('[data-kind]')); if (dots.length !== n1 || dots.filter(d => d.dataset.kind === 'caught').length !== K || dots.filter(d => d.dataset.kind !== 'clear').length !== W) fails.push(tag + ' dots');
+            const v = $('e1').querySelector('[data-verdict]'); if (!v || v.dataset.verdict !== (n1 ? CH1[n1 - 1].kind : 'none')) fails.push(tag + ' verdict');
+            if (n1) { const c = CH1[n1 - 1], d = $('e1').querySelector('[data-du]'); if (+d.dataset.du !== c.u) fails.push(tag + ' D change');
+                const oldV = (c.i - 1) % 2, newV = c.i % 2, reads = c.kind === 'clear' ? c.u <= -1 : c.takesNew, fin = +$('e1').querySelector('[data-qfin]').dataset.qfin; if (fin !== (reads ? newV : oldV)) fails.push(tag + ' Q final');
+                if (c.kind === 'caught') { const h = $('e1').querySelector('[data-hover]'); if (!h || Math.abs(+h.dataset.hover - c.hover) > 1e-12 || !v.textContent.includes(c.hover.toFixed(2) + ' ns')) fails.push(tag + ' hover'); } }
+            const win = $('e1').querySelector('[data-win]'), sl = $('e1').querySelector('[data-slice]');
+            if (Math.abs(+win.getAttribute('x') - EX(-1)) > 0.02 || Math.abs(+win.getAttribute('x') + +win.getAttribute('width') - EX(0.5)) > 0.03 || Math.abs(+sl.getAttribute('width') - (EX(0.05) - EX(-0.05))) > 0.03) fails.push(tag + ' window geometry'); };
+        for (let i = 0; i <= 12; i++) { if (i) advance(1); check1('b1 n' + n1); sweep('b1 n' + n1); if (i % 4 === 0) contrastGate('b1 n' + n1); checkMtbf('b1'); }
+        for (let i = 0; i < 9; i++) { push1(100); drawPage(); check1('b1 n' + n1); if (i % 3 === 0) { sweep('b1 n' + n1); contrastGate('b1 n' + n1); } }
+        if (n1 !== 912) fails.push('b1 count ' + n1);
+        { const seq = []; doReset(); for (let i = 0; i < 6; i++) { seq.push(frame()); advance(1); } push1(100); drawPage(); const A = frame(); advance(-1); if (n1 !== 6) fails.push('b1 back after batch');
+          for (let i = 5; i >= 0; i--) { advance(-1); if (frame() !== seq[i]) fails.push('b1 back frame ' + i); } if (!$('bk1').disabled) fails.push('b1 back enabled at start'); }
+        // beat 2
+        setPage(2);
+        for (let s = 0; s <= NS2; s++) { s2 = s; drawPage(); sweep('b2s' + s); contrastGate('b2s' + s);
+            const bars = Array.from($('h2').querySelectorAll('[data-bin]')); if (bars.map(b => +b.dataset.n).join() !== BINS2.filter(n => n).join()) fails.push('b2 bars');
+            if (Array.from($('h2').querySelectorAll('[data-binl]')).map(t => t.textContent).join() !== BINS2.join()) fails.push('b2 bar labels');
+            if ($('v2').querySelectorAll('[data-tau]').length !== (s >= 2 ? 2 : 0) || $('v2').querySelectorAll('[data-tr]').length !== (s >= 3 ? 1 : 0)) fails.push('b2 annotations ' + s);
+            if (!$('sim2').textContent.includes(AT1 + ' of the 1,000')) fails.push('b2 run count'); }
+        // beat 3: the three facts, and only those
+        setPage(3); for (let s = 0; s <= NS3; s++) { s3 = s; drawPage(); sweep('b3s' + s); contrastGate('b3s' + s);
+            const lit = Array.from($('t3').querySelectorAll('.tnode.on')).length; if (lit !== (s ? 1 : 0)) fails.push('b3 lit ' + s); }
+        { const txt = $('p3').textContent; if (!/Chaney and Molnar/.test(txt) || !/1973/.test(txt) || !/early 1970s/i.test(txt)) fails.push('b3 facts');
+          const years = (txt.match(/\b(1[89]\d\d|20\d\d)\b/g) || []); if (years.some(y => y !== '1973')) fails.push('b3 extra dates ' + years.join()); }
+        // beat 4: term by term
+        setPage(4); for (let s = 0; s <= NS4; s++) { s4 = s; drawPage(); sweep('b4s' + s); contrastGate('b4s' + s); checkMtbf('b4s' + s);
+            const on = Array.from(document.querySelectorAll('#pan4f .t.on')).map(e => e.dataset.t).sort().join(); if (on !== LIT4[s].slice().sort().join()) fails.push('b4 lit ' + s + ' ' + on);
+            if ($('terms4').querySelectorAll('tr').length !== ROW4[s] + 1 || !$('terms4').querySelectorAll('tr')[ROW4[s]].classList.contains('on')) fails.push('b4 rows ' + s);
+            if (($('pan4c').style.display !== 'none') !== (s === 5) || ($('pan4t').style.display === 'none') !== (s === 5)) fails.push('b4 comparison shown at ' + s);
+            if (s === 5) {   // the stacks: each row sums to its periods, t_r = 1 and 8 ns, MTBFs and the factor from python3
+                const segs = (k) => Array.from($('c4').querySelectorAll(`[data-stack="${k}"]`)).map(r => [r.dataset.k, +r.dataset.t0, +r.dataset.t1]);
+                const sumOf = (k) => segs(k).reduce((a, g) => a + g[2] - g[1], 0), trOf = (k) => segs(k).filter(g => g[0] === 'tr').reduce((a, g) => a + g[2] - g[1], 0);
+                if (sumOf('one') !== 10 || sumOf('sync') !== 20) fails.push('b4 stack sums ' + sumOf('one') + '/' + sumOf('sync'));
+                for (const k of ['one', 'sync']) { const g = segs(k).sort((p, q) => p[1] - q[1]); for (let i = 1; i < g.length; i++) if (g[i][1] !== g[i - 1][2]) fails.push('b4 stack gap ' + k); }
+                { const g = segs('sync'), p1 = g.filter(x => x[1] < 10).reduce((a, x) => a + x[2] - x[1], 0), p2 = g.filter(x => x[1] >= 10).reduce((a, x) => a + x[2] - x[1], 0); if (p1 !== 10 || p2 !== 10) fails.push('b4 sync periods ' + p1 + '/' + p2); }
+                if (trOf('one') !== 1 || trOf('sync') !== STAGE(2, 10) || STAGE(2, 10) !== 10 - 1 - 1) fails.push('b4 stack t_r');
+                if (!near(STACKS4[0].m, 0.01484131591025766) || !near(STACKS4[1].m, PY.base) || fmtTime(STACKS4[0].m) !== '14.8 ms' || fmtTime(STACKS4[1].m) !== '746,000 years') fails.push('b4 stack MTBFs');
+                const fac = +$('c4').querySelector('[data-factor]').dataset.factor; if (!near(fac, 1586013452313430.8) || !near(fac, Math.exp(35)) || !$('c4').querySelector('[data-factor]').textContent.includes('1.59 × 10¹⁵')) fails.push('b4 factor');
+                for (const c of [SEGC4.co, SEGC4.pd, SEGC4.tr, SEGC4.su]) { const n = parseInt(c.slice(1), 16), cr = 1.05 / (lum(n >> 16, (n >> 8) & 255, n & 255) + 0.05); contrasted++; if (cr < 3) fails.push('b4 white on ' + c + ' ' + cr.toFixed(2)); }
+                for (const r of Array.from($('c4').querySelectorAll('rect[data-k]'))) { const want = { co: 'rgb(184, 100, 10)', pd: 'rgb(74, 111, 165)', tr: 'rgb(46, 125, 79)', su: 'rgb(107, 79, 168)', sl: 'rgb(217, 221, 227)' }[r.dataset.k]; if (getComputedStyle(r).fill !== want) fails.push('b4 stack color ' + r.dataset.k); } } }
+        { const n = (k) => $('terms4').querySelector(`[data-n4="${k}"]`).textContent;
+          if (n('caught') !== '10,000' || +n('tr') !== STAGE(2, 10) || n('e') !== '2.35 × 10¹⁷' || $('terms4').querySelector('[data-mtbf]').textContent !== '746,000 years') fails.push('b4 values');
+          const segs = Array.from($('s4').querySelectorAll('[data-seg]')); if (segs.reduce((a, e) => a + +e.dataset.w, 0) !== 10 || +segs.find(e => e.dataset.seg === 'tr').dataset.w !== STAGE(2, 10) || +$('s4').querySelector('[data-tr4]').dataset.tr4 !== 8) fails.push('b4 bar'); }
+        // beat 5: every case, asked and revealed; needles; directions; guesses
+        setPage(5); doReset();
+        for (let i = 0; i < 12; i++) { const c = CASES[c5]; checkMeter(M5, 'b5'); needleAt(M5, 'base', REF(SYNC), 'b5 ' + i);
+            if (rv5) { needleAt(M5, 'case', REF(c.o), 'b5 ' + i); const cr = document.querySelector(`#cards5 [data-case="${c5}"] .cr`); if (+cr.dataset.dir !== DIRS[c5] || (REF(c.o) > REF(SYNC)) !== (DIRS[c5] > 0)) fails.push('b5 direction ' + c5);
+                if (!$('reason5').textContent.startsWith(DIRS[c5] > 0 ? 'Longer' : 'Shorter')) fails.push('b5 reason ' + c5); }
+            else { if (M5.svg.querySelector('[data-needle="case"]')) fails.push('b5 needle before reveal'); if (document.querySelector(`#cards5 [data-case="${c5}"] .cr.q`) === null) fails.push('b5 spoiler ' + c5); }
+            if (Math.abs(+M5.fill.getAttribute('width') - (M5.X(Math.log10(rv5 ? REF(c.o) : REF(SYNC))) - M5.o.x0)) > 0.02) fails.push('b5 fill ' + i);
+            sweep('b5 ' + i); if (i % 3 === 0) contrastGate('b5 ' + i); checkMtbf('b5 ' + i);
+            const A = frame(); if (i < 11) { advance(1); advance(-1); if (frame() !== A) fails.push('b5 back frame ' + i); advance(1); } }
+        for (const [d, ok] of [[1, 'right'], [-1, 'not this time']]) { c5 = 0; rv5 = 0; g5 = 0; drawPage(); guess5(d); if (!rv5 || !$('verd5').textContent.includes(d === DIRS[0] ? 'right' : 'not this time')) fails.push('b5 guess ' + d); }
+        // beat 6
+        setPage(6); for (let s = 0; s <= NS6; s++) { s6 = s; drawPage(); sweep('b6s' + s); contrastGate('b6s' + s); checkMtbf('b6s' + s); checkMeter(M6, 'b6');
+            const k = Math.min(s, 3); needleAt(M6, 'cur', REF(FLEET[k].o), 'b6s' + s); if (k % 2) needleAt(M6, 'one', REF(FLEET[k - 1].o), 'b6s' + s);
+            if ($('t6').querySelectorAll('td.hi').length !== 1 || $('t6').querySelector('td.hi').dataset.mtbf !== 't6-' + k) fails.push('b6 lit cell ' + s);
+            if (!near(REF(FLEET[1].o) * 1e6, REF(FLEET[0].o)) || !near(REF(FLEET[3].o) * 1e6, REF(FLEET[2].o))) fails.push('b6 fleet = MTBF / 1e6'); }
+        // back restores the exact frame on beats 2, 3, 4, 6
+        for (const [pg, N, set] of [[2, NS2, (v) => s2 = v], [3, NS3, (v) => s3 = v], [4, NS4, (v) => s4 = v], [6, NS6, (v) => s6 = v]]) { setPage(pg);
+            for (let s = 0; s < N; s++) { set(s); drawPage(); const A = frame(); advance(1); advance(-1); if (frame() !== A) fails.push(`b${pg} back ${s}`); } set(0); drawPage(); if (!$('bk' + pg).disabled) fails.push(`b${pg} back enabled at 0`); }
+        // the definitions panel
+        setPage(1); openDefs(); { const c = document.querySelector('.defs-card').getBoundingClientRect(), s = $('designSurface').getBoundingClientRect(); if (c.height > s.height || c.top < s.top) fails.push('defs too tall'); } closeDefs();
+        if (document.querySelectorAll('.defs-list .ds').length !== 8) fails.push('defs entries');
+        if (nm < 60) fails.push('too few MTBF values checked: ' + nm);
+        if (contrasted < 600) fails.push('too few contrast checks: ' + contrasted);
+        if (measured < 1200) fails.push('too few text boxes measured: ' + measured);
+        page = S0.page; n1 = S0.n1; stack1 = S0.stack1; s2 = S0.s2; s3 = S0.s3; s4 = S0.s4; c5 = S0.c5; rv5 = S0.rv5; g5 = S0.g5; s6 = S0.s6; render();
         if (fails.length) document.title += ' — ASSERT FAIL (' + fails.length + '): ' + [...new Set(fails)].slice(0, 16).join(' | ');
         else document.title += ' — ASSERT PASS (' + nm + ' MTBF values, ' + measured + ' text boxes, ' + contrasted + ' contrast checks)';
     }
@@ -1043,6 +1190,8 @@
         try { runAssertions(); }
         catch (e) { document.title += ' — ASSERT FAIL: exception in the checks: ' + e.message + ' ' + (e.stack || '').split('\n')[1]; }
     }
+
+
 </script>
 </body>
 </html>
