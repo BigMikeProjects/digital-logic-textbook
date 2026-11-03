@@ -144,7 +144,7 @@
     .seg4 { stroke: #fff; stroke-width: 2; }
     .segt { fill: #fff; font-weight: 700; }
     .r4 { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
-    .sync4 svg { width: 100%; height: 250px; }
+    .sync4 svg { width: 100%; height: 330px; }
     /* beats 5, 6: the meter */
     .meter svg { width: 100%; height: 300px; }
     .low5 { display: flex; gap: 14px; flex: 1; min-height: 0; }
@@ -291,7 +291,7 @@
                         <svg id="e1" viewBox="0 0 1240 410"></svg>
                     </div>
                     <div class="panel dots1" id="pan1d">
-                        <div class="phead">Where every change landed <span class="dimtxt">&mdash; one dot per change, measured from the nearest clock edge</span></div>
+                        <div class="phead"><span id="dh1">Where every change landed</span> <span class="dimtxt">&mdash; one dot per change, measured from the nearest clock edge</span></div>
                         <svg id="d1" viewBox="0 0 1240 262"></svg>
                     </div>
                 </div>
@@ -303,6 +303,7 @@
                             <button class="btn bk" id="bk1">&#9664; back <span class="kk">&uarr;</span></button>
                             <button class="btn nxt" id="nxt1">next change <span class="kk">Space</span></button>
                             <button class="btn go" id="run1">&times;100 <span class="kk">H</span></button>
+                            <button class="btn go" id="run1k">&times;1000 <span class="kk">K</span></button>
                             <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
                         </div>
                     </div>
@@ -353,7 +354,7 @@
                     </div>
                     <div class="panel card fill">
                         <div class="ct">Two names</div>
-                        <div><b>&tau;</b> (tau) belongs to the flip-flop: how fast a hover dies out. A faster flip-flop has a smaller &tau;.<br><b>t<sub>r</sub></b> belongs to the design: how long it waits before anything reads the flip-flop.</div>
+                        <div><b>&tau;</b> (tau) belongs to the flip-flop: how fast a hover dies out. A faster flip-flop has a smaller &tau;.<br><b>t<sub>r</sub></b> belongs to the design: how long it waits before anything reads the flip-flop. <span data-slack="b2">t<sub>r</sub> is the slack: what is left of the clock period after t<sub>co</sub>, the logic and t<sub>su</sub>.</span></div>
                     </div>
                 </div>
             </div>
@@ -403,8 +404,8 @@
                         </div>
                     </div>
                     <div class="panel sync4" id="pan4s">
-                        <div class="phead">The synchronizer at 100 MHz <span class="dimtxt">&mdash; each flip-flop loses its own 2 ns</span></div>
-                        <svg id="s4" viewBox="0 0 680 250"></svg>
+                        <div class="phead">The synchronizer at 100 MHz <span class="dimtxt">&mdash; t<sub>r</sub> is the slack</span></div>
+                        <svg id="s4" viewBox="0 0 680 330"></svg>
                     </div>
                 </div>
             </div>
@@ -467,7 +468,7 @@
         <div class="controls">
             <span class="k">1</span>&ndash;<span class="k">6</span> or <span class="k">&larr;</span><span class="k">&rarr;</span> beat
             &middot; <span class="k">Space</span> or <span class="k">&darr;</span> next &middot; <span class="k">&#9664; back</span> or <span class="k">&uarr;</span> one step back
-            &middot; <span class="k">H</span> &times;100 (beat 1) &middot; <span class="k">L</span> <span class="k">S</span> guess (beat 5) &middot; <span class="k">R</span> reset &middot; <span class="k">D</span> definitions
+            &middot; <span class="k">H</span> <span class="k">K</span> &times;100 / &times;1000 (beat 1) &middot; <span class="k">L</span> <span class="k">S</span> guess (beat 5) &middot; <span class="k">R</span> reset &middot; <span class="k">D</span> definitions
         </div>
     </div>
 
@@ -479,7 +480,7 @@
                 <div class="ds">decision window</div><div class="dd">From the setup time before a clock edge to the hold time after it (here &minus;1 to +0.5 ns). A change inside it is not guaranteed to be read cleanly.</div>
                 <div class="ds">caught, <span class="mono">T<sub>0</sub></span></div><div class="dd">A change so close to the edge that the flip-flop cannot decide at once. <span class="mono">T<sub>0</sub></span> is how wide that slice is: here 0.1 ns, a small part of the decision window.</div>
                 <div class="ds">hover</div><div class="dd">A caught flip-flop&rsquo;s output sits near halfway, wobbling, then settles to 0 or 1: a <b>metastable state</b>. See <b data-topic="metastable-states">Metastable States</b>.</div>
-                <div class="ds">resolution time <span class="mono">t<sub>r</sub></span></div><div class="dd">How long the design lets a caught flip-flop settle before anything reads it. Each flip-flop stage loses its own <span class="mono">t<sub>co</sub> + t<sub>su</sub></span> (2 ns here), so a synchronizer&rsquo;s first flip-flop gets <span class="mono">10 &minus; 2 = 8 ns</span>.</div>
+                <div class="ds">resolution time <span class="mono">t<sub>r</sub></span></div><div class="dd">How long the design lets a caught flip-flop settle before anything reads it. <span data-slack="def">t<sub>r</sub> is the slack: what is left of the clock period after t<sub>co</sub>, the logic and t<sub>su</sub></span>, so a synchronizer&rsquo;s first flip-flop gets <span class="mono">10 &minus; 2 = 8 ns</span>. Each added flip-flop stacks one more period of slack (a simplification: each stage&rsquo;s slack adds in the exponent, which real chains follow only approximately).</div>
                 <div class="ds"><span class="mono">&tau;</span> (tau)</div><div class="dd">The flip-flop&rsquo;s settling time constant: every &tau;, the chance of still hovering drops by e &asymp; 2.7. Here 0.2 ns; a faster flip-flop has a smaller &tau;.</div>
                 <div class="ds">MTBF</div><div class="dd"><b>Mean time between failures</b>: the average time from one failure to the next. A rate, not a date. See <b data-topic="synchronizers">Synchronizers</b>.</div>
                 <div class="ds"><span class="mono">f<sub>clk</sub>, f<sub>data</sub></span></div><div class="dd">How often the clock samples (100 MHz) and how often the input changes (1 MHz). All constants here are illustrative round values, not a data sheet.</div>
@@ -517,7 +518,7 @@
     // beat 5: the L29 practice cases, each a change from SYNC
     const CASES = [
         { name: 'Add a third flip-flop', what: 'resolution time 8 → 16 ns', o: { ...SYNC, tr: stageTr(3, 10) }, ar: 't_r = 2 × (10 − 2) = 16 ns',
-          why: 'Each flip-flop loses its own 2 ns, so the time to settle doubles to 16 ns. The top of the formula grows by e⁴⁰.' },
+          why: 'A third flip-flop stacks a second period of slack: 8 + 8 = 16 ns (a simplification: each stage’s slack adds in the exponent, which real chains follow only approximately).' },
         { name: 'Clock 100 → 200 MHz', what: 'resolution time 8 → 3 ns, twice the catches', o: { ...SYNC, tr: stageTr(2, 5), fclk: 200e6 }, ar: 't_r = 5 − 2 = 3 ns',
           why: 'The period halves, leaving only 3 ns to settle, and the clock samples twice as often. It hurts twice.' },
         { name: 'The input changes twice as often', what: 'twice the catches', o: { ...SYNC, fdata: 2e6 }, ar: 'f_data = 2 MHz',
@@ -648,7 +649,7 @@
     // each change: u = where it lands relative to the nearest clock edge (uniform, -5 .. +5 ns); caught when |u| <= T0/2;
     // inside the decision window (-1 .. +0.5 ns) but not caught: decided at once, old or new value; caught: hovers for an
     // exponential time with mean tau, then settles to the old or new value. Three draws per change, always.
-    const SEED1 = 8317, CAP1 = 1000, WIN = [-1, 0.5];
+    const SEED1 = 8317, CAP1 = 6000, DOTS1 = 1000, WIN = [-1, 0.5];      // the dot strip shows the latest DOTS1 changes
     function simChanges(seed, n) {
         const r = mulberry32(seed), out = [];
         for (let i = 0; i < n; i++) { const u = r() * 10 - 5, a = r(), b = r();
@@ -659,6 +660,18 @@
     const CH1 = simChanges(SEED1, CAP1);
     let n1 = 0, stack1 = [];
     const EX = (t) => 150 + (t + 3) * (1200 - 150) / 8;
+    const TRACE_CAP = 60;
+    // a caught Q, in levels (0..1) against ns after the edge: leaves the old level at t_co - 0.3, reaches halfway at t_co = 1,
+    // wobbles about halfway for the catch's own hover time, rolls to the level it resolved to in 0.3 ns
+    function hoverPts(c) {
+        const oldV = (c.i - 1) % 2, fin = c.takesNew ? c.i % 2 : oldV, h = c.hover, pts = [[0.7, oldV]];
+        for (let t = 0.75; t <= 1.0001; t += 0.05) pts.push([t, oldV + (0.5 - oldV) * (t - 0.7) / 0.3]);
+        for (let t = 1.0; t <= 1 + h + 1e-9; t += 0.02) { const e = Math.min(1, (t - 1) / 0.1, (1 + h - t) / 0.15); pts.push([t, 0.5 + 0.08 * Math.max(0, e) * Math.sin(2 * Math.PI * (t - 1) / 0.4)]); }
+        pts.push([1 + h + 0.3, fin]);
+        return { oldV, fin, pts };
+    }
+    // the catches before the current change, most recent TRACE_CAP of them (the persistence overlay)
+    const ghostCatches = () => { const all = CH1.slice(0, Math.max(0, n1 - 1)).filter(c => c.kind === 'caught'); return { all: all.length, kept: all.slice(-TRACE_CAP) }; };
     function drawEdge() {
         const svg = $('e1'); clear(svg);
         const R = { clk: [62, 98], d: [138, 178], q: [244, 316] }, top = 50, bot = 330;
@@ -673,6 +686,11 @@
         el('path', { d: `M${EX(-3)} ${R.clk[1]} H${EX(0)} L${f1(EX(0) + 2)} ${R.clk[0]} H${EX(5)}`, class: 'w clk' }, svg);
         const c = n1 ? CH1[n1 - 1] : null, oldV = c ? (c.i - 1) % 2 : 0, newV = c ? c.i % 2 : 0;
         const yD = (v) => v ? R.d[0] : R.d[1], yQ = (lv) => R.q[1] - lv * (R.q[1] - R.q[0]);
+        // persistence overlay: every earlier catch's Q, faint, aligned to the clock edge (Mike, 11-02)
+        const G = ghostCatches(), gg = el('g', { 'data-ghosts': G.kept.length }, svg);
+        for (const k of G.kept) { const hp = hoverPts(k);
+            el('path', { d: `M${f1(EX(0))} ${yQ(hp.oldV)} ` + hp.pts.map(p => 'L' + f1(EX(p[0])) + ' ' + f1(yQ(p[1]))).join(' ') + ` H${EX(5)}`, fill: 'none', stroke: '#b4472f', 'stroke-width': 1.5, 'stroke-opacity': 0.3, 'stroke-linejoin': 'round',
+                'data-ghost': k.i, 'data-hover': k.hover, 'data-gfin': hp.fin, 'data-start': 0 }, gg); }
         if (!c) { el('path', { d: `M${EX(-3)} ${yD(0)} H${EX(5)}`, class: 'w d' }, svg); el('path', { d: `M${EX(-3)} ${yQ(0)} H${EX(5)}`, class: 'w q' }, svg);
             tx(svg, 1200, 226, 'no change yet', 'lab ink2', 18, { 'text-anchor': 'end', 'data-verdict': 'none' }); return; }
         // D
@@ -690,19 +708,18 @@
                 : (reads ? 'clear of the edge: read cleanly on this edge' : 'clear of the edge: read cleanly on the next edge');
             if (c.kind === 'window') cls = 'lab st';
         } else {
-            const h = c.hover, pts = [[-3, oldV], [0.7, oldV]];
-            for (let t = 0.7; t <= 1.0001; t += 0.05) pts.push([t, oldV + (0.5 - oldV) * (t - 0.7) / 0.3]);
-            for (let t = 1.0; t <= 1 + h + 1e-9; t += 0.02) { const e = Math.min(1, (t - 1) / 0.1, (1 + h - t) / 0.15); pts.push([t, 0.5 + 0.08 * Math.max(0, e) * Math.sin(2 * Math.PI * (t - 1) / 0.4)]); }
-            pts.push([1 + h + 0.3, fin]);
+            const h = c.hover, pts = hoverPts(c).pts;
             el('path', { d: `M${EX(-3)} ${yQ(oldV)} H${f1(EX(0.7))}`, class: 'w q' }, svg);
-            el('path', { d: 'M' + pts.slice(1).map(p => f1(EX(p[0])) + ' ' + f1(yQ(p[1]))).join(' L'), class: 'w hov', 'data-hover': h, 'data-qfin': fin }, svg);
+            el('path', { d: 'M' + pts.map(p => f1(EX(p[0])) + ' ' + f1(yQ(p[1]))).join(' L'), class: 'w hov', 'data-hover': h, 'data-qfin': fin }, svg);
             el('path', { d: `M${f1(EX(1 + h + 0.3))} ${yQ(fin)} H${EX(5)}`, class: 'w q' }, svg);
             verdict = `caught: Q hovers ${h.toFixed(2)} ns, then settles to the ${reads ? 'new' : 'old'} value`; cls = 'lab raw';
         }
         el('line', { x1: EX(-3), y1: yQ(0.5), x2: EX(5), y2: yQ(0.5), stroke: '#b8bfc8', 'stroke-dasharray': '4 6', 'stroke-width': 1 }, svg);
         tx(svg, EX(5) + 4, yQ(0.5) + 5, 'half', 'lab ink2', 14);
         tx(svg, 1200, 226, verdict, cls + ' halo', 18, { 'text-anchor': 'end', 'data-verdict': c.kind });
-        tx(svg, 150, 392, 'Each change lands at a random moment. Only the thin slice right at the edge catches the flip-flop.', 'lab ink2', 16);
+        { const G2 = ghostCatches(); tx(svg, 150, 392, G2.all
+            ? `faint traces: ${G2.all > TRACE_CAP ? 'the latest ' + TRACE_CAP + ' of ' + G2.all : G2.all === 1 ? 'the earlier catch' : 'all ' + G2.all + ' earlier catches'}, lined up on the edge — each one settles at a different time`
+            : 'Each change lands at a random moment. Only the thin slice right at the edge catches the flip-flop.', G2.all ? 'lab raw' : 'lab ink2', 16, { 'data-caption': G2.all }); }
     }
     const DX = (u) => 70 + (u + 5) * (1200 - 70) / 10;
     function drawDots() {
@@ -714,7 +731,8 @@
         for (let u = -5; u <= 5; u++) { el('line', { x1: f1(DX(u)), y1: base, x2: f1(DX(u)), y2: base + 6, class: 'tick' }, svg);
             tx(svg, DX(u), base + 26, u === 0 ? 'edge' : (u > 0 ? '+' : '−') + Math.abs(u) + (Math.abs(u) === 5 ? ' ns' : ''), 'lab ink2', 16, { 'text-anchor': 'middle' }); }
         const cols = new Map(), g = el('g', {}, svg);
-        for (let k = 0; k < n1; k++) { const c = CH1[k], col = Math.floor((c.u + 5) / 0.1), h = cols.get(col) || 0; cols.set(col, h + 1);
+        $('dh1').textContent = n1 > DOTS1 ? `Where the latest ${DOTS1.toLocaleString('en-US')} changes landed` : 'Where every change landed';
+        for (let k = Math.max(0, n1 - DOTS1); k < n1; k++) { const c = CH1[k], col = Math.floor((c.u + 5) / 0.1), h = cols.get(col) || 0; cols.set(col, h + 1);
             const cy = base - 6 - Math.min(h, 16) * 9.5, cx = DX(-5 + (col + 0.5) * 0.1);
             el('circle', { cx: f1(cx), cy: f1(cy), r: 4, class: c.kind === 'caught' ? 'dot-x' : c.kind === 'window' ? 'dot-w' : 'dot-c', 'data-kind': c.kind }, g);
             if (k === n1 - 1) el('circle', { cx: f1(cx), cy: f1(cy), r: 8, class: 'dot-last' }, svg); }
@@ -735,7 +753,7 @@
             : c.kind === 'caught' ? `<b>Change ${n1}: caught.</b> It landed right at the edge. Q hovers near halfway, then settles.`
             : c.kind === 'window' ? `<b>Change ${n1}: inside the decision window.</b> Still decided at once: the flip-flop took the ${c.takesNew ? 'new' : 'old'} value.`
             : `<b>Change ${n1}: clear of the edge.</b> The flip-flop reads it cleanly, on this edge or the next.`;
-        $('bk1').disabled = !stack1.length; $('nxt1').disabled = n1 >= CAP1; $('run1').disabled = n1 + 100 > CAP1;
+        $('bk1').disabled = !stack1.length; $('nxt1').disabled = n1 >= CAP1; $('run1').disabled = n1 + 100 > CAP1; $('run1k').disabled = n1 + 1000 > CAP1;
     }
     function push1(k) { if (n1 + k > CAP1) return; stack1.push(n1); n1 += k; }
 
@@ -829,7 +847,7 @@
         ['f<sub>clk</sub>', 'how often the clock samples', '100 MHz: an edge every 10 ns'],
         ['T<sub>0</sub>', 'the catch slice at each edge', '0.1 ns'],
         ['T<sub>0</sub> &middot; f<sub>clk</sub> &middot; f<sub>data</sub>', 'how often it is caught', `0.1 ns &times; 100 MHz &times; 1 MHz = <b data-n4="caught">${grp(caughtPerSec())}</b> a second`],
-        ['t<sub>r</sub>, &tau;', 'time to settle; time constant', `t<sub>r</sub> = 10 &minus; 2 = <b data-n4="tr">${SYNC.tr}</b> ns; &tau; = 0.2 ns`],
+        ['t<sub>r</sub>, &tau;', 'the slack (time to settle); time constant', `t<sub>r</sub> = 10 &minus; 2 = <b data-n4="tr">${SYNC.tr}</b> ns; &tau; = 0.2 ns`],
         ['e<sup>t<sub>r</sub>/&tau;</sup>', '1 catch in this many still hovers', `e<sup>${SYNC.tr / TAU}</sup> = <b data-n4="e">${fmtNum(S4E)}</b>`],
         ['MTBF', 'the top divided by the bottom', `${fmtNum(S4M)} s &asymp; <b data-mtbf="b4" data-o='${JSON.stringify(SYNC)}'>${fmtTime(S4M)}</b>`],
     ];
@@ -838,7 +856,7 @@
         '<b>How often the clock samples.</b> 100 MHz: a clock edge every 10 ns.',
         '<b>How close a change must land to catch the flip-flop.</b> The catch slice is 0.1 ns wide.',
         '<b>Multiply them: how often it is caught.</b> 10,000 catches every second.',
-        '<b>The two times from Resolution Time.</b> The synchronizer&rsquo;s first flip-flop gets 10 &minus; 2 = 8 ns to settle; the time constant is 0.2 ns.',
+        '<b>The two times from Resolution Time.</b> t<sub>r</sub> is the slack: what is left of the clock period after t<sub>co</sub>, the logic and t<sub>su</sub>. Here 10 &minus; 2 = 8 ns; &tau; = 0.2 ns.',
         '<b>Without and with a synchronizer.</b> After 7 ns of logic, one flip-flop has 1 ns left to settle; a synchronizer gives its first flip-flop 8 ns.',
         '<b>How rare a failed catch is.</b> 8 ns is 40 time constants: only 1 catch in 2.35 &times; 10<sup>17</sup> is still hovering.',
         '<b>Divide: about 746,000 years.</b> 2.35 &times; 10<sup>17</sup> &divide; 10,000 a second = 2.35 &times; 10<sup>13</sup> seconds between failures.',
@@ -860,7 +878,10 @@
         for (const e of [0, 10]) el('line', { x1: BX + e * PX, y1: by - 6, x2: BX + e * PX, y2: by + bh + 6, stroke: '#b8640a', 'stroke-width': 2 }, svg);
         tx(svg, BX + 5 * PX, by + 21, `settle ${SYNC.tr} ns`, 'lab acc', 17, { 'text-anchor': 'middle' });
         tx(svg, BX + 0.5 * PX, by + bh + 20, 't_{co}', 'lab ink2', 15, { 'text-anchor': 'middle' }); tx(svg, BX + 9.5 * PX, by + bh + 20, 't_{su}', 'lab ink2', 15, { 'text-anchor': 'middle' });
-        tx(svg, BX, by + bh + 50, 'one clock period, 10 ns: t_{r} = 10 − 2 = 8 ns', 'lab b', 17, { 'data-tr4': SYNC.tr });
+        tx(svg, BX, by + bh + 50, 'the slack in one 10 ns period: t_{r} = 10 − 2 = 8 ns', 'lab b', 17, { 'data-tr4': SYNC.tr });
+        tx(svg, 20, 272, 'A third flip-flop stacks a second period of slack: 8 + 8 = 16 ns', 'lab', 17, { 'data-slack': 'b4stack' });
+        tx(svg, 20, 296, '(a simplification: each stage’s slack adds in the exponent,', 'lab ink2', 16, { 'data-slack': 'b4simp' });
+        tx(svg, 20, 318, 'which real chains follow only approximately)', 'lab ink2', 16);
         fixOverbars(svg);
     }
     // the L29 deck's stacks (Lectures/PrepLectures/mwf-29-11-02-26/figs.py stack_fig): t_co 1, t_pd 7, t_su 1 on a 10 ns clock
@@ -1004,19 +1025,21 @@
     document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
     for (let i = 1; i <= 6; i++) { $('nxt' + i).addEventListener('click', e => { advance(1); e.currentTarget.blur(); }); $('bk' + i).addEventListener('click', e => { advance(-1); e.currentTarget.blur(); }); }
     $('run1').addEventListener('click', e => { push1(100); drawPage(); e.currentTarget.blur(); });
+    $('run1k').addEventListener('click', e => { push1(1000); drawPage(); e.currentTarget.blur(); });
     $('gu5').addEventListener('click', e => { guess5(1); e.currentTarget.blur(); });
     $('gd5').addEventListener('click', e => { guess5(-1); e.currentTarget.blur(); });
     document.addEventListener('keydown', (e) => {
         const k = e.key;
         if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
         if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
-        if (defsOpen()) { if (k === 'Escape') closeDefs(); if (k === ' ' || 'rRhHlLsS'.includes(k)) e.preventDefault(); return; }
+        if (defsOpen()) { if (k === 'Escape') closeDefs(); if (k === ' ' || 'rRhHkKlLsS'.includes(k)) e.preventDefault(); return; }
         switch (k) {
             case ' ': case 'ArrowDown': advance(1); e.preventDefault(); break;
             case 'ArrowUp': advance(-1); e.preventDefault(); break;
             case 'ArrowRight': setPage(page + 1); e.preventDefault(); break;
             case 'ArrowLeft': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
             case 'h': case 'H': if (page === 1) { push1(100); drawPage(); e.preventDefault(); } break;
+            case 'k': case 'K': if (page === 1) { push1(1000); drawPage(); e.preventDefault(); } break;
             case 'l': case 'L': if (page === 5) { guess5(1); e.preventDefault(); } break;
             case 's': case 'S': if (page === 5) { guess5(-1); e.preventDefault(); } break;
             case 'r': case 'R': doReset(); e.preventDefault(); break;
@@ -1061,7 +1084,7 @@
           for (let i = 0; i < CAP1; i++) { const u = rnd() * 10 - 5, x = rnd(), y = rnd(), kind = Math.abs(u) <= 0.05 ? 'caught' : (u > -1 && u < 0.5 ? 'window' : 'clear');
               const c = CH1[i]; if (Math.abs(c.u - u) > 1e-12 || c.kind !== kind || (kind === 'caught' && Math.abs(c.hover + 0.2 * Math.log(1 - x)) > 1e-12) || c.takesNew !== (y < 0.5)) { fails.push('b1 replay ' + i); break; } }
           const kinds = CH1.slice(0, 4).map(c => c.kind).join(); if (kinds !== 'clear,window,clear,caught') fails.push('b1 seeded opening ' + kinds);
-          const W = CH1.filter(c => c.kind !== 'clear').length, K = CH1.filter(c => c.kind === 'caught').length; if (W < 100 || W > 200 || K < 3 || K > 20) fails.push(`b1 rates over ${CAP1}: ${W} / ${K}`); }
+          const W = CH1.filter(c => c.kind !== 'clear').length, K = CH1.filter(c => c.kind === 'caught').length; if (W < 0.1 * CAP1 || W > 0.2 * CAP1 || K < 0.003 * CAP1 || K > 0.02 * CAP1) fails.push(`b1 rates over ${CAP1}: ${W} / ${K}`); }
         // 2) beat 2's catches
         { let a = SEED2 >>> 0; const rnd = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
           for (let i = 0; i < NC2; i++) if (Math.abs(HOV2[i] + 0.2 * Math.log(1 - rnd())) > 1e-12) { fails.push('b2 replay ' + i); break; }
@@ -1115,16 +1138,29 @@
         setPage(1); doReset();
         const check1 = (tag) => { const seen = CH1.slice(0, n1), W = seen.filter(c => c.kind !== 'clear').length, K = seen.filter(c => c.kind === 'caught').length;
             if ($('cn1').textContent !== n1.toLocaleString('en-US') || !$('cw1').textContent.startsWith(String(W)) || !$('cx1').textContent.startsWith(String(K))) fails.push(tag + ' tiles');
-            const dots = Array.from($('d1').querySelectorAll('[data-kind]')); if (dots.length !== n1 || dots.filter(d => d.dataset.kind === 'caught').length !== K || dots.filter(d => d.dataset.kind !== 'clear').length !== W) fails.push(tag + ' dots');
+            const win1 = CH1.slice(Math.max(0, n1 - DOTS1), n1), dots = Array.from($('d1').querySelectorAll('[data-kind]')); if (dots.length !== win1.length || dots.filter(d => d.dataset.kind === 'caught').length !== win1.filter(c => c.kind === 'caught').length || dots.filter(d => d.dataset.kind !== 'clear').length !== win1.filter(c => c.kind !== 'clear').length) fails.push(tag + ' dots');
             const v = $('e1').querySelector('[data-verdict]'); if (!v || v.dataset.verdict !== (n1 ? CH1[n1 - 1].kind : 'none')) fails.push(tag + ' verdict');
             if (n1) { const c = CH1[n1 - 1], d = $('e1').querySelector('[data-du]'); if (+d.dataset.du !== c.u) fails.push(tag + ' D change');
                 const oldV = (c.i - 1) % 2, newV = c.i % 2, reads = c.kind === 'clear' ? c.u <= -1 : c.takesNew, fin = +$('e1').querySelector('[data-qfin]').dataset.qfin; if (fin !== (reads ? newV : oldV)) fails.push(tag + ' Q final');
                 if (c.kind === 'caught') { const h = $('e1').querySelector('[data-hover]'); if (!h || Math.abs(+h.dataset.hover - c.hover) > 1e-12 || !v.textContent.includes(c.hover.toFixed(2) + ' ns')) fails.push(tag + ' hover'); } }
+            {   // the persistence overlay: one faint trace per earlier catch (latest TRACE_CAP), its own hover time and final level, starting at the edge
+                const prev = CH1.slice(0, Math.max(0, n1 - 1)).filter(x => x.kind === 'caught'), kept = prev.slice(-TRACE_CAP), gs = Array.from($('e1').querySelectorAll('[data-ghost]'));
+                if (gs.length !== kept.length || +$('e1').querySelector('[data-ghosts]').dataset.ghosts !== kept.length) fails.push(tag + ' traces ' + gs.length + '/' + kept.length);
+                gs.forEach((g, j) => { const k = kept[j]; if (!k || +g.dataset.ghost !== k.i || Math.abs(+g.dataset.hover - k.hover) > 1e-12 || +g.dataset.gfin !== (k.takesNew ? k.i % 2 : (k.i - 1) % 2)) fails.push(tag + ' trace ' + j);
+                    const p0 = g.getPointAtLength(0); if (Math.abs(p0.x - EX(0)) > 0.05) fails.push(tag + ' trace not at the edge');
+                    const L = g.getTotalLength(), pe = g.getPointAtLength(L), ye = (k.takesNew ? k.i % 2 : (k.i - 1) % 2) ? 244 : 316; if (Math.abs(pe.y - ye) > 0.05 || Math.abs(pe.x - EX(5)) > 0.05) fails.push(tag + ' trace end');
+                    // the settle instant: where the trace leaves halfway for good is 1 + hover (+ the 0.3 ns roll)
+                    let tSettle = null; for (let d = 0; d <= L; d += 0.5) { const q = g.getPointAtLength(d); if (Math.abs(q.y - 280) <= 0.081 * 72 + 0.5) tSettle = q.x; }
+                    if (tSettle === null || Math.abs(tSettle - EX(1 + k.hover)) > 10) fails.push(tag + ' trace hover length ' + j);
+                    if (+getComputedStyle(g).strokeOpacity > 0.4 || +getComputedStyle(g).strokeOpacity < 0.2) fails.push(tag + ' trace opacity'); });
+                const cap = $('e1').querySelector('[data-caption]'); if (n1 && (!cap || +cap.dataset.caption !== prev.length) || (prev.length && !/faint traces/.test(cap.textContent))) fails.push(tag + ' trace caption'); }
             const win = $('e1').querySelector('[data-win]'), sl = $('e1').querySelector('[data-slice]');
             if (Math.abs(+win.getAttribute('x') - EX(-1)) > 0.02 || Math.abs(+win.getAttribute('x') + +win.getAttribute('width') - EX(0.5)) > 0.03 || Math.abs(+sl.getAttribute('width') - (EX(0.05) - EX(-0.05))) > 0.03) fails.push(tag + ' window geometry'); };
         for (let i = 0; i <= 12; i++) { if (i) advance(1); check1('b1 n' + n1); sweep('b1 n' + n1); if (i % 4 === 0) contrastGate('b1 n' + n1); checkMtbf('b1'); }
         for (let i = 0; i < 9; i++) { push1(100); drawPage(); check1('b1 n' + n1); if (i % 3 === 0) { sweep('b1 n' + n1); contrastGate('b1 n' + n1); } }
         if (n1 !== 912) fails.push('b1 count ' + n1);
+        for (let i = 0; i < 5; i++) { push1(1000); drawPage(); check1('b1 n' + n1); sweep('b1 n' + n1); contrastGate('b1 n' + n1); }
+        { const prev = CH1.slice(0, 5911).filter(c => c.kind === 'caught').length; if (n1 !== 5912 || $('e1').querySelectorAll('[data-ghost]').length !== Math.min(prev, TRACE_CAP) || prev < 40) fails.push('b1 traces at 5,912: ' + prev); }
         { const seq = []; doReset(); for (let i = 0; i < 6; i++) { seq.push(frame()); advance(1); } push1(100); drawPage(); const A = frame(); advance(-1); if (n1 !== 6) fails.push('b1 back after batch');
           for (let i = 5; i >= 0; i--) { advance(-1); if (frame() !== seq[i]) fails.push('b1 back frame ' + i); } if (!$('bk1').disabled) fails.push('b1 back enabled at start'); }
         // beat 2
@@ -1176,6 +1212,12 @@
         // back restores the exact frame on beats 2, 3, 4, 6
         for (const [pg, N, set] of [[2, NS2, (v) => s2 = v], [3, NS3, (v) => s3 = v], [4, NS4, (v) => s4 = v], [6, NS6, (v) => s6 = v]]) { setPage(pg);
             for (let s = 0; s < N; s++) { set(s); drawPage(); const A = frame(); advance(1); advance(-1); if (frame() !== A) fails.push(`b${pg} back ${s}`); } set(0); drawPage(); if (!$('bk' + pg).disabled) fails.push(`b${pg} back enabled at 0`); }
+        // the slack wording (Mike, 11-02): t_r is the slack; added stages stack slack, with the simplification note
+        { setPage(2); const t2 = $('p2').textContent; if (!/is the slack: what is left of the clock period after tco, the logic and tsu/.test(t2)) fails.push('slack text b2');
+          setPage(4); s4 = 4; drawPage(); if (!/is the slack: what is left of the clock period/.test($('reason4').textContent) || !/stacks a second period of slack: 8 \+ 8 = 16 ns/.test($('s4').textContent) || !/a simplification: each stage’s slack adds in the exponent/.test($('s4').textContent)) fails.push('slack text b4');
+          setPage(5); c5 = 0; rv5 = 1; g5 = 0; drawPage(); if (!/stacks a second period of slack: 8 \+ 8 = 16 ns \(a simplification/.test($('reason5').textContent)) fails.push('slack text b5'); sweep('b5 slack'); contrastGate('b5 slack');
+          if (!/is the slack/.test(document.querySelector('[data-slack="def"]').textContent) || !/a simplification/.test(document.querySelector('.defs-list').textContent)) fails.push('slack text defs');
+          if (/loses its own/.test($('designSurface').textContent)) fails.push('old per-stage wording left'); c5 = 0; rv5 = 0; }
         // the definitions panel
         setPage(1); openDefs(); { const c = document.querySelector('.defs-card').getBoundingClientRect(), s = $('designSurface').getBoundingClientRect(); if (c.height > s.height || c.top < s.top) fails.push('defs too tall'); } closeDefs();
         if (document.querySelectorAll('.defs-list .ds').length !== 8) fails.push('defs entries');

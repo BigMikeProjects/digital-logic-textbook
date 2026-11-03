@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1450 300" role="img" aria-label="One clock period of 10 ns: t_co 1 ns, logic t_pd 7 ns, t_su 1 ns, leaving t_r = 1 ns to settle">
+  <style>
+    text { font-family: Inter, Helvetica, Arial, sans-serif; }
+    .label { font-size: 30px; font-weight: 700; fill: #24313f; }
+    .small { font-size: 24px; fill: #64748b; }
+    .blk   { font-size: 32px; font-weight: 700; fill: #24313f; }
+    .ctl   { font-size: 28px; font-weight: 700; fill: #f97316; }
+    .wire  { fill: none; stroke: #24313f; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .cwire { fill: none; stroke: #f97316; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .gate  { fill: #fff; stroke: #24313f; stroke-width: 4; stroke-linejoin: round; }
+    .box   { fill: #f3f6fb; stroke: #24313f; stroke-width: 4; stroke-linejoin: round; }
+    .mbox  { fill: #fff4e8; stroke: #f97316; stroke-width: 4; stroke-linejoin: round; }
+    .node  { fill: #24313f; }
+    .head  { fill: #24313f; }
+    .chead { fill: #f97316; }
+    .pin   { font-size: 24px; font-weight: 700; fill: #64748b; }
+    .cnode { fill: #f97316; }
+    .wave  { fill: none; stroke: #24313f; stroke-width: 5; stroke-linejoin: round; stroke-linecap: round; }
+    .awave { fill: none; stroke: #12866f; stroke-width: 6; stroke-linejoin: round; stroke-linecap: round; }
+    .guide { stroke: #c3ccd8; stroke-width: 2; stroke-dasharray: 6 8; }
+    .lvl   { stroke: #c3ccd8; stroke-width: 2; stroke-dasharray: 2 10; }
+    .bar   { stroke: #24313f; stroke-width: 3; stroke-linecap: round; }
+  </style>
+<style>.lab{font:700 34px Segoe UI,sans-serif;fill:#1c2433}.seg{font:700 32px Menlo,monospace;fill:#fff}.ax{font:600 28px Segoe UI,sans-serif;fill:#5a6676}.ed{font:600 28px Segoe UI,sans-serif;fill:#b8640a}</style><path d="M300,90 H330 V40 H870.0 V90 H1410 V40 H1430" fill="none" stroke="#b8640a" stroke-width="4"/><text class="lab" x="290" y="78" text-anchor="end">CLK</text><line x1="330" y1="40" x2="330" y2="250" stroke="#c9d3e0" stroke-width="2" stroke-dasharray="6 6"/><text class="ax" x="330" y="280" text-anchor="middle">0 ns</text><line x1="1410" y1="40" x2="1410" y2="250" stroke="#c9d3e0" stroke-width="2" stroke-dasharray="6 6"/><text class="ax" x="1410" y="280" text-anchor="middle">10 ns</text><text class="ed" x="870.0" y="118" text-anchor="middle">period 1: T = 10 ns</text><text class="lab" x="290" y="186" text-anchor="end">FF &#8594; logic &#8594; FF</text><rect x="332" y="150" width="104" height="56" rx="8" fill="#b8640a"/><text class="seg" x="384.0" y="187" text-anchor="middle">t<tspan baseline-shift='sub' font-size='70%'>co</tspan></text><rect x="440" y="150" width="752" height="56" rx="8" fill="#4a6fa5"/><text class="seg" x="816.0" y="187" text-anchor="middle">t<tspan baseline-shift='sub' font-size='70%'>pd</tspan> = 7 ns</text><rect x="1196" y="150" width="104" height="56" rx="8" fill="#2e7d4f"/><text class="seg" x="1248.0" y="187" text-anchor="middle">t<tspan baseline-shift='sub' font-size='70%'>r</tspan></text><rect x="1304" y="150" width="104" height="56" rx="8" fill="#6b4fa8"/><text class="seg" x="1356.0" y="187" text-anchor="middle">t<tspan baseline-shift='sub' font-size='70%'>su</tspan></text></svg>

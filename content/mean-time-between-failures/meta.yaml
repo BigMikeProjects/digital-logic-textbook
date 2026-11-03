@@ -1,9 +1,11 @@
 title: "Mean Time Between Failures"
-description: "How rare a synchronizer failure is: the mean time between failures, and why a few nanoseconds of settling time turn milliseconds into centuries."
+description: "How rare a synchronizer failure is: the mean time between failures, why the settling time (the slack) dominates it, and why a product shipped in millions of copies needs far more margin than one board."
 chapter: sequential-logic
 section: practical-considerations
 order: 40406
 
 graphics:
+  00-video.youtube:
+    caption: "Video: mean time between failures, narrated over the interactive: catching an edge, resolution time, the formula term by term, slack, longer or shorter, and making millions"
   01-interactive.html:
     caption: "Interactive: how a flip-flop gets caught, the exponent on a log-scale MTBF meter, one flip-flop against a synchronizer, and what makes MTBF worse"
