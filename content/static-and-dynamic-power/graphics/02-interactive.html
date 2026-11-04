@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Static and Dynamic Power — Where Every Watt in a CMOS Gate Comes From</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: var(--surround); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9; max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0; transform-origin: top left;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* ======== VISUAL SYSTEM v2 (light) — copied from 40-switch-debouncer ========
+       surround #f6f6f4 · stage white · text #1c2433 · secondary #5b6472 · unfocused #858e99 (3.4:1) · hairline #d9dde3
+       accent (lecture-deck blue) #4a6fa5, emphasis #2f4f7f · control #b8640a · status #6b4fa8 · output #2e7d4f · raw #b4472f
+       this graphic: dynamic power = accent blue · static power (leakage) = amber #b8640a · heat = #b4472f · stored = accent blue */
+    :root { --surround: #f6f6f4; --stage: #ffffff; --ink: #1c2433; --ink3: #3a4350; --ink2: #5b6472; --mute: #858e99; --hair: #d9dde3;
+        --accent: #4a6fa5; --accent2: #2f4f7f; --dyn: #4a6fa5; --stat: #b8640a; --heat: #b4472f; --ok: #2e7d4f; --wire: #6b7480; --grid: #eef0f3; }
+    .viewport-container { background: var(--stage); }
+    .design-surface { background: var(--stage); color: var(--ink); }
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; border: 1px solid var(--hair); border-radius: 6px; padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: var(--ink); font-size: 38px; font-weight: 600; line-height: 1.15; }
+    .titles h1 .sub { color: var(--ink2); font-size: 25px; font-weight: 400; }
+    .titles .subtitle { color: var(--ink2); font-size: 20px; margin-top: 4px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; border: 1px solid var(--hair); border-radius: 6px; font-weight: 500; }
+    .page-count { flex-shrink: 0; color: var(--ink2); font-size: 20px; padding: 8px 18px; }
+    .page-count b { color: var(--ink); font-size: 26px; }
+    .defs-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 20px; font-weight: 500;
+        color: var(--ink); background: transparent; padding: 8px 18px; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k, .controls .k { border: 1px solid var(--hair); border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: var(--ink2); }
+    .defs-btn .k { line-height: 26px; }
+    .defs-btn.on { border-color: var(--accent); background: rgba(74,111,165,0.08); }
+
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(28,36,51,0.351); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1500px; background: var(--stage); border: 1px solid var(--hair); border-radius: 8px; padding: 16px 38px 22px; }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+    .defs-title { font-size: 34px; font-weight: 600; color: var(--ink); }
+    .defs-close { font-size: 20px; color: var(--ink2); }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 9px; align-items: baseline; }
+    .defs-list .ds { font-size: 23px; font-weight: 700; white-space: nowrap; }
+    .defs-list .dd { font-size: 20px; line-height: 1.26; color: var(--ink3); }
+    .defs-list .dd b { color: var(--ink); }
+
+    .tabstrip { display: flex; gap: 30px; margin: 14px 0 6px; border-bottom: 1px solid var(--hair); }
+    .tab { display: flex; align-items: center; gap: 12px; border-bottom: 3px solid transparent; padding: 8px 2px 10px; color: var(--ink2); cursor: pointer; }
+    .tab .tnum { width: 30px; height: 30px; flex-shrink: 0; border: 1px solid currentColor; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; }
+    .tab .tlabel { font-size: 21px; font-weight: 600; white-space: nowrap; }
+    .tab .tstep { font-size: 15px; font-weight: 500; color: var(--mute); }
+    .tab.on { color: var(--accent2); border-bottom-color: var(--accent); }
+    .tab.on .tnum { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 14px; flex-direction: column; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+    .panel { background: var(--stage); border: 1px solid var(--hair); border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+    .panel svg { display: block; }
+    .phead { white-space: nowrap; font-size: 22px; font-weight: 600; color: var(--ink); padding: 10px 22px 0; }
+    .phead .dimtxt { color: var(--ink2); font-weight: 400; }
+    .row { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .colL { flex: 0 0 640px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .colR { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .circ svg { width: 100%; height: 540px; }
+    .card { padding: 12px 20px 14px; font-size: 20px; line-height: 1.38; color: var(--ink3); }
+    .card b { color: var(--ink); }
+    .card .ct { font-size: 22px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+    .card .ct .dimtxt { color: var(--ink2); font-weight: 400; }
+    .card.fill { flex: 1; min-height: 0; }
+    .card .rule { border-left: 3px solid var(--accent); padding-left: 14px; margin-top: 6px; color: var(--ink); }
+    .card .note { margin-top: 8px; color: var(--ink2); font-size: 18px; line-height: 1.35; }
+    .eq { font-family: 'Cambria Math', 'STIX Two Math', 'Times New Roman', serif; font-size: 30px; color: var(--ink); white-space: nowrap; }
+    .eq i { font-style: italic; } .eq sub { font-size: 0.6em; } .eq sup { font-size: 0.6em; }
+    .stepcard .snum { font-size: 17px; font-weight: 700; letter-spacing: 0.5px; color: var(--accent); }
+    .stepcard .head { font-size: 26px; font-weight: 600; color: var(--ink); margin-top: 4px; line-height: 1.25; }
+    .stepcard .line { font-size: 21px; color: var(--ink3); margin-top: 4px; line-height: 1.35; min-height: 29px; }
+    .steprow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+    .btn { font: inherit; font-size: 19px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid #5b6472; border-radius: 6px; padding: 5px 14px; cursor: pointer; white-space: nowrap; }
+    .btn .kk { font-weight: 500; font-size: 17px; color: var(--ink2); }
+    .btn.nxt { border-color: var(--accent); color: var(--accent2); }
+    .btn.bk { border-color: var(--mute); color: var(--ink3); }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+    .btn.case { border-color: var(--hair); color: var(--ink2); font-size: 18px; padding: 4px 13px; }
+    .btn.case.on { border-color: var(--ink); color: var(--ink); background: rgba(28,36,51,0.048); }
+
+    /* counters (beats 1-2) */
+    .tiles { display: flex; gap: 0; }
+    .tile { flex: 1; padding: 6px 22px 6px; border-left: 1px solid var(--hair); }
+    .tile:first-child { border-left: none; }
+    .tile .tl { font-size: 18px; color: var(--ink2); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .tile .sw { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+    .tile .tn { font-family: 'Menlo','Consolas',monospace; font-size: 40px; font-weight: 700; color: var(--ink); line-height: 1.15; white-space: nowrap; }
+    .tile .tn .u { font-size: 22px; font-weight: 500; color: var(--ink2); }
+    .tile .ts { font-size: 17px; color: var(--ink2); white-space: nowrap; }
+    .tile.later .tn, .tile.later .tl, .tile.later .ts { color: var(--mute); }
+    .tile.later .tn .u { color: var(--mute); }
+    .tlp svg { width: 100%; height: 286px; }
+    .unitdef { padding: 0 22px 8px; font-size: 18px; color: var(--ink2); }
+
+    /* circuit */
+    .rail { stroke: var(--ink); stroke-width: 2; fill: none; }
+    .w { stroke: var(--wire); stroke-width: 1.5; fill: none; stroke-linejoin: round; }
+    .mos { stroke: var(--ink); stroke-width: 2; fill: none; }
+    .mos.bub { fill: var(--stage); stroke-width: 1.5; }
+    .jd { fill: var(--wire); }
+    .cap { stroke: var(--ink); stroke-width: 3; }
+    .cap.full { stroke: var(--dyn); }
+    .tbox { fill: none; stroke: none; }
+    .tbox.heat { fill: rgba(180,71,47,0.08); stroke: var(--heat); stroke-width: 1.5; }
+    .tbox.leak { fill: rgba(184,100,10,0.08); stroke: var(--stat); stroke-width: 1.5; }
+    .path { fill: none; stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 10 8; animation: flow 0.7s linear infinite; }
+    .path.chg { stroke: var(--dyn); } .path.cut { stroke: #bcc3cc; stroke-width: 2; stroke-dasharray: 4 7; animation: none; }
+    .w.slp { stroke: var(--stat); stroke-width: 2; } .cl.slp { fill: var(--stat); }
+    .tbox.hdr { fill: rgba(74,111,165,0.08); stroke: var(--accent); stroke-width: 1.5; } .path.dis { stroke: var(--heat); } .path.lk { stroke: var(--stat); stroke-width: 2; stroke-dasharray: 4 7; animation-duration: 2.4s; }
+    @keyframes flow { to { stroke-dashoffset: -18; } }
+    .cl { fill: var(--ink); font-size: 22px; font-weight: 600; }
+    .cl.mono { font-family: 'Menlo','Consolas',monospace; }
+    .cs { fill: var(--ink2); font-size: 18px; }
+    .cs.on { fill: var(--ink); font-weight: 600; }
+    .cs.heat { fill: var(--heat); font-weight: 600; }
+    .cs.leak { fill: var(--stat); font-weight: 600; }
+    .cs.store { fill: var(--accent2); font-weight: 600; }
+
+    /* timelines + charts (dataviz: 2 px lines, hairline grid, text in ink tokens) */
+    .ax { stroke: #c9ced6; stroke-width: 1; }
+    .gr { stroke: var(--grid); stroke-width: 1; }
+    .tk { fill: var(--ink2); font-size: 16px; }
+    .tk.mono { font-family: 'Menlo','Consolas',monospace; }
+    .rl { fill: var(--ink); font-size: 18px; font-weight: 600; }
+    .ln { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .ln.v { stroke: var(--ink); } .ln.dyn { stroke: var(--dyn); } .ln.stat { stroke: var(--stat); } .ln.lk { stroke: var(--stat); }
+    .avgl { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 8 6; }
+    .wash.dyn { fill: rgba(74,111,165,0.10); } .wash.lk { fill: rgba(184,100,10,0.10); }
+    .cur { stroke: var(--ink2); stroke-width: 1; }
+    .edgel { fill: var(--ink2); font-size: 15px; }
+    .dotm { stroke: var(--stage); stroke-width: 2; }
+    .dotm.dyn { fill: var(--dyn); } .dotm.stat { fill: var(--stat); } .dotm.x { fill: var(--ink); }
+    .lab { fill: var(--ink); font-size: 18px; font-weight: 600; }
+    .lab2 { fill: var(--ink2); font-size: 16px; paint-order: stroke; stroke: #ffffff; stroke-width: 5px; stroke-linejoin: round; }
+    .tip { pointer-events: none; }
+    .tip rect { fill: var(--stage); stroke: var(--hair); }
+
+    /* beat 3: the meter */
+    .sliders { display: flex; gap: 0; padding: 6px 8px 10px; }
+    .sl { flex: 1; padding: 6px 18px 4px; border-left: 1px solid var(--hair); }
+    .sl:first-child { border-left: none; }
+    .sl .sh { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; white-space: nowrap; }
+    .sl .sn { font-size: 20px; font-weight: 600; color: var(--ink); }
+    .sl .sn .k { font-family: 'Menlo','Consolas',monospace; font-size: 15px; font-weight: 500; color: var(--ink2); border: 1px solid var(--hair); border-radius: 5px; padding: 0 6px; margin-left: 6px; }
+    .sl .sv { font-family: 'Menlo','Consolas',monospace; font-size: 22px; font-weight: 700; color: var(--ink); }
+    .sl.focus { background: rgba(74,111,165,0.07); box-shadow: inset 0 -3px 0 var(--accent); }
+    .sl .sr { font-size: 15px; color: var(--ink2); display: flex; justify-content: space-between; }
+    input[type=range] { width: 100%; margin: 8px 0 2px; accent-color: var(--accent); height: 22px; }
+    .caserow { display: flex; align-items: center; gap: 12px; padding: 0 22px 12px; flex-wrap: nowrap; }
+    .caserow .lbl { font-size: 19px; color: var(--ink2); }
+    .caserow .cname { font-size: 19px; color: var(--ink); margin-left: 10px; white-space: nowrap; }
+    .row3 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .chartp { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .chartp svg { width: 100%; height: 560px; }
+    .meterc { flex: 0 0 660px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .hero { display: flex; align-items: baseline; gap: 16px; padding: 4px 22px 4px; }
+    .hero .hn { font-family: 'Menlo','Consolas',monospace; font-size: 60px; font-weight: 700; color: var(--ink); line-height: 1.1; }
+    .hero .hl { font-size: 20px; color: var(--ink2); line-height: 1.3; }
+    .meter svg { width: 100%; height: 150px; }
+    .why { flex: 1; min-height: 0; }
+    .why .wt { font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: 0.5px; }
+    .why .wl { font-size: 22px; color: var(--ink); line-height: 1.38; margin-top: 4px; }
+    .xline { padding: 2px 22px 12px; font-size: 21px; color: var(--ink3); }
+    .xline b { color: var(--ink); font-family: 'Menlo','Consolas',monospace; }
+
+    /* beat 4 */
+    .cols4 { display: flex; gap: 14px; flex: 0 0 auto; }
+    .lev { flex: 1; padding: 14px 24px 16px; }
+    .lev .lh { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 600; color: var(--ink); }
+    .lev .lh .sw { width: 18px; height: 18px; border-radius: 4px; }
+    .lev .lh .eq { font-size: 26px; color: var(--ink2); margin-left: auto; }
+    .lev ul { list-style: none; margin-top: 8px; }
+    .lev li { font-size: 21px; color: var(--ink3); line-height: 1.38; padding: 7px 0 7px 18px; position: relative; border-top: 1px solid #eef0f3; }
+    .lev li:first-child { border-top: none; }
+    .lev li::before { content: '\25AA'; position: absolute; left: 0; color: var(--accent); }
+    .lev li b { color: var(--ink); }
+    .tab4 { flex: 0 0 900px; } .tab4 .note4 { padding: 4px 22px 14px; font-size: 20px; color: var(--ink3); line-height: 1.38; } .tab4 .note4 b { color: var(--ink); }
+    .tab4 table { border-collapse: collapse; margin: 10px 22px 12px; font-variant-numeric: tabular-nums; }
+    .tab4 th { font-size: 20px; font-weight: 600; color: var(--ink2); padding: 6px 48px 9px 0; text-align: center; border-bottom: 1px solid var(--hair); white-space: nowrap; }
+    .tab4 td { font-size: 24px; padding: 12px 48px 12px 0; border-bottom: 1px solid #eef0f3; color: var(--ink); white-space: nowrap; text-align: center; font-family: 'Menlo','Consolas',monospace; }
+    .tab4 th:first-child, .tab4 td:first-child { text-align: left; font-family: inherit; }
+    .tab4 td.big { font-weight: 700; }
+    .row4 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .hook { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; padding: 18px 30px; }
+    .hook .hh { font-size: 28px; font-weight: 600; color: var(--ink); }
+    .hook .hb { font-size: 22px; color: var(--ink3); line-height: 1.4; margin-top: 8px; }
+    .hook .hq { font-size: 24px; color: var(--ink); margin-top: 14px; border-left: 3px solid var(--accent); padding-left: 14px; line-height: 1.38; }
+    .hook b { color: var(--ink); }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .pdot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--hair); }
+    .pdot.on { background: var(--ink); border-color: var(--ink); }
+    .controls { font-size: 19px; color: var(--ink2); white-space: nowrap; }
+    .hid { display: none; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 31 H30" stroke="#6b7480" stroke-width="2"/>
+                <path d="M30 14 L58 31 L30 48 Z" stroke="#1c2433" stroke-width="2.2"/>
+                <circle cx="63" cy="31" r="5" stroke="#1c2433" stroke-width="2"/>
+                <path d="M68 31 H104 V38 M92 38 H116 M92 45 H116 M104 45 V56" stroke="#4a6fa5" stroke-width="2.4"/>
+                <path d="M126 10 L120 26 H130 L122 44" stroke="#b8640a" stroke-width="2.4"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Static and Dynamic Power <span class="sub">&mdash; where every watt in a CMOS gate comes from</span></h1>
+            <div class="subtitle">A gate pays to change its output (dynamic power) and pays a little just to hold it (static power). Each cost has one home in the inverter.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Charging the Load</div><div class="tstep">dynamic</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">Holding Still</div><div class="tstep">static</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">The Meter</div><div class="tstep">move the sliders</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Design Levers</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 — charging the load -->
+        <div class="page" id="p1">
+            <div class="row">
+                <div class="colL">
+                    <div class="panel circ">
+                        <div class="phead">One inverter driving a load <span class="dimtxt">&mdash; C = 10 fF, V<sub>DD</sub> = 1.0 V</span></div>
+                        <svg id="c1" viewBox="0 0 640 540"></svg>
+                    </div>
+                    <div class="panel card fill">
+                        <div class="ct">A footnote: the short-circuit current</div>
+                        While the input is passing <b>between</b> 0 and 1, both transistors conduct for a moment and a little current flows straight from V<sub>DD</sub> to ground. At the logic levels only one is on; during the edge, briefly, both are. With fast edges it is small, so this graphic leaves it out.
+                    </div>
+                </div>
+                <div class="colR">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum1"></div>
+                        <div class="head" id="head1"></div>
+                        <div class="line" id="line1"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk1">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt1"><span id="nxt1t">next: flip the input</span> <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="tiles">
+                            <div class="tile"><div class="tl"><span class="sw" style="background:#1c2433"></span>energy from the supply</div><div class="tn" id="eSup"></div><div class="ts" id="eSupS"></div></div>
+                            <div class="tile"><div class="tl"><span class="sw" style="background:#4a6fa5"></span>stored on C right now</div><div class="tn" id="eSto"></div><div class="ts" id="eStoS"></div></div>
+                            <div class="tile"><div class="tl"><span class="sw" style="background:#b4472f"></span>turned into heat</div><div class="tn" id="eHeat"></div><div class="ts" id="eHeatS"></div></div>
+                        </div>
+                        <div class="unitdef" id="fjdef">Energies are in fJ: 1 fJ = 10<sup>&minus;15</sup> J, a femtojoule.</div>
+                    </div>
+                    <div class="panel tlp">
+                        <div class="phead" id="t1head"></div>
+                        <svg id="t1" viewBox="0 0 1162 286"></svg>
+                    </div>
+                    <div class="panel card fill">
+                        <div class="ct">From energy per edge to power</div>
+                        <div style="display:flex; align-items:center; gap:30px">
+                            <div class="eq"><i>P</i><sub>dynamic</sub> = <i>&alpha;</i> &middot; <i>C</i> &middot; <i>V</i><sub>DD</sub><sup>2</sup> &middot; <i>f</i></div>
+                            <div>= <b>(C&middot;V<sub>DD</sub><sup>2</sup>) &times; (&alpha;&middot;f)</b>: the energy of one spike &times; spikes per second.</div>
+                        </div>
+                        <div class="note" id="worked1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 — holding still -->
+        <div class="page" id="p2">
+            <div class="row">
+                <div class="colL">
+                    <div class="panel circ">
+                        <div class="phead" id="c2head"></div>
+                        <svg id="c2" viewBox="0 0 640 540"></svg>
+                    </div>
+                    <div class="panel card fill">
+                        <div class="ct">Where 5 nA comes from</div>
+                        <span data-topic="non-ideal-switching"><b>Non-ideal Switching</b></span> modeled an off transistor as about 1 G&Omega;: at 5 V that leaks 5 V / 1 G&Omega; = <b>5 nA</b>, or <b>25 nW</b> per gate.
+                        <div class="note">Real leakage is not a plain resistor: it depends mostly on the transistor&rsquo;s threshold voltage and rises quickly with temperature. So designers quote a leakage current per gate, and this graphic holds it at 5 nA.</div>
+                    </div>
+                </div>
+                <div class="colR">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum2"></div>
+                        <div class="head" id="head2"></div>
+                        <div class="line" id="line2"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk2">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt2">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="tiles">
+                            <div class="tile" id="lt1"><div class="tl"><span class="sw" style="background:#b8640a"></span>leakage current, one gate</div><div class="tn" id="lkI"></div><div class="ts" id="lkIs"></div></div>
+                            <div class="tile" id="lt2"><div class="tl"><span class="sw" style="background:#b8640a"></span>static power, one gate</div><div class="tn" id="lkP"></div><div class="ts" id="lkPs"></div></div>
+                            <div class="tile" id="lt3"><div class="tl"><span class="sw" style="background:#b8640a"></span>static power, a million gates</div><div class="tn" id="lkN"></div><div class="ts" id="lkNs"></div></div>
+                        </div>
+                    </div>
+                    <div class="panel tlp">
+                        <div class="phead">Output voltage and supply current <span class="dimtxt">&mdash; the current axis is now in nanoamps</span></div>
+                        <svg id="t2" viewBox="0 0 1162 286"></svg>
+                    </div>
+                    <div class="panel card fill" id="b2card">
+                        <div class="ct">The static term</div>
+                        <div style="display:flex; align-items:center; gap:30px">
+                            <div class="eq"><i>P</i><sub>static</sub> = <i>N</i> &middot; <i>I</i><sub>leak</sub> &middot; <i>V</i><sub>DD</sub></div>
+                            <div><b>N</b> = the number of gates. It does not depend on <b>f</b> or <b>&alpha;</b>: the chip pays it <b>doing nothing</b>.</div>
+                        </div>
+                        <div class="note">This is the term that sets a phone&rsquo;s standby time. The fix is <b>power gating</b>: cut the supply to a block that is idle.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 — the meter -->
+        <div class="page" id="p3">
+            <div class="panel">
+                <div class="sliders" id="sliders"></div>
+                <div class="caserow">
+                    <span class="lbl">Try</span>
+                    <button class="btn case" data-case="0">Defaults <span class="kk">Z</span></button>
+                    <button class="btn case" data-case="1">Case 1</button>
+                    <button class="btn case" data-case="2">Case 2</button>
+                    <button class="btn case" data-case="3">Case 3</button>
+                    <button class="btn case" data-case="4">Case 4</button>
+                    <button class="btn case" data-case="5">Case 5</button>
+                    <button class="btn bk" id="bk3">&#9664; back <span class="kk">&uarr;</span></button>
+                    <button class="btn nxt" id="nxt3">next case <span class="kk">Space</span></button>
+                    <span class="cname" id="cname"></span>
+                </div>
+            </div>
+            <div class="row3">
+                <div class="panel chartp">
+                    <div class="phead">Power of a block of a million gates against clock frequency <span class="dimtxt">&mdash; both axes logarithmic</span></div>
+                    <svg id="ch3" viewBox="0 0 1142 560"></svg>
+                </div>
+                <div class="meterc">
+                    <div class="panel">
+                        <div class="phead">Static share of the total</div>
+                        <div class="hero"><div class="hn" id="share3"></div><div class="hl">of <b id="tot3"></b><br>is spent holding, not switching</div></div>
+                    </div>
+                    <div class="panel meter">
+                        <div class="phead">The meter <span class="dimtxt">&mdash; the total split into its two terms</span></div>
+                        <svg id="m3" viewBox="0 0 658 150"></svg>
+                        <div class="xline" id="x3"></div>
+                    </div>
+                    <div class="panel card why">
+                        <div class="wt" id="whyT"></div>
+                        <div class="wl" id="whyL"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 — design levers -->
+        <div class="page" id="p4">
+            <div class="cols4">
+                <div class="panel lev">
+                    <div class="lh"><span class="sw" style="background:#4a6fa5"></span>To cut dynamic power <span class="eq"><i>&alpha;</i> <i>C</i> <i>V</i><sub>DD</sub><sup>2</sup> <i>f</i></span></div>
+                    <ul>
+                        <li><b>Lower V<sub>DD</sub></b>: the best lever, because the supply is squared. 1.0 &rarr; 0.8 V cuts dynamic power to <b id="lv08"></b>.</li>
+                        <li><b>Lower f</b>: power falls in step with the clock, but so does the work done per second.</li>
+                        <li><b>Gate the clock</b>: stop the clock to a block that is idle, so its &alpha; drops to 0.</li>
+                        <li><b>Shrink C</b>: shorter wires and smaller loads.</li>
+                    </ul>
+                </div>
+                <div class="panel lev">
+                    <div class="lh"><span class="sw" style="background:#b8640a"></span>To cut static power <span class="eq"><i>N</i> <i>I</i><sub>leak</sub> <i>V</i><sub>DD</sub></span></div>
+                    <ul>
+                        <li><b>Power-gate idle blocks</b>: cut their supply, so they leak nothing at all.</li>
+                        <li><b>Lower V<sub>DD</sub></b>: helps here too, but only in proportion. 1.0 &rarr; 0.8 V cuts static power to <b id="lv08s"></b>.</li>
+                        <li><b>Choose a low-leakage process</b>: transistors that leak less, usually at some cost in speed.</li>
+                        <li>Slowing the clock or gating it does <b>nothing</b> for this term.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="row4">
+                <div class="panel tab4">
+                    <div class="phead">Halve one quantity, starting from the defaults <span class="dimtxt">&mdash; new power &divide; old</span></div>
+                    <table id="tab4"></table>
+                    <div class="note4">Halving V<sub>DD</sub> quarters the dynamic power. No other single quantity does as much, and dynamic is nearly all of the total at these settings.</div>
+                </div>
+                <div class="panel hook">
+                    <div class="hh">The biggest lever is not free</div>
+                    <div class="hb">Lowering V<sub>DD</sub> shrinks the gap between a 0 and a 1, so there is less <b>noise margin</b>, and every gate switches more <b>slowly</b>.</div>
+                    <div class="hq">So how low can the supply go before the logic stops being reliable, or fast enough? That is the next topic: <b data-topic="power-noise-margin-and-speed-trades">Power, Noise Margin and Speed Trades</b>.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress"><div class="pdot" data-dot="1"></div><div class="pdot" data-dot="2"></div><div class="pdot" data-dot="3"></div><div class="pdot" data-dot="4"></div></div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">4</span> or <span class="k">&larr;</span><span class="k">&rarr;</span> beat
+            &middot; <span class="k">Space</span> next &middot; <span class="k">&uarr;</span> back
+            &middot; <span class="k">V</span><span class="k">F</span><span class="k">A</span><span class="k">C</span><span class="k">L</span> pick a slider, then <span class="k">&larr;</span><span class="k">&rarr;</span> (beat 3)
+            &middot; <span class="k">Z</span> defaults &middot; <span class="k">R</span> reset &middot; <span class="k">D</span> definitions
+        </div>
+    </div>
+
+    <div class="defs" id="defs">
+        <div class="defs-card">
+            <div class="defs-head"><div class="defs-title">Definitions</div><div class="defs-close">D or Esc closes</div></div>
+            <div class="defs-list">
+                <div class="ds" style="color:#4a6fa5">Dynamic power</div><div class="dd">The cost of <b>changing</b> outputs: P<sub>dynamic</sub> = &alpha; C V<sub>DD</sub><sup>2</sup> f. Each 0 &rarr; 1 takes C V<sub>DD</sub><sup>2</sup> from the supply; half is stored on C, half is heat in the PMOS. The 1 &rarr; 0 turns the stored half into heat in the NMOS.</div>
+                <div class="ds" style="color:#b8640a">Static power</div><div class="dd">The cost of <b>holding</b> outputs: P<sub>static</sub> = N I<sub>leak</sub> V<sub>DD</sub>, from the small current that leaks through every off transistor. Paid whether or not anything switches.</div>
+                <div class="ds">C, load capacitance</div><div class="dd">Everything the output has to charge: the inputs of the gates it drives, plus the wire. A few femtofarads (fF, 10<sup>&minus;15</sup> F) per gate.</div>
+                <div class="ds">&alpha;, activity factor</div><div class="dd">The fraction of clock cycles in which this output goes 0 &rarr; 1. A clock net has &alpha; = 1; a typical logic node is near 0.1.</div>
+                <div class="ds">fJ, fF</div><div class="dd"><b>Femtojoule</b> and <b>femtofarad</b>: 1 fJ = 10<sup>&minus;15</sup> J, 1 fF = 10<sup>&minus;15</sup> F. The energy and the capacitance of one gate are this small.</div>
+                <div class="ds">f, V<sub>DD</sub>, N</div><div class="dd">The clock frequency, the supply voltage, and the number of gates in the block.</div>
+                <div class="ds">I<sub>leak</sub></div><div class="dd">The leakage current of one idle gate, in nanoamps. In <b data-topic="non-ideal-switching">Non-ideal Switching</b> it came from a 1 G&Omega; off resistance.</div>
+                <div class="ds">Crossover frequency</div><div class="dd">The clock frequency at which the two terms are equal: f = I<sub>leak</sub> / (&alpha; C V<sub>DD</sub>). Below it, static power is the larger one.</div>
+                <div class="ds">Clock gating</div><div class="dd">Stopping the clock to an idle block so nothing in it switches. It cuts dynamic power only.</div>
+                <div class="ds">Power gating</div><div class="dd">Disconnecting an idle block from the supply so it cannot leak. It cuts static power; the block forgets its state unless it is saved first.</div>
+                <div class="ds">Header (sleep switch)</div><div class="dd">One PMOS between V<sub>DD</sub> and a block, driven by a control signal <b>sleep</b>. sleep = 0: on, the block runs. sleep = 1: off, the block is cut from the supply.</div>
+                <div class="ds">Short-circuit current</div><div class="dd">The brief current straight from V<sub>DD</sub> to ground while an input is between 0 and 1 and both transistors conduct. Small with fast edges; left out here.</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALING ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const container = document.getElementById('viewportContainer'), surface = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * 16 / 9; } else { cw = vw; ch = cw * 9 / 16; }
+        container.style.width = cw + 'px'; container.style.height = ch + 'px';
+        surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    const $ = (id) => document.getElementById(id);
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+    function txt(parent, x, y, s, cls, attrs = {}) { const t = el('text', { x, y, class: cls, ...attrs }, parent); t.textContent = s; return t; }
+    // text with a subscript: txtSub(g, x, y, 'V', 'DD', ' = 1.0 V', cls)
+    function txtSub(parent, x, y, a, sub, rest, cls, attrs = {}) { const t = el('text', { x, y, class: cls, ...attrs }, parent);
+        const t1 = el('tspan', {}, t); t1.textContent = a; const t2 = el('tspan', { 'baseline-shift': 'sub', 'font-size': '70%' }, t); t2.textContent = sub;
+        if (rest) { const t3 = el('tspan', { 'baseline-shift': '0' }, t); t3.textContent = rest; } return t; }
+    const clear = (svg) => { while (svg.firstChild) svg.removeChild(svg.firstChild); };
+    const poly = (pts) => pts.map(p => p.join(',')).join(' ');
+
+    // ============ THE MODEL (one source for every number on screen) ============
+    const NGATES = 1e6;
+    const B1 = { C: 10e-15, V: 1.0, R: 1e3 };                 // beat 1-2 inverter: 10 fF, 1.0 V, R_on = 1 kΩ (Non-ideal Switching)
+    B1.tau = B1.R * B1.C;                                     // 10 ps
+    const ILEAK2 = 5e-9;                                      // beat 2: 5 nA per gate
+    const pDyn = (s) => s.alpha * NGATES * s.C * s.V * s.V * s.f;
+    const pStat = (s) => NGATES * s.I * s.V;
+    const fCross = (s) => s.alpha > 0 ? s.I / (s.alpha * s.C * s.V) : Infinity;
+    // formatting: 4 significant figures, SI prefix, trailing zeros dropped (rounding error < 0.05 %)
+    const sig = (x, n = 4) => String(parseFloat(x.toPrecision(n)));
+    function fmtP(W) { if (W === 0) return '0 W'; const U = [[1, 'W'], [1e-3, 'mW'], [1e-6, 'µW'], [1e-9, 'nW'], [1e-12, 'pW']];
+        for (const [k, u] of U) if (Math.abs(W) >= k * 0.99995) return sig(W / k) + ' ' + u; return sig(W / 1e-12) + ' pW'; }
+    function fmtF(Hz) { const U = [[1e9, 'GHz'], [1e6, 'MHz'], [1e3, 'kHz'], [1, 'Hz']]; for (const [k, u] of U) if (Hz >= k * 0.99995) return sig(Hz / k) + ' ' + u; return sig(Hz) + ' Hz'; }
+    function fmtShare(s) { return sig(s * 100, 3) + ' %'; }
+    const fmtE = (J) => sig(J * 1e15) + ' fJ';
+
+    // ============ BEAT 1-2: THE INVERTER DRAWING ============
+    // geometry (viewBox 640 x 540). Every wire is listed in W1 so the label checks can see it.
+    const G = { rail: 54, xs: 320, gx: 278, ch: 290, pT: 122, pB: 190, nT: 330, nB: 398, out: 260, gnd: 470, xin: 200, xcap: 470, capT: 340, capB: 354, xo: 560 };
+    const W1 = [
+        { id: 'vdd', pts: [[G.xs, G.rail], [G.xs, G.pT]] },
+        { id: 'p-out', pts: [[G.xs, G.pB], [G.xs, G.out]] },
+        { id: 'out-n', pts: [[G.xs, G.out], [G.xs, G.nT]] },
+        { id: 'n-gnd', pts: [[G.xs, G.nB], [G.xs, G.gnd]] },
+        { id: 'out', pts: [[G.xs, G.out], [G.xo, G.out]] },
+        { id: 'cap-top', pts: [[G.xcap, G.out], [G.xcap, G.capT]] },
+        { id: 'cap-gnd', pts: [[G.xcap, G.capB], [G.xcap, G.gnd]] },
+        { id: 'gnd', pts: [[G.xs, G.gnd], [G.xcap, G.gnd]] },
+        { id: 'in', pts: [[70, G.out], [G.xin, G.out]] },
+        { id: 'in-v', pts: [[G.xin, 156], [G.xin, 364]] },
+        { id: 'in-p', pts: [[G.xin, 156], [G.gx - 16, 156]] },
+        { id: 'in-n', pts: [[G.xin, 364], [G.gx, 364]] },
+    ];
+    // power gating (beat 2, step 5): a header PMOS between the V_DD rail and the block, gate = sleep
+    const H = { yT: 64, yB: 100, gy: 82, xsl: 110 };
+    const WG = [{ id: 'vdd-h', pts: [[G.xs, G.rail], [G.xs, H.yT]] }, { id: 'h-p', pts: [[G.xs, H.yB], [G.xs, G.pT]] }, { id: 'sleep', pts: [[H.xsl, H.gy], [G.gx - 16, H.gy]] }]
+        .concat(W1.filter(w => w.id !== 'vdd'));
+    const wiresOf = (st) => st.gated ? WG : W1;
+    // state: { inp, out, charged, path: 'chg'|'dis'|'leakP'|'leakN'|null, heat: 'P'|'N'|null, stored: J }
+    function drawInverter(svg, st) {
+        clear(svg);
+        const gx = G.gx, ch = G.ch, xs = G.xs, xg = (G.xs + G.xcap) / 2;
+        const onP = st.inp === 0, onN = st.inp === 1;
+        // transistor highlight boxes (behind)
+        el('rect', { x: 236, y: 104, width: 222, height: 104, rx: 6, class: 'tbox' + (st.heat === 'P' ? ' heat' : st.path === 'leakP' && !st.gated ? ' leak' : '') }, svg);
+        el('rect', { x: 236, y: 312, width: 222, height: 104, rx: 6, class: 'tbox' + (st.heat === 'N' ? ' heat' : st.path === 'leakN' && !st.gated ? ' leak' : '') }, svg);
+        // rails
+        el('line', { x1: 250, y1: G.rail, x2: 390, y2: G.rail, class: 'rail' }, svg);
+        txtSub(svg, 320, G.rail - 16, 'V', 'DD', ' = 1.0 V', 'cl', { 'text-anchor': 'middle' });
+        // ground: rail + symbol
+        const gc = xg; el('line', { x1: gc, y1: G.gnd, x2: gc, y2: G.gnd + 18, class: 'w' }, svg);
+        el('line', { x1: gc - 22, y1: G.gnd + 18, x2: gc + 22, y2: G.gnd + 18, class: 'rail' }, svg);
+        el('line', { x1: gc - 14, y1: G.gnd + 25, x2: gc + 14, y2: G.gnd + 25, class: 'rail' }, svg);
+        el('line', { x1: gc - 6, y1: G.gnd + 32, x2: gc + 6, y2: G.gnd + 32, class: 'rail' }, svg);
+        if (st.gated) el('rect', { x: 236, y: 58, width: 222, height: 48, rx: 6, class: 'tbox hdr' }, svg);
+        for (const w of wiresOf(st)) el('polyline', { points: poly(w.pts), class: 'w' + (w.id === 'sleep' ? ' slp' : ''), 'data-w': w.id }, svg);
+        // MOSFETs: gate plate, channel, drain/source stubs (3-terminal symbol)
+        const mos = (yT, yB, pmos) => {
+            el('line', { x1: gx, y1: yT + 6, x2: gx, y2: yB - 6, class: 'mos' }, svg);
+            el('line', { x1: ch, y1: yT - 6, x2: ch, y2: yB + 6, class: 'mos' }, svg);
+            el('polyline', { points: poly([[ch, yT], [xs, yT]]), class: 'mos' }, svg);
+            el('polyline', { points: poly([[ch, yB], [xs, yB]]), class: 'mos' }, svg);
+            if (pmos) el('circle', { cx: gx - 8, cy: (yT + yB) / 2, r: 7, class: 'mos bub' }, svg);
+        };
+        mos(G.pT, G.pB, true); mos(G.nT, G.nB, false);
+        if (st.gated) mos(H.yT, H.yB, true);
+        // capacitor plates
+        el('line', { x1: G.xcap - 30, y1: G.capT, x2: G.xcap + 30, y2: G.capT, class: 'cap' + (st.stored > 0 ? ' full' : '') }, svg);
+        el('line', { x1: G.xcap - 30, y1: G.capB, x2: G.xcap + 30, y2: G.capB, class: 'cap' + (st.stored > 0 ? ' full' : '') }, svg);
+        // junction dots
+        for (const [x, y] of [[G.xin, G.out], [xs, G.out], [G.xcap, G.out], [gc, G.gnd]]) el('circle', { cx: x, cy: y, r: 4.5, class: 'jd' }, svg);
+        // current path overlay
+        const P = {
+            chg: [[xs, G.rail], [xs, G.pT], [ch, G.pT], [ch, G.pB], [xs, G.pB], [xs, G.out], [G.xcap, G.out], [G.xcap, G.capT]],
+            dis: [[G.xcap, G.capT], [G.xcap, G.out], [xs, G.out], [xs, G.nT], [ch, G.nT], [ch, G.nB], [xs, G.nB], [xs, G.gnd], [gc, G.gnd]],
+            gated: [[xs, H.yB], [xs, G.pT], [ch, G.pT], [ch, G.pB], [xs, G.pB], [xs, G.out], [xs, G.nT], [ch, G.nT], [ch, G.nB], [xs, G.nB], [xs, G.gnd], [gc, G.gnd]],
+            leak: [[xs, G.rail], [xs, G.pT], [ch, G.pT], [ch, G.pB], [xs, G.pB], [xs, G.out], [xs, G.nT], [ch, G.nT], [ch, G.nB], [xs, G.nB], [xs, G.gnd], [gc, G.gnd]],
+        };
+        const pk = st.gated ? 'gated' : st.path === 'leakP' || st.path === 'leakN' ? 'leak' : st.path;
+        if (pk) el('polyline', { points: poly(P[pk]), class: 'path ' + (pk === 'chg' ? 'chg' : pk === 'dis' ? 'dis' : pk === 'gated' ? 'cut' : 'lk'), 'data-path': pk }, svg);
+        if (st.gated) { txt(svg, 340, H.gy + 7, 'header: off', 'cs on', { 'data-val': 'hstate' }); txt(svg, 100, H.gy + 7, 'sleep', 'cl mono slp', { 'text-anchor': 'end' }); txt(svg, 100, H.gy + 33, '= 1', 'cs on', { 'text-anchor': 'end', 'data-val': 'sleep' }); }
+        // labels
+        txt(svg, 62, G.out + 7, 'in', 'cl mono', { 'text-anchor': 'end' });
+        txt(svg, 62, G.out + 34, '= ' + st.inp, 'cs on', { 'text-anchor': 'end', 'data-val': 'in' });
+        txt(svg, G.xo + 10, G.out + 7, 'out', 'cl mono');
+        txt(svg, G.xo + 10, G.out + 34, '= ' + st.out, 'cs on', { 'data-val': 'out' });
+        txt(svg, 340, 150, 'PMOS', 'cl');
+        const pState = onP ? (st.heat === 'P' ? 'on · heating' : 'on') : (st.path === 'leakP' ? (st.gated ? 'off' : 'off · leaking') : 'off');
+        const nState = onN ? (st.heat === 'N' ? 'on · heating' : 'on') : (st.path === 'leakN' ? (st.gated ? 'off' : 'off · leaking') : 'off');
+        txt(svg, 340, 178, pState, 'cs' + (st.heat === 'P' ? ' heat' : st.path === 'leakP' && !st.gated ? ' leak' : onP ? ' on' : ''), { 'data-val': 'pstate' });
+        txt(svg, 340, 358, 'NMOS', 'cl');
+        txt(svg, 340, 386, nState, 'cs' + (st.heat === 'N' ? ' heat' : st.path === 'leakN' && !st.gated ? ' leak' : onN ? ' on' : ''), { 'data-val': 'nstate' });
+        txt(svg, G.xcap + 42, G.capT + 2, 'C', 'cl');
+        txt(svg, G.xcap + 42, G.capT + 26, '10 fF', 'cs');
+        txt(svg, G.xcap + 42, G.capT + 56, st.stored > 0 ? 'holds ' + fmtE(st.stored) : 'empty', 'cs' + (st.stored > 0 ? ' store' : ''), { 'data-val': 'stored' });
+    }
+
+    // ============ BEAT 1 ============
+    // the input flips on each step; the output is its complement. Toggles at t = 50, 150, 250, 350 ps.
+    const IN1 = [1, 0, 1, 0, 1], NS1 = IN1.length - 1, TOG = [null, 50, 150, 250, 350], TMAX = 450;
+    let s1 = 0;
+    function energy1(k) {           // after step k: supply, stored, heat in PMOS / NMOS (exact, from C V^2)
+        const E = B1.C * B1.V * B1.V; let rises = 0, falls = 0;
+        for (let j = 1; j <= k; j++) { if (1 - IN1[j] > 1 - IN1[j - 1]) rises++; else falls++; }
+        const out = 1 - IN1[k];
+        return { supply: rises * E, stored: out ? E / 2 : 0, heatP: rises * E / 2, heatN: falls * E / 2, heat: rises * E - (out ? E / 2 : 0), rises, falls };
+    }
+    // waveforms: Vout(t) and supply current i(t); the supply current is truncated after 8 tau (e^-8 = 0.03 %)
+    function wave1(t) {
+        let v = 1 - IN1[0], i = 0;
+        for (let j = 1; j <= NS1; j++) { const t0 = TOG[j]; if (t < t0) break; const dt = (t - t0) * 1e-12, e = Math.exp(-dt / B1.tau);
+            const rising = IN1[j] === 0;
+            v = rising ? B1.V * (1 - e) : B1.V * e;
+            i = rising && dt <= 8 * B1.tau ? (B1.V / B1.R) * e : 0; }
+        return { v, i };
+    }
+    // supply power p(t) = V_DD · i(t): same shape as the current; at 1.0 V the 1 mA peak is 1 mW. Its area per 0 -> 1 is C·V².
+    const pow1 = (t) => { const w = wave1(t); return { v: w.v, i: B1.V * w.i }; };
+    // the zoomed-out step: 20 clock cycles at f = 1 GHz (period 1 ns); a fixed pattern with exactly 2 rising edges in 20 cycles (alpha = 0.1)
+    const ZF = 1e9, ZCYC = 20, ZRISE = [3, 12], ZFALL = [6, 14];       // edges at these clock edges (ns)
+    const ZEDGES = ZRISE.map(c => ({ c, up: 1 })).concat(ZFALL.map(c => ({ c, up: 0 }))).sort((a, b) => a.c - b.c);
+    function waveZ(tns) {               // v(t), p(t) with t in ns
+        let v = 0, p = 0;
+        for (const e of ZEDGES) { if (tns < e.c) break; const dt = (tns - e.c) * 1e-9, x = Math.exp(-dt / B1.tau);
+            v = e.up ? B1.V * (1 - x) : B1.V * x; p = e.up && dt <= 8 * B1.tau ? B1.V * (B1.V / B1.R) * x : 0; }
+        return { v, p };
+    }
+    const ZAVG = ZRISE.length * B1.C * B1.V * B1.V / (ZCYC / ZF);    // energy in the window / window length = 1 µW
+    const TL = { x0: 150, x1: 1130, vT: 34, vB: 110, iT: 150, iB: 232, axY: 258 };
+    const tx = (t) => TL.x0 + (TL.x1 - TL.x0) * t / TMAX;
+    function drawTimeline(svg, o) {
+        clear(svg);
+        const { tEnd, iMax, iUnit, iFmt, sample, edges } = o;
+        for (let t = 0; t <= TMAX; t += 50) el('line', { x1: tx(t), y1: TL.vT - 6, x2: tx(t), y2: TL.iB, class: 'gr' }, svg);
+        for (const [yT, yB] of [[TL.vT, TL.vB], [TL.iT, TL.iB]]) { el('line', { x1: TL.x0, y1: yB, x2: TL.x1, y2: yB, class: 'ax' }, svg); el('line', { x1: TL.x0, y1: yT, x2: TL.x1, y2: yT, class: 'gr' }, svg); }
+        txtSub(svg, 18, (TL.vT + TL.vB) / 2 + 6, 'V', 'out', '', 'rl');
+        txt(svg, 18, (TL.iT + TL.iB) / 2 - 8, 'supply', 'rl'); txt(svg, 18, (TL.iT + TL.iB) / 2 + 18, o.row || 'current', 'rl');
+        txt(svg, TL.x0 - 10, TL.vT + 6, '1 V', 'tk mono', { 'text-anchor': 'end' }); txt(svg, TL.x0 - 10, TL.vB + 5, '0', 'tk mono', { 'text-anchor': 'end' });
+        txt(svg, TL.x0 - 10, TL.iT + 6, iMax, 'tk mono', { 'text-anchor': 'end' }); txt(svg, TL.x0 - 10, TL.iB + 5, '0', 'tk mono', { 'text-anchor': 'end' });
+        for (let t = 0; t <= TMAX; t += 100) txt(svg, tx(t), TL.axY + 18, t + ' ps', 'tk mono', { 'text-anchor': 'middle' });
+        // edge labels above the voltage strip
+        for (const e of edges) if (e.t < tEnd) txt(svg, tx(e.t) + 6, TL.vT - 12, e.s, 'edgel');
+        // the traces, sampled every 0.5 ps up to tEnd
+        const vp = [], ip = []; const N = Math.round(tEnd * 2);
+        for (let n = 0; n <= N; n++) { const t = n / 2, w = sample(t);
+            if (w.v !== null) vp.push([+tx(t).toFixed(2), +(TL.vB - (TL.vB - TL.vT) * w.v / B1.V).toFixed(2)]);
+            ip.push([+tx(t).toFixed(2), +(TL.iB - (TL.iB - TL.iT) * w.i / iUnit).toFixed(2)]); }
+        el('polyline', { points: poly(vp), class: 'ln v', 'data-tr': 'v' }, svg);
+        el('polygon', { points: poly([[tx(0), TL.iB], ...ip, [tx(tEnd), TL.iB]]), class: 'wash ' + o.icls }, svg);
+        el('polyline', { points: poly(ip), class: 'ln ' + o.icls, 'data-tr': 'i' }, svg);
+        el('line', { x1: tx(tEnd), y1: TL.vT - 6, x2: tx(tEnd), y2: TL.iB + 4, class: 'cur', 'data-cursor': 1 }, svg);
+        if (o.note) txt(svg, o.note.x, o.note.y, o.note.s, 'lab2', { 'text-anchor': o.note.anchor || 'start' });
+        if (o.vnote) txt(svg, o.vnote.x, o.vnote.y, o.vnote.s, 'lab2');
+        for (const t0 of (o.areas || [])) if (t0 < tEnd) txt(svg, tx(t0) + 30, TL.iT + 26, 'area = ' + fmtE(B1.C * B1.V * B1.V), 'lab', { 'data-area': t0 });
+        if (o.ival) txt(svg, Math.min(tx(tEnd) + 10, TL.x1 - 70), TL.iT + (TL.iB - TL.iT) * (1 - o.ival.frac) - 8, o.ival.s, 'lab', { 'data-val': 'ival' });
+    }
+    const STEP1 = [
+        ['The output is 0 and the load is empty.', 'C stands for the inputs of the next gates plus the wire. Press next to flip the input.'],
+        ['Output 0 → 1: the supply charges C through the PMOS.', 'The supply gives C·V² = 10 fJ (1 fJ = 10⁻¹⁵ J, a femtojoule). Half is stored on C; half heats the PMOS.'],
+        ['Output 1 → 0: the NMOS empties C into ground.', 'The 5 fJ that was stored becomes heat in the NMOS. The supply gives nothing.'],
+        ['Output 0 → 1 again: another 10 fJ from the supply.', 'Each 0 → 1 is one spike on the power graph, and every spike has the same area: 10 fJ.'],
+        ['Two full 0 → 1 → 0 cycles: 20 fJ in, 20 fJ of heat.', 'Every full cycle turns C·V² of supply energy into heat. Next: what this looks like over many clock cycles.'],
+        ['Dynamic power is just the average of the supply-power graph.', 'The energy of one spike times how many spikes happen each second: 10 fJ × 10⁸ per second = 1 µW.'],
+    ];
+    const ZSTEP = 5;
+    const ZX = { x0: 150, x1: 1130, vT: 26, vB: 68, pT: 94, pB: 158, aT: 182, aB: 240, axY: 258 };
+    const zx = (tns) => ZX.x0 + (ZX.x1 - ZX.x0) * tns / ZCYC;
+    const zyA = (w) => ZX.aB - (ZX.aB - ZX.aT) * w / 2e-6;          // average strip: 0 .. 2 µW
+    function drawZoom(svg) {
+        clear(svg);
+        for (let c = 0; c <= ZCYC; c++) el('line', { x1: zx(c), y1: ZX.vT, x2: zx(c), y2: ZX.aB, class: 'gr', 'data-clk': c }, svg);
+        for (const [yT, yB] of [[ZX.vT, ZX.vB], [ZX.pT, ZX.pB], [ZX.aT, ZX.aB]]) { el('line', { x1: ZX.x0, y1: yB, x2: ZX.x1, y2: yB, class: 'ax' }, svg); el('line', { x1: ZX.x0, y1: yT, x2: ZX.x1, y2: yT, class: 'gr' }, svg); }
+        txtSub(svg, 18, (ZX.vT + ZX.vB) / 2 + 6, 'V', 'out', '', 'rl');
+        txt(svg, 18, (ZX.pT + ZX.pB) / 2 - 4, 'supply', 'rl'); txt(svg, 18, (ZX.pT + ZX.pB) / 2 + 20, 'power', 'rl');
+        txt(svg, 18, (ZX.aT + ZX.aB) / 2 + 6, 'average', 'rl');
+        txt(svg, ZX.x0 - 10, ZX.vT + 6, '1 V', 'tk mono', { 'text-anchor': 'end' }); txt(svg, ZX.x0 - 10, ZX.vB + 5, '0', 'tk mono', { 'text-anchor': 'end' });
+        txt(svg, ZX.x0 - 10, ZX.pT + 6, '1 mW', 'tk mono', { 'text-anchor': 'end' }); txt(svg, ZX.x0 - 10, ZX.pB + 5, '0', 'tk mono', { 'text-anchor': 'end' });
+        txt(svg, ZX.x0 - 10, ZX.aT + 6, '2 \u00b5W', 'tk mono', { 'text-anchor': 'end' }); txt(svg, ZX.x0 - 10, ZX.aB + 5, '0', 'tk mono', { 'text-anchor': 'end' });
+        for (let c = 0; c <= ZCYC; c += 5) txt(svg, zx(c), ZX.axY + 18, c + ' ns', 'tk mono', { 'text-anchor': 'middle' });
+        // traces: fine samples near each edge, coarse elsewhere
+        const ts = []; for (let c = 0; c < ZCYC; c++) { if (c && ZEDGES.some(e => e.c === c)) ts.push(c - 1e-6); ts.push(c); if (ZEDGES.some(e => e.c === c)) for (let d = 0.001; d <= 0.1; d += 0.001) ts.push(c + d); ts.push(c + 0.5); } ts.push(ZCYC);
+        const vp = ts.map(t => [+zx(t).toFixed(2), +(ZX.vB - (ZX.vB - ZX.vT) * waveZ(t).v / B1.V).toFixed(2)]);
+        const pp = ts.map(t => [+zx(t).toFixed(2), +(ZX.pB - (ZX.pB - ZX.pT) * waveZ(t).p / 1e-3).toFixed(2)]);
+        el('polyline', { points: poly(vp), class: 'ln v', 'data-tr': 'v' }, svg);
+        el('polygon', { points: poly([[zx(0), ZX.pB], ...pp, [zx(ZCYC), ZX.pB]]), class: 'wash dyn' }, svg);
+        el('polyline', { points: poly(pp), class: 'ln dyn', 'data-tr': 'p' }, svg);
+        for (const c of ZRISE) { el('circle', { cx: zx(c), cy: ZX.pT, r: 4, class: 'dotm dyn', 'data-spike': c }, svg); txt(svg, zx(c) + 10, ZX.pT + 22, fmtE(B1.C * B1.V * B1.V), 'lab', { 'data-area': c }); }
+        for (const e of ZEDGES) txt(svg, zx(e.c) + 5, ZX.vT - 8, e.up ? '0 \u2192 1' : '1 \u2192 0', 'edgel');
+        txt(svg, zx(14.4), ZX.pT + 22, 'spikes peak at 1 mW; the average is', 'lab2');
+        txt(svg, zx(14.4), ZX.pT + 42, '1000\u00d7 smaller, so it gets its own axis', 'lab2');
+        // the average, on its own µW axis
+        const ya = zyA(ZAVG);
+        el('line', { x1: ZX.x0, y1: ya, x2: ZX.x1, y2: ya, class: 'avgl', 'data-avg': ZAVG }, svg);
+        txtSub(svg, ZX.x0 + 12, ya - 14, 'P', 'dynamic', ' = average of this graph: 10 fJ per spike \u00d7 spikes per second = ' + fmtP(ZAVG), 'lab', { 'data-val': 'avg' });
+    }
+    function paintZoom() {
+        const E = B1.C * B1.V * B1.V, n = ZRISE.length;
+        drawInverter($('c1'), { inp: 1, out: 0, stored: 0, path: null, heat: null });
+        $('snum1').textContent = `STEP ${ZSTEP + 1} OF ${ZSTEP + 1}`; $('head1').textContent = STEP1[ZSTEP][0]; $('line1').textContent = STEP1[ZSTEP][1];
+        $('eSup').innerHTML = sig(n * E * 1e15) + ' <span class="u">fJ</span>'; $('eSupS').textContent = `${n} \u00d7 C\u00b7V\u00b2 in ${ZCYC} cycles`;
+        $('eSto').innerHTML = '0 <span class="u">fJ</span>'; $('eStoS').textContent = 'the output ends at 0';
+        $('eHeat').innerHTML = sig(n * E * 1e15) + ' <span class="u">fJ</span>'; $('eHeatS').textContent = `PMOS ${sig(n * E / 2 * 1e15)} fJ \u00b7 NMOS ${sig(n * E / 2 * 1e15)} fJ`;
+        $('t1head').innerHTML = `Twenty clock cycles at 1 GHz <span class="dimtxt">&mdash; a 0 &rarr; 1 in ${n} of ${ZCYC} cycles, so &alpha; = ${sig(n / ZCYC, 3)}</span>`;
+        drawZoom($('t1'));
+    }
+    function paintB1() {
+        $('bk1').disabled = s1 === 0; $('nxt1').disabled = s1 === ZSTEP; $('nxt1t').textContent = s1 >= NS1 ? 'next: zoom out' : 'next: flip the input';
+        if (s1 === ZSTEP) { paintZoom(); paintWorked(); return; }
+        $('t1head').innerHTML = 'Output voltage and supply power <span class="dimtxt">&mdash; the supply works only at the 0 &rarr; 1 edges</span>';
+        const k = s1, E = energy1(k), out = 1 - IN1[k];
+        const trans = k === 0 ? null : (out ? 'up' : 'down');
+        drawInverter($('c1'), { inp: IN1[k], out, stored: E.stored, path: trans === 'up' ? 'chg' : trans === 'down' ? 'dis' : null, heat: trans === 'up' ? 'P' : trans === 'down' ? 'N' : null });
+        $('snum1').textContent = `STEP ${k + 1} OF ${ZSTEP + 1}`; $('head1').textContent = STEP1[k][0]; $('line1').textContent = STEP1[k][1];
+        $('eSup').innerHTML = sig(E.supply * 1e15) + ' <span class="u">fJ</span>';
+        $('eSupS').textContent = `${E.rises} × C·V² (one per 0 → 1)`;
+        $('eSto').innerHTML = sig(E.stored * 1e15) + ' <span class="u">fJ</span>';
+        $('eStoS').textContent = out ? '½ C·V² while the output is 1' : 'nothing while the output is 0';
+        $('eHeat').innerHTML = sig(E.heat * 1e15) + ' <span class="u">fJ</span>';
+        $('eHeatS').textContent = `PMOS ${sig(E.heatP * 1e15)} fJ · NMOS ${sig(E.heatN * 1e15)} fJ`;
+        const tEnd = k === 0 ? TOG[1] - 5 : k < NS1 ? TOG[k] + 95 : TMAX;
+        drawTimeline($('t1'), { tEnd, iMax: '1 mW', iUnit: 1e-3, sample: pow1, icls: 'dyn', row: 'power',
+            areas: TOG.filter((t, j) => j && IN1[j] === 0),
+            edges: TOG.slice(1).map((t, j) => ({ t, s: IN1[j + 1] === 0 ? '0 → 1' : '1 → 0' })) });
+        paintWorked();
+    }
+    function paintWorked() {
+        const g = { alpha: 0.1, C: B1.C, V: 1.0, f: 1e9 }, g5 = { ...g, V: 5.0 }, pg = (s) => s.alpha * s.C * s.V * s.V * s.f;
+        $('worked1').innerHTML = `&alpha; = 0.1 (a 0 &rarr; 1 in one cycle of ten), f = 1 GHz: ${fmtE(g.C * g.V * g.V)} &times; 10<sup>${Math.log10(g.alpha * g.f)}</sup> per second = <b>${fmtP(pg(g))}</b>. At 5 V: <b>${fmtP(pg(g5))}</b>, <b>${sig(pg(g5) / pg(g))}&times;</b> (the supply is squared).`;
+    }
+
+    // ============ BEAT 2 ============
+    let s2 = 0; const NS2 = 4, GSTEP = 4, TSLEEP = 300;
+    const IN2 = (k) => k === 0 ? 1 : 0;     // flips once at t = 225 ps, then holds
+    const TFLIP2 = 225;
+    function wave2(t) { const inp = t < TFLIP2 ? 1 : 0; return { v: (1 - inp) * B1.V, i: ILEAK2 }; }
+    // gated: from TSLEEP the header is off; the block's leakage is cut (drawn at ~0) and its output is no longer held (not drawn)
+    function wave2g(t) { return t < TSLEEP ? wave2(t) : { v: null, i: 0 }; }
+    const STEP2 = [
+        ['Input 1, output 0, and nothing is switching.', 'Yet a tiny current still flows: through the PMOS, which is off but not perfectly off.'],
+        ['Flip the input and hold it: now the off NMOS leaks.', 'One transistor is always off, so one is always leaking. The current is the same 5 nA.'],
+        ['One gate: 5 nA × 1.0 V = 5 nW. A million gates: 5 mW.', 'Per gate it rounds to zero. Multiplied by a million, it does not.'],
+        ['It is spent whether or not the chip is doing anything.', 'A phone asleep in your pocket is still paying it, every second.'],
+        ['The fix: switch the idle block off.', 'A header switch sits between the supply and the block. sleep = 1 turns it off and cuts the leak path.'],
+    ];
+    const B2CARD = $('b2card').innerHTML;
+    const B2PRICE = '<div class="ct">The price of switching a block off</div>The block <b>forgets</b> what it was holding, its outputs and any stored values, unless they are saved first. Waking up takes a little <b>time and energy</b> to recharge the block&rsquo;s supply, and the switch adds a little <b>area</b>.<div class="note">Phones and laptops switch off whole blocks that are idle, such as a radio or a camera interface.</div>';
+    function paintB2() {
+        const k = s2, inp = IN2(k), out = 1 - inp;
+        const g = k === GSTEP;
+        drawInverter($('c2'), { inp, out, stored: out && !g ? B1.C * B1.V * B1.V / 2 : 0, path: inp === 1 ? 'leakP' : 'leakN', heat: null, gated: g });
+        $('c2head').innerHTML = g ? 'The same inverter, behind a sleep switch <span class="dimtxt">&mdash; it stands for a whole idle block</span>' : 'The same inverter, holding still <span class="dimtxt">&mdash; nothing switches</span>';
+        $('b2card').innerHTML = g ? B2PRICE : B2CARD;
+        $('lkIs').textContent = g ? 'only the header\u2019s own small leak' : 'through the off transistor';
+        $('lkPs').innerHTML = g ? 'the block is cut from V<sub>DD</sub>' : 'I<sub>leak</sub> &times; V<sub>DD</sub> = 5 nA &times; 1.0 V';
+        $('lkNs').textContent = g ? 'for every gate behind the switch' : 'every second, busy or idle';
+        $('snum2').textContent = `STEP ${k + 1} OF ${NS2 + 1}`; $('head2').textContent = STEP2[k][0]; $('line2').textContent = STEP2[k][1];
+        $('lkI').innerHTML = sig(ILEAK2 * 1e9) + ' <span class="u">nA</span>';
+        const p1 = ILEAK2 * B1.V, pN = NGATES * ILEAK2 * B1.V;
+        $('lkP').innerHTML = fmtP(p1).replace(/ (\S+)$/, ' <span class="u">$1</span>');
+        $('lkN').innerHTML = fmtP(pN).replace(/ (\S+)$/, ' <span class="u">$1</span>');
+        $('lt2').classList.toggle('later', k < 2); $('lt3').classList.toggle('later', k < 2);
+        if (g) { for (const id of ['lkI', 'lkP', 'lkN']) $(id).innerHTML = '\u2248 0'; }
+        const tEnd = k === 0 ? TFLIP2 - 25 : TMAX;
+        if (g) { drawTimeline($('t2'), { tEnd, iMax: '10 nA', iUnit: 10e-9, sample: wave2g, icls: 'lk', edges: [{ t: TSLEEP, s: 'sleep = 1: header off' }],
+            ival: { frac: 0, s: '\u2248 0' }, note: { x: tx(TSLEEP) + 8, y: TL.iT + 22, s: 'leakage cut: only the header\u2019s own small leak' },
+            vnote: { x: tx(TSLEEP) + 8, y: (TL.vT + TL.vB) / 2 + 6, s: 'output no longer held' } });
+            $('bk2').disabled = false; $('nxt2').disabled = true; return; }
+        drawTimeline($('t2'), { tEnd, iMax: '10 nA', iUnit: 10e-9, sample: wave2, icls: 'lk', edges: [{ t: TFLIP2, s: 'input flips, then holds' }],
+            ival: { frac: ILEAK2 / 10e-9, s: '5 nA' },
+            note: k >= 1 ? { x: tx(TFLIP2) + 8, y: TL.iB - 10, s: 'the switching spike itself is off this scale: 1 mA is 200,000 × 5 nA' } : null });
+        $('bk2').disabled = k === 0; $('nxt2').disabled = k === NS2;
+    }
+
+    // ============ BEAT 3: THE METER ============
+    const STOPS = {
+        V: { name: 'V', sub: 'DD', key: 'V', vals: Array.from({ length: 45 }, (_, i) => +(0.6 + i * 0.1).toFixed(1)), def: 1.0, fmt: (v) => v.toFixed(1) + ' V', si: (v) => v },
+        f: { name: 'f', sub: '', key: 'F', vals: [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 4000], def: 1000, fmt: (v) => fmtF(v * 1e6), si: (v) => v * 1e6 },
+        alpha: { name: 'α', sub: '', key: 'A', vals: Array.from({ length: 101 }, (_, i) => +(i / 100).toFixed(2)), def: 0.1, fmt: (v) => v.toFixed(2), si: (v) => v },
+        C: { name: 'C', sub: '', key: 'C', vals: Array.from({ length: 50 }, (_, i) => i + 1), def: 10, fmt: (v) => v + ' fF', si: (v) => v * 1e-15 },
+        I: { name: 'I', sub: 'leak', key: 'L', vals: [1, 2, 5, 10, 20, 50, 100], def: 5, fmt: (v) => v + ' nA', si: (v) => v * 1e-9 },
+    };
+    const SKEYS = ['V', 'f', 'alpha', 'C', 'I'];
+    const S3 = {}; for (const k of SKEYS) S3[k] = STOPS[k].def;
+    const CASES = [
+        { name: 'The defaults: a busy block at 1 GHz on a modern 1.0 V core supply.', set: {} },
+        { name: 'Case 1 · near idle: the clock at 10 MHz.', set: { f: 10 } },
+        { name: 'Case 2 · every node toggles every cycle.', set: { alpha: 1 } },
+        { name: 'Case 3 · the old 5 V supply.', set: { V: 5.0 } },
+        { name: 'Case 4 · a leaky process, near idle.', set: { I: 50, f: 10 } },
+        { name: 'Case 5 · a low-voltage core: 0.7 V.', set: { V: 0.7 } },
+    ];
+    let kase = 0, custom = false, lastSlider = null, focusKey = null;
+    const si3 = () => { const o = {}; for (const k of SKEYS) o[k] = STOPS[k].si(S3[k]); return o; };
+    function buildSliders() {
+        const root = $('sliders');
+        for (const k of SKEYS) { const S = STOPS[k];
+            const d = document.createElement('div'); d.className = 'sl'; d.id = 'sl-' + k;
+            d.innerHTML = `<div class="sh"><span class="sn">${S.name}${S.sub ? '<sub>' + S.sub + '</sub>' : ''}<span class="k">${S.key}</span></span><span class="sv" id="sv-${k}"></span></div>
+                <input type="range" id="in-${k}" min="0" max="${S.vals.length - 1}" step="1">
+                <div class="sr"><span>${S.fmt(S.vals[0])}</span><span>${S.fmt(S.vals[S.vals.length - 1])}</span></div>`;
+            root.appendChild(d);
+            const inp = d.querySelector('input');
+            inp.addEventListener('input', () => { S3[k] = S.vals[+inp.value]; custom = true; lastSlider = k; paintB3(); });
+            inp.addEventListener('focus', () => { focusKey = k; markFocus(); });
+            inp.addEventListener('blur', () => { focusKey = null; markFocus(); });
+        }
+    }
+    function markFocus() { for (const k of SKEYS) $('sl-' + k).classList.toggle('focus', k === focusKey); }
+    function setS(o) { for (const k in o) { const S = STOPS[k]; if (!S) continue; let best = 0; S.vals.forEach((v, i) => { if (Math.abs(v - o[k]) < Math.abs(S.vals[best] - o[k])) best = i; }); S3[k] = S.vals[best]; } }
+    function setCase(c) { kase = Math.max(0, Math.min(CASES.length - 1, c)); for (const k of SKEYS) S3[k] = STOPS[k].def; setS(CASES[kase].set); custom = false; lastSlider = null; if (page === 3) paintB3(); }
+    // chart scales: f 1 MHz .. 4 GHz, P 0.1 mW .. 10 kW, both log
+    const CH = { x0: 118, x1: 1000, y0: 500, y1: 22, fmin: 1e6, fmax: 4e9, pmin: 1e-4, pmax: 1e4 };
+    const cx = (f) => CH.x0 + (CH.x1 - CH.x0) * (Math.log10(f) - Math.log10(CH.fmin)) / (Math.log10(CH.fmax) - Math.log10(CH.fmin));
+    const cy = (p) => CH.y0 - (CH.y0 - CH.y1) * (Math.log10(p) - Math.log10(CH.pmin)) / (Math.log10(CH.pmax) - Math.log10(CH.pmin));
+    const clampY = (y) => Math.max(CH.y1, Math.min(CH.y0, y));
+    function drawChart() {
+        const svg = $('ch3'); clear(svg); const s = si3();
+        el('defs', {}, svg).innerHTML = `<clipPath id="plotclip"><rect x="${CH.x0}" y="${CH.y1}" width="${CH.x1 - CH.x0}" height="${CH.y0 - CH.y1}"/></clipPath>`;
+        const YT = [[1e-4, '0.1 mW'], [1e-3, '1 mW'], [1e-2, '10 mW'], [1e-1, '100 mW'], [1, '1 W'], [10, '10 W'], [100, '100 W'], [1e3, '1 kW'], [1e4, '10 kW']];
+        for (const [p, l] of YT) { el('line', { x1: CH.x0, y1: cy(p), x2: CH.x1, y2: cy(p), class: 'gr' }, svg); txt(svg, CH.x0 - 10, cy(p) + 5, l, 'tk mono', { 'text-anchor': 'end' }); }
+        const XT = [[1e6, '1 MHz'], [1e7, '10 MHz'], [1e8, '100 MHz'], [1e9, '1 GHz'], [4e9, '4 GHz']];
+        for (const [f, l] of XT) { el('line', { x1: cx(f), y1: CH.y1, x2: cx(f), y2: CH.y0, class: 'gr' }, svg); txt(svg, cx(f), CH.y0 + 30, l, 'tk mono', { 'text-anchor': 'middle' }); }
+        el('line', { x1: CH.x0, y1: CH.y0, x2: CH.x1, y2: CH.y0, class: 'ax' }, svg);
+        txt(svg, (CH.x0 + CH.x1) / 2, CH.y0 + 54, 'clock frequency f', 'lab2', { 'text-anchor': 'middle' });
+        const g = el('g', { 'clip-path': 'url(#plotclip)' }, svg);
+        // static: flat in f
+        const ps = pStat(s); el('line', { x1: CH.x0, y1: cy(ps), x2: CH.x1, y2: cy(ps), class: 'ln stat', 'data-line': 'stat' }, g);
+        // dynamic: linear in f (a straight line of slope 1 on log-log)
+        const pts = []; for (let n = 0; n <= 60; n++) { const f = CH.fmin * Math.pow(CH.fmax / CH.fmin, n / 60); const pd = pDyn({ ...s, f }); if (pd > 0) pts.push([+cx(f).toFixed(2), +cy(pd).toFixed(2)]); }
+        if (pts.length) el('polyline', { points: poly(pts), class: 'ln dyn', 'data-line': 'dyn' }, g);
+        // crossover
+        const fx = fCross(s);
+        if (fx >= CH.fmin && fx <= CH.fmax && cy(ps) >= CH.y1 && cy(ps) <= CH.y0) {
+            el('circle', { cx: cx(fx), cy: cy(ps), r: 6, class: 'dotm x', 'data-mark': 'cross' }, svg);
+            const lx = cx(fx), right = lx < CH.x1 - 300;
+            txt(svg, right ? lx + 12 : lx - 12, cy(ps) + 26, 'equal at ' + fmtF(fx), 'lab2', { 'text-anchor': right ? 'start' : 'end', 'data-lab': 'cross' }); }
+        // the current f: a vertical line and the two operating points
+        const f0 = s.f, pd0 = pDyn(s);
+        el('line', { x1: cx(f0), y1: CH.y1, x2: cx(f0), y2: CH.y0, class: 'cur', 'data-mark': 'f' }, svg);
+        { const rt = cx(f0) < CH.x1 - 150; txt(svg, rt ? cx(f0) + 8 : cx(f0) - 8, CH.y1 + 21, 'f = ' + fmtF(f0), 'lab2', { 'text-anchor': rt ? 'start' : 'end', 'data-lab': 'f' }); }
+        if (pd0 > 0 && cy(pd0) >= CH.y1 && cy(pd0) <= CH.y0) el('circle', { cx: cx(f0), cy: cy(pd0), r: 6, class: 'dotm dyn', 'data-mark': 'pd' }, svg);
+        if (cy(ps) >= CH.y1 && cy(ps) <= CH.y0) el('circle', { cx: cx(f0), cy: cy(ps), r: 6, class: 'dotm stat', 'data-mark': 'ps' }, svg);
+        // direct labels at the right end, pushed apart, clamped to the plot
+        const yd = pd0 > 0 ? clampY(cy(pDyn({ ...s, f: CH.fmax }))) : CH.y0, yS = clampY(cy(ps));
+        let a = yd, b = yS; if (Math.abs(a - b) < 26) { const m = (a + b) / 2, up = a <= b ? -1 : 1; a = m + up * 13; b = m - up * 13; }
+        a = Math.max(CH.y1 + 6, Math.min(CH.y0 - 6, a)); b = Math.max(CH.y1 + 6, Math.min(CH.y0 - 6, b));
+        if (Math.abs(a - b) < 26) { if (a < b) b = a + 26; else a = b + 26; if (Math.max(a, b) > CH.y0 - 6) { const d = Math.max(a, b) - (CH.y0 - 6); a -= d; b -= d; } }
+        const LX = CH.x1 + 12;
+        el('line', { x1: LX, y1: a, x2: LX + 18, y2: a, class: 'ln dyn' }, svg); txt(svg, LX + 24, a + 6, pd0 > 0 ? 'dynamic' : 'dynamic: 0', 'lab', { 'data-lab': 'dyn' });
+        el('line', { x1: LX, y1: b, x2: LX + 18, y2: b, class: 'ln stat' }, svg); txt(svg, LX + 24, b + 6, 'static', 'lab', { 'data-lab': 'stat' });
+        // hover layer: crosshair + tooltip at any frequency
+        const tip = el('g', { class: 'tip hid' }, svg), hl = el('line', { y1: CH.y1, y2: CH.y0, class: 'cur' }, tip), tr = el('rect', { width: 250, height: 76, rx: 4 }, tip);
+        const t1 = txt(tip, 0, 0, '', 'lab2'), t2 = txt(tip, 0, 0, '', 'lab2'), t3 = txt(tip, 0, 0, '', 'lab2');
+        const hit = el('rect', { x: CH.x0, y: CH.y1, width: CH.x1 - CH.x0, height: CH.y0 - CH.y1, fill: 'transparent' }, svg);
+        hit.addEventListener('mousemove', (e) => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse());
+            const f = Math.pow(10, Math.log10(CH.fmin) + (q.x - CH.x0) / (CH.x1 - CH.x0) * (Math.log10(CH.fmax) - Math.log10(CH.fmin)));
+            tip.classList.remove('hid'); hl.setAttribute('x1', q.x); hl.setAttribute('x2', q.x); const bx = q.x > CH.x1 - 270 ? q.x - 262 : q.x + 12;
+            tr.setAttribute('x', bx); tr.setAttribute('y', CH.y1 + 8); [[t1, 'f = ' + fmtF(f)], [t2, 'dynamic ' + fmtP(pDyn({ ...s, f }))], [t3, 'static ' + fmtP(ps)]].forEach(([t, s2], i) => { t.setAttribute('x', bx + 12); t.setAttribute('y', CH.y1 + 30 + i * 22); t.textContent = s2; }); });
+        hit.addEventListener('mouseleave', () => tip.classList.add('hid'));
+    }
+    const MW = { x0: 22, x1: 636, y: 18, h: 24 };
+    function drawMeter() {
+        const svg = $('m3'); clear(svg); const s = si3(), pd = pDyn(s), ps = pStat(s), tot = pd + ps, sh = ps / tot;
+        const W = MW.x1 - MW.x0, gap = 2;
+        let wd = W * (pd / tot), ws = W * sh;      // linear: lengths are shares of the total
+        // a 2 px surface gap between the two segments (dataviz); the dynamic segment gives up the gap
+        const segD = Math.max(0, wd - gap), segS = ws;
+        if (segD > 0) el('rect', { x: MW.x0, y: MW.y, width: segD, height: MW.h, fill: '#4a6fa5', 'data-seg': 'dyn' }, svg);
+        if (segS > 0) el('rect', { x: MW.x0 + wd, y: MW.y, width: segS, height: MW.h, fill: '#b8640a', 'data-seg': 'stat' }, svg);
+        el('line', { x1: MW.x0, y1: MW.y + MW.h + 8, x2: MW.x1, y2: MW.y + MW.h + 8, class: 'ax' }, svg);
+        txt(svg, MW.x0, MW.y + MW.h + 28, '0 %', 'tk mono'); txt(svg, MW.x1, MW.y + MW.h + 28, '100 %', 'tk mono', { 'text-anchor': 'end' });
+        // legend + direct values (text in ink tokens; the swatch carries identity)
+        const ly = MW.y + MW.h + 66;
+        el('rect', { x: MW.x0, y: ly - 14, width: 16, height: 16, rx: 3, fill: '#4a6fa5' }, svg);
+        txt(svg, MW.x0 + 24, ly, 'dynamic ' + fmtP(pd), 'lab', { 'data-val': 'pd' });
+        el('rect', { x: 340, y: ly - 14, width: 16, height: 16, rx: 3, fill: '#b8640a' }, svg);
+        txt(svg, 364, ly, 'static ' + fmtP(ps), 'lab', { 'data-val': 'ps' });
+        $('share3').textContent = fmtShare(sh); $('tot3').textContent = fmtP(tot);
+        const fx = fCross(s);
+        $('x3').innerHTML = isFinite(fx) ? `Static = dynamic at f = <b>${fmtF(fx)}</b>. Below that clock, static is the larger term.` : `With &alpha; = 0 nothing switches: <b>all</b> of the power is static.`;
+    }
+    const VNOTE = 'Core logic today runs at roughly 0.7&ndash;1.0 V; 1.8&ndash;3.3 V is for I/O pins; 5 V is legacy.';
+    function whyText() {
+        const s = si3(), r = (x) => sig(x, 3);
+        const W = {
+            V: ['V DD — THE SUPPLY', `Dynamic scales with the square of V<sub>DD</sub>, static only in proportion. At ${S3.V.toFixed(1)} V, dynamic is <b>&times;${r(S3.V * S3.V)}</b> its 1.0 V value; static is <b>&times;${r(S3.V)}</b>. ${VNOTE}`],
+            f: ['f — THE CLOCK', `Dynamic power is proportional to f; static does not move. Slow the clock below the crossover and static wins.`],
+            alpha: ['α — HOW OFTEN NODES SWITCH', `At &alpha; = ${S3.alpha.toFixed(2)} dynamic is <b>&times;${r(S3.alpha / 0.1)}</b> the default. A clock net has &alpha; = 1, which is why <b>clock gating</b> stops the clock to idle blocks.`],
+            C: ['C — THE LOAD', `Dynamic power is proportional to C: <b>&times;${r(S3.C / 10)}</b> the default here. Shorter wires and smaller loads save power.`],
+            I: ['I leak — LEAKAGE', `Only the static term moves: <b>&times;${r(S3.I / 5)}</b> the default here. The fix for static power is <b>power gating</b>; for dynamic, clock gating.`],
+        };
+        if (lastSlider) return W[lastSlider];
+        if (kase === 0) return ['THE DEFAULTS', 'A busy block on a modern 1.0 V core supply: dynamic power is almost all of it. Move a slider, or try the five cases. ' + VNOTE];
+        return [['', 'CASE 1', 'CASE 2', 'CASE 3', 'CASE 4', 'CASE 5'][kase], [null,
+            'A hundred times slower clock: dynamic falls a hundredfold, static stays put and is now a third of the total.',
+            'Every node switching every cycle: ten times the default dynamic power. Static is lost in it.',
+            'Five times the supply: dynamic is <b>25&times;</b> (squared), static only 5&times;.',
+            'Ten times the leakage and a slow clock: static is now most of the power, spent doing almost nothing.',
+            `A low-voltage core: dynamic is <b>&times;${sig(S3.V * S3.V, 3)}</b> (0.7 squared) of its 1.0 V value, static <b>&times;${sig(S3.V, 3)}</b>. The supply is squared, so lowering it is the strongest lever. The price is speed (see <b data-topic="power-noise-margin-and-speed-trades">Power, Noise Margin and Speed Trades</b>).`][kase]];
+    }
+    function paintB3() {
+        for (const k of SKEYS) { const S = STOPS[k]; $('in-' + k).value = S.vals.indexOf(S3[k]); $('sv-' + k).textContent = S.fmt(S3[k]); }
+        markFocus(); drawChart(); drawMeter();
+        const [t, l] = whyText(); $('whyT').innerHTML = t; $('whyL').innerHTML = l;
+        document.querySelectorAll('.btn.case').forEach(b => b.classList.toggle('on', !custom && +b.dataset.case === kase));
+        $('cname').textContent = custom ? 'Your own settings.' : CASES[kase].name;
+        $('bk3').disabled = !custom && kase === 0; $('nxt3').disabled = !custom && kase === CASES.length - 1;
+    }
+
+    // ============ BEAT 4 ============
+    const DEF = { V: 1.0, f: 1e9, alpha: 0.1, C: 10e-15, I: 5e-9 };
+    const HALVE = [['V', 'the supply V<sub>DD</sub>'], ['f', 'the clock f'], ['alpha', 'the activity &alpha;'], ['C', 'the load C'], ['I', 'the leakage I<sub>leak</sub>']];
+    function paintB4() {
+        const d0 = pDyn(DEF), s0 = pStat(DEF), frac = (x) => '&times;' + sig(x, 3);
+        let h = '<tr><th>Halve</th><th>dynamic</th><th>static</th><th>total</th></tr>';
+        for (const [k, nm] of HALVE) { const s = { ...DEF, [k]: DEF[k] / 2 }, d = pDyn(s), st = pStat(s);
+            h += `<tr data-row="${k}"><td>${nm}</td><td class="${d / d0 < 0.3 ? 'big' : ''}">${frac(d / d0)}</td><td>${frac(st / s0)}</td><td>${frac((d + st) / (d0 + s0))}</td></tr>`; }
+        $('tab4').innerHTML = h;
+        const v8 = { ...DEF, V: 0.8 }; $('lv08').innerHTML = '&times;' + sig(pDyn(v8) / d0, 3); $('lv08s').innerHTML = '&times;' + sig(pStat(v8) / s0, 3);
+    }
+
+    // ============ RENDER / NAV ============
+    const NPAGES = 4; let page = 1;
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    function drawPage() { [null, paintB1, paintB2, paintB3, paintB4][page](); }
+    function render() {
+        for (let i = 1; i <= NPAGES; i++) $('p' + i).classList.toggle('active', i === page);
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        document.querySelectorAll('[data-dot]').forEach(d => d.classList.toggle('on', +d.dataset.dot <= page));
+        $('pcNum').textContent = page; drawPage();
+    }
+    const defsEl = $('defs'), defsBtn = $('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) { closeDefs(); page = Math.max(1, Math.min(NPAGES, n)); render(); }
+    function advance(dir = 1) {
+        if (page === 1) { s1 = Math.max(0, Math.min(ZSTEP, s1 + dir)); drawPage(); }
+        else if (page === 2) { s2 = Math.max(0, Math.min(NS2, s2 + dir)); drawPage(); }
+        else if (page === 3) { if (custom) setCase(dir > 0 ? kase + (kase === 0 ? 1 : 1) : kase); else setCase(kase + dir); }
+    }
+    function doReset() { if (defsOpen()) return; if (page === 1) s1 = 0; else if (page === 2) s2 = 0; else if (page === 3) { setCase(0); return; } drawPage(); }
+    function toggleInput() { if (page === 1 || page === 2) advance(1); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    for (const id of ['nxt1', 'nxt2', 'nxt3']) $(id).addEventListener('click', e => { advance(1); e.currentTarget.blur(); });
+    for (const id of ['bk1', 'bk2', 'bk3']) $(id).addEventListener('click', e => { advance(-1); e.currentTarget.blur(); });
+    document.querySelectorAll('.btn.case').forEach(b => b.addEventListener('click', () => { setCase(+b.dataset.case); b.blur(); }));
+    buildSliders();
+    document.addEventListener('keydown', (e) => {
+        const k = e.key, onRange = document.activeElement && document.activeElement.type === 'range';
+        if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) { if (k === 'Escape') closeDefs(); e.preventDefault(); return; }
+        if (onRange && (k === 'ArrowLeft' || k === 'ArrowRight')) return;            // the focused slider takes the arrows
+        if (k === 'Escape' && onRange) { document.activeElement.blur(); return; }
+        if (page === 3) { const m = { v: 'V', f: 'f', a: 'alpha', c: 'C', l: 'I' }[k.toLowerCase()];
+            if (m) { $('in-' + m).focus(); e.preventDefault(); return; }
+            if (k === 'z' || k === 'Z') { setCase(0); e.preventDefault(); return; } }
+        switch (k) {
+            case ' ': if (onRange) document.activeElement.blur(); advance(1); e.preventDefault(); break;
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': case 'Backspace': setPage(page - 1); e.preventDefault(); break;
+            case 'ArrowDown': advance(1); e.preventDefault(); break;
+            case 'ArrowUp': if (onRange) document.activeElement.blur(); advance(-1); e.preventDefault(); break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = { setPage, advance, toggleInput, setCase, reset: doReset, openDefs, closeDefs,
+        set: (o) => { const m = {}; if (o.V !== undefined) m.V = o.V; if (o.f !== undefined) m.f = o.f / 1e6; if (o.alpha !== undefined) m.alpha = o.alpha; if (o.C !== undefined) m.C = o.C * 1e15; if (o.Ileak !== undefined) m.I = o.Ileak * 1e9; setS(m); custom = true; lastSlider = null; if (page === 3) paintB3(); },
+        getState: () => ({ page, s1, s2, kase, custom, S3: { ...S3 } }), model: { pDyn, pStat, fCross, energy1, wave1, wave2, STOPS } };
+    setPage(1);
+    // ?beat=N&step=M&case=K — deep link (step on beats 1-2, case 0-4 on beat 3)
+    { const q = new URLSearchParams(location.search), b = q.get('beat') ? Math.max(1, Math.min(NPAGES, +q.get('beat'))) : 1;
+      if (q.get('step') !== null) { const m = +q.get('step'); if (b === 1) s1 = Math.max(0, Math.min(ZSTEP, m)); if (b === 2) s2 = Math.max(0, Math.min(NS2, m)); }
+      if (q.get('case') !== null) setCase(+q.get('case'));
+      if (q.get('slider') !== null) { lastSlider = q.get('slider'); custom = true; }
+      setPage(b); }
+
+    // ============ IN-PAGE ASSERTIONS (house rule; run with ?verify) ============
+    function runAssertions() {
+        const fails = [], S0 = { page, s1, s2, kase, custom, S3: { ...S3 } };
+        const close = (a, b, rel = 1e-3) => Math.abs(a - b) <= rel * Math.max(Math.abs(a), Math.abs(b), 1e-30);
+        // parse "12.3 mW" -> W, "5 MHz" -> Hz, "4.76 %" -> fraction
+        const UNIT = { W: 1, mW: 1e-3, 'µW': 1e-6, nW: 1e-9, pW: 1e-12, Hz: 1, kHz: 1e3, MHz: 1e6, GHz: 1e9, '%': 0.01, fJ: 1e-15, nA: 1e-9, V: 1, fF: 1e-15 };
+        const parse = (s) => { const m = String(s).trim().match(/(-?[\d.]+)\s*(\S+)\s*$/); if (!m || !(m[2] in UNIT)) return NaN; return +m[1] * UNIT[m[2]]; };
+        const lastNum = (s) => s.replace(/^.*?([\d.]+\s*\S+)$/, '$1');
+        // independent re-implementation of the formulas (not the page's pDyn / pStat)
+        const ref = (V, f, a, C, I) => { const d = a * 1e6 * C * V ** 2 * f, s = 1e6 * I * V; return { d, s, sh: s / (d + s), fx: a > 0 ? I / (a * C * V) : Infinity }; };
+        let checked = 0;
+        function checkMeter(tag, V, f, a, C, I) { const R = ref(V, f, a, C, I); checked++;
+            const pd = parse(lastNum(document.querySelector('#m3 [data-val="pd"]').textContent)), ps = parse(lastNum(document.querySelector('#m3 [data-val="ps"]').textContent));
+            if (!close(pd, R.d)) fails.push(`${tag}: P_dyn shown ${pd} want ${R.d}`);
+            if (!close(ps, R.s)) fails.push(`${tag}: P_static shown ${ps} want ${R.s}`);
+            const sh = parse($('share3').textContent), digits = (String($('share3').textContent).match(/[\d.]+/)[0].replace('.', '').replace(/^0+/, '').length || 1);
+            const ulp = Math.pow(10, Math.floor(Math.log10(R.sh * 100)) - digits + 1) / 100;   // half a unit in the last shown digit
+            if (Math.abs(sh - R.sh) > ulp / 2 + 1e-12) fails.push(`${tag}: share shown ${sh} want ${R.sh}`);
+            if (!close(parse($('tot3').textContent), R.d + R.s)) fails.push(`${tag}: total`);
+            const x3 = $('x3').textContent;
+            if (isFinite(R.fx)) { const m = x3.match(/f = ([\d.]+ \S*Hz)/); if (!m || !close(parse(m[1]), R.fx)) fails.push(`${tag}: crossover ${m && m[1]} want ${R.fx}`); }
+            else if (!/nothing switches/.test(x3)) fails.push(`${tag}: alpha 0 crossover text`);
+            // meter segment widths are linear shares; 2 px surface gap between them
+            const sd = document.querySelector('#m3 [data-seg="dyn"]'), ss = document.querySelector('#m3 [data-seg="stat"]'), Wm = MW.x1 - MW.x0;
+            const wS = ss ? +ss.getAttribute('width') : 0; if (Math.abs(wS - Wm * R.sh) > 0.01) fails.push(`${tag}: static segment ${wS} want ${Wm * R.sh}`);
+            if (sd && ss && Math.abs((+ss.getAttribute('x')) - (+sd.getAttribute('x') + +sd.getAttribute('width')) - 2) > 0.01) fails.push(`${tag}: segment gap`);
+            if (sd && Math.abs(+sd.getAttribute('width') - Math.max(0, Wm * (1 - R.sh) - 2)) > 0.01) fails.push(`${tag}: dynamic segment`);
+            // the chart: the static line's y and the dynamic dot's y invert to the formula values
+            const inv = (y) => Math.pow(10, Math.log10(CH.pmin) + (CH.y0 - y) / (CH.y0 - CH.y1) * (Math.log10(CH.pmax) - Math.log10(CH.pmin)));
+            const sl = document.querySelector('#ch3 [data-line="stat"]'); if (!close(inv(+sl.getAttribute('y1')), R.s, 1e-6)) fails.push(`${tag}: static line`);
+            const dd = document.querySelector('#ch3 [data-mark="pd"]'); const inY = R.d > 0 && cy(R.d) >= CH.y1 && cy(R.d) <= CH.y0;
+            if (!!dd !== inY) fails.push(`${tag}: dynamic dot shown ${!!dd} in range ${inY}`); else if (dd && !close(inv(+dd.getAttribute('cy')), R.d, 1e-6)) fails.push(`${tag}: dynamic dot`);
+            const dl = document.querySelector('#ch3 [data-line="dyn"]'); if (dl) { const p = dl.getAttribute('points').split(' ').map(s => s.split(',').map(Number));
+                for (const [x, y] of [p[0], p[p.length - 1]]) { const fq = Math.pow(10, Math.log10(CH.fmin) + (x - CH.x0) / (CH.x1 - CH.x0) * (Math.log10(CH.fmax) - Math.log10(CH.fmin))); if (!close(inv(y), ref(V, fq, a, C, I).d, 2e-3)) fails.push(`${tag}: dynamic line end`); } }
+            const xm = document.querySelector('#ch3 [data-mark="cross"]'); const xIn = isFinite(R.fx) && R.fx >= CH.fmin && R.fx <= CH.fmax && cy(R.s) >= CH.y1 && cy(R.s) <= CH.y0;
+            if (!!xm !== xIn) fails.push(`${tag}: crossover dot`); else if (xm && Math.abs(+xm.getAttribute('cx') - cx(R.fx)) > 0.01) fails.push(`${tag}: crossover x`);
+            // the slider readouts show the state
+            if (!close(parse($('sv-V').textContent), V) || !close(parse($('sv-f').textContent), f) || !close(+$('sv-alpha').textContent, a, 1e-9) || !close(parse($('sv-C').textContent), C) || !close(parse($('sv-I').textContent), I)) fails.push(`${tag}: slider readouts`);
+        }
+        // geometry helpers (measured on the active page)
+        const overlap = (a, b, pad = 0) => a.x < b.x + b.width + pad && a.x + a.width + pad > b.x && a.y < b.y + b.height + pad && a.y + a.height + pad > b.y;
+        const vbOf = (svg) => svg.getAttribute('viewBox').split(' ').map(Number);
+        let measured = 0;
+        function textsIn(svg, tag, noOverlap = true) { const [vx, vy, vw, vh] = vbOf(svg); const out = [];
+            for (const t of Array.from(svg.querySelectorAll('text'))) { if (t.closest('.hid')) continue; const bb = t.getBBox(); if (!bb.width) continue; out.push({ t, bb }); measured++;
+                if (bb.x < vx - 0.5 || bb.y < vy - 0.5 || bb.x + bb.width > vx + vw + 0.5 || bb.y + bb.height > vy + vh + 0.5) fails.push(`${tag} text outside: ` + t.textContent.slice(0, 24)); }
+            if (noOverlap) for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) if (overlap(out[i].bb, out[j].bb)) fails.push(`${tag} texts overlap "${out[i].t.textContent.slice(0, 14)}" / "${out[j].t.textContent.slice(0, 14)}"`);
+            return out; }
+        const sweep = (tag) => { const ds = $('designSurface'); if (ds.scrollHeight > 1080 + 1 || ds.scrollWidth > 1920 + 1) fails.push('overflow ' + tag);
+            document.querySelectorAll('.page.active .panel, .page.active .card, .page.active .sl, .page.active .tile').forEach(p => { if (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1) fails.push('panel overflow ' + tag + ' ' + (p.id || (p.className || '').split(' ').slice(0, 3).join('.'))); });
+            const st = $('stage').getBoundingClientRect(); document.querySelectorAll('.page.active > *').forEach(p => { const r = p.getBoundingClientRect(); if (r.bottom > st.bottom + 1) fails.push('stage overflow ' + tag); }); };
+        // contrast gate: every visible text >= 3:1 on white after its opacity (v2 light)
+        let contrasted = 0;
+        const lum = (r, g, b) => { const f = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+        function contrastGate(tag) {
+            const els = Array.from(document.querySelectorAll('.page.active svg text, .page.active svg tspan')).filter(t => !t.closest('.hid') && t.textContent.trim() && t.getBoundingClientRect().width);
+            const html = Array.from(document.querySelectorAll('.page.active *')).filter(e => !(e instanceof SVGElement) && Array.from(e.childNodes).some(n => n.nodeType === 3 && n.textContent.trim()) && e.getBoundingClientRect().width);
+            for (const t of els.concat(html)) { const cs = getComputedStyle(t), m = (t instanceof SVGElement ? cs.fill : cs.color).match(/rgba?\(([^)]*)\)/); if (!m) continue; const [r, g, b, a = 1] = m[1].split(',').map(Number);
+                let op = a * (t instanceof SVGElement ? +cs.fillOpacity : 1); for (let n = t; n && n.nodeType === 1; n = n.parentNode) op *= +getComputedStyle(n).opacity;
+                if (t.closest('button:disabled')) continue;     // a disabled control is meant to read as unavailable
+                const bl = (c) => c * op + 255 * (1 - op), L = lum(bl(r), bl(g), bl(b)), cr = 1.05 / (L + 0.05); contrasted++;
+                if (cr < 3 - 1e-6) { fails.push(`${tag}: pale text "${t.textContent.trim().slice(0, 14)}" ${cr.toFixed(2)}:1`); return; } }
+        }
+        // circuit: no label on a wire or on a transistor; the lit path follows the drawn wires
+        function circuitChecks(svg, tag, gated = false) {
+            const WW = gated ? WG : W1;
+            const segs = WW.flatMap(w => w.pts.slice(1).map((q, i) => { const p = w.pts[i]; return { id: w.id, x: Math.min(p[0], q[0]) - 2, y: Math.min(p[1], q[1]) - 2, width: Math.abs(q[0] - p[0]) + 4, height: Math.abs(q[1] - p[1]) + 4 }; }));
+            const devs = [{ id: 'pmos', x: G.gx - 16, y: G.pT - 6, width: G.xs - G.gx + 16, height: G.pB - G.pT + 12 }, { id: 'header', x: G.gx - 16, y: H.yT - 6, width: gated ? G.xs - G.gx + 16 : 0, height: gated ? H.yB - H.yT + 12 : 0 }, { id: 'nmos', x: G.gx, y: G.nT - 6, width: G.xs - G.gx, height: G.nB - G.nT + 12 },
+                { id: 'cap', x: G.xcap - 30, y: G.capT - 2, width: 60, height: G.capB - G.capT + 4 }];
+            for (const t of Array.from(svg.querySelectorAll('text'))) { const bb = t.getBBox(); if (!bb.width) continue;
+                for (const s of segs.concat(devs)) if (overlap(bb, s)) fails.push(`${tag} "${t.textContent.slice(0, 14)}" on ${s.id}`); }
+            textsIn(svg, tag);
+            // every MOSFET terminal meets a wire end: PMOS stubs at (xs, pT/pB), NMOS at (xs, nT/nB), gates at the input wires
+            const ends = WW.flatMap(w => [w.pts[0], w.pts[w.pts.length - 1]].map(p => p.join(',')));
+            for (const p of [[G.xs, G.pT], [G.xs, G.pB], [G.xs, G.nT], [G.xs, G.nB], [G.gx - 16, 156], [G.gx, 364], [G.xcap, G.capT], [G.xcap, G.capB]].concat(gated ? [[G.xs, H.yT], [G.xs, H.yB], [G.gx - 16, H.gy]] : [])) if (!ends.includes(p.join(','))) fails.push(`${tag} terminal ${p} unwired`);
+        }
+        const frameOf = (n) => $('p' + n).innerHTML;
+        // ---- beat 1
+        setPage(1);
+        const E = B1.C * B1.V ** 2;
+        for (let k = 0; k <= NS1; k++) { s1 = k; drawPage(); sweep('b1s' + k); contrastGate('b1s' + k); circuitChecks($('c1'), 'b1s' + k); textsIn($('t1'), 'b1 timeline s' + k);
+            const en = energy1(k);
+            if (!close(parse($('eSup').textContent), en.rises * E) || !close(parse($('eSto').textContent) || 0, (1 - IN1[k]) * E / 2) || !close(parse($('eHeat').textContent) || 0, en.rises * E - (1 - IN1[k]) * E / 2)) fails.push('b1 counters s' + k);
+            if (!close(en.supply, en.stored + en.heatP + en.heatN, 1e-9)) fails.push('b1 energy not conserved s' + k);
+            const path = $('c1').querySelector('[data-path]'); const want = k === 0 ? null : (IN1[k] === 0 ? 'chg' : 'dis');
+            if ((path ? path.dataset.path : null) !== want) fails.push('b1 path s' + k);
+            if ($('c1').querySelector('[data-val="out"]').textContent !== '= ' + (1 - IN1[k])) fails.push('b1 out value s' + k);
+            if ($('head1').textContent.length < 20) fails.push('b1 text s' + k); }
+        // the femtojoule is defined, visibly and inside its panel, on the first step that shows fJ (step 0: the counters)
+        { s1 = 0; drawPage(); const d = $('fjdef'), r = d.getBoundingClientRect(), pr = d.closest('.panel').getBoundingClientRect();
+          if (!/fJ/.test($('eSup').textContent)) fails.push('b1 step 0 shows no fJ');
+          if (!/1 fJ = 10\u221215 J, a femtojoule/.test(d.textContent) || !r.width || !r.height || r.left < pr.left || r.right > pr.right + 0.5 || r.top < pr.top || r.bottom > pr.bottom + 0.5) fails.push('b1 fJ definition not visible in its panel');
+          s1 = 1; drawPage(); if (!$('line1').textContent.includes('(1 fJ = 10\u207b\u00b9\u2075 J, a femtojoule)')) fails.push('b1 step 2 line lacks the fJ definition');
+          if (!/1 fJ = 10\u221215 J/.test($('defs').textContent) || !/1 fF = 10\u221215 F/.test($('defs').textContent)) fails.push('definitions lack fJ / fF'); }
+        // after one full 0 -> 1 -> 0: supply = C V^2, stored = 0, heat = C V^2 (10 fJ)
+        s1 = 2; drawPage(); if ($('eSup').textContent.replace(/\s+/g, ' ').trim() !== '10 fJ' || $('eSto').textContent.replace(/\s+/g, ' ').trim() !== '0 fJ' || $('eHeat').textContent.replace(/\s+/g, ' ').trim() !== '10 fJ') fails.push('b1 one full cycle is not 10 / 0 / 10 fJ');
+        // the supply power is zero except in the 8-tau window after each 0 -> 1; its peak is 1 mW; each spike's area is C V^2 = 10 fJ (0.1 %)
+        { let A = 0, pk = 0; const dt = 0.01; for (let t = 0; t <= TMAX; t += dt) { const w = pow1(t), inWin = TOG.some((t0, j) => j && IN1[j] === 0 && t >= t0 && t <= t0 + 8 * B1.tau * 1e12 + 1e-9);
+              if (!inWin && w.i !== 0) { fails.push('b1 supply power outside a 0 -> 1 edge at ' + t.toFixed(2)); break; } A += w.i * dt * 1e-12; pk = Math.max(pk, w.i); }
+          const nR = TOG.filter((t0, j) => j && IN1[j] === 0).length; if (!close(A, nR * E, 1e-3)) fails.push(`b1 area under supply power ${A} want ${nR * E}`);
+          if (!close(pk, 1e-3, 2e-3) || pk > 1e-3 + 1e-12) fails.push('b1 power peak not 1 mW');
+          s1 = NS1; drawPage(); const al = Array.from($('t1').querySelectorAll('[data-area]')); if (al.length !== nR || al.some(t => t.textContent !== 'area = 10 fJ')) fails.push('b1 spike area labels');
+          if (/current|resist|k\u03a9|\u03c4|tau|exp/i.test($('p1').textContent.replace(/short-circuit current|current flows/gi, ''))) fails.push('b1 mentions current/resistance/time constant'); }
+        // the zoomed step: spikes = alpha x cycles, only at 0 -> 1, average = 1 µW, drawn at its value on the µW axis
+        { s1 = ZSTEP; drawPage(); sweep('b1zoom'); contrastGate('b1zoom'); circuitChecks($('c1'), 'b1zoom'); textsIn($('t1'), 'b1 zoom');
+          const sp = Array.from($('t1').querySelectorAll('[data-spike]')).map(e => +e.dataset.spike);
+          if (sp.length !== 0.1 * ZCYC) fails.push(`b1 zoom: ${sp.length} spikes, want alpha x cycles = ${0.1 * ZCYC}`);
+          let v = 0, ups = []; for (let c = 0; c < ZCYC; c++) { const e = ZEDGES.find(x => x.c === c); if (e) { if (e.up === v) fails.push('b1 zoom: edge does not change the output at ' + c); if (e.up) ups.push(c); v = e.up; } }
+          if (sp.join() !== ups.join()) fails.push('b1 zoom: spikes not exactly at the 0 -> 1 edges');
+          if ($('t1').querySelectorAll('[data-clk]').length !== ZCYC + 1) fails.push('b1 zoom: clock gridlines');
+          let A = 0; const dt = 0.0001; for (let t = 0; t < ZCYC; t += dt) { const w = waveZ(t), inWin = ZRISE.some(c => t >= c && t <= c + 8 * B1.tau * 1e9 + 1e-9);
+              if (!inWin && w.p !== 0) { fails.push('b1 zoom: power outside a 0 -> 1 at ' + t.toFixed(4)); break; } A += w.p * dt * 1e-9; }
+          const avg = A / (ZCYC / ZF), want = 0.1 * B1.C * B1.V ** 2 * ZF;
+          if (!close(avg, want, 1e-3) || !close(ZAVG, want, 1e-9) || !close(want, 1e-6, 1e-9)) fails.push(`b1 zoom average ${avg} want ${want}`);
+          const al = $('t1').querySelector('[data-avg]'), y = +al.getAttribute('y1'); if (Math.abs(y - zyA(want)) > 0.01 || y <= ZX.aT || y >= ZX.aB) fails.push('b1 zoom: average line not at 1 µW on its axis');
+          if (!$('t1').querySelector('[data-val="avg"]').textContent.endsWith('= 1 \u00b5W')) fails.push('b1 zoom: average label');
+          if (Array.from($('t1').querySelectorAll('[data-area]')).some(t => t.textContent !== '10 fJ')) fails.push('b1 zoom: spike labels');
+          if (!/average/.test($('head1').textContent) || !/1 \u00b5W/.test($('line1').textContent)) fails.push('b1 zoom text');
+          const en = 2 * E; if (!close(parse($('eSup').textContent), en) || !close(parse($('eHeat').textContent), en) || parse($('eSto').textContent) !== 0) fails.push('b1 zoom counters'); }
+        { const g = { a: 0.1, C: 10e-15, V: 1, f: 1e9 }; const p1 = g.a * g.C * g.V ** 2 * g.f, p5 = g.a * g.C * 25 * g.f; const w = $('worked1').textContent;
+          if (!w.includes(fmtP(p1)) || !w.includes(fmtP(p5)) || !w.includes(sig(p5 / p1) + '×') || fmtP(p1) !== '1 µW' || fmtP(p5) !== '25 µW') fails.push('b1 worked numbers'); }
+        // ---- beat 2
+        setPage(2);
+        for (let k = 0; k < GSTEP; k++) { s2 = k; drawPage(); sweep('b2s' + k); contrastGate('b2s' + k); circuitChecks($('c2'), 'b2s' + k); textsIn($('t2'), 'b2 timeline s' + k);
+            if (parse($('lkI').textContent) !== 5e-9 || !close(parse($('lkP').textContent), 5e-9 * 1.0) || !close(parse($('lkN').textContent), 1e6 * 5e-9 * 1.0)) fails.push('b2 numbers s' + k);
+            const path = $('c2').querySelector('[data-path]'); if (!path || path.dataset.path !== 'leak') fails.push('b2 leak path s' + k);
+            const off = IN2(k) === 1 ? 'pstate' : 'nstate'; if (!/leaking/.test($('c2').querySelector(`[data-val="${off}"]`).textContent)) fails.push('b2 off transistor not marked s' + k); }
+        { for (let t = 0; t <= TMAX; t += 0.5) if (wave2(t).i !== ILEAK2) { fails.push('b2 leakage not flat'); break; }
+          s2 = 0; drawPage(); if (!close(5 / 1e9, 5e-9) || !close(5 * 5e-9, 25e-9) || !$('p2').textContent.includes('25 nW')) fails.push('b2 model numbers (5 V / 1 GOhm)'); }
+        // step 5: power gating. The header exists and is off, sleep = 1, the leak path starts at the header's lower terminal (cut there), the tiles read ~0
+        { s2 = GSTEP; drawPage(); sweep('b2gate'); contrastGate('b2gate'); circuitChecks($('c2'), 'b2gate', true); textsIn($('t2'), 'b2 gate timeline');
+          if (NS2 !== 4 || $('snum2').textContent !== 'STEP 5 OF 5' || !/switch the idle block off/.test($('head2').textContent)) fails.push('b2 step 5 missing');
+          const c2 = $('c2'), path = c2.querySelector('[data-path]'), pts = path ? path.getAttribute('points').split(' ').map(q => q.split(',').map(Number)) : [];
+          if (!path || path.dataset.path !== 'gated' || pts[0][0] !== G.xs || pts[0][1] !== H.yB || pts.some(q => q[1] < H.yB)) fails.push('b2 gated: leak path does not stop at the off header');
+          if (!path || !path.classList.contains('cut') || getComputedStyle(path).animationName !== 'none') fails.push('b2 gated: cut path still drawn as a live leak');
+          if (c2.querySelector('[data-val="hstate"]').textContent !== 'header: off' || c2.querySelector('[data-val="sleep"]').textContent !== '= 1' || !c2.querySelector('[data-w="sleep"]') || c2.querySelector('[data-w="vdd"]')) fails.push('b2 gated: header / sleep drawing');
+          if (/leaking/.test(c2.textContent)) fails.push('b2 gated: a transistor still marked leaking');
+          for (const id of ['lkI', 'lkP', 'lkN']) if ($(id).textContent.trim() !== '\u2248 0') fails.push('b2 gated tile ' + id);
+          if (!/header/.test($('lkIs').textContent) || /\d\s*(nA|nW|mW|pA|pW)/.test($('lt1').textContent + $('lt2').textContent + $('lt3').textContent)) fails.push('b2 gated: tiles invent a number');
+          for (let t = 0; t <= TMAX; t += 0.5) { const w = wave2g(t); if (t < TSLEEP ? w.i !== ILEAK2 : w.i !== 0) { fails.push('b2 gated wave'); break; } }
+          if (!/forgets/.test($('b2card').textContent) || !/time and energy/.test($('b2card').textContent) || !/area/.test($('b2card').textContent) || !/radio or a camera/.test($('b2card').textContent)) fails.push('b2 gated: price / use text');
+          if ($('nxt2').disabled !== true || $('bk2').disabled) fails.push('b2 gated buttons');
+          if (!/Header \(sleep switch\)/.test($('defs').textContent) || !/Power gating/.test($('defs').textContent)) fails.push('definitions: header / power gating');
+          s2 = GSTEP - 1; drawPage(); if (!/The static term/.test($('b2card').textContent)) fails.push('b2 card not restored before step 5'); }
+        // ---- beat 3: the nine brief rows, every stop of every slider (others at defaults), and seeded random combinations
+        setPage(3);
+        const ROWS = [[1, 1e9, .1, 5e-9, 1, 5e-3, .004975], [1, 1e8, .1, 5e-9, .1, 5e-3, .04762], [1, 1e7, .1, 5e-9, .01, 5e-3, .3333], [1, 1e9, 1, 5e-9, 10, 5e-3, .0005], [5, 1e9, .1, 5e-9, 25, 25e-3, .000999],
+            [.8, 1e9, .1, 5e-9, .64, 4e-3, .006211], [1.2, 1e9, .1, 5e-9, 1.44, 6e-3, .004149], [1, 1e9, .1, 50e-9, 1, 50e-3, .04762], [1, 1e7, .1, 50e-9, .01, 50e-3, .8333]];
+        ROWS.forEach(([V, f, a, I, d, s, sh], i) => { window.__api.set({ V, f, alpha: a, C: 10e-15, Ileak: I }); checkMeter('row' + (i + 1), V, f, a, 10e-15, I);
+            const R = ref(V, f, a, 10e-15, I); if (!close(R.d, d) || !close(R.s, s) || Math.abs(R.sh - sh) > 5e-4 * sh + 1e-6) fails.push('row' + (i + 1) + ' differs from the python table');
+            sweep('row' + i); });
+        window.__api.set({ V: 1, f: 1e9, alpha: .1, C: 10e-15, Ileak: 5e-9 }); if ($('x3').textContent.indexOf('5 MHz') < 0) fails.push('crossover 5 MHz at defaults');
+        window.__api.set({ V: 1, f: 1e9, alpha: .1, C: 10e-15, Ileak: 50e-9 }); if ($('x3').textContent.indexOf('50 MHz') < 0) fails.push('crossover 50 MHz leaky');
+        let geo3 = 0;
+        for (const key of SKEYS) { const S = STOPS[key];
+            for (const v of S.vals) { setCase(0); S3[key] = v; custom = true; lastSlider = key; paintB3(); const s = si3();
+                checkMeter(`${key}=${v}`, s.V, s.f, s.alpha, s.C, s.I);
+                if (v === S.vals[0] || v === S.vals[S.vals.length - 1] || v === S.def || geo3 % 9 === 0) { textsIn($('ch3'), `chart ${key}=${v}`); textsIn($('m3'), `meter ${key}=${v}`); sweep(`${key}=${v}`); }
+                geo3++; } }
+        let seed = 12345; const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+        for (let n = 0; n < 400; n++) { setCase(0); for (const key of SKEYS) { const S = STOPS[key]; S3[key] = S.vals[Math.floor(rnd() * S.vals.length)]; } custom = true; lastSlider = SKEYS[n % 5]; paintB3(); const s = si3();
+            checkMeter('rand' + n, s.V, s.f, s.alpha, s.C, s.I); if (n % 10 === 0) { textsIn($('ch3'), 'chart rand' + n); textsIn($('m3'), 'meter rand' + n); sweep('rand' + n); } }
+        // the extremes for the label placement
+        for (const o of [{ V: 5, f: 4e9, alpha: 1, C: 50e-15, Ileak: 100e-9 }, { V: .6, f: 1e6, alpha: 0, C: 1e-15, Ileak: 1e-9 }, { V: .6, f: 1e6, alpha: .01, C: 1e-15, Ileak: 100e-9 }, { V: 5, f: 4e9, alpha: .01, C: 1e-15, Ileak: 1e-9 }]) {
+            window.__api.set(o); checkMeter('extreme', o.V, o.f, o.alpha, o.C, o.Ileak); textsIn($('ch3'), 'chart extreme'); sweep('extreme'); contrastGate('b3 extreme'); }
+        // the why line recomputes its factors
+        { setCase(0); S3.V = 0.8; custom = true; lastSlider = 'V'; paintB3(); if (!/×0\.64\b/.test($('whyL').textContent) || !/×0\.8\b/.test($('whyL').textContent)) fails.push('why V 0.8');
+          setCase(0); S3.alpha = 1; custom = true; lastSlider = 'alpha'; paintB3(); if (!/×10\b/.test($('whyL').textContent)) fails.push('why alpha 1'); }
+        // the four cases are the brief's presets
+        const CW = [null, [1, 1e7, .1, 10e-15, 5e-9], [1, 1e9, 1, 10e-15, 5e-9], [5, 1e9, .1, 10e-15, 5e-9], [1, 1e7, .1, 10e-15, 50e-9], [0.7, 1e9, .1, 10e-15, 5e-9]];
+        for (let c = 0; c < CASES.length; c++) { setCase(c); const w = CW[c] || [1, 1e9, .1, 10e-15, 5e-9]; checkMeter('case' + c, ...w); sweep('case' + c); contrastGate('b3 case' + c); textsIn($('ch3'), 'chart case' + c); textsIn($('m3'), 'meter case' + c); }
+        // Case 5: the python-checked numbers and the 0.49x factor; the defaults name the modern core supply; Case 3 keeps its wording
+        { if (CASES.length !== 6) fails.push('b3 case count');
+          setCase(5); const t = (q) => document.querySelector(q).textContent;
+          if (t('#m3 [data-val="pd"]') !== 'dynamic 490 mW' || t('#m3 [data-val="ps"]') !== 'static 3.5 mW' || $('share3').textContent !== '0.709 %' || $('tot3').textContent !== '493.5 mW' || !/7\.143 MHz/.test($('x3').textContent)) fails.push('b3 case 5 values');
+          if (!/\u00d70\.49\b/.test($('whyL').textContent) || !/\u00d70\.7\b/.test($('whyL').textContent) || !$('whyL').querySelector('[data-topic="power-noise-margin-and-speed-trades"]')) fails.push('b3 case 5 factor line');
+          if (!close(pDyn(si3()) / pDyn({ ...si3(), V: 1 }), 0.49, 1e-9)) fails.push('b3 case 5: 0.49x');
+          if (!$('cname').textContent.includes('0.7 V') || !document.querySelector('.btn.case[data-case="5"]').classList.contains('on')) fails.push('b3 case 5 button');
+          setCase(3); if ($('cname').textContent !== 'Case 3 \u00b7 the old 5 V supply.') fails.push('b3 case 3 wording');
+          setCase(0); if (!/modern 1\.0 V core supply/.test($('cname').textContent) || !/0\.7\u20131\.0 V; 1\.8\u20133\.3 V is for I\/O pins; 5 V is legacy/.test($('whyL').textContent)) fails.push('b3 defaults wording');
+          custom = true; lastSlider = 'V'; S3.V = 0.7; paintB3(); if (!/5 V is legacy/.test($('whyL').textContent) || !/\u00d70\.49\b/.test($('whyL').textContent)) fails.push('b3 V why line'); }
+        // ---- beat 4
+        setPage(4); sweep('b4'); contrastGate('b4');
+        { const rows = Array.from($('tab4').querySelectorAll('tr[data-row]')); const want = { V: [.25, .5], f: [.5, 1], alpha: [.5, 1], C: [.5, 1], I: [1, .5] };
+          if (rows.length !== 5) fails.push('b4 rows');
+          for (const r of rows) { const td = Array.from(r.querySelectorAll('td')).map(t => +t.textContent.replace('×', '')), w = want[r.dataset.row];
+              const R0 = ref(1, 1e9, .1, 10e-15, 5e-9), tot0 = R0.d + R0.s, s = { V: 1, f: 1e9, a: .1, C: 10e-15, I: 5e-9 }; const k = r.dataset.row === 'alpha' ? 'a' : r.dataset.row; s[k] /= 2; const R1 = ref(s.V, s.f, s.a, s.C, s.I);
+              if (!close(td[1], w[0], 1e-9) || !close(td[2], w[1], 1e-9) || !close(td[3], +sig((R1.d + R1.s) / tot0, 3), 1e-9)) fails.push('b4 row ' + r.dataset.row); } }
+        if ($('lv08').textContent !== '×0.64' || $('lv08s').textContent !== '×0.8') fails.push('b4 0.8 V factors');
+        // ---- back restores the exact frame
+        setPage(1); for (let k = 0; k < ZSTEP; k++) { s1 = k; drawPage(); const A = frameOf(1); advance(1); advance(-1); if (s1 !== k || frameOf(1) !== A) fails.push('b1 back ' + k); }
+        s1 = 0; drawPage(); if (!$('bk1').disabled) fails.push('b1 back enabled at 0'); s1 = ZSTEP; drawPage(); if (!$('nxt1').disabled) fails.push('b1 next enabled at end');
+        setPage(2); for (let k = 0; k < NS2; k++) { s2 = k; drawPage(); const A = frameOf(2); advance(1); advance(-1); if (s2 !== k || frameOf(2) !== A) fails.push('b2 back ' + k); }
+        setPage(3); for (let c = 0; c < CASES.length - 1; c++) { setCase(c); const A = frameOf(3); advance(1); advance(-1); if (kase !== c || frameOf(3) !== A) fails.push('b3 back ' + c); }
+        // toggleInput is the step on beats 1-2
+        setPage(1); s1 = 0; drawPage(); window.__api.toggleInput(); if (s1 !== 1) fails.push('toggleInput');
+        openDefs(); sweep('defs'); closeDefs();
+        if (checked < 600) fails.push('too few meter states checked: ' + checked);
+        if (contrasted < 300) fails.push('too few texts checked for contrast: ' + contrasted);
+        if (measured < 1500) fails.push('too few text boxes measured: ' + measured);
+        page = S0.page; s1 = S0.s1; s2 = S0.s2; kase = S0.kase; Object.assign(S3, S0.S3); custom = S0.custom; render();
+        document.title += fails.length ? ' — ASSERT FAIL: ' + [...new Set(fails)].slice(0, 14).join(', ') : ` — ASSERT PASS (${checked} meter states, ${measured} text boxes, ${contrasted} contrast)`;
+    }
+    if (location.search.indexOf('verify') >= 0) {
+        try { runAssertions(); }
+        catch (e) { document.title += ' — ASSERT FAIL: exception in the checks: ' + e.message + ' ' + (e.stack || '').split('\n')[1]; }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+title: "Static and Dynamic Power"
+description: "Where a CMOS chip's power goes: dynamic power, the average cost of charging load capacitance on every 0-to-1 change (alpha C V squared f), and static power, the leakage paid just to hold outputs (N I_leak V_DD), with the design levers for each."
+chapter: foundations
+section: circuits
+order: 20205
+
+graphics:
+  01-video.youtube:
+    caption: "Video: static and dynamic power, narrated over the interactive: the definitions, charging the load, dynamic power as the average of the supply-power graph, leakage, the balance between the two, and the design levers"
+  02-interactive.html:
+    caption: "Interactive: charge and discharge a gate's load and watch the supply power, hold still and watch leakage, then move V, f, alpha, C and leakage on a million-gate power meter"

@@ -1,0 +1,11 @@
+title: "Laser-Range-Finder"
+description: "A golf laser range finder built as an FSMD: count 300 MHz clocks from the laser firing to the echo, store half the count as the distance, and time out when the shot never comes back."
+chapter: rtl-design
+section: examples
+order: 50203
+
+graphics:
+  01-video.youtube:
+    caption: "Video: the laser range finder, narrated over the interactive: the larger system, the FSMD with its timeout, the datapath and controller, a timing trace with breaks in the time axis, and why a real unit runs a slower clock"
+  02-interactive.html:
+    caption: "Interactive: time a laser pulse to a golf flag; build the four-state FSMD, read the datapath and controller off it, step the timing trace, and see how a slower clock needs a fine count"

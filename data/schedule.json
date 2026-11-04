@@ -944,14 +944,14 @@
           "title": "Static and Dynamic Power",
           "slug": "static-and-dynamic-power",
           "type": "full",
-          "published": false
+          "published": true
         },
         {
           "num": "5.2.3",
           "title": "Laser-Range-Finder",
           "slug": "laser-range-finder",
           "type": "full",
-          "published": false
+          "published": true
         }
       ]
     },
