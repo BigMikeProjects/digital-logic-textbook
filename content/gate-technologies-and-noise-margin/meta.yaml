@@ -1,0 +1,11 @@
+title: "Gate Technologies and Noise Margin"
+description: "What a logic gate's output promises and its input needs (V_OH,min, V_OL,max, V_IH,min, V_IL,max), the noise margins as the gaps between them, and how the margins shrank as the supply came down from 5 V TTL and CMOS to 1.2 V."
+chapter: foundations
+section: circuits
+order: 20204
+
+graphics:
+  01-video.youtube:
+    caption: "Video: gate technologies and noise margin, narrated over the interactive: what an output promises and an input needs, the noise margins as a noise budget, and the supply coming down from 5 V to 1.2 V"
+  02-interactive.html:
+    caption: "Interactive: step through one 5 V CMOS gate's four levels and its noise margins with a noise slider, then watch the same picture shrink from 5 V TTL to 1.2 V on one voltage scale"
