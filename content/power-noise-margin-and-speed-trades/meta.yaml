@@ -1,0 +1,11 @@
+title: "Power, Noise Margin and Speed Trades"
+description: "One supply voltage, three consequences: for one fixed transistor, lowering V_DD cuts power as the square but shrinks the noise margin and slows every gate; why chips still got faster as the supply fell, and how products from hearing aids to servers pick their point on the trade."
+chapter: foundations
+section: circuits
+order: 20206
+
+graphics:
+  01-video.youtube:
+    caption: "Video: power, noise margin and speed trades, narrated over the interactive: one fixed car and its three dials, the noise trap, the design triangle, why chips got faster anyway, and who picks which corner"
+  02-interactive.html:
+    caption: "Interactive: turn the supply on one fixed transistor and watch power, noise margin and delay move, hold the noise fixed, drive the design triangle with the supply and clock knobs, and see the history and the products on the same trade"

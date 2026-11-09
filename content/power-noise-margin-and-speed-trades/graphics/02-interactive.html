@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Power, Noise Margin and Speed Trades — One Supply Voltage, Three Consequences</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: var(--surround); }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9; max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0;
+        transform-origin: top left; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #1c2433; padding: 26px 52px; display: flex; flex-direction: column; }
+
+    /* the three dials (decorative identity; every corner and chart is also named in text):
+       power #b8640a (amber) · noise margin #2f6db5 (blue) · speed #9a3f8f (plum) — dataviz validator, light: ALL PASS
+       (CVD worst adjacent 7.3 deutan = WARN band, legal because every mark is also labeled by position + text)
+       status red #b4472f is reserved for the illegal state (f > f_max) and the failing noise verdict, always with an icon + words */
+
+    .topbar { display: flex; align-items: center; gap: 28px; }
+    .anchor-sym { flex-shrink: 0; padding: 8px 14px; }
+    .anchor-sym svg { width: 150px; height: 62px; display: block; }
+    .titles { flex: 1; }
+    .titles h1 { color: #1c2433; font-size: 38px; line-height: 1.15; }
+    .titles h1 .sub { color: #5b6472; font-size: 25px; }
+    .titles .subtitle { color: #5b6472; font-size: 20px; margin-top: 4px; }
+    .page-count { flex-shrink: 0; color: #5b6472; font-size: 20px; padding: 8px 18px; border: 1px solid #d9dde3; }
+    .page-count b { color: #1c2433; font-size: 26px; }
+    .page-count, .defs-btn { height: 52px; line-height: 32px; }
+    .defs-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 10px; font: inherit; font-size: 20px;
+        color: #1c2433; background: transparent; border: 1px solid #d9dde3; padding: 8px 18px; cursor: pointer; margin-right: -14px; }
+    .defs-btn .k { border: 1px solid #d9dde3; border-radius: 6px; padding: 0 8px; font-family: 'Menlo','Consolas',monospace; color: #5b6472; line-height: 26px; }
+    .defs-btn.on { border-color: #6b4fa8; background: rgba(107,79,168,0.08); }
+
+    .defs { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(28,36,51,0.351); }
+    .defs.open { display: flex; }
+    .defs-card { width: 1480px; background: #ffffff; padding: 16px 38px 22px; }
+    .defs-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; }
+    .defs-title { font-size: 34px; font-weight: 600; color: #1c2433; }
+    .defs-close { font-size: 20px; color: #5b6472; }
+    .defs-list { display: grid; grid-template-columns: max-content 1fr; column-gap: 30px; row-gap: 10px; align-items: baseline; }
+    .defs-list .ds { font-size: 24px; font-weight: 600; white-space: nowrap; color: #1c2433; }
+    .defs-list .dd { font-size: 21px; line-height: 1.28; color: #3a4350; }
+    .defs-list .dd b { color: #1c2433; }
+
+    .tabstrip { display: flex; margin: 14px 0 4px; }
+    .tab { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .tab .tnum { display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid currentColor; }
+    .tab .tlabel { font-size: 21px; white-space: nowrap; }
+    .tab .tstep { font-size: 15px; margin-left: 4px; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 12px; }
+    .page { position: absolute; inset: 0; display: none; gap: 14px; flex-direction: column; }
+    .page.active { display: flex; }
+    .mono { font-family: 'Menlo','Consolas','Courier New',monospace; }
+
+    .panel { overflow: hidden; flex-shrink: 0; }
+    .panel svg { display: block; }
+    .phead { white-space: nowrap; font-size: 22px; color: #1c2433; padding: 10px 22px 0; }
+    .phead .dimtxt { color: #5b6472; font-weight: 400; }
+    .row { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .side { flex: 0 0 600px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+    .main svg { width: 100%; }
+    .card { padding: 12px 20px 14px; font-size: 20px; line-height: 1.38; color: #3a4350; }
+    .card b { color: #1c2433; }
+    .card .ct { font-size: 22px; font-weight: 600; color: #1c2433; margin-bottom: 6px; }
+    .card ul { list-style: none; }
+    .card li { margin-top: 6px; padding-left: 18px; position: relative; }
+    .card li::before { content: '\25AA'; position: absolute; left: 0; color: #4a6fa5; }
+    .card .rule { border-left: 3px solid #4a6fa5; padding-left: 14px; margin-top: 8px; color: #1c2433; }
+    .card.fill { flex: 1; min-height: 0; }
+    .stepcard .snum { font-size: 17px; font-weight: 700; letter-spacing: 0.5px; color: #4a6fa5; }
+    .stepcard .reason { font-size: 24px; font-weight: 600; line-height: 1.3; color: #1c2433; margin-top: 4px; }
+    .stepcard .why { font-size: 20px; line-height: 1.38; color: #3a4350; margin-top: 4px; min-height: 56px; }
+    .steprow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+
+    .btn { font: inherit; font-size: 19px; font-weight: 600; color: #1c2433; background: transparent;
+        border: 1px solid #5b6472; border-radius: 6px; padding: 5px 14px; cursor: pointer; white-space: nowrap; }
+    .btn .kk { font-weight: 500; font-size: 17px; color: #5b6472; }
+    .btn.nxt { border-color: #4a6fa5; color: #4a6fa5; }
+    .btn.bk { border-color: #858e99; color: #3a4350; }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+    .btn.case { border-color: #d9dde3; color: #5b6472; font-size: 18px; padding: 4px 13px; }
+    .btn.case.on { border-color: #1c2433; color: #1c2433; background: rgba(28,36,51,0.048); }
+
+    /* knobs */
+    .knob { display: flex; align-items: center; gap: 16px; padding: 10px 20px; border-left: 3px solid transparent; }
+    .knob.focus { border-left-color: #4a6fa5; background: rgba(74,111,165,0.07); }
+    .knob .kn { font-size: 22px; font-weight: 600; color: #1c2433; white-space: nowrap; min-width: 66px; }
+    .knob .kk { font-family: 'Menlo','Consolas',monospace; font-size: 16px; color: #5b6472; border: 1px solid #d9dde3; border-radius: 5px; padding: 0 7px; }
+    .knob input[type=range] { flex: 1; min-width: 0; accent-color: #4a6fa5; height: 26px; }
+    .knob .kv { font-family: 'Menlo','Consolas',monospace; font-size: 24px; font-weight: 700; color: #1c2433; min-width: 130px; text-align: right; white-space: nowrap; }
+    .knob .kr { font-size: 15px; color: #5b6472; white-space: nowrap; min-width: 190px; }
+
+    /* tables */
+    .mtab { padding: 4px 16px 10px; }
+    .mtab table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    .mtab th { font-size: 16px; font-weight: 600; color: #5b6472; padding: 4px 6px 6px; text-align: center; border-bottom: 1px solid #b8bfc8; white-space: nowrap; line-height: 1.2; }
+    .mtab td { font-size: 18px; padding: 6px 6px; border-bottom: 1px solid #e6e9ee; color: #1c2433; white-space: nowrap; text-align: center; font-family: 'Menlo','Consolas',monospace; }
+    .mtab tr.hi td { background: rgba(74,111,165,0.10); font-weight: 700; }
+    .mtab tr.ref td { font-weight: 700; }
+    .vtab td { text-align: right; font-size: 19px; padding: 6px 8px; }
+    .vtab td:first-child { text-align: left; font-family: 'Segoe UI', Tahoma, sans-serif; color: #3a4350; }
+    .vtab td.bad { color: #b4472f; font-weight: 700; }
+    .vtab td.good { color: #2e7d4f; font-weight: 700; }
+    .note { font-size: 17px; line-height: 1.35; color: #5b6472; padding: 4px 20px 12px; }
+    .note b { color: #1c2433; }
+
+    /* beat 1 */
+    .fig1 svg { height: 760px; }
+    /* beat 2 */
+    .fig2 svg { height: 700px; }
+    .lev2 svg { width: 100%; height: 412px; }
+    /* beat 3 */
+    .col3 { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .tri3 svg { width: 100%; height: 590px; }
+    .knobs3 { display: flex; flex-direction: column; padding: 4px 0 8px; }
+    .presets { display: flex; align-items: center; gap: 10px; padding: 6px 20px 2px; flex-wrap: nowrap; }
+    .presets .pl { font-size: 18px; color: #5b6472; margin-right: 4px; }
+    .moved { padding: 12px 20px 10px; }
+    .moved .ct { font-size: 22px; font-weight: 600; color: #1c2433; margin-bottom: 4px; }
+    .mv { display: flex; align-items: baseline; gap: 12px; padding: 5px 0; border-bottom: 1px solid #eef0f3; font-size: 20px; color: #3a4350; }
+    .mv .sw { flex-shrink: 0; width: 14px; height: 14px; border-radius: 50%; align-self: center; }
+    .mv .mn { font-weight: 600; color: #1c2433; min-width: 140px; }
+    .mv .mx { font-family: 'Menlo','Consolas',monospace; font-weight: 700; color: #1c2433; }
+    .mv .md { color: #5b6472; font-size: 18px; margin-left: auto; white-space: nowrap; }
+    .take { font-size: 20px; line-height: 1.38; color: #1c2433; border-left: 3px solid #4a6fa5; padding: 2px 0 2px 14px; margin-top: 10px; min-height: 84px; }
+    /* beat 4 */
+    .tl4 svg { width: 100%; height: 446px; }
+    .row4 { display: flex; gap: 14px; flex: 1; min-height: 0; }
+    .close4 { font-size: 30px; line-height: 1.35; color: #1c2433; font-weight: 600; padding: 20px 28px; }
+    .close4 .sm { display: block; font-size: 20px; font-weight: 400; color: #3a4350; margin-top: 10px; }
+    .close4 .sm b { color: #1c2433; }
+    .vkey { display: flex; flex-wrap: wrap; column-gap: 20px; row-gap: 2px; font-size: 18px; color: #3a4350; padding: 2px 0 4px; border-bottom: 1px solid #eef0f3; }
+    .vkey b { color: #1c2433; }
+    /* beat 5 */
+    .apps5 { padding: 0 16px 8px; flex: 1; min-height: 0; }
+    .apps5 th.l, .apps5 td.l, #tab5w th.l, #tab5w td.l { text-align: left; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    #tab5 td { font-size: 19px; padding: 12px 8px; }
+    #tab5 td.job b { display: block; color: #1c2433; font-size: 20px; }
+    #tab5 td.job span { color: #5b6472; font-size: 16px; }
+    #tab5 td.why { white-space: normal; color: #3a4350; font-size: 17px; line-height: 1.3; width: 470px; }
+    #tab5 td.gu { font-weight: 700; }
+    #tab5 tbody tr { cursor: pointer; }
+    #tab5 tbody tr:hover td { background: rgba(74,111,165,0.07); }
+    #tab5 .go { font-size: 16px; padding: 3px 10px; }
+    .carnote { margin: 14px 6px 0; padding: 10px 14px; border-left: 3px solid #4a6fa5; font-size: 19px; line-height: 1.38; color: #3a4350; }
+    .carnote b { color: #1c2433; }
+    .row5 { display: flex; gap: 14px; flex: 0 0 auto; }
+    .wide5 { flex: 1; }
+    .wide5 .wrow { display: flex; gap: 24px; align-items: flex-start; }
+    .wide5 ul { flex: 1; margin-top: -4px; }
+    #tab5w td { font-size: 19px; }
+    .close5 { flex: 0 0 560px; font-size: 27px; padding: 16px 24px; }
+
+    /* SVG classes */
+    .ax { stroke: #b8bfc8; stroke-width: 1; }
+    .grid { stroke: #eef0f3; stroke-width: 1; }
+    .tick { fill: #5b6472; font-size: 16px; font-family: 'Menlo','Consolas',monospace; }
+    .cht { fill: #1c2433; font-size: 21px; font-weight: 600; }
+    .chs { fill: #5b6472; font-size: 17px; font-weight: 400; }
+    .lbl { fill: #1c2433; font-size: 18px; }
+    .lbl2 { fill: #5b6472; font-size: 16px; }
+    .val { fill: #1c2433; font-family: 'Menlo','Consolas',monospace; font-size: 18px; font-weight: 700; }
+    .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .guide { stroke: #5b6472; stroke-width: 1; }
+    .hover-g { pointer-events: none; }
+    .tip-box { fill: #ffffff; stroke: #b8bfc8; stroke-width: 1; }
+    .hid { display: none; }
+    .bad { fill: #b4472f; }
+    .ok { fill: #2e7d4f; }
+    .corner-n { fill: #1c2433; font-size: 24px; font-weight: 600; }
+    .corner-v { fill: #1c2433; font-family: 'Menlo','Consolas',monospace; font-size: 34px; font-weight: 700; }
+    .corner-s { fill: #5b6472; font-size: 18px; }
+    .corner-d { fill: #3a4350; font-size: 17px; }
+    .edge { stroke: #d9dde3; stroke-width: 1.5; fill: none; }
+    .ghost { fill: none; stroke: #858e99; stroke-width: 1.5; stroke-dasharray: 5 5; }
+    .badge-t { font-size: 24px; font-weight: 700; }
+
+    .footer { display: flex; align-items: center; gap: 26px; padding-top: 12px; flex-shrink: 0; }
+    .progress { display: flex; gap: 9px; }
+    .pdot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #d9dde3; }
+    .pdot.on { background: #1c2433; border-color: #1c2433; }
+    .controls { font-size: 20px; color: #5b6472; }
+    .controls .k { border: 1px solid #d9dde3; border-radius: 6px; padding: 1px 8px; font-family: 'Menlo','Consolas',monospace; color: #5b6472; }
+
+    /* ======== VISUAL SYSTEM v2 (light) — copied from 40-switch-debouncer ========
+       surround #f6f6f4 · stage white · text #1c2433 · secondary #5b6472 · unfocused #858e99 (3.4:1) · hairline #d9dde3
+       accent (lecture-deck blue) #4a6fa5, emphasis #2f4f7f · control #b8640a · status #6b4fa8 · data/registers #4a6fa5
+       output/accept #2e7d4f · raw btn #b4472f · every text color >= 4.5:1 on white except unfocused (>= 3:1)
+       no glows, shadows or gradients; 1.5 px structure, 2.5 px lit path; lit = accent stroke + 8-10% tint; unfocused = grey, not faded */
+    :root { --surround: #f6f6f4; --stage: #ffffff; --ink: #1c2433; --ink2: #5b6472; --mute: #858e99; --hair: #d9dde3;
+        --accent: #4a6fa5; --accent2: #2f4f7f; --ctl: #b8640a; --st: #6b4fa8; --data: #4a6fa5; --ok: #2e7d4f; --raw: #b4472f;
+        --pw: #b8640a; --nm: #2f6db5; --sp: #9a3f8f; }
+    .viewport-container { background: var(--stage); }
+    .design-surface { background: var(--stage); color: var(--ink); }
+    .anchor-sym { border: 1px solid var(--hair); background: none; border-radius: 6px; }
+    .titles h1 { font-weight: 600; } .titles h1 .sub { font-weight: 400; }
+    .page-count, .defs-btn { border-width: 1px; border-radius: 6px; font-weight: 500; }
+    .defs-card { border: 1px solid var(--hair); border-radius: 8px; }
+    .tabstrip { gap: 30px; border-bottom: 1px solid var(--hair); margin-bottom: 6px; }
+    .tab { border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 8px 2px 10px; background: none; color: var(--ink2); }
+    .tab .tnum { width: 30px; height: 30px; border-width: 1px; border-radius: 50%; font-size: 17px; font-weight: 600; }
+    .tab .tlabel { font-weight: 600; }
+    .tab .tstep { letter-spacing: 0; font-weight: 500; color: var(--mute); }
+    .tab.on { color: var(--accent2); border-bottom-color: var(--accent); background: none; }
+    .tab.on .tnum { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .panel { border: 1px solid var(--hair); border-radius: 6px; background: var(--stage); }
+    .phead { font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="anchor-sym">
+            <svg viewBox="0 0 150 62" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="75" cy="10" r="6" fill="#b8640a" stroke="none"/>
+                <circle cx="22" cy="52" r="6" fill="#2f6db5" stroke="none"/>
+                <circle cx="128" cy="52" r="6" fill="#9a3f8f" stroke="none"/>
+                <path d="M75 18 L28 47 M81 15 L122 46 M30 54 H120" stroke="#858e99" stroke-width="1.5"/>
+            </svg>
+        </div>
+        <div class="titles">
+            <h1>Power, Noise Margin and Speed <span class="sub">&mdash; one supply voltage, three consequences</span></h1>
+            <div class="subtitle">Turning the supply voltage down saves power as the square, but it shrinks the noise margin and slows every gate. You cannot win all three.</div>
+        </div>
+        <button class="defs-btn" id="defsBtn"><span>Definitions</span><span class="k">D</span></button>
+        <div class="page-count">Beat <b id="pcNum">1</b> / 5</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip">
+        <div class="tab" data-page="1"><div class="tnum">1</div><div class="tlabel">Three Relations</div><div class="tstep">step through</div></div>
+        <div class="tab" data-page="2"><div class="tnum">2</div><div class="tlabel">The Noise Trap</div><div class="tstep">step through</div></div>
+        <div class="tab" data-page="3"><div class="tnum">3</div><div class="tlabel">The Triangle</div><div class="tstep">turn the knobs</div></div>
+        <div class="tab" data-page="4"><div class="tnum">4</div><div class="tlabel">Where Chips Settled</div></div>
+        <div class="tab" data-page="5"><div class="tnum">5</div><div class="tlabel">Who Picks Which Corner</div><div class="tstep">click a row</div></div>
+    </div>
+
+    <div class="stage" id="stage">
+
+        <!-- BEAT 1 — three relations on one axis -->
+        <div class="page" id="p1">
+            <div class="row">
+                <div class="panel main fig1">
+                    <div class="phead">One knob, three dials <span class="dimtxt">&mdash; one fixed car: same transistors, same load; only the supply changes (hover to read)</span></div>
+                    <svg id="d1" viewBox="0 0 1220 760"></svg>
+                </div>
+                <div class="side">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum1"></div>
+                        <div class="reason" id="reason1"></div>
+                        <div class="why" id="why1"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk1">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt1">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="knob" data-knob="V"><span class="kn">V<sub>DD</sub></span><span class="kk">V</span><input type="range" data-range="V"><span class="kv" data-kv="V"></span></div>
+                    </div>
+                    <div class="panel mtab">
+                        <table id="tab1">
+                            <thead><tr><th>V<sub>DD</sub></th><th>NM</th><th>delay<br>t<sub>pd</sub></th><th>top speed<br>f<sub>max</sub></th><th>power<br>same f</th><th>power<br>at f<sub>max</sub></th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                        <div class="note" style="padding: 8px 4px 0">Every column except NM is <b>relative to 1.0 V</b>. Model: one modern transistor, V<sub>t</sub> = 0.35 V, 20 ps per gate at 1.0 V, safe from 0.5 to 1.2 V.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 2 — the absolute-noise trap -->
+        <div class="page" id="p2">
+            <div class="row">
+                <div class="panel main fig2">
+                    <div class="phead">Noise margin shrinks with the supply; <span class="c-bad" style="color:#b4472f">noise does not, unless the design cuts it</span> <span class="dimtxt">&mdash; margin on each side, in volts</span></div>
+                    <svg id="d2" viewBox="0 0 1220 700"></svg>
+                    <div class="note" style="padding: 0 22px 12px">Ground bounce, crosstalk and supply ripple come from the board and the package. Every drop in V<sub>DD</sub> shrinks the margin, so it has to be matched by quieter design: more ground pins, on-chip capacitors, better boards. Lowering the supply is only possible once the noise comes down with it.</div>
+                </div>
+                <div class="side">
+                    <div class="panel card stepcard">
+                        <div class="snum" id="snum2"></div>
+                        <div class="reason" id="reason2"></div>
+                        <div class="why" id="why2"></div>
+                        <div class="steprow">
+                            <button class="btn bk" id="bk2">&#9664; back <span class="kk">&uarr;</span></button>
+                            <button class="btn nxt" id="nxt2">next <span class="kk">Space</span></button>
+                            <button class="btn" data-reset>&#8634; <span class="kk">R</span></button>
+                        </div>
+                    </div>
+                    <div class="panel lev2">
+                        <div class="phead">The input contract at <span id="lev2v"></span> <span class="dimtxt">&mdash; drawn to scale</span></div>
+                        <svg id="d2b" viewBox="0 0 580 412"></svg>
+                    </div>
+                    <div class="panel">
+                        <div class="knob" data-knob="V"><span class="kn">V<sub>DD</sub></span><span class="kk">V</span><input type="range" data-range="V"><span class="kv" data-kv="V"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 3 — the design triangle -->
+        <div class="page" id="p3">
+            <div class="row">
+                <div class="col3">
+                    <div class="panel tri3">
+                        <div class="phead">The design triangle <span class="dimtxt">&mdash; one fixed car; dot size is the dial's value; the dashed ring is 1.0 V and 1 GHz</span></div>
+                        <svg id="d3" viewBox="0 0 1240 590"></svg>
+                    </div>
+                    <div class="panel knobs3">
+                        <div class="knob" data-knob="V"><span class="kn">V<sub>DD</sub></span><span class="kk">V</span><input type="range" data-range="V"><span class="kv" data-kv="V"></span><span class="kr">moves all three corners</span></div>
+                        <div class="knob" data-knob="F"><span class="kn">clock f</span><span class="kk">F</span><input type="range" data-range="F"><span class="kv" data-kv="F"></span><span class="kr">moves only power</span></div>
+                        <div class="presets">
+                            <span class="pl">Try:</span>
+                            <button class="btn case" data-case="0">Case 1</button>
+                            <button class="btn case" data-case="1">Case 2</button>
+                            <button class="btn case" data-case="2">Case 3</button>
+                            <button class="btn case" data-case="3">Case 4</button>
+                            <button class="btn" id="fmaxBtn">clock = f<sub>max</sub> <span class="kk">M</span></button>
+                            <button class="btn" id="zBtn">&#8634; 1.0 V, 1 GHz <span class="kk">Z</span></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="side">
+                    <div class="panel moved">
+                        <div class="ct">What moved <span style="color:#5b6472;font-weight:400">&mdash; against 1.0 V, 1 GHz</span></div>
+                        <div class="mv"><span class="sw" style="background:#b8640a"></span><span class="mn">Power</span><span class="mx" data-mv="P"></span><span class="md" data-mvd="P"></span></div>
+                        <div class="mv"><span class="sw" style="background:#2f6db5"></span><span class="mn">Noise margin</span><span class="mx" data-mv="NM"></span><span class="md" data-mvd="NM"></span></div>
+                        <div class="mv"><span class="sw" style="background:#9a3f8f"></span><span class="mn">Speed</span><span class="mx" data-mv="S"></span><span class="md" data-mvd="S"></span></div>
+                        <div class="take" id="take3"></div>
+                    </div>
+                    <div class="panel mtab">
+                        <table class="vtab" id="vtab3"><tbody>
+                            <tr><td>Dynamic power, &alpha;NCV<sub>DD</sub><sup>2</sup>f</td><td data-q="P"></td></tr>
+                            <tr><td>Noise margin, 0.1 V<sub>DD</sub></td><td data-q="NM"></td></tr>
+                            <tr><td>Delay per gate, t<sub>pd</sub></td><td data-q="tpd"></td></tr>
+                            <tr><td>Critical path, 20 gates</td><td data-q="path"></td></tr>
+                            <tr><td>Top clock, f<sub>max</sub> = 1 / path</td><td data-q="fmax"></td></tr>
+                            <tr><td>Clock f</td><td data-q="f"></td></tr>
+                            <tr><td>Operates correctly? (f &lt; f<sub>max</sub>)</td><td data-q="legal"></td></tr>
+                        </tbody></table>
+                        <div class="note" style="padding: 8px 8px 0">The same block as <b data-topic="static-and-dynamic-power">Static and Dynamic Power</b>: N = 10<sup>6</sup> gates, C = 10 fF, &alpha; = 0.1. Static power, N&middot;I<sub>leak</sub>&middot;V<sub>DD</sub> = <span class="mono" data-q="Ps"></span>, also falls with V<sub>DD</sub>, but only linearly.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 4 — where chips settled -->
+        <div class="page" id="p4">
+            <div class="panel tl4">
+                <div class="phead">Why chips settled where they did <span class="dimtxt">&mdash; each generation is a new, better car</span></div>
+                <svg id="d4" viewBox="0 0 1816 470"></svg>
+            </div>
+            <div class="row4">
+                <div class="panel card" style="flex: 0 0 1100px">
+                    <div class="ct">The car keeps getting better</div>
+                    <div class="vkey"><span><b>distance</b> = the swing, V<sub>DD</sub></span><span><b>weight</b> = the load</span><span><b>engine</b> = the current</span><span><b>clearance</b> = noise margin</span><span><b>bumps</b> = noise</span></div>
+                    <ul>
+                        <li><b>Beats 1&ndash;3 drive one car</b> inside its safe window: it redlines near 1.2 V and stalls toward V<sub>t</sub>. Turning its engine down makes every trip slower.</li>
+                        <li><b>Each generation built a better car.</b> Lighter, so it went faster on less fuel and clocks rose. Lower to the ground, so the roads and suspension had to improve: quieter boards, packages and on-chip capacitors.</li>
+                        <li><b>Then the tiny car could not go faster.</b> V<sub>t</sub> could not drop without leaking, and packed cars ran too hot. Since about 2005 clocks hold at 3&ndash;5 GHz, and chips add <b>more cars (cores)</b> instead.</li>
+                    </ul>
+                </div>
+                <div class="panel close4" style="flex: 1; font-size: 26px">
+                    About 1 V is where most chips sit today, but it is not the answer for every chip.
+                    <span class="sm">A hearing aid, a phone, a laptop and a server do different jobs, so each one gives up a different corner of the triangle. Beat 5 puts each of them on the knobs.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BEAT 5 — who picks which corner -->
+        <div class="page" id="p5">
+            <div class="panel mtab apps5">
+                <div class="phead" style="padding-left:6px">There is no best supply voltage <span class="dimtxt">&mdash; each job picks the corner it can afford to give up; click a row to set the triangle's knobs</span></div>
+                <table id="tab5">
+                    <thead><tr><th class="l">Job (example)</th><th>V<sub>DD</sub></th><th>clock f</th><th>power</th><th>noise<br>margin</th><th class="l">Gives up</th><th class="l">Because</th><th></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+                <div class="carnote"><b>Not on this table: a car's engine controller.</b> Next to the ignition and motors the road is very bumpy, so it needs far more clearance than this car has. It uses bigger, older transistors rated for 3.3 V or 5 V: a different car, with a wider window.</div>
+            </div>
+            <div class="row5">
+                <div class="panel card wide5">
+                    <div class="ct">A third way out: more gates, each one slower <span style="color:#5b6472;font-weight:400">&mdash; how NVIDIA GPUs and AI chips get their speed</span></div>
+                    <div class="wrow">
+                        <div class="mtab" style="padding:0">
+                            <table id="tab5w">
+                                <thead><tr><th class="l">Same work: 2.5 billion operations/s</th><th>V<sub>DD</sub></th><th>clock, each</th><th>power</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <ul>
+                            <li><b>Splitting the work lets every copy slow down,</b> and a slower clock lets the supply drop, which pays back as the square.</li>
+                            <li><b>The price is silicon:</b> 4 copies need 4&times; the gates. A GPU has thousands of cores, so it still draws hundreds of watts.</li>
+                        </ul>
+                    </div>
+                    <div class="rule">Two copies do the same work for 36% less power; four copies, for 51% less.</div>
+                </div>
+                <div class="panel close4 close5">
+                    Pick the corner you can give up.
+                    <span class="sm">Apple's chips put the phone and laptop rows on one die: <b>efficiency cores</b> for the light work, <b>performance cores</b> for the heavy work, and DVFS moves each group's supply and clock all day.</span>
+                </div>
+            </div>
+            <div class="note" style="padding:0 4px">Numbers come from this graphic's model (the same 10<sup>6</sup>-gate block as beat 3), not from any product's datasheet. Ultra-low-power chips like these really do run near 0.5 V.</div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="progress"><div class="pdot" data-dot="1"></div><div class="pdot" data-dot="2"></div><div class="pdot" data-dot="3"></div><div class="pdot" data-dot="4"></div><div class="pdot" data-dot="5"></div></div>
+        <div class="controls">
+            <span class="k">1</span>&ndash;<span class="k">5</span> beat
+            &middot; <span class="k">Space</span> next &middot; <span class="k">&#9664; back</span> or <span class="k">&uarr;</span> one step back
+            &middot; <span class="k">V</span> <span class="k">F</span> pick a knob, then <span class="k">&larr;</span><span class="k">&rarr;</span> nudge it
+            &middot; <span class="k">Z</span> knobs to 1.0 V, 1 GHz &middot; <span class="k">N</span> noise on/off (beat 2)
+            &middot; <span class="k">R</span> reset &middot; <span class="k">D</span> definitions
+        </div>
+    </div>
+
+    <div class="defs" id="defs">
+        <div class="defs-card">
+            <div class="defs-head"><div class="defs-title">Definitions</div><div class="defs-close">D or Esc closes</div></div>
+            <div class="defs-list">
+                <div class="ds">Supply voltage, V<sub>DD</sub></div><div class="dd">The voltage that powers every gate. A logic 1 sits near V<sub>DD</sub> and a logic 0 near 0 V, so V<sub>DD</sub> also sets how far apart 0 and 1 are.</div>
+                <div class="ds">Noise margin, NM</div><div class="dd">How much noise a signal can pick up before the next gate misreads it: NM<sub>H</sub> = V<sub>OH</sub> &minus; V<sub>IH</sub>, NM<sub>L</sub> = V<sub>IL</sub> &minus; V<sub>OL</sub>. Here outputs promise 0.25 / 0.75 V<sub>DD</sub> and inputs need 0.35 / 0.65 V<sub>DD</sub> (the published 1.2 V levels), so both are <b>0.1 V<sub>DD</sub></b>. See <b data-topic="gate-technologies-and-noise-margin">Gate Technologies and Noise Margin</b>.</div>
+                <div class="ds">Gate delay, t<sub>pd</sub></div><div class="dd">The time from an input change to the output change. A gate charges its load with the current its transistors can push; less voltage means much less current. More supply means a bigger swing to cover, but the current grows faster than the swing. Here t<sub>pd</sub> &prop; V<sub>DD</sub> / (V<sub>DD</sub> &minus; V<sub>t</sub>)<sup>2</sup>.</div>
+                <div class="ds">Threshold, V<sub>t</sub></div><div class="dd">The gate voltage a transistor needs before it starts to conduct (0.35 V in this model). As V<sub>DD</sub> nears V<sub>t</sub>, the transistors barely turn on and the delay shoots up.</div>
+                <div class="ds">Safe window</div><div class="dd">The supply range one kind of transistor can use. Too high and its thin insulation breaks down (the redline, about 1.2 V here); too low and it barely turns on (the stall, toward V<sub>t</sub>). Going from 5 V to 1 V meant building new transistors, not turning old ones down.</div>
+                <div class="ds">Top clock, f<sub>max</sub></div><div class="dd">The fastest clock the slowest path allows: one clock period must cover the path's 20 gate delays, so f<sub>max</sub> = 1 / (20 &middot; t<sub>pd</sub>). A faster clock captures wrong values.</div>
+                <div class="ds">Dynamic power</div><div class="dd">P<sub>dyn</sub> = &alpha; N C V<sub>DD</sub><sup>2</sup> f, the cost of charging and discharging every load. See <b data-topic="static-and-dynamic-power">Static and Dynamic Power</b>.</div>
+                <div class="ds">Core</div><div class="dd">One complete processor inside a chip, running its own stream of instructions. A phone chip has about 6 to 8; a GPU has thousands of small ones. Each core, or group of cores, can get its own supply and clock.</div>
+                <div class="ds">DVFS</div><div class="dd">Dynamic voltage and frequency scaling: lower the supply <b>and</b> the clock together when full speed is not needed. This is how a phone stretches its battery.</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALING ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const container = document.getElementById('viewportContainer'), surface = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * 16 / 9; } else { cw = vw; ch = cw * 9 / 16; }
+        container.style.width = cw + 'px'; container.style.height = ch + 'px';
+        surface.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    const $ = (id) => document.getElementById(id);
+    const SVGNS = 'http://www.w3.org/2000/svg';
+
+    // ============ THE MODEL (source of truth; brief 45 relations + brief 44 block) ============
+    const M = { Vt: 0.35, T0: 20e-12, VREF: 1.0, STAGES: 20, N: 1e6, C: 10e-15, alpha: 0.1, Ileak: 5e-9, NOISE: 0.075, kNM: 0.1, VMIN: 0.5, VMAX: 1.2 };
+    // one modern transistor ('one fixed car') has a safe window: it redlines near 1.2 V (thin insulation breaks down) and stalls toward V_t
+    const kDelay = (V) => V / Math.pow(V - M.Vt, 2);                 // long-channel: t_pd ∝ V / (V − V_t)^2
+    const tpd = (V) => M.T0 * kDelay(V) / kDelay(M.VREF);            // seconds per gate
+    const fmax = (V) => 1 / (M.STAGES * tpd(V));                       // Hz
+    const Pdyn = (V, f) => M.alpha * M.N * M.C * V * V * f;            // W
+    const Pstat = (V) => M.N * M.Ileak * V;                            // W
+    const NMof = (V) => M.kNM * V;                                     // V, each side: V_OL = 0.25, V_IL = 0.35, V_IH = 0.65, V_OH = 0.75 of V_DD (the 1.2 V standard in brief 43)
+    const DEF = { V: 1.0, f: 1e9 };
+    const ROWS1 = [1.2, 1.1, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5];
+    const ROWS2 = [1.2, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5];
+    const VSTOPS = Array.from({ length: 15 }, (_, i) => Math.round((0.5 + 0.05 * i) * 100) / 100);
+    const FSTOPS = [10, 15, 20, 30, 50, 70, 100, 150, 200, 300, 500, 700, 1000, 1250, 1500, 2000, 2500, 3000, 3500, 4000].map(m => m * 1e6);
+    const CASES = [{ V: 0.8, f: 1e9 }, { V: 0.8, f: 2e9 }, { V: 1.2, f: 1e9 }, { V: 1.0, f: 2e9 }];
+    const legalOf = (V, f) => f <= fmax(V) * (1 + 1e-9);
+    const atEdge = (V, f) => Math.abs(f / fmax(V) - 1) < 0.005;
+
+    // ============ FORMATTING ============
+    const p3 = (x) => { const s = Number(x).toPrecision(3); return s.indexOf('e') >= 0 ? String(Math.round(x)) : s; };
+    const fmtV = (v) => (Math.abs(v * 100 - Math.round(v * 100)) < 1e-6 ? v.toFixed(2) : v.toFixed(3)) + ' V';
+    const fmtVs = (v) => (Math.abs(v * 10 - Math.round(v * 10)) < 1e-6 ? v.toFixed(1) : v.toFixed(2)) + ' V';  // a supply
+    const fmtW = (w) => w >= 0.1 ? p3(w) + ' W' : p3(w * 1e3) + ' mW';
+    const fmtHz = (h) => h >= 1e9 ? p3(h / 1e9) + ' GHz' : p3(h / 1e6) + ' MHz';
+    const fmtS = (s) => s >= 1e-9 * 0.9995 ? p3(s * 1e9) + ' ns' : p3(s * 1e12) + ' ps';
+    const fmtX = (x) => '×' + p3(x);
+    const fmtN = (v) => v < 0.1 ? Math.round(v * 1000) + ' mV' : fmtV(v);  // a noise amplitude
+    const sub = (s) => `<tspan baseline-shift="sub" font-size="70%">${s}</tspan>`;
+
+    // ============ STATE ============
+    let page = 1, V = DEF.V, f = DEF.f, focus = null, s1 = 0, s2 = 0, noiseOn = false, hoverV = null;
+    const NPAGES = 5;
+
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+    function txt(parent, x, y, s, cls, attrs = {}) { const { fill, ...rest } = attrs; const t = el('text', { x, y, class: cls, ...rest }, parent); if (fill) t.style.fill = fill; /* CSS class fills beat attributes */ if (/[<&]/.test(s)) t.innerHTML = s; else t.textContent = s; return t; }
+
+    // ============ BEAT 1: three single-series charts on one shared V_DD axis ============
+    const X1 = { x0: 120, x1: 1180, v0: 0.4, v1: 1.3 };
+    const x1Of = (v) => X1.x0 + (v - X1.v0) / (X1.v1 - X1.v0) * (X1.x1 - X1.x0);
+    const v1Of = (x) => X1.v0 + (x - X1.x0) / (X1.x1 - X1.x0) * (X1.v1 - X1.v0);
+    const CH = [
+        { key: 'P', color: '#b8640a', title: 'Power at the same clock', sub: ' — grows as the square of V' + sub('DD') + ' (relative to 1.0 V)', max: 1.8, ticks: [0, 0.5, 1.0, 1.5], fn: (v) => (v / M.VREF) ** 2, fmt: (y) => fmtX(y) },
+        { key: 'NM', color: '#2f6db5', title: 'Noise margin, each side', sub: ' — a straight line, 0.1 V' + sub('DD') + ' (volts)', max: 0.15, ticks: [0, 0.05, 0.10, 0.15], fn: (v) => NMof(v), fmt: (y) => fmtV(y) },
+        { key: 'D', color: '#9a3f8f', title: 'Gate delay', sub: ' — a cliff as V' + sub('DD') + ' falls toward V' + sub('t') + ' = 0.35 V (relative to 1.0 V)', max: 12.5, ticks: [0, 2, 4, 6, 8, 10, 12], fn: (v) => tpd(v) / tpd(M.VREF), fmt: (y) => fmtX(y) },
+    ];
+    CH.forEach((c, i) => { c.top = 30 + i * 240; c.yb = c.top + 190; c.yt = c.top + 40; c.yOf = (y) => c.yb - y / c.max * (c.yb - c.yt); });
+    const B1 = {};
+    function buildB1() {
+        const svg = $('d1'); svg.innerHTML = '';
+        { const d = el('defs', {}, svg), p = el('pattern', { id: 'hatch-d1', width: 9, height: 9, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, d);
+          el('line', { x1: 0, y1: 0, x2: 0, y2: 9, stroke: '#b8bfc8', 'stroke-width': 1.4 }, p); }
+        CH.forEach((c, i) => {
+            const g = el('g', { 'data-chart': c.key }, svg);
+            txt(g, X1.x0, c.top + 8, `<tspan>${c.title}</tspan><tspan class="chs">${c.sub}</tspan>`, 'cht');
+            for (const t of c.ticks) { el('line', { x1: X1.x0, x2: X1.x1, y1: c.yOf(t), y2: c.yOf(t), class: t ? 'grid' : 'ax' }, g);
+                txt(g, X1.x0 - 12, c.yOf(t) + 5, c.key === 'NM' ? t.toFixed(2) : (c.key === 'P' ? t.toFixed(1) : String(t)), 'tick', { 'text-anchor': 'end' }); }
+            for (const v of [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]) el('line', { x1: x1Of(v), x2: x1Of(v), y1: c.yt, y2: c.yb, class: 'grid' }, g);
+            // outside the window: hatched, this car does not go there
+            for (const [a, b] of [[X1.v0, M.VMIN], [M.VMAX, X1.v1]]) el('rect', { x: x1Of(a), y: c.yt, width: x1Of(b) - x1Of(a), height: c.yb - c.yt, fill: 'url(#hatch-d1)', opacity: 0.55 }, g);
+            el('line', { x1: X1.x0, x2: X1.x0, y1: c.yt - 6, y2: c.yb, class: 'ax' }, g);
+            // the curve: sampled every 0.01 V straight from the relation
+            const pts = []; for (let v = 0.48; v <= X1.v1 + 1e-9; v += 0.005) pts.push([x1Of(v), c.yOf(Math.min(c.fn(v), c.max * 1.02))]);
+            el('path', { d: 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' L'), class: 'line', stroke: c.color, 'data-curve': c.key }, g);
+            if (i === CH.length - 1) {
+                for (const v of [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3]) txt(g, x1Of(v), c.yb + 26, v.toFixed(1), 'tick', { 'text-anchor': 'middle' });
+                txt(g, X1.x1, c.yb + 50, 'supply voltage V' + sub('DD') + ' (volts)', 'lbl2', { 'text-anchor': 'end' });
+            }
+            c.dot = el('circle', { r: 6, fill: c.color, stroke: '#ffffff', 'stroke-width': 2, 'data-dot': c.key }, g);
+            c.lab = txt(g, 0, 0, '', 'val', { 'data-q1': c.key });
+        });
+        // the cliff note sits in the empty upper middle of the delay chart
+        const D = CH[2]; txt(svg, x1Of(0.66), D.yOf(7.2), 'toward V' + sub('t') + ' the curve goes vertical:', 'lbl2');
+        txt(svg, x1Of(0.66), D.yOf(7.2) + 26, 'the transistors barely turn on', 'lbl2');
+        // the two walls of the window, named once on the power chart
+        const P0 = CH[0]; txt(svg, x1Of(0.45), P0.yt + 18, 'stall', 'lbl2', { 'text-anchor': 'middle', 'font-weight': 600 });
+        txt(svg, x1Of(1.25), P0.yt + 18, 'redline', 'lbl2', { 'text-anchor': 'middle', 'font-weight': 600 });
+        B1.guide = el('line', { y1: CH[0].yt - 4, y2: CH[2].yb, class: 'guide' }, svg);
+        svg.insertBefore(B1.guide, svg.firstChild);
+        // hover layer: crosshair + one tooltip reporting all three values at the hovered voltage
+        B1.hov = el('g', { class: 'hover-g hid' }, svg);
+        B1.hline = el('line', { y1: CH[0].yt - 4, y2: CH[2].yb, stroke: '#1c2433', 'stroke-width': 1 }, B1.hov);
+        B1.tip = el('g', {}, B1.hov); B1.tipBox = el('rect', { width: 250, height: 132, rx: 4, class: 'tip-box' }, B1.tip);
+        B1.tipT = [0, 1, 2, 3].map(i => txt(B1.tip, 14, 26 + i * 31, '', i ? 'lbl' : 'val', { 'data-tip': i }));
+        B1.hdots = CH.map(c => el('circle', { r: 5, fill: c.color, stroke: '#fff', 'stroke-width': 2 }, B1.hov));
+        const hit = el('rect', { x: X1.x0, y: CH[0].yt, width: X1.x1 - X1.x0, height: CH[2].yb - CH[0].yt, fill: 'transparent' }, svg);
+        hit.addEventListener('mousemove', (e) => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse()); setHover(Math.max(M.VMIN, Math.min(M.VMAX, v1Of(q.x)))); });
+        hit.addEventListener('mouseleave', () => setHover(null));
+    }
+    function paintHover() {
+        if (hoverV === null) { B1.hov.classList.add('hid'); return; }
+        B1.hov.classList.remove('hid'); const x = x1Of(hoverV);
+        B1.hline.setAttribute('x1', x); B1.hline.setAttribute('x2', x);
+        CH.forEach((c, i) => { B1.hdots[i].setAttribute('cx', x); B1.hdots[i].setAttribute('cy', c.yOf(Math.min(c.fn(hoverV), c.max))); });
+        B1.tipT[0].innerHTML = 'V' + sub('DD') + ' = ' + hoverV.toFixed(2) + ' V';
+        B1.tipT[1].textContent = 'power ' + fmtX(CH[0].fn(hoverV));
+        B1.tipT[2].textContent = 'margin ' + fmtV(CH[1].fn(hoverV));
+        B1.tipT[3].textContent = 'delay ' + fmtX(CH[2].fn(hoverV));
+        const tx = x + 270 > X1.x1 ? x - 266 : x + 16; B1.tip.setAttribute('transform', `translate(${tx},${CH[1].yt})`);
+    }
+    function setHover(v) { hoverV = v; if (page === 1) paintHover(); }
+    const STEPS1 = [
+        { V: 1.0, h: 'One modern car at 1.0 V', w: 'These charts follow one set of transistors. Its safe window runs from about 0.5 V to 1.2 V; the hatched ends are where this car cannot go. Margin 0.10 V on each side.' },
+        { V: 1.2, h: 'Up to the redline: 1.2 V', w: 'Gates 1.42× faster and margin 0.12 V, but power ×1.44. Much above 1.2 V the thin insulation in these transistors breaks down.' },
+        { V: 0.8, h: 'Down to 0.8 V: power ×0.64', w: 'The margin shrinks to 0.08 V and each gate is 1.67× slower. A lower supply has less distance to swing, but it pushes much less current.' },
+        { V: 0.6, h: '0.6 V: the cliff begins', w: 'Power ×0.36, but gates are 4.06× slower. The supply is getting close to V<sub>t</sub> = 0.35 V, so the current is collapsing.' },
+        { V: 0.5, h: '0.5 V: the bottom of the window', w: 'Gates 9.39× slower: fine for a hearing aid at a few MHz, useless for a laptop. Go much lower and the slow circuit leaks for so long that it stops saving energy.' },
+        { V: 1.0, h: 'Square, line, cliff', w: 'Inside the window: power is the square, margin is the line, delay is the cliff. One knob turns all three.' },
+    ];
+    function paintB1() {
+        const st = STEPS1[s1];
+        $('snum1').textContent = `STEP ${s1 + 1} OF ${STEPS1.length}`; $('reason1').innerHTML = st.h; $('why1').innerHTML = st.w;
+        $('bk1').disabled = s1 === 0; $('nxt1').disabled = s1 === STEPS1.length - 1;
+        const x = x1Of(V); B1.guide.setAttribute('x1', x); B1.guide.setAttribute('x2', x);
+        CH.forEach(c => { const y = c.fn(V), cy = c.yOf(Math.min(y, c.max)); c.dot.setAttribute('cx', x); c.dot.setAttribute('cy', cy);
+            c.lab.textContent = c.fmt(y); const right = V < 1.05; c.lab.setAttribute('x', right ? x + 14 : x - 14); c.lab.setAttribute('text-anchor', right ? 'start' : 'end');
+            const below = c.key !== 'D' && cy + 28 <= c.yb - 6;  // a rising curve's label sits below the line, where the curve never goes
+            c.lab.setAttribute('y', below ? cy + 28 : Math.max(c.yt + 14, cy - 12)); });
+        const tb = $('tab1').tBodies[0]; tb.innerHTML = '';
+        for (const v of ROWS1) { const tr = tb.insertRow(), tr0 = tpd(v) / tpd(1), fr = 1 / tr0;
+            if (Math.abs(v - V) < 1e-9) tr.className = 'hi'; else if (v === 1.0) tr.className = 'ref';
+            tr.dataset.v = v;
+            [fmtVs(v), fmtV(NMof(v)), p3(tr0), p3(fr), p3(v * v), p3(v * v * fr)].forEach((s, i) => { const td = tr.insertCell(); td.textContent = s; td.dataset.col = i; }); }
+        paintHover();
+    }
+
+    // ============ BEAT 2: margin bars against a fixed 75 mV of noise ============
+    const X2 = { x0: 170, perV: 4000 }; const x2Of = (v) => X2.x0 + v * X2.perV;
+    const R2 = { top: 62, h: 70 };
+    const B2 = {};
+    function buildB2() {
+        const svg = $('d2'); svg.innerHTML = '';
+        const defs = el('defs', {}, svg); const pat = el('pattern', { id: 'hatch-d2', width: 9, height: 9, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs);
+        el('line', { x1: 0, y1: 0, x2: 0, y2: 9, stroke: '#5b6472', 'stroke-width': 1.6 }, pat);
+        const nRows = ROWS2.length + 1, yBot = R2.top + nRows * R2.h + 14;
+        for (const t of [0, 0.025, 0.05, 0.075, 0.1, 0.125, 0.15]) { el('line', { x1: x2Of(t), x2: x2Of(t), y1: R2.top - 6, y2: yBot, class: t ? 'grid' : 'ax' }, svg);
+            if ([0, 0.05, 0.1, 0.15].includes(t)) txt(svg, x2Of(t), yBot + 24, t.toFixed(2), 'tick', { 'text-anchor': 'middle' }); }
+        txt(svg, x2Of(0.15), yBot + 48, 'noise margin, each side (volts)', 'lbl2', { 'text-anchor': 'end' });
+        txt(svg, 20, R2.top - 22, 'V' + sub('DD'), 'lbl2');
+        txt(svg, 940, R2.top - 22, 'a 75 mV noise bump', 'lbl2');
+        B2.rows = [];
+        const all = ROWS2.concat(['live']);
+        all.forEach((v, i) => { const yc = R2.top + i * R2.h + R2.h / 2 + (v === 'live' ? 14 : 0), g = el('g', { 'data-row2': v === 'live' ? 'live' : v }, svg);
+            if (v === 'live') el('line', { x1: 20, x2: 1200, y1: yc - R2.h / 2 - 4, y2: yc - R2.h / 2 - 4, class: 'ax' }, svg);
+            const lab = txt(g, 20, yc + (v === 'live' ? -2 : 7), '', 'val');
+            if (v === 'live') txt(g, 20, yc + 22, 'your knob', 'lbl2');
+            const bar = el('rect', { x: X2.x0, y: yc - 12, height: 24, rx: 4, fill: '#2f6db5' }, g);
+            const nm = txt(g, 0, yc + 6, '', 'val', { 'data-q2': 'NM' });
+            const v1 = txt(g, 940, yc - 3, '', 'lbl', { 'font-weight': 700, 'data-q2': 'verdict' });
+            const v2 = txt(g, 940, yc + 20, '', 'lbl2');
+            B2.rows.push({ v, yc, g, lab, bar, nm, v1, v2 }); });
+        B2.band = el('g', { 'data-band': 1 }, svg);
+        el('rect', { x: X2.x0, y: R2.top - 6, width: NOISE_W(), height: yBot - R2.top + 6, fill: 'url(#hatch-d2)', opacity: 0.45 }, B2.band);
+        el('line', { x1: x2Of(M.NOISE), x2: x2Of(M.NOISE), y1: R2.top - 6, y2: yBot, stroke: '#b4472f', 'stroke-width': 2 }, B2.band);
+        txt(B2.band, x2Of(M.NOISE), yBot + 24, '75 mV noise', 'tick', { 'text-anchor': 'middle', fill: '#b4472f', 'font-weight': 700 });
+        buildLev();
+    }
+    function NOISE_W() { return M.NOISE * X2.perV; }
+    function verdict(v) { const nm = NMof(v); return nm >= M.NOISE - 1e-12 ? { ok: true, t1: '✓ survives', t2: nm / M.NOISE < 1.25 ? `barely: ${p3(nm / M.NOISE)}× the noise` : `${p3(nm / M.NOISE)}× the noise` }
+                                                          : { ok: false, t1: '⚠ fails', t2: 'noise lands in the forbidden zone' }; }
+    const STEPS2 = [
+        { V: 1.0, n: false, h: 'Margin is a fixed fraction of the supply', w: 'NM = 0.1 V<sub>DD</sub> on each side, so the bars shrink in a straight line. Think of it as the car\'s ground clearance.' },
+        { V: 1.0, n: true, h: 'Now add 75 mV of noise', w: 'The bumps in the road are the same height on every row. Lowering V<sub>DD</sub> does not shrink them; only better design does.' },
+        { V: 1.2, n: true, h: '1.2 V: 1.6 times the noise', w: 'The most clearance this car has, at the most power.' },
+        { V: 1.0, n: true, h: '1.0 V: 1.33 times', w: '0.10 V of margin against 75 mV of noise.' },
+        { V: 0.9, n: true, h: '0.9 V: 1.2 times', w: '0.09 V of margin. Little room for anything else to go wrong.' },
+        { V: 0.8, n: true, h: '0.8 V: survives, barely', w: '0.08 V of margin, 5 mV to spare.' },
+        { V: 0.7, n: true, h: '0.7 V: the noise wins', w: 'The whole margin is 0.07 V. A 75 mV bump pushes a 0 into the forbidden zone. To run here, the design must first cut the noise below 70 mV: a smoother road, or better suspension.' },
+        { V: 0.75, n: true, h: 'The flip point is 0.75 V', w: '0.1 V<sub>DD</sub> = 75 mV when V<sub>DD</sub> = 0.75 V. Below that, this noise breaks the circuit.' },
+    ];
+    function paintB2() {
+        const st = STEPS2[s2];
+        $('snum2').textContent = `STEP ${s2 + 1} OF ${STEPS2.length}`; $('reason2').innerHTML = st.h; $('why2').innerHTML = st.w;
+        $('bk2').disabled = s2 === 0; $('nxt2').disabled = s2 === STEPS2.length - 1;
+        B2.band.classList.toggle('hid', !noiseOn);
+        for (const r of B2.rows) { const v = r.v === 'live' ? V : r.v, nm = NMof(v), vd = verdict(v), focusRow = r.v === 'live' || Math.abs(v - V) < 1e-9;
+            r.lab.textContent = fmtVs(v);
+            r.bar.setAttribute('width', nm * X2.perV); r.bar.setAttribute('fill', focusRow || !noiseOn || s2 < 2 ? '#2f6db5' : '#bcc3cc'); r.bar.dataset.lit = focusRow ? 1 : 0;
+            r.nm.setAttribute('x', x2Of(nm) + 12); r.nm.textContent = fmtV(nm);
+            r.v1.textContent = noiseOn ? vd.t1 : ''; r.v1.style.fill = vd.ok ? '#2e7d4f' : '#b4472f'; r.v2.textContent = noiseOn ? vd.t2 : '';
+            const dim = noiseOn && s2 >= 2 && !focusRow;   // unfocused rows go grey, never faded
+            [r.lab, r.nm, r.v2].forEach(t => t.style.fill = dim ? '#858e99' : ''); if (dim) r.v1.style.fill = '#858e99'; }
+        // a bar-end label that would sit under the noise line moves past it
+        for (const r of B2.rows) { const nm = NMof(r.v === 'live' ? V : r.v); if (noiseOn && Math.abs(nm - M.NOISE) < 0.006) r.nm.setAttribute('x', x2Of(Math.max(nm, M.NOISE)) + 12); }
+        paintLev();
+    }
+    // the level column for the current V_DD, drawn TO SCALE (Mike 11-08): the box, both noise-margin bands and the
+    // labels all shrink with V_DD, while the 75 mV of noise stays the same height
+    const L2 = { x: 250, w: 110, yb: 352, yt: 30 }; const PXV = (L2.yb - L2.yt) / M.VMAX; const yA = (v) => L2.yb - v * PXV;
+    function buildLev() {
+        const svg = $('d2b'); svg.innerHTML = '';
+        const defs = el('defs', {}, svg); const mk = el('marker', { id: 'ah-d2b', markerWidth: 12, markerHeight: 10, refX: 10, refY: 5, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs);
+        el('path', { d: 'M0,0 L12,5 L0,10 Z', fill: '#b4472f' }, mk);
+        B2.L = { svg };
+        el('rect', { x: L2.x, y: yA(M.VMAX), width: L2.w, height: yA(0) - yA(M.VMAX), fill: 'none', stroke: '#b8bfc8', 'stroke-width': 1, 'stroke-dasharray': '4 4' }, svg);  // the 1.2 V box, for scale
+        txt(svg, L2.x - 12, yA(M.VMAX) + 5, '1.2 V', 'tick', { 'text-anchor': 'end' });
+        B2.L.z0 = el('rect', { x: L2.x, width: L2.w, fill: 'rgba(47,109,181,0.08)', stroke: '#8a9bb0', 'stroke-width': 1 }, svg);
+        B2.L.zf = el('rect', { x: L2.x, width: L2.w, fill: 'rgba(180,71,47,0.06)', stroke: '#8a9bb0', 'stroke-width': 1 }, svg);
+        B2.L.z1 = el('rect', { x: L2.x, width: L2.w, fill: 'rgba(47,109,181,0.08)', stroke: '#8a9bb0', 'stroke-width': 1 }, svg);
+        B2.L.nmL = el('rect', { x: L2.x, width: L2.w, fill: 'rgba(47,109,181,0.75)', 'data-nmlev': 'L' }, svg);
+        B2.L.nmH = el('rect', { x: L2.x, width: L2.w, fill: 'rgba(47,109,181,0.75)', 'data-nmlev': 'H' }, svg);
+        B2.L.t0 = txt(svg, L2.x + L2.w / 2, 0, 'valid 0', 'lbl2', { 'text-anchor': 'middle' });
+        B2.L.tf = txt(svg, L2.x + L2.w / 2, 0, 'forbidden', 'lbl2', { 'text-anchor': 'middle' });
+        B2.L.t1 = txt(svg, L2.x + L2.w / 2, 0, 'valid 1', 'lbl2', { 'text-anchor': 'middle' });
+        B2.L.labs = ['VDD', 'OH', 'IH', 'IL', 'OL', 'Z'].map(k => ({ k, lead: el('path', { fill: 'none', stroke: '#858e99', 'stroke-width': 1 }, svg), t: txt(svg, 0, 0, '', k === 'VDD' || k === 'Z' ? 'lbl' : 'lbl2', { 'data-lev': k }) }));
+        B2.L.ng = el('g', {}, svg);
+        B2.L.arrow = el('line', { x1: L2.x - 30, x2: L2.x - 30, stroke: '#b4472f', 'stroke-width': 2.5, 'marker-end': 'url(#ah-d2b)' }, B2.L.ng);
+        B2.L.dot = el('circle', { cx: L2.x - 30, r: 4.5, fill: '#1c2433' }, B2.L.ng);
+        B2.L.n1 = txt(B2.L.ng, L2.x - 44, 0, 'a 0 at V' + sub('OL'), 'lbl', { 'text-anchor': 'end' });
+        B2.L.n2 = txt(B2.L.ng, L2.x - 44, 0, '+ 75 mV noise', 'lbl', { 'text-anchor': 'end', fill: '#b4472f', 'font-weight': 600 });
+        B2.L.tip = el('line', { x1: L2.x - 44, x2: L2.x + L2.w, stroke: '#b4472f', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, B2.L.ng);
+        B2.L.verd = txt(svg, 20, 398, '', 'lbl', { 'font-weight': 600 });
+    }
+    function paintLev() {
+        const L = B2.L, vd = verdict(V), lv = { OL: 0.25 * V, IL: 0.35 * V, IH: 0.65 * V, OH: 0.75 * V };
+        $('lev2v').textContent = fmtVs(V);
+        const box = (r, lo, hi) => { r.setAttribute('y', yA(hi)); r.setAttribute('height', Math.max(0, yA(lo) - yA(hi))); };
+        box(L.z0, 0, lv.IL); box(L.zf, lv.IL, lv.IH); box(L.z1, lv.IH, V); box(L.nmL, lv.OL, lv.IL); box(L.nmH, lv.IH, lv.OH);
+        L.t0.setAttribute('y', yA(lv.OL / 2) + 6); L.tf.setAttribute('y', yA(V / 2) + 6); L.t1.setAttribute('y', yA((lv.OH + V) / 2) + 6);
+        // labels on the right with leader lines, pushed apart so they never touch (the box can be only 134 px tall)
+        const want = { VDD: V, OH: lv.OH, IH: lv.IH, IL: lv.IL, OL: lv.OL, Z: 0 };
+        const text = { VDD: 'V' + sub('DD') + ' = ' + fmtVs(V), OH: 'V' + sub('OH') + ' = ' + fmtV(lv.OH), IH: 'V' + sub('IH') + ' = ' + fmtV(lv.IH),
+            IL: 'V' + sub('IL') + ' = ' + fmtV(lv.IL), OL: 'V' + sub('OL') + ' = ' + fmtV(lv.OL), Z: '0 V' };
+        const ys = L.labs.map(l => yA(want[l.k]) + 6), GAP = 27;
+        for (let i = ys.length - 2; i >= 0; i--) ys[i] = Math.min(ys[i], ys[i + 1] - GAP);  // from the bottom up
+        L.labs.forEach((l, i) => { l.t.innerHTML = text[l.k]; l.t.setAttribute('x', L2.x + L2.w + 40); l.t.setAttribute('y', ys[i]);
+            l.lead.setAttribute('d', `M${L2.x + L2.w},${yA(want[l.k])} H${L2.x + L2.w + 14} L${L2.x + L2.w + 34},${ys[i] - 6}`); });
+        L.ng.classList.toggle('hid', !noiseOn);
+        const y0 = yA(lv.OL), yt = yA(lv.OL + M.NOISE);
+        L.dot.setAttribute('cy', y0); L.arrow.setAttribute('y1', y0); L.arrow.setAttribute('y2', yt + 1); L.tip.setAttribute('y1', yt); L.tip.setAttribute('y2', yt);
+        L.n1.setAttribute('y', y0 + 6); L.n2.setAttribute('y', Math.min(yt - 6, y0 - 24));
+        L.verd.innerHTML = noiseOn ? (vd.ok ? `<tspan fill="#2e7d4f">✓</tspan> ${fmtV(lv.OL)} + 75 mV = ${fmtV(lv.OL + M.NOISE)} ≤ V${sub('IL')}: still read as 0`
+                                               : `<tspan fill="#b4472f">⚠</tspan> ${fmtV(lv.OL)} + 75 mV = ${fmtV(lv.OL + M.NOISE)} &gt; V${sub('IL')}: no longer a valid 0`) : 'Blue: noise margin on each side, ' + fmtV(NMof(V));
+    }
+
+    // ============ BEAT 3: the triangle ============
+    const T3 = { P: { x: 620, y: 130 }, NM: { x: 330, y: 466 }, S: { x: 910, y: 466 } };
+    const R0 = 34, rOf = (rel) => Math.max(7, Math.min(78, R0 * (1 + 0.42 * Math.log2(rel))));
+    const B3 = {};
+    function buildB3() {
+        const svg = $('d3'); svg.innerHTML = '';
+        el('path', { d: `M${T3.P.x},${T3.P.y} L${T3.NM.x},${T3.NM.y} L${T3.S.x},${T3.S.y} Z`, class: 'edge' }, svg);
+        const mk = (key, color, name, anchor, lx, ly) => {
+            const c = T3[key], g = el('g', { 'data-corner': key }, svg);
+            const ghost = el('circle', { cx: c.x, cy: c.y, r: R0, class: 'ghost' }, g);
+            const dot = el('circle', { cx: c.x, cy: c.y, r: R0, fill: color, 'fill-opacity': 0.85, stroke: '#ffffff', 'stroke-width': 2 }, g);
+            g.insertBefore(dot, ghost);
+            const n = txt(g, lx, ly, name, 'corner-n', { 'text-anchor': anchor });
+            const v = txt(g, lx, ly + 40, '', 'corner-v', { 'text-anchor': anchor, 'data-c': key });
+            const s = txt(g, lx, ly + 68, '', 'corner-s', { 'text-anchor': anchor });
+            const d = txt(g, lx, ly + 100, '', 'corner-d', { 'text-anchor': anchor });
+            B3[key] = { g, dot, ghost, n, v, s, d };
+        };
+        mk('P', '#b8640a', 'Power', 'start', T3.P.x + 100, T3.P.y - 46);
+        mk('NM', '#2f6db5', 'Noise margin', 'end', T3.NM.x - 100, T3.NM.y - 46);
+        mk('S', '#9a3f8f', 'Speed', 'start', T3.S.x + 100, T3.S.y - 46);
+        B3.bg = el('g', { 'data-badge': 1 }, svg);
+        B3.bbox = el('rect', { x: 470, y: 300, width: 300, height: 64, rx: 6 }, B3.bg);
+        B3.bt = txt(B3.bg, 620, 340, '', 'badge-t', { 'text-anchor': 'middle' });
+        B3.bs = txt(svg, 620, 392, '', 'lbl2', { 'text-anchor': 'middle' }); B3.bs2 = txt(svg, 620, 416, '', 'lbl2', { 'text-anchor': 'middle' });
+    }
+    function moveText(base, now, unit) { return now; }
+    function paintB3() {
+        const P = Pdyn(V, f), P0 = Pdyn(DEF.V, DEF.f), nm = NMof(V), nm0 = NMof(DEF.V), fm = fmax(V), fm0 = fmax(DEF.V), ok = legalOf(V, f), edge = atEdge(V, f);
+        B3.P.dot.setAttribute('r', rOf(P / P0)); B3.NM.dot.setAttribute('r', rOf(nm / nm0)); B3.S.dot.setAttribute('r', rOf(fm / fm0));
+        B3.P.v.textContent = fmtW(P); B3.P.s.textContent = 'dynamic, at ' + fmtHz(f); B3.P.d.textContent = 'lower is better';
+        B3.NM.v.textContent = fmtV(nm); B3.NM.s.textContent = 'each side'; B3.NM.d.textContent = 'wider is better';
+        B3.S.v.textContent = fmtHz(fm); B3.S.s.innerHTML = 'f' + sub('max') + ', from t' + sub('pd') + ' = ' + fmtS(tpd(V)); B3.S.d.textContent = 'faster is better';
+        const bad = !ok; B3.bbox.setAttribute('fill', bad ? 'rgba(180,71,47,0.08)' : (edge ? 'rgba(184,100,10,0.08)' : 'rgba(46,125,79,0.07)'));
+        B3.bbox.setAttribute('stroke', bad ? '#b4472f' : (edge ? '#b8640a' : '#2e7d4f')); B3.bbox.setAttribute('stroke-width', bad ? 2.5 : 1);
+        B3.bt.style.fill = (bad ? '#b4472f' : (edge ? '#b8640a' : '#2e7d4f'));
+        B3.bt.innerHTML = bad ? '⚠ Fails' : '✓ Operates correctly';
+        { const w = B3.bt.getBBox().width; if (w) { B3.bbox.setAttribute('width', w + 48); B3.bbox.setAttribute('x', 620 - (w + 48) / 2); } }
+        B3.bt.dataset.legal = bad ? 'no' : (edge ? 'edge' : 'yes');
+        B3.bs.innerHTML = edge ? `at the edge: the clock is exactly f${sub('max')} = ${fmtHz(fm)},` : (bad ? 'operates correctly only at frequencies' : `at frequencies less than f${sub('max')} = ${fmtHz(fm)};`);
+        B3.bs2.innerHTML = edge ? 'zero slack, no room to spare' : (bad ? `less than f${sub('max')} = ${fmtHz(fm)}; the clock is ${fmtHz(f)}` : `the clock is ${fmtHz(f)}`);
+        // what moved
+        const same = (a, b) => Math.abs(a / b - 1) < 1e-9;
+        const mv = (k, x, d) => { document.querySelector(`[data-mv="${k}"]`).textContent = x; document.querySelector(`[data-mvd="${k}"]`).textContent = d; };
+        mv('P', same(P, P0) ? 'unchanged' : fmtX(P / P0), same(P, P0) ? '' : (P < P0 ? 'less power: better' : 'more power: worse'));
+        mv('NM', same(nm, nm0) ? 'unchanged' : `${fmtV(nm0)} → ${fmtV(nm)}`, same(nm, nm0) ? '' : (nm < nm0 ? 'narrower: worse' : 'wider: better'));
+        mv('S', same(fm, fm0) ? 'unchanged' : fmtX(fm / fm0), same(fm, fm0) ? '' : (fm < fm0 ? `gates ${p3(fm0 / fm)}× slower: worse` : `gates ${p3(fm / fm0)}× faster: better`));
+        // the value table
+        const q = (k, s, cls) => { const td = document.querySelector(`#vtab3 [data-q="${k}"]`); td.innerHTML = s; td.className = cls || ''; };
+        q('P', fmtW(P)); q('NM', fmtV(nm)); q('tpd', fmtS(tpd(V))); q('path', fmtS(M.STAGES * tpd(V))); q('fmax', fmtHz(fm)); q('f', fmtHz(f));
+        q('legal', bad ? '⚠ no' : (edge ? 'yes, at the edge' : 'yes'), bad ? 'bad' : 'good');
+        document.querySelector('.note [data-q="Ps"]').textContent = fmtW(Pstat(V));
+        document.querySelectorAll('.btn.case').forEach(b => { const c = CASES[+b.dataset.case]; b.classList.toggle('on', Math.abs(c.V - V) < 1e-9 && Math.abs(c.f - f) < 1); });
+        $('take3').innerHTML = takeaway();
+    }
+    function takeaway() {
+        const is = (v, ff) => Math.abs(V - v) < 1e-9 && Math.abs(f - ff) < 1;
+        if (is(1.0, 1e9)) return 'The reference: 1.0 V and 1 GHz, 1.00 W. Drag V<sub>DD</sub> down and watch one corner shrink the good way and two the bad way.';
+        if (is(0.8, 1e9)) return 'Lower the supply: power ×0.64. The cost is 0.02 V of margin and gates 1.67× slower.';
+        if (is(0.8, 2e9)) return 'The slower gates cannot keep up: at 0.8 V the path allows only 1.50 GHz. A 2 GHz clock captures wrong values.';
+        if (is(1.2, 1e9)) return 'Raise the supply to the redline: margin 0.12 V and gates 1.42× faster, paid for as the square: ×1.44 the power.';
+        if (is(1.0, 2e9)) return 'Double the clock alone: power ×2.00, and nothing else moves. The clock is a free lever until it reaches f<sub>max</sub>.';
+        if (atEdge(V, f) && Math.abs(V - 0.8) < 1e-9) return 'This is DVFS: 0.8 V at its own top clock uses ×0.38 the power of 1.0 V at its top clock (2.50 GHz). A phone does this to save battery.';
+        if (atEdge(V, f) && Math.abs(V - 1.2) < 1e-9) return 'Cash in the speed: 1.2 V at its top clock uses ×2.05 the power of 1.0 V at its top clock. Supply squared times frequency.';
+        if (!legalOf(V, f)) return 'The clock outruns the gates. Lower the clock, or raise the supply and pay for it in power.';
+        return 'The supply moves all three corners at once. The clock moves only power, until it hits f<sub>max</sub>.';
+    }
+
+    // ============ BEAT 4: the timeline ============
+    // margins are the published levels from brief 43 (each era is a different, better car), not this graphic's 0.1 V_DD model
+    const STOPS4 = [{ V: 5.0, era: '1980s', who: '5 V CMOS', nm: 1.40, clk: '≈ 25 MHz', sz: 1.0, load: 'heavy, high off the road' },
+        { V: 3.3, era: '1990s', who: '3.3 V', nm: 0.40, clk: '≈ 150 MHz', sz: 0.72, load: 'lighter and lower' },
+        { V: 1.8, era: 'around 2000', who: '1.8 V', nm: 0.18, clk: '≈ 1 GHz', sz: 0.5, load: 'light and low' },
+        { V: 1.2, era: '2005 to today', who: '1.2 V and below: a range →', nm: 0.12, clk: '3–5 GHz', sz: 0.3, n: 4, load: 'tiny and low: so add more, cores' }];
+    // a gate as a vehicle: body + cab + two wheels, s = scale (weight), drawn sitting on baseline y
+    function vehicle(g, cx, y, s) { const bw = 100 * s, bh = 46 * s, cw = 34 * s, ch = 32 * s, w = bw + cw, x0 = cx - w / 2, r = Math.max(4, 9 * s);
+        el('rect', { x: x0, y: y - r - bh, width: bw, height: bh, rx: 3, fill: 'rgba(74,111,165,0.14)', stroke: '#4a6fa5', 'stroke-width': 1.5 }, g);
+        el('rect', { x: x0 + bw + 2, y: y - r - ch, width: cw - 2, height: ch, rx: 3, fill: 'rgba(74,111,165,0.14)', stroke: '#4a6fa5', 'stroke-width': 1.5 }, g);
+        for (const wx of [x0 + bw * 0.22, x0 + bw + cw * 0.45]) el('circle', { cx: wx, cy: y - r, r, fill: '#fff', stroke: '#2f4f7f', 'stroke-width': 1.5 }, g); return w; }
+    function buildB4() {
+        const svg = $('d4'); svg.innerHTML = '';
+        const xs = [140, 450, 760, 1070], yl = 120;
+        el('line', { x1: 80, x2: 1130, y1: yl, y2: yl, stroke: '#b8bfc8', 'stroke-width': 2 }, svg);
+        for (let i = 0; i < 3; i++) { txt(svg, (xs[i] + xs[i + 1]) / 2, yl - 32, 'lighter: faster, less fuel', 'lbl2', { 'text-anchor': 'middle', 'font-style': 'italic' }); txt(svg, (xs[i] + xs[i + 1]) / 2, yl - 12, 'lower: needs a smoother road', 'lbl2', { 'text-anchor': 'middle', 'font-style': 'italic' }); }
+        STOPS4.forEach((s, i) => { const x = xs[i], g = el('g', { 'data-stop': s.V }, svg);
+            el('circle', { cx: x, cy: yl, r: 9, fill: '#4a6fa5', stroke: '#fff', 'stroke-width': 2 }, g);
+            txt(g, x, yl - 44, s.era, 'lbl2', { 'text-anchor': 'middle' });
+            txt(g, x, yl + 58, fmtVs(s.V), 'corner-v', { 'text-anchor': 'middle' });
+            txt(g, x, yl + 86, s.who, 'lbl2', { 'text-anchor': 'middle' });
+            const vb = yl + 172, n = s.n || 1, w1 = (100 + 34) * s.sz, gap = 10, tot = n * w1 + (n - 1) * gap;
+            for (let k = 0; k < n; k++) vehicle(g, x - tot / 2 + w1 / 2 + k * (w1 + gap), vb, s.sz);
+            txt(g, x, vb + 22, s.load, 'lbl2', { 'text-anchor': 'middle' });
+            const rows = [['#2f6db5', 'margin', fmtV(s.nm)], ['#9a3f8f', 'CPU clock', s.clk]];
+            rows.forEach((r, j) => { const y = yl + 240 + j * 36; el('circle', { cx: x - 110, cy: y - 6, r: 7, fill: r[0] }, g);
+                txt(g, x - 94, y, r[1], 'lbl'); txt(g, x + 120, y, r[2], 'val', { 'text-anchor': 'end', 'data-q4': r[1] === 'margin' ? 'margin' : 'clock' }); });
+        });
+        txt(svg, xs[3], yl + 320, 'flat since about 2005', 'lbl2', { 'text-anchor': 'middle', 'font-style': 'italic' });
+        // today is a range on one chip, not one value: the beat-5 jobs on a small supply scale
+        const rx = 1230, yR = (v) => 380 - (v - 0.5) / (1.3 - 0.5) * 300, rg = el('g', { 'data-range4': '' }, svg);
+        txt(rg, rx - 14, 50, 'Today: one chip, many settings', 'lbl', { 'font-weight': 600 });
+        el('rect', { x: rx - 5, y: yR(1.2), width: 10, height: yR(0.5) - yR(1.2), rx: 5, fill: 'rgba(74,111,165,0.18)', stroke: '#4a6fa5', 'stroke-width': 1.5 }, rg);
+        el('path', { d: `M${xs[3] + 14},${yl} C${xs[3] + 80},${yl} ${rx - 60},${yR(1.2)} ${rx - 9},${yR(1.2)}`, fill: 'none', stroke: '#858e99', 'stroke-width': 1.5, 'stroke-dasharray': '4 4' }, rg);
+        for (const [v, who] of [[1.2, 'server at turbo'], [1.0, 'laptop, heavy work'], [0.7, 'phone, light work'], [0.5, 'hearing aid']]) {
+            el('line', { x1: rx - 9, x2: rx + 9, y1: yR(v), y2: yR(v), stroke: '#4a6fa5', 'stroke-width': 2 }, rg);
+            txt(rg, rx + 18, yR(v) + 6, fmtVs(v), 'val', { 'data-r4': v }); txt(rg, rx + 90, yR(v) + 6, who, 'lbl2'); }
+        txt(rg, rx - 14, 412, 'DVFS moves each core along it;', 'lbl2'); txt(rg, rx - 14, 434, 'cars and factories use 3.3 or 5 V parts', 'lbl2');
+        // the wall: V_t
+        const wx = 1560; const defs = el('defs', {}, svg); const pat = el('pattern', { id: 'hatch-d4', width: 10, height: 10, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs);
+        el('line', { x1: 0, y1: 0, x2: 0, y2: 10, stroke: '#9a3f8f', 'stroke-width': 1.6 }, pat);
+        el('rect', { x: wx, y: 40, width: 40, height: 380, fill: 'url(#hatch-d4)', opacity: 0.5 }, svg);
+        el('line', { x1: wx, x2: wx, y1: 40, y2: 420, stroke: '#9a3f8f', 'stroke-width': 2 }, svg);
+        txt(svg, wx + 56, 92, 'The floor', 'corner-n'); txt(svg, wx + 56, 122, 'threshold V' + sub('t') + ' = 0.35 V', 'lbl');
+        txt(svg, wx + 56, 168, 'at 0.5 V a gate is', 'lbl2'); txt(svg, wx + 56, 192, fmtX(tpd(0.5) / tpd(1)) + ' slower', 'val', { 'data-q4': 'wall' });
+        txt(svg, wx + 56, 216, 'than at 1.0 V', 'lbl2'); txt(svg, wx + 56, 262, 'much lower, and', 'lbl2'); txt(svg, wx + 56, 286, 'leaking eats the', 'lbl2'); txt(svg, wx + 56, 310, 'energy savings', 'lbl2');
+        txt(svg, 80, 452, 'Margins: published levels (see Gate Technologies and Noise Margin). Dates, clocks approximate; vehicles not to scale.', 'lbl2');
+    }
+
+    // ============ BEAT 5: who picks which corner ============
+    const GU = { P: '<span style="color:#b8640a">power</span>', NM: '<span style="color:#2f6db5">margin</span>', S: '<span style="color:#9a3f8f">speed</span>' };
+    const APPS = [
+        { job: 'Hearing aid or implant sensor', ex: 'runs for days on a tiny cell', V: 0.5, f: 10e6, gu: GU.S + ' and ' + GU.NM, why: 'The battery is everything. Sound and heartbeats are slow, so 10 MHz is plenty, and the package is tiny and quiet.' },
+        { job: 'Phone, light work', ex: 'an Apple efficiency core', V: 0.7, f: 500e6, gu: GU.S, why: 'Checking mail with the screen off: nobody is waiting, so the battery comes first.' },
+        { job: 'Laptop, heavy work', ex: 'an Apple performance core', V: 1.0, f: 2e9, gu: 'a little of each', why: 'The middle setting: fast while you wait, then DVFS drops it back down.' },
+        { job: 'Server or gaming CPU at turbo', ex: 'plugged in, fans and heat sinks', V: 1.2, f: fmax(1.2), gu: GU.P, why: 'Speed sells, and the wall socket pays. The clock runs at the top the 1.2 V gates allow.' },
+    ];
+    const WIDE = [{ n: 1, V: 1.0, f: 2.5e9 }, { n: 2, V: 0.8, f: 1.25e9 }, { n: 4, V: 0.7, f: 625e6 }];
+    function buildB5() {
+        $('tab5').querySelector('tbody').innerHTML = APPS.map((a, i) => `<tr data-app="${i}"><td class="l job"><b>${a.job}</b><span>${a.ex}</span></td>` +
+            `<td data-q5="V">${fmtVs(a.V)}</td><td data-q5="f">${fmtHz(a.f)}</td><td data-q5="P">${fmtW(Pdyn(a.V, a.f))}</td><td data-q5="NM">${fmtV(NMof(a.V))}</td>` +
+            `<td class="l gu">${a.gu}</td><td class="l why">${a.why}</td><td><button class="btn go">&#9656; triangle</button></td></tr>`).join('');
+        $('tab5w').querySelector('tbody').innerHTML = WIDE.map(w => `<tr data-wide="${w.n}"><td class="l">${w.n === 1 ? 'one copy' : w.n + ' copies, the work split ' + w.n + ' ways'}</td>` +
+            `<td data-q5="V">${fmtVs(w.V)}</td><td data-q5="f">${fmtHz(w.f)}</td><td data-q5="P">${fmtW(w.n * Pdyn(w.V, w.f))}</td></tr>`).join('');
+        $('tab5').querySelectorAll('tbody tr').forEach(r => r.addEventListener('click', () => { const a = APPS[+r.dataset.app]; setPage(3); setV(a.V); setF(a.f); }));
+    }
+
+    // ============ KNOBS ============
+    const nearestIdx = (arr, x, logs) => { let b = 0; for (let i = 1; i < arr.length; i++) if (Math.abs((logs ? Math.log(arr[i]) : arr[i]) - (logs ? Math.log(x) : x)) < Math.abs((logs ? Math.log(arr[b]) : arr[b]) - (logs ? Math.log(x) : x))) b = i; return b; };
+    function paintKnobs() {
+        document.querySelectorAll('[data-range="V"]').forEach(r => { r.min = 0; r.max = VSTOPS.length - 1; r.step = 1; r.value = nearestIdx(VSTOPS, V); });
+        document.querySelectorAll('[data-range="F"]').forEach(r => { r.min = 0; r.max = FSTOPS.length - 1; r.step = 1; r.value = nearestIdx(FSTOPS, f, true); });
+        document.querySelectorAll('[data-kv="V"]').forEach(e => e.textContent = fmtVs(V));
+        document.querySelectorAll('[data-kv="F"]').forEach(e => e.textContent = fmtHz(f));
+        document.querySelectorAll('.knob').forEach(k => k.classList.toggle('focus', k.dataset.knob === focus));
+    }
+    function setV(v) { V = Math.max(M.VMIN, Math.min(M.VMAX, v)); paintKnobs(); drawPage(); }
+    function setF(x) { f = Math.max(FSTOPS[0], Math.min(FSTOPS[FSTOPS.length - 1], x)); paintKnobs(); drawPage(); }
+    function nudge(dir) {
+        if (focus === 'V') { const i = nearestIdx(VSTOPS, V); const j = Math.abs(VSTOPS[i] - V) < 1e-9 ? i + dir : (VSTOPS[i] > V ? (dir > 0 ? i : i - 1) : (dir > 0 ? i + 1 : i)); setV(VSTOPS[Math.max(0, Math.min(VSTOPS.length - 1, j))]); }
+        else if (focus === 'F') { let j; if (dir > 0) { j = FSTOPS.findIndex(s => s > f * (1 + 1e-9)); if (j < 0) j = FSTOPS.length - 1; } else { j = -1; FSTOPS.forEach((s, i) => { if (s < f * (1 - 1e-9)) j = i; }); if (j < 0) j = 0; } setF(FSTOPS[j]); }
+    }
+    document.querySelectorAll('[data-range="V"]').forEach(r => r.addEventListener('input', () => { focus = 'V'; setV(VSTOPS[+r.value]); }));
+    document.querySelectorAll('[data-range="F"]').forEach(r => r.addEventListener('input', () => { focus = 'F'; setF(FSTOPS[+r.value]); }));
+    const knobsOn = (k) => (k === 'V' && page <= 3) || (k === 'F' && page === 3);
+
+    // ============ RENDER / NAV ============
+    const tabs = Array.from(document.querySelectorAll('.tab'));
+    function drawPage() { ({ 1: paintB1, 2: paintB2, 3: paintB3, 4: () => {}, 5: () => {} })[page](); }
+    function render() {
+        for (let i = 1; i <= NPAGES; i++) $('p' + i).classList.toggle('active', i === page);
+        tabs.forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+        document.querySelectorAll('[data-dot]').forEach(d => d.classList.toggle('on', +d.dataset.dot <= page));
+        $('pcNum').textContent = page; if (!knobsOn(focus)) focus = null; paintKnobs(); drawPage();
+    }
+    const defsEl = $('defs'), defsBtn = $('defsBtn');
+    const defsOpen = () => defsEl.classList.contains('open');
+    function openDefs() { defsEl.classList.add('open'); defsBtn.classList.add('on'); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
+    function closeDefs() { defsEl.classList.remove('open'); defsBtn.classList.remove('on'); }
+    const toggleDefs = () => defsOpen() ? closeDefs() : openDefs();
+    defsBtn.addEventListener('click', () => { toggleDefs(); defsBtn.blur(); });
+    defsEl.addEventListener('click', e => { if (e.target === defsEl) closeDefs(); });
+    function setPage(n) { closeDefs(); page = Math.max(1, Math.min(NPAGES, n)); hoverV = null;
+        if (page === 1) V = STEPS1[s1].V; else if (page === 2) { V = STEPS2[s2].V; noiseOn = STEPS2[s2].n; }  // a stepped beat shows its step's supply
+        render(); }
+    function setStep1(k) { s1 = Math.max(0, Math.min(STEPS1.length - 1, k)); V = STEPS1[s1].V; paintKnobs(); drawPage(); }
+    function setStep2(k) { s2 = Math.max(0, Math.min(STEPS2.length - 1, k)); V = STEPS2[s2].V; noiseOn = STEPS2[s2].n; paintKnobs(); drawPage(); }
+    function advance(dir = 1) { if (page === 1) setStep1(s1 + dir); else if (page === 2) setStep2(s2 + dir); }
+    function setCase(c) { V = CASES[c].V; f = CASES[c].f; paintKnobs(); drawPage(); }
+    function resetKnobs() { V = DEF.V; f = DEF.f; paintKnobs(); drawPage(); }
+    function doReset() { if (defsOpen()) return; if (page === 1) setStep1(0); else if (page === 2) setStep2(0); else if (page === 3) resetKnobs(); }
+    tabs.forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', () => { doReset(); b.blur(); }));
+    for (const id of ['nxt1', 'nxt2']) $(id).addEventListener('click', e => { advance(1); e.currentTarget.blur(); });
+    for (const id of ['bk1', 'bk2']) $(id).addEventListener('click', e => { advance(-1); e.currentTarget.blur(); });
+    document.querySelectorAll('.btn.case').forEach(b => b.addEventListener('click', () => { setCase(+b.dataset.case); b.blur(); }));
+    $('fmaxBtn').addEventListener('click', e => { setF(fmax(V)); e.currentTarget.blur(); });
+    $('zBtn').addEventListener('click', e => { resetKnobs(); e.currentTarget.blur(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.target && e.target.tagName === 'INPUT' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); }
+        const k = e.key;
+        if (k >= '1' && k <= String(NPAGES)) { setPage(+k); e.preventDefault(); return; }
+        if (k === 'd' || k === 'D') { toggleDefs(); e.preventDefault(); return; }
+        if (defsOpen()) { if (k === 'Escape') closeDefs(); e.preventDefault(); return; }
+        switch (k) {
+            case ' ': case 'ArrowDown': advance(1); e.preventDefault(); break;
+            case 'ArrowUp': advance(-1); e.preventDefault(); break;
+            case 'v': case 'V': if (knobsOn('V')) { focus = focus === 'V' ? null : 'V'; paintKnobs(); } e.preventDefault(); break;
+            case 'f': case 'F': if (knobsOn('F')) { focus = focus === 'F' ? null : 'F'; paintKnobs(); } e.preventDefault(); break;
+            case 'Escape': focus = null; paintKnobs(); break;
+            case 'ArrowRight': if (focus) nudge(1); else setPage(page + 1); e.preventDefault(); break;
+            case 'ArrowLeft': if (focus) nudge(-1); else setPage(page - 1); e.preventDefault(); break;
+            case 'z': case 'Z': resetKnobs(); e.preventDefault(); break;
+            case 'm': case 'M': if (page === 3) { setF(fmax(V)); e.preventDefault(); } break;
+            case 'n': case 'N': if (page === 2) { noiseOn = !noiseOn; drawPage(); e.preventDefault(); } break;
+            case 'r': case 'R': doReset(); e.preventDefault(); break;
+        }
+    });
+
+    buildB1(); buildB2(); buildB3(); buildB4(); buildB5();
+
+    // ============ SELF-TEST API ============
+    window.__api = { setPage, advance, setV, setF, setCase, setStep1, setStep2, setHover, reset: doReset, resetKnobs, openDefs, closeDefs,
+        getState: () => ({ page, V, f, s1, s2, noiseOn, focus }), model: { M, tpd, fmax, Pdyn, Pstat, NMof } };
+    setPage(1);
+    // ?beat=N&step=M&v=…&f=… — deep link (step on beats 1–2; v in volts, f in Hz on beat 3)
+    {
+        const q = new URLSearchParams(location.search);
+        const b = q.get('beat') ? Math.max(1, Math.min(NPAGES, +q.get('beat'))) : 1;
+        if (b >= 3) { V = DEF.V; f = DEF.f; } setPage(b);
+        if (q.get('step') !== null) { if (b === 1) setStep1(+q.get('step')); else if (b === 2) setStep2(+q.get('step')); }
+        if (q.get('v') !== null) setV(+q.get('v')); if (q.get('f') !== null) setF(+q.get('f'));
+    }
+
+    // ============ IN-PAGE ASSERTIONS (house rule; ?verify) ============
+    function runAssertions() {
+        const fails = [], S0 = { page, V, f, s1, s2, noiseOn };
+        // independent re-statement of the relations (not the page's functions)
+        const R = { NM: (v) => 0.1 * v, tpd: (v) => 20e-12 * (v / (v - 0.35) ** 2) / (1 / 0.65 ** 2), P: (v, ff) => 0.1 * 1e6 * 10e-15 * v * v * ff, Ps: (v) => 1e6 * 5e-9 * v };
+        R.fmax = (v) => 1 / (20 * R.tpd(v));
+        const UNIT = { 'W': 1, 'mW': 1e-3, 'GHz': 1e9, 'MHz': 1e6, 'ps': 1e-12, 'ns': 1e-9, 'V': 1, '': 1 };
+        const parse = (s) => { const m = String(s).replace('×', '').match(/(-?\d+(?:\.\d+)?)\s*(mW|W|GHz|MHz|ps|ns|V)?/); return m ? +m[1] * UNIT[m[2] || ''] : NaN; };
+        const near = (got, want, tag, tol = 0.01) => { if (!(Math.abs(got - want) <= tol * Math.abs(want) + 1e-15)) fails.push(`${tag}: shows ${got}, relation gives ${want}`); };
+        // 1) beat 1 table: the seven rows, every column within 1 %, plus the brief's printed values
+        setPage(1);
+        const tb = $('tab1').tBodies[0]; if (tb.rows.length !== 8) fails.push('b1 table rows ' + tb.rows.length);
+        ROWS1.forEach((v, i) => { const c = Array.from(tb.rows[i].cells).map(td => parse(td.textContent)), tr = R.tpd(v) / R.tpd(1);
+            near(c[0], v, `b1 row ${v} V`); near(c[1], R.NM(v), `b1 ${v} NM`); near(c[2], tr, `b1 ${v} tpd`); near(c[3], 1 / tr, `b1 ${v} fmax`); near(c[4], v * v, `b1 ${v} P`); near(c[5], v * v / tr, `b1 ${v} P@fmax`); });
+        const BRIEF1 = { 1.2: [0.12, 0.702, 1.425, 1.44, 2.052], 1: [0.10, 1, 1, 1, 1], 0.8: [0.08, 1.669, 0.599, 0.64, 0.383], 0.6: [0.06, 4.056, 0.247, 0.36, 0.0888], 0.5: [0.05, 9.389, 0.1065, 0.25, 0.0266] };
+        for (const v of Object.keys(BRIEF1).map(Number)) { const b = BRIEF1[v], tr = R.tpd(v) / R.tpd(1), mine = [R.NM(v), tr, 1 / tr, v * v, v * v / tr];
+            mine.forEach((x, j) => { if (Math.abs(x / b[j] - 1) > 0.002) fails.push(`brief table ${v} col ${j}: ${b[j]} vs ${x}`); }); }
+        // 1b) chart markers sit on the relation at every step, and each marker label reads the relation
+        for (let k = 0; k < STEPS1.length; k++) { setStep1(k); const v = STEPS1[k].V;
+            CH.forEach(c => { const want = c.key === 'P' ? v * v : c.key === 'NM' ? R.NM(v) : R.tpd(v) / R.tpd(1);
+                near(parse(c.lab.textContent), want, `b1 s${k} ${c.key} label`);
+                if (Math.abs(+c.dot.getAttribute('cx') - x1Of(v)) > 0.5 || Math.abs(+c.dot.getAttribute('cy') - c.yOf(Math.min(want, c.max))) > 0.5) fails.push(`b1 s${k} ${c.key} marker off the curve`);
+                const path = document.querySelector(`[data-curve="${c.key}"]`), pt = path.getPointAtLength(0);
+                if (Math.abs(pt.y - c.yOf(Math.min(c.fn(0.48), c.max * 1.02))) > 0.5) fails.push(`b1 ${c.key} curve start`); }); }
+        // 1c) hover tooltip reports all three values at the hovered voltage
+        for (const v of [0.5, 0.7, 1.0, 1.2]) { setHover(v); const t = B1.tipT.map(x => x.textContent);
+            near(parse(t[1]), v * v, `tooltip P @${v}`); near(parse(t[2]), R.NM(v), `tooltip NM @${v}`); near(parse(t[3]), R.tpd(v) / R.tpd(1), `tooltip delay @${v}`);
+            const bb = B1.tip.getBBox(), m = B1.tip.transform.baseVal.consolidate().matrix; if (m.e + bb.x < 0 || m.e + bb.x + bb.width > 1220) fails.push('tooltip outside at ' + v); }
+        setHover(null);
+        // 2) beat 3 anchor states (brief table) + the default equals brief 44's default (1.00 W)
+        setPage(3);
+        const ANCH = [[1.0, 1e9, 1.00, 0.10, 20, 400, 2.50e9, 'yes'], [0.8, 1e9, 0.64, 0.08, 33.38, 667.7, 1.498e9, 'yes'], [0.8, 2e9, 1.28, 0.08, 33.38, 667.7, 1.498e9, 'no'],
+                      [1.2, 1e9, 1.44, 0.12, 14.03, 280.7, 3.563e9, 'yes'], [1.2, R.fmax(1.2), 5.13, 0.12, 14.03, 280.7, 3.563e9, 'edge'], [1.0, 2e9, 2.00, 0.10, 20, 400, 2.50e9, 'yes']];
+        let illegalSeen = 0;
+        for (const [v, ff, Pw, nm, tp, path, fm, lg] of ANCH) { setV(v); setF(ff); const tag = `b3 ${v}V ${p3(ff / 1e9)}GHz`;
+            const g = (k) => parse(document.querySelector(`#vtab3 [data-q="${k}"]`).textContent);
+            near(g('P'), R.P(v, ff), tag + ' P'); near(g('P'), Pw, tag + ' P vs brief'); near(g('NM'), R.NM(v), tag + ' NM'); near(g('NM'), nm, tag + ' NM vs brief');
+            near(g('tpd'), R.tpd(v), tag + ' tpd'); near(g('tpd'), tp * 1e-12, tag + ' tpd vs brief'); near(g('path'), path * 1e-12, tag + ' path');
+            near(g('fmax'), R.fmax(v), tag + ' fmax'); near(g('fmax'), fm, tag + ' fmax vs brief'); near(parse(B3.P.v.textContent), R.P(v, ff), tag + ' corner P');
+            near(parse(B3.NM.v.textContent), R.NM(v), tag + ' corner NM'); near(parse(B3.S.v.textContent), R.fmax(v), tag + ' corner fmax');
+            if (B3.bt.dataset.legal !== lg) fails.push(`${tag}: badge ${B3.bt.dataset.legal}, want ${lg}`); if (lg === 'no') illegalSeen++;
+            const bad = /Fails/.test(B3.bt.textContent) && /⚠/.test(B3.bt.textContent); if (bad !== (lg === 'no')) fails.push(tag + ': red badge text/icon wrong');
+            if (!/operates correctly/i.test(B3.bt.textContent + B3.bs.textContent + B3.bs2.textContent)) fails.push(tag + ': badge lost the phrase');
+            const bb = B3.bbox.getBBox(), tb = B3.bt.getBBox(); if (tb.x < bb.x + 8 || tb.x + tb.width > bb.x + bb.width - 8) fails.push(tag + ': badge text outside its box'); }
+        if (illegalSeen !== 1) fails.push('illegal anchors ' + illegalSeen);
+        resetKnobs(); near(parse(document.querySelector('#vtab3 [data-q="P"]').textContent), 1.00, 'default power = brief 44 default (1.00 W)', 0.001);
+        near(parse(document.querySelector('.note [data-q="Ps"]').textContent), 5e-3, 'default static = brief 44 (5 mW)', 0.001);
+        // 2b) DVFS factors quoted in the takeaways
+        near(R.P(0.8, R.fmax(0.8)) / R.P(1, R.fmax(1)), 0.38, 'DVFS ×0.38', 0.02); near(R.P(1.2, R.fmax(1.2)) / R.P(1, R.fmax(1)), 2.05, '×2.05', 0.005);
+        // 2c) every V stop × every f stop: legality, the four values and the "what moved" factors
+        let combos = 0;
+        for (const v of VSTOPS) for (const ff of FSTOPS) { V = v; f = ff; paintB3(); combos++;
+            const lg = B3.bt.dataset.legal, want = ff > R.fmax(v) * (1 + 1e-9) ? 'no' : (Math.abs(ff / R.fmax(v) - 1) < 0.005 ? 'edge' : 'yes');
+            if (lg !== want) { fails.push(`b3 ${v} V ${ff} Hz: legal ${lg}, want ${want}`); break; }
+            const g = (k) => parse(document.querySelector(`#vtab3 [data-q="${k}"]`).textContent);
+            if (Math.abs(g('P') / R.P(v, ff) - 1) > 0.01 || Math.abs(g('NM') / R.NM(v) - 1) > 0.01 || Math.abs(g('fmax') / R.fmax(v) - 1) > 0.01 || Math.abs(g('tpd') / R.tpd(v) - 1) > 0.01) { fails.push(`b3 values at ${v} V ${ff} Hz`); break; }
+            const mP = document.querySelector('[data-mv="P"]').textContent; if (mP !== 'unchanged' && Math.abs(parse(mP) / (R.P(v, ff) / R.P(1, 1e9)) - 1) > 0.01) { fails.push(`moved P at ${v} ${ff}`); break; }
+            const mS = document.querySelector('[data-mv="S"]').textContent; if (mS !== 'unchanged' && Math.abs(parse(mS) / (R.fmax(v) / R.fmax(1)) - 1) > 0.01) { fails.push(`moved S at ${v} ${ff}`); break; } }
+        if (combos !== VSTOPS.length * FSTOPS.length) fails.push('combos ' + combos);
+        // 3) beat 2: verdict flips exactly at 0.1 V = 75 mV (V = 0.75 V); each row's NM and verdict
+        setPage(2); setStep2(1);
+        const live = () => B2.rows.find(r => r.v === 'live');
+        for (const [v, ok] of [[0.76, true], [0.7501, true], [0.7499, false], [0.74, false], [0.8, true], [0.7, false], [1.2, true]]) { setV(v);
+            const got = /survives/.test(live().v1.textContent); if (got !== ok) fails.push(`b2 flip: ${v} V reads ${live().v1.textContent}`);
+            const lv = /still read as 0/.test(B2.L.verd.textContent); if (lv !== ok) fails.push(`b2 level verdict at ${v}`); }
+        if (Math.abs(0.075 / 0.1 - 0.75) > 1e-9) fails.push('flip point');
+        setStep2(1);
+        for (const r of B2.rows.filter(r => r.v !== 'live')) { near(parse(r.nm.textContent), R.NM(r.v), `b2 ${r.v} NM`); const ok = R.NM(r.v) >= 0.075 - 1e-12;
+            if (/survives/.test(r.v1.textContent) !== ok) fails.push(`b2 ${r.v} verdict`); if (Math.abs(+r.bar.getAttribute('width') - R.NM(r.v) * X2.perV) > 0.5) fails.push(`b2 ${r.v} bar length`); }
+        for (const k of [1, 6, 7]) { setStep2(k); for (const r of B2.rows) { const bb = r.bar.getBBox(); for (const t of Array.from(r.g.querySelectorAll('text'))) { const tb = t.getBBox(); if (tb.width && tb.x < bb.x + bb.width + 4 && tb.x + tb.width > bb.x - 4 && tb.y < bb.y + bb.height && tb.y + tb.height > bb.y) fails.push(`b2 s${k} "${t.textContent}" on its bar`); } } }
+        const band = B2.band.querySelector('rect'); if (Math.abs(+band.getAttribute('width') - 0.075 * X2.perV) > 0.5) fails.push('b2 noise band width');
+        // level column: noise tip sits at 0.25/V of the column, V_IL at 0.3
+        for (const v of [1.2, 1, 0.7]) { setV(v); const y = +B2.L.tip.getAttribute('y1'); if (Math.abs(y - yA(0.25 * v + 0.075)) > 0.5) fails.push('b2 level tip ' + v);
+            for (const [k, lo, hi] of [['L', 0.25 * v, 0.35 * v], ['H', 0.65 * v, 0.75 * v]]) { const r = document.querySelector(`[data-nmlev="${k}"]`); if (Math.abs(+r.getAttribute('height') - (hi - lo) * PXV) > 0.5 || Math.abs(+r.getAttribute('y') - yA(hi)) > 0.5) fails.push('b2 level NM band ' + k + ' ' + v); }
+            near(parse(document.querySelector('[data-lev="IL"]').textContent.split('=').pop()), 0.35 * v, 'b2 VIL ' + v); near(parse(document.querySelector('[data-lev="IH"]').textContent.split('=').pop()), 0.65 * v, 'b2 VIH ' + v); }
+        // 4) beat 4 numbers
+        setPage(4);
+        for (const s of STOPS4) { const g = document.querySelector(`[data-stop="${s.V}"]`);
+            near(parse(g.querySelector('[data-q4="margin"]').textContent), { 5: 1.40, 3.3: 0.40, 1.8: 0.18, 1.2: 0.12 }[s.V], 'b4 NM = brief 43 ' + s.V);
+            if (g.querySelector('[data-q4="power"], [data-q4="delay"]')) fails.push('b4 model power/delay back on the history timeline ' + s.V); }
+        { const c = Array.from(document.querySelectorAll('[data-q4="clock"]')).map(t => parse(t.textContent.replace('3–', ''))); for (let k = 1; k < c.length; k++) if (!(c[k] > c[k - 1])) fails.push('b4 clocks must rise along the timeline'); }
+        near(parse(document.querySelector('[data-q4="wall"]').textContent), 9.39, 'b4 wall');
+        for (const a of APPS.filter(a => a.V <= 1.2)) { const t = document.querySelector(`[data-r4="${a.V}"]`); if (!t) fails.push('b4 range missing ' + a.V); else near(parse(t.textContent), a.V, 'b4 range ' + a.V); }
+        
+
+        // 4b) beat 5: every application row and the wide-not-fast rows against the independent relations; a row click lands on beat 3
+        setPage(5);
+        document.querySelectorAll('#tab5 tbody tr').forEach((r, i) => { const a = APPS[i], q = (k) => parse(r.querySelector(`[data-q5="${k}"]`).textContent);
+            near(q('V'), a.V, 'b5 V ' + i); near(q('f'), a.f, 'b5 f ' + i); near(q('P'), R.P(a.V, a.f), 'b5 P ' + i); near(q('NM'), R.NM(a.V), 'b5 NM ' + i);
+            if (!(a.f <= R.fmax(a.V) * 1.000001)) fails.push('b5 row clock above f_max ' + i); });
+        const WANT = { 1: 2.5, 2: 1.6, 4: 1.225 };
+        document.querySelectorAll('#tab5w tbody tr').forEach(r => { const n = +r.dataset.wide, w = WIDE.find(x => x.n === n), P = parse(r.querySelector('[data-q5="P"]').textContent);
+            near(P, n * R.P(w.V, w.f), 'b5 wide P ' + n); near(P, WANT[n], 'b5 wide want ' + n, 0.005); near(n * w.f, 2.5e9, 'b5 same work ' + n);
+            if (!(w.f <= R.fmax(w.V) * 1.000001)) fails.push('b5 wide illegal ' + n); });
+        near(1.6 / 2.5, 0.64, 'b5 36% less'); near(1 - 1.225 / 2.5, 0.51, 'b5 51% less', 0.01);
+        { const r = document.querySelectorAll('#tab5 tbody tr')[0]; r.click(); const st = window.__api.getState(); if (st.page !== 3 || Math.abs(st.V - 0.5) > 1e-9 || Math.abs(st.f - 1e7) > 1) fails.push('b5 row click'); }
+
+        // 5) geometry, overflow and contrast, at the extreme knob stops on every beat
+        const overlap = (a, b, pad = 0) => a.x < b.x + b.width + pad && a.x + a.width + pad > b.x && a.y < b.y + b.height + pad && a.y + a.height + pad > b.y;
+        let measured = 0, contrasted = 0;
+        function texts(svg, tag) { const [vx, vy, vw, vh] = svg.getAttribute('viewBox').split(' ').map(Number), out = [];
+            for (const t of Array.from(svg.querySelectorAll('text'))) { if (t.closest('.hid') || !t.textContent.trim()) continue; const b0 = t.getBBox(); if (!b0.width) continue; const mm = svg.getScreenCTM().inverse().multiply(t.getScreenCTM());
+                const bb = { x: b0.x * mm.a + mm.e, y: b0.y * mm.d + mm.f, width: b0.width * mm.a, height: b0.height * mm.d }; out.push({ t, bb, tip: !!t.closest('.hover-g') }); measured++;
+                if (bb.x < vx - 0.5 || bb.y < vy - 0.5 || bb.x + bb.width > vx + vw + 0.5 || bb.y + bb.height > vy + vh + 0.5) fails.push(`${tag} text outside: ` + t.textContent.slice(0, 24)); }
+            for (let i = 0; i < out.length; i++) for (let j = i + 1; j < out.length; j++) if (out[i].tip === out[j].tip && overlap(out[i].bb, out[j].bb, -1)) fails.push(`${tag} texts overlap "${out[i].t.textContent.slice(0, 14)}" / "${out[j].t.textContent.slice(0, 14)}"`);
+            return out; }
+        const sweep = (tag) => { const ds = $('designSurface'); if (ds.scrollHeight > 1080 + 1 || ds.scrollWidth > 1920 + 1) fails.push('overflow ' + tag);
+            document.querySelectorAll('.page.active .panel, .page.active .card, .page.active .knob, .defs.open .defs-card').forEach(p => { if (p.scrollHeight > p.clientHeight + 1 || p.scrollWidth > p.clientWidth + 1) fails.push('panel overflow ' + tag + ' ' + (p.className || '').split(' ').slice(0, 3).join('.')); });
+            const st = $('stage').getBoundingClientRect(); document.querySelectorAll('.page.active > *').forEach(p => { const r = p.getBoundingClientRect(); if (r.bottom > st.bottom + 1) fails.push('below stage ' + tag); }); };
+        const lum = (r, g, b) => { const q = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }; return 0.2126 * q(r) + 0.7152 * q(g) + 0.0722 * q(b); };
+        function contrastGate(tag) {
+            const els = Array.from(document.querySelectorAll('.page.active svg text, .page.active svg tspan, .page.active .panel *:not(svg *)')).filter(t => !t.closest('.hid') && t.getBoundingClientRect().width && Array.from(t.childNodes).some(n => n.nodeType === 3 && n.textContent.trim()));
+            for (const t of els) { const cs = getComputedStyle(t), isSvg = t instanceof SVGElement, col = isSvg ? cs.fill : cs.color, m = col.match(/rgba?\(([^)]*)\)/); if (!m) continue;
+                const [r, g, b, a = 1] = m[1].split(',').map(Number); let op = a * (isSvg ? +cs.fillOpacity : 1);
+                for (let n = t; n && n.nodeType === 1; n = n.parentNode) op *= +getComputedStyle(n).opacity;
+                if (t.closest('button:disabled')) continue;
+                const bl = (c) => c * op + 255 * (1 - op), L = lum(bl(r), bl(g), bl(b)), cr = 1.05 / (L + 0.05); contrasted++;
+                if (cr < 3 - 1e-6) { fails.push(`${tag}: pale text "${t.textContent.slice(0, 14)}" ${cr.toFixed(2)}:1`); return; } } }
+        // corner labels clear of every dot (at its largest) and of the triangle's badge
+        function cornersClear(tag) { const dots = ['P', 'NM', 'S'].map(k => B3[k].dot.getBBox()); const labs = Array.from($('d3').querySelectorAll('[data-corner] text')).map(t => t.getBBox()).filter(b => b.width);
+            for (const l of labs) for (const d of dots) if (overlap(l, d, 4)) fails.push(`${tag}: corner label on a dot`);
+            const bb = B3.bbox.getBBox(); for (const d of dots) if (overlap(bb, d, 4)) fails.push(`${tag}: badge on a dot`); }
+        const STATES = { 1: [0, 1, 2, 4, 5], 2: [0, 1, 2, 6, 7] };
+        setPage(1); for (const k of STATES[1]) { setStep1(k); texts($('d1'), 'b1s' + k); sweep('b1s' + k); contrastGate('b1s' + k); }
+        for (const v of [0.5, 1.0, 1.05, 1.1, 1.2]) { setV(v); texts($('d1'), 'b1v' + v); sweep('b1v' + v); }
+        setHover(0.5); texts($('d1'), 'b1hov'); setHover(1.2); texts($('d1'), 'b1hov5'); setHover(null);
+        setPage(2); for (let k = 0; k < STEPS2.length; k++) { setStep2(k); texts($('d2'), 'b2s' + k); texts($('d2b'), 'b2Ls' + k); sweep('b2s' + k); if (STATES[2].includes(k)) contrastGate('b2s' + k); }
+        for (const v of [0.5, 0.7, 0.75, 1.0, 1.2]) { setV(v); texts($('d2'), 'b2v' + v); texts($('d2b'), 'b2Lv' + v); sweep('b2v' + v); }
+        setPage(3); for (const [v, ff] of [[0.5, 1e7], [0.5, 4e9], [1.2, 1e7], [1.2, 4e9], [1, 1e9], [0.8, 2e9], [1.2, R.fmax(1.2)], [0.9, 3e8]]) { setV(v); setF(ff); const tag = `b3 ${v}/${ff}`; texts($('d3'), tag); sweep(tag); cornersClear(tag); contrastGate(tag); }
+        setPage(4); texts($('d4'), 'b4'); sweep('b4'); contrastGate('b4');
+        setPage(5); sweep('b5'); contrastGate('b5');
+        for (const a of APPS) { setPage(3); setV(a.V); setF(a.f); const tag = 'b3app ' + a.V; texts($('d3'), tag); sweep(tag); cornersClear(tag); }
+        openDefs(); sweep('defs'); closeDefs();
+        if (measured < 400) fails.push('too few text boxes measured: ' + measured);
+        if (contrasted < 300) fails.push('too few texts checked for contrast: ' + contrasted);
+        // 6) back-frame identity: next then back returns the identical frame on the stepped beats
+        const frame = () => document.querySelector('.page.active').innerHTML + '|' + V + '|' + noiseOn;
+        setPage(1); for (let k = 0; k < STEPS1.length - 1; k++) { setStep1(k); const A = frame(); advance(1); advance(-1); if (s1 !== k || frame() !== A) fails.push('b1 back ' + k); }
+        setStep1(0); if (!$('bk1').disabled) fails.push('b1 back enabled at 0');
+        setPage(2); for (let k = 0; k < STEPS2.length - 1; k++) { setStep2(k); const A = frame(); advance(1); advance(-1); if (s2 !== k || frame() !== A) fails.push('b2 back ' + k); }
+        setStep2(0); if (!$('bk2').disabled) fails.push('b2 back enabled at 0');
+        // 7) American spelling on everything visible
+        const all = document.body.innerText; const sp = all.match(/colour|labell|centre|centred|behaviour|modell|optimis|minimis|analys(e|ing)/i); if (sp) fails.push('spelling: ' + sp[0]);
+
+        page = S0.page; V = S0.V; f = S0.f; s1 = S0.s1; s2 = S0.s2; noiseOn = S0.noiseOn; render();
+        if (fails.length) document.title += ' — ASSERT FAIL: ' + [...new Set(fails)].slice(0, 14).join(', ');
+        else document.title += ` — ASSERT PASS (${measured} boxes, ${contrasted} contrast, ${combos} knob states)`;
+    }
+    if (location.search.indexOf('verify') >= 0) {
+        try { runAssertions(); }
+        catch (e) { document.title += ' — ASSERT FAIL: exception in the checks: ' + e.message; }
+    }
+</script>
+</body>
+</html>
