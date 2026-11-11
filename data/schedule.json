@@ -996,6 +996,13 @@
       "weekday": "Mon",
       "items": [
         {
+          "num": "5.1.2",
+          "title": "FSMD to Datapath Practice",
+          "slug": "fsmd-to-datapath-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
           "num": null,
           "title": "Exam 3 Review",
           "slug": null,
@@ -1009,13 +1016,6 @@
       "date": "2026-11-18",
       "weekday": "Wed",
       "items": [
-        {
-          "num": "5.1.2",
-          "title": "FSMD to Datapath Practice",
-          "slug": "fsmd-to-datapath-practice",
-          "type": "practice",
-          "published": true
-        },
         {
           "num": null,
           "title": "Exam 3",
