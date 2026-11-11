@@ -1,0 +1,10 @@
+title: "FSMD Timing Practice"
+description: "Four small finite state machines with datapaths, each with a timing diagram that is mostly filled in: complete the blank window of clock cycles, check your entries, and step through hints and worked steps on demand."
+chapter: rtl-design
+section: introduction-to-rtl-design
+order: 50104
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: four FSMDs, each with a timing diagram about 60 percent filled in. Complete the blank window of cycles, state by state and register by register, then check your work"

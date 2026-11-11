@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verilog to State Diagram — Practice</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: #e9edf3; }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9; max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0; transform-origin: top left;
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #1c2433; background: #f7f9fc;
+        padding: 22px 48px; display: flex; flex-direction: column; }
+
+    /* tokens (light, as the decks and 38P): ink #1c2433 · state blue #3f5f9e · input amber #a86f05 · one-hot term violet #7a52c7
+       · muted #5a6676 · revealed answer cyan #0b7fa8 · template tints: blue (block 1) amber (block 2) green (block 3) */
+
+    .topbar { display: flex; align-items: center; gap: 26px; }
+    .titles { flex: 1; }
+    .titles h1 { font-size: 34px; font-weight: 800; color: #1c2433; }
+    .titles h1 .sub { color: #5a6676; font-size: 21px; font-weight: 600; }
+    .titles .subtitle { color: #5a6676; font-size: 17px; margin-top: 2px; }
+    .page-count { color: #5a6676; font-size: 20px; font-weight: 600; border: 2px solid #c9d3e0; border-radius: 10px; padding: 8px 18px; background: #fff; }
+    .page-count b { color: #3f5f9e; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 12px; margin: 12px 0 2px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 11px; position: relative; border: 2px solid #c9d3e0; border-radius: 12px;
+        padding: 9px 16px; color: #5a6676; background: #fff; cursor: pointer; }
+    .tab .tnum { width: 36px; height: 36px; flex-shrink: 0; border: 2px solid currentColor; border-radius: 9px; display: flex;
+        align-items: center; justify-content: center; font-size: 19px; font-weight: 700; }
+    .tab .tlabel { font-size: 18px; font-weight: 700; line-height: 1.15; }
+    .tab .tlabel small { display: block; font-size: 13px; font-weight: 500; color: #7b8796; }
+    .tab.on { color: #3f5f9e; border-color: #3f5f9e; background: #eef3fb; }
+    .tab.on .tnum { background: #3f5f9e; color: #fff; border-color: #3f5f9e; }
+    .tab .tdone { position: absolute; bottom: 5px; right: 12px; font-size: 13px; font-weight: 700; color: #0b7fa8; display: none; }
+    .tab.seen .tdone { display: block; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 10px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 10px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'SF Mono', Menlo, Consolas, monospace; }
+    .ov { text-decoration: overline; }
+    sub { font-size: 0.72em; }
+
+    .panel { background: #fff; border: 2px solid #c9d3e0; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: center; gap: 12px; padding: 6px 14px 6px 18px; border-bottom: 2px solid #e3e8ef; white-space: nowrap; min-height: 42px; }
+    .panel-head .ph { font-size: 18px; font-weight: 700; color: #3f5f9e; }
+    .panel-head .ph .sn { color: #7b8796; margin-right: 6px; }
+    .panel-head .role { font-size: 14.5px; color: #7b8796; overflow: hidden; text-overflow: ellipsis; }
+    .panel-head .spacer { flex: 1; }
+
+    .btn { cursor: pointer; user-select: none; border: 2px solid #c9d3e0; border-radius: 999px; padding: 3px 14px; color: #5a6676;
+        font-size: 15px; font-weight: 700; background: #fff; white-space: nowrap; }
+    .btn:hover { border-color: #5a6676; color: #1c2433; }
+    .btn .k { font-family: Menlo, Consolas, monospace; color: #9aa5b3; font-size: 13px; margin-left: 7px; font-weight: 400; }
+    .btn.hint { border-color: #c98a12; color: #a86f05; background: #fdf6e7; }
+    .btn.final { border-color: #0b7fa8; color: #fff; background: #0b7fa8; } .btn.final .k { color: #cbeaf5; }
+    .btn.used { opacity: 0.55; }
+    .btn.sm { font-size: 13.5px; padding: 1px 11px; }
+    .btn.big { font-size: 16px; padding: 5px 17px; }
+
+    /* ---- page 0 ---- */
+    .steps { display: flex; gap: 8px; }
+    .step { flex: 1; border: 2px solid #c9d3e0; border-radius: 14px; background: #fff; padding: 12px 15px; display: flex; flex-direction: column; gap: 7px; }
+    .step .sn { width: 34px; height: 34px; border: 2px solid #3f5f9e; border-radius: 9px; color: #3f5f9e; font-size: 18px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center; }
+    .step .st { font-size: 19px; font-weight: 700; }
+    .step .sd { font-size: 15.5px; color: #3a4556; line-height: 1.45; }
+    .step .sd b { color: #1c2433; } .step .sd .mono { color: #0b7fa8; }
+    .arrowcell { align-self: center; color: #9aa5b3; font-size: 24px; }
+    .leadrow { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .convbody { padding: 12px 22px; display: flex; flex-direction: column; gap: 8px; font-size: 16.5px; color: #3a4556; line-height: 1.45; }
+    .convbody b { color: #1c2433; } .convbody li { margin-left: 20px; margin-bottom: 3px; } .convbody .mono { color: #0b7fa8; }
+    .helpbody { padding: 12px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .hrow { display: flex; align-items: center; gap: 14px; font-size: 16px; color: #3a4556; line-height: 1.35; }
+    .hrow .btn { flex: 0 0 190px; text-align: center; cursor: default; }
+    .cards { display: flex; gap: 12px; }
+    .startcard { flex: 1; cursor: pointer; border: 2px solid #3f5f9e; border-radius: 14px; background: #eef3fb; padding: 12px 18px; }
+    .startcard .ct { font-size: 20px; font-weight: 700; color: #3f5f9e; } .startcard .cf { font-size: 15px; color: #3a4556; }
+
+    /* ---- problem pages ---- */
+    .main { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .probpanel { flex: 0 0 656px; }
+    .probbody { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 18px 12px; gap: 9px; }
+    .story { font-size: 16px; color: #1c2433; line-height: 1.42; }
+    .story b { color: #3f5f9e; } .story .cy { color: #0b7fa8; font-weight: 700; }
+    .vcode { flex: 0 0 auto; margin: 0; padding: 12px 16px; background: #f4f6fa; border: 2px solid #e3e8ef; border-radius: 10px;
+        font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 14.5px; line-height: 1.42; color: #1c2433; white-space: pre; overflow: hidden; }
+    .vcode .vkw { color: #3f5f9e; font-weight: 700; } .vcode .vnum { color: #a86f05; } .vcode .vcm { color: #7b8796; font-style: italic; }
+    .find { font-size: 15px; color: #5a6676; border-top: 2px solid #e3e8ef; padding-top: 8px; line-height: 1.4; }
+    .find b { color: #1c2433; }
+
+    .work { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+    .rowA { flex: 0 0 196px; display: flex; gap: 10px; min-height: 0; }
+    .rowA .c0 { flex: 1.1; min-width: 0; } .rowA .c1 { flex: 1; min-width: 0; }
+    .rowB { flex: 0 0 214px; display: flex; min-height: 0; }
+    .rowB .scard { flex: 1; }
+    .rowC { flex: 1; display: flex; gap: 10px; min-height: 0; }
+    .rowC .c3 { flex: 0 0 364px; min-width: 0; } .rowC .c4 { flex: 1; min-width: 0; }
+    .scard .panel-head { padding: 4px 10px 4px 16px; min-height: 40px; gap: 8px; }
+    .scard .ph { font-size: 17px; }
+    .scard.open { border-color: #7fb7d0; }
+    .sbody { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .blank { flex: 1; display: flex; align-items: center; justify-content: center; color: #9aa5b3; font-size: 16px; font-style: italic;
+        margin: 8px; border: 2px dashed #d5dbe5; border-radius: 10px; }
+    .facts { padding: 6px 16px; display: grid; grid-template-columns: 1fr; gap: 3px; align-content: center; flex: 1; font-size: 14.5px; color: #1c2433; line-height: 1.28; }
+    .facts .fk { display: inline-block; min-width: 78px; color: #7b8796; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+    .facts .am { color: #a86f05; } .facts .cyb { color: #0b7fa8; } .facts .mono { color: #0b7fa8; }
+    .facts .b1 { color: #3f5f9e; } .facts .b2 { color: #a86f05; } .facts .b3 { color: #16866a; }
+    .tblwrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 6px 10px; gap: 22px; }
+    .tblwrap .side { font-size: 14.5px; color: #3a4556; line-height: 1.45; }
+    .tblwrap .side b { color: #1c2433; } .tblwrap .side .mono { color: #0b7fa8; }
+    .stt { border-collapse: collapse; font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 16px; }
+    .stt th, .stt td { border: 2px solid #c9d3e0; padding: 0 11px; text-align: center; color: #1c2433; height: 27px; }
+    .stt th { background: #eef3fb; color: #3f5f9e; font-size: 13px; font-weight: 700; font-family: 'Segoe UI', Arial, sans-serif; }
+    .stt th.in { color: #a86f05; }
+    .stt td.st { font-family: 'Segoe UI', Arial, sans-serif; font-weight: 700; color: #1c2433; }
+    .stt td.v1 { color: #0b7fa8; font-weight: 700; } .stt td.v0 { color: #9aa5b3; }
+    .stt td.code { color: #0b7fa8; }
+    .stt td.rs { color: #a86f05; font-family: 'Segoe UI', Arial, sans-serif; font-size: 12.5px; font-weight: 700; }
+    .stt td.dim { color: #9aa5b3; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; }
+    .eqs { display: flex; flex-direction: column; gap: 5px; }
+    .eqrow { display: flex; align-items: baseline; gap: 14px; }
+    .eqrow .eqn { font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 17px; color: #1c2433; white-space: nowrap; }
+    .eqrow .eqn .dn { color: #0b7fa8; font-weight: 700; } .eqrow .eqn .tm { color: #7a52c7; }
+    .eqrow .arcs { font-size: 13.5px; color: #5a6676; white-space: nowrap; }
+    .eqrow .arcs b { color: #1c2433; font-weight: 600; }
+    .rd { font-size: 14.5px; color: #3a4556; line-height: 1.45; max-width: 560px; }
+    .rd b { color: #1c2433; } .rd .mono { color: #0b7fa8; }
+    .rd .ex { display: block; margin-top: 6px; font-family: 'SF Mono', Menlo, Consolas, monospace; color: #1c2433; font-size: 15px; }
+    .rd .ex .to { color: #a86f05; font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; margin-left: 10px; }
+    .outbox { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 8px 14px; }
+    .verdict { font-size: 15.5px; color: #1c2433; line-height: 1.4; text-align: center; }
+    .verdict b { color: #0b7fa8; } .verdict .mono { color: #a86f05; }
+    .c4wrap { flex: 1; display: flex; align-items: stretch; gap: 10px; padding: 6px 10px 8px 6px; min-height: 0; }
+    .sdbox { flex: 1; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+    .sdbox svg { width: 100%; height: 100%; display: block; }
+    .ansnote { flex: 0 0 236px; align-self: center; font-size: 14px; color: #3a4556; line-height: 1.45; border-left: 3px solid #c9d3e0; padding-left: 12px; }
+    .ansnote b { color: #1c2433; } .ansnote .mono { color: #0b7fa8; }
+
+    .sd-node .sdc { fill: #fff; stroke: #1c2433; stroke-width: 3; }
+    .sd-node.z1 .sdc { stroke: #0b7fa8; stroke-width: 3.5; }
+    .sd-node .sdname { fill: #1c2433; font-family: 'Segoe UI', Arial, sans-serif; font-weight: 800; text-anchor: middle; font-size: 18px; }
+    .sd-node .sdenc { fill: #0b7fa8; font-family: 'SF Mono', Menlo, Consolas, monospace; text-anchor: middle; font-size: 13px; }
+    .sd-node .sdz { fill: #7b8796; font-family: 'SF Mono', Menlo, Consolas, monospace; text-anchor: middle; font-size: 12px; }
+    .sd-node.z1 .sdz { fill: #0b7fa8; font-weight: 700; }
+    .arc { fill: none; stroke: #3a4556; stroke-width: 2.6; }
+    .arc-l { fill: #a86f05; font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 16px; font-weight: 700; text-anchor: middle;
+        paint-order: stroke; stroke: #fff; stroke-width: 7px; stroke-linejoin: round; }
+    .arc-l .zl { fill: #0b7fa8; }
+    .resetarrow { fill: none; stroke: #7b8796; stroke-width: 2.4; }
+    .resetlab { fill: #7b8796; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; }
+    .sdkey { fill: #7b8796; font-family: 'Segoe UI', Arial, sans-serif; font-size: 12.5px; }
+
+    .helpbar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; background: #fff; border: 2px solid #c9d3e0; border-radius: 14px; padding: 7px 14px; min-height: 56px; }
+    .hintbox { flex: 1; min-width: 0; font-size: 15.5px; color: #1c2433; line-height: 1.35; border-left: 3px solid #e7c27a; padding-left: 12px; }
+    .hintbox .hl { color: #a86f05; font-weight: 700; margin-right: 6px; }
+    .hintbox .dim { color: #7b8796; }
+    .hintbox .mono { color: #0b7fa8; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 8px; height: 28px; }
+    .controls { color: #7b8796; font-size: 15px; white-space: nowrap; }
+    .controls .k { display: inline-block; color: #3a4556; border: 1px solid #c9d3e0; border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: Menlo, Consolas, monospace; background: #fff; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="titles">
+            <h1>Verilog to State Diagram <span class="sub">&mdash; practice set</span></h1>
+            <div class="subtitle">Two machines written with the FSM coding template, one binary and one one-hot &middot; read the code back to the state assignment, the next state table, the output and the state diagram</div>
+        </div>
+        <div class="page-count">Page <b id="pcNum">0</b> of 0&ndash;2</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip"></div>
+    <div class="stage" id="stage"></div>
+
+    <div class="footer">
+        <div class="controls">
+            <span class="k">0</span>&ndash;<span class="k">2</span> page
+            &middot; each step card: <span class="k">Hint</span> a nudge &middot; <span class="k">Show</span> the worked step
+            &middot; <span class="k">H</span> next hint
+            &middot; <span class="k">F</span> final answer
+            &middot; <span class="k">R</span> &#8634; clear
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer'), s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight; let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * (16 / 9); } else { cw = vw; ch = cw * (9 / 16); }
+        c.style.width = cw + 'px'; c.style.height = ch + 'px'; s.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize, 100));
+    const SVGNS = 'http://www.w3.org/2000/svg';
+
+    // ============ THE TWO MACHINES (source of truth) ============
+    // Each problem is a machine: states, encoding, reset state, next-state table ns[s][x], and output (Moore z[s] or
+    // Mealy z[s][x]). The Verilog the student reads is GENERATED from this data in the review set's template style
+    // (block comments included); verify.py proves that exact text in Icarus Verilog and checks the page prints it verbatim.
+    // geo = where the diagram puts things: bends for arcs, loop directions, label sides.
+    const PROBS = [
+        {
+            name: 'fsm_z', enc: 'binary', states: ['S0', 'S1', 'S2', 'S3'], codes: ['00', '01', '11', '10'], reset: 0,
+            ns: [[1, 0], [2, 0], [3, 0], [3, 0]], out: 'moore', z: [0, 0, 0, 1],
+            hints: [
+                'The <span class="mono">localparam</span> line is the assignment. Read each code: don&rsquo;t assume S2 is 10. Four names in two bits, so no code is unused. The reset line names the start state.',
+                'Eight arms, eight arcs. Every <span class="mono">1&rsquo;b1</span> arm sends the machine to the same state. On x = 0 the machine walks forward one state at a time, and the last state stays put.',
+                'The Z line compares <span class="mono">state</span> with one name and never mentions x.',
+            ],
+            claims: { allOnes: 0, zeroChain: [1, 2, 3, 3] },
+            what: '<b>Z = 1 once x has been 0 for three or more clocks in a row.</b> S1, S2 and S3 count the 0s (one, two, three or more), and any 1 sends the machine back to S0. Moore: Z shows the clock after the third 0.',
+            geo: { layout: 'square', bend: { '0-1': -44, '1-0': -44 }, loop: { 0: Math.PI, 3: Math.PI }, side: { '2-0': -1 } },
+        },
+        {
+            name: 'fsm_t', enc: 'onehot', states: ['A', 'B', 'C'], reset: 0,
+            ns: [[0, 1], [1, 2], [2, 0]], out: 'mealy', z: [[0, 0], [0, 0], [0, 1]],
+            hints: [
+                '<span class="mono">localparam A = 0, B = 1, C = 2</span> gives each state its own bit: <span class="mono">state[B]</span> is Q<sub>B</sub> and <span class="mono">next[B]</span> is D<sub>B</sub>. The reset value <span class="mono">3&rsquo;b001</span> sets bit 0.',
+                'Each <span class="mono">next[]</span> line is one D equation, and each term is an arc <b>into</b> that state. Every line starts with <span class="mono">~x &amp;</span> its own bit: a self-loop on x = 0.',
+                'The Z line reads x as well as a state bit, so Z belongs on an arc, written x / Z. Exactly one arc has Z = 1.',
+            ],
+            claims: { selfOnZero: true, mealyOnes: 1 },
+            what: '<b>Z = 1 on every third 1</b> (the 3rd, 6th, 9th, &hellip;), in the same clock that 1 arrives. A, B and C mean zero, one or two 1s so far; the machine counts 1s modulo 3, and 0s leave the count alone.',
+            geo: { layout: 'row', bend: { '2-0': -150 }, loop: { 0: -Math.PI / 2, 1: -Math.PI / 2, 2: -Math.PI / 2 }, side: {} },
+        },
+    ];
+    const NPROB = PROBS.length;
+
+    // ============ DERIVED FACTS ============
+    const nStates = P => P.states.length;
+    const isMoore = P => P.out === 'moore';
+    const zOf = (P, s, x) => isMoore(P) ? P.z[s] : P.z[s][x];
+    const width = P => P.enc === 'binary' ? P.codes[0].length : nStates(P);
+    // the state vector as the flip-flops hold it: the binary code, or the one-hot vector (bit k = state k)
+    const vecOf = (P, s) => P.enc === 'binary' ? P.codes[s] : [...Array(nStates(P)).keys()].reverse().map(i => i === s ? '1' : '0').join('');
+    const unusedCodes = P => P.enc !== 'binary' ? [] : [...Array(1 << width(P)).keys()].map(m => m.toString(2).padStart(width(P), '0')).filter(c => !P.codes.includes(c));
+    // the arcs INTO state k, as [source, cond] with cond 0, 1 or 'any'; the self-loop first, then by state order
+    function arcsInto(P, k) {
+        const r = [];
+        P.states.forEach((s, i) => {
+            const a0 = P.ns[i][0] === k, a1 = P.ns[i][1] === k;
+            if (a0 && a1) r.push([i, 'any']); else if (a1) r.push([i, 1]); else if (a0) r.push([i, 0]);
+        });
+        return r.filter(a => a[0] === k).concat(r.filter(a => a[0] !== k));
+    }
+    // the behavior the Step 4 note describes, simulated: state after each bit of a stream and Z per clock (before the edge)
+    function run(P, bits) {
+        let s = P.reset; const st = [], z = [];
+        for (const b of bits) { z.push(zOf(P, s, +b)); s = P.ns[s][+b]; st.push(s); }
+        return { st, z };
+    }
+
+    // ============ THE VERILOG THE STUDENT READS (generated; the same text verify.py proves) ============
+    function verilog(pi) {
+        const P = PROBS[pi], S = P.states, n = S.length, L = [];
+        L.push(`module ${P.name} (input clk, reset, x, output reg Z);`);
+        if (P.enc === 'binary') {
+            const w = width(P), parts = S.map((s, i) => `${s} = ${w}'b${P.codes[i]}`), lp = `  localparam [${w - 1}:0] `;
+            if (n <= 3) L.push(lp + parts.join(', ') + ';');
+            else { L.push(lp + parts.slice(0, 2).join(', ') + ','); L.push(' '.repeat(lp.length) + parts.slice(2).join(', ') + ';'); }
+            L.push(`  reg [${w - 1}:0] state, next;`);
+        } else {
+            L.push('  // which bit is which state');
+            L.push('  localparam ' + S.map((s, i) => `${s} = ${i}`).join(', ') + ';');
+            L.push(`  reg [${n - 1}:0] state, next;`);
+        }
+        L.push('  // Block 1: state register');
+        L.push('  always @(posedge clk)');
+        L.push(P.enc === 'binary' ? `    if (reset) state <= ${S[P.reset]};` : `    if (reset) state <= ${n}'b${vecOf(P, P.reset)};   // ${S[P.reset]} is hot`);
+        L.push('    else       state <= next;');
+        if (P.enc === 'binary') {
+            L.push('  // Block 2: next-state logic, one arm per arc');
+            L.push('  always @(*)'); L.push('    case ({state, x})');
+            S.forEach((s, i) => [0, 1].forEach(x => L.push(`      {${s}, 1'b${x}}: next = ${S[P.ns[i][x]]};`)));
+            L.push(`      default:    next = ${S[P.reset]};`); L.push('    endcase');
+        } else {
+            L.push('  // Block 2: next-state logic, one line per flip-flop');
+            L.push('  always @(*) begin');
+            S.forEach((t, k) => {
+                const terms = arcsInto(P, k).map(([i, c]) => c === 'any' ? `state[${S[i]}]` : `${c === 1 ? '' : '~'}x & state[${S[i]}]`);
+                L.push(`    next[${t}] = ` + terms.join(' | ') + ';');
+            });
+            L.push('  end');
+        }
+        const sel = i => P.enc === 'binary' ? `(state == ${S[i]})` : `state[${S[i]}]`;
+        const zt = isMoore(P) ? S.map((s, i) => P.z[i] ? sel(i) : null).filter(Boolean).join(' | ')
+            : S.flatMap((s, i) => [0, 1].map(x => P.z[i][x] ? `${x ? 'x' : '~x'} & ${sel(i)}` : null)).filter(Boolean).join(' | ');
+        L.push('  // Block 3: output logic');
+        L.push('  always @(*)');
+        L.push(`    Z = ${zt};`);
+        L.push('endmodule');
+        return L.join('\n') + '\n';
+    }
+    const KW = /\b(module|endmodule|input|output|reg|wire|assign|always|begin|end|if|else|case|endcase|default|posedge|localparam)\b/g;
+    const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const codeLine = l => esc(l).replace(KW, '<span class="vkw">$1</span>').replace(/(\d+'b[01]+)/g, '<span class="vnum">$1</span>');
+    const codeHTML = pi => verilog(pi).replace(/\n$/, '').split('\n').map(l => {
+        const c = l.indexOf('//');
+        return c < 0 ? codeLine(l) : codeLine(l.slice(0, c)) + `<span class="vcm">${esc(l.slice(c))}</span>`;
+    }).join('\n');
+
+    // ============ STATE DIAGRAM (generated; drawn when Step 4 is shown) ============
+    const R = 30;
+    function el(tag, attrs, parent) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+    function nodePositions(P) {
+        if (P.geo.layout === 'square') return [{ x: 142, y: 104 }, { x: 478, y: 104 }, { x: 478, y: 258 }, { x: 142, y: 258 }].slice(0, nStates(P));
+        const n = nStates(P), x0 = 120, x1 = 500; return P.states.map((s, i) => ({ x: x0 + (x1 - x0) * i / (n - 1), y: 132 }));
+    }
+    // the arcs to draw: one per (state, x), except that a Moore state whose two arcs agree draws ONE unlabeled arc
+    function diagramArcs(P) {
+        const arcs = [];
+        P.states.forEach((s, i) => {
+            const t0 = P.ns[i][0], t1 = P.ns[i][1];
+            if (t0 === t1 && (isMoore(P) || P.z[i][0] === P.z[i][1])) arcs.push({ f: i, t: t0, xs: [0, 1] });
+            else { arcs.push({ f: i, t: t0, xs: [0] }); arcs.push({ f: i, t: t1, xs: [1] }); }
+        });
+        return arcs;
+    }
+    function arcLabel(P, a) {
+        if (a.xs.length === 2) return isMoore(P) ? '' : `0,1/${P.z[a.f][0]}`;
+        return isMoore(P) ? String(a.xs[0]) : `${a.xs[0]}/${P.z[a.f][a.xs[0]]}`;
+    }
+    function buildDiagram(svg, P, pid) {
+        const N = nodePositions(P), G = P.geo;
+        const cx = N.reduce((a, p) => a + p.x, 0) / N.length, cy = N.reduce((a, p) => a + p.y, 0) / N.length;
+        const defs = el('defs', {}, svg);
+        const mk = (id, d, fill) => { const m = el('marker', { id, markerWidth: 18, markerHeight: 14, refX: 13, refY: 6, orient: 'auto', markerUnits: 'userSpaceOnUse' }, defs); el('path', { d, fill }, m); };
+        mk('ah' + pid, 'M0,0 L15,6 L0,12 Z', '#3a4556'); mk('ahr' + pid, 'M0,0 L15,6 L0,12 Z', '#7b8796');
+        const labels = [];
+        for (const a of diagramArcs(P)) {
+            const A = N[a.f], B = N[a.t]; let d, lx, ly;
+            if (a.f === a.t) {
+                const th = G.loop[a.f] !== undefined ? G.loop[a.f] : Math.atan2(A.y - cy, A.x - cx);
+                const a1 = th + 0.48, a2 = th - 0.48, ro = R + 70;
+                const p1 = { x: A.x + R * Math.cos(a1), y: A.y + R * Math.sin(a1) }, p2 = { x: A.x + (R - 1) * Math.cos(a2), y: A.y + (R - 1) * Math.sin(a2) };
+                const c1 = { x: A.x + ro * Math.cos(th + 0.6), y: A.y + ro * Math.sin(th + 0.6) }, c2 = { x: A.x + ro * Math.cos(th - 0.6), y: A.y + ro * Math.sin(th - 0.6) };
+                d = `M${p1.x.toFixed(1)},${p1.y.toFixed(1)} C${c1.x.toFixed(1)},${c1.y.toFixed(1)} ${c2.x.toFixed(1)},${c2.y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+                lx = A.x + (R + 66) * Math.cos(th); ly = A.y + (R + 66) * Math.sin(th) + 6;
+                if (Math.abs(Math.cos(th)) > 0.5) lx += Math.sign(Math.cos(th)) * 10;
+            } else {
+                const key = `${a.f}-${a.t}`, bend = G.bend[key] || 0;
+                const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+                const C = { x: (A.x + B.x) / 2 + nx * bend, y: (A.y + B.y) / 2 + ny * bend };
+                const sa = Math.atan2(C.y - A.y, C.x - A.x), ea = Math.atan2(C.y - B.y, C.x - B.x);
+                const P0 = { x: A.x + R * Math.cos(sa), y: A.y + R * Math.sin(sa) }, P2 = { x: B.x + (R + 1) * Math.cos(ea), y: B.y + (R + 1) * Math.sin(ea) };
+                d = `M${P0.x.toFixed(1)},${P0.y.toFixed(1)} Q${C.x.toFixed(1)},${C.y.toFixed(1)} ${P2.x.toFixed(1)},${P2.y.toFixed(1)}`;
+                const mx = 0.25 * P0.x + 0.5 * C.x + 0.25 * P2.x, my = 0.25 * P0.y + 0.5 * C.y + 0.25 * P2.y;
+                // label side: along the bend, else the side given, else away from the diagram's center (above, for a row)
+                let sg = G.side[key] !== undefined ? G.side[key] : (bend ? Math.sign(bend) : Math.sign((mx - cx) * nx + (my - cy) * ny) || -1);
+                lx = mx + nx * sg * 18; ly = my + ny * sg * 18 + 6;
+                if (!bend && Math.abs(ny) > 0.9 && G.side[key] === undefined) { lx = mx; ly = my - 12; }
+            }
+            el('path', { class: 'arc', d, 'marker-end': `url(#ah${pid})`, 'data-from': a.f, 'data-to': a.t, 'data-x': a.xs.join('') }, svg);
+            const text = arcLabel(P, a);
+            if (text) labels.push({ lx, ly, text, a });
+        }
+        // reset arrow into the start state: from the left on a row, from above on a square (whose S0 loop points left)
+        const rs = N[P.reset], rdir = G.layout === 'square' ? -Math.PI / 2 : Math.PI * 1.06;
+        const rx0 = rs.x + (R + 50) * Math.cos(rdir), ry0 = rs.y + (R + 50) * Math.sin(rdir);
+        el('path', { class: 'resetarrow', d: `M${rx0.toFixed(1)},${ry0.toFixed(1)} L${(rs.x + (R + 2) * Math.cos(rdir)).toFixed(1)},${(rs.y + (R + 2) * Math.sin(rdir)).toFixed(1)}`, 'marker-end': `url(#ahr${pid})` }, svg);
+        const rlx = G.layout === 'square' ? rx0 + 8 : Math.max(2, rx0 - 2), rly = G.layout === 'square' ? ry0 + 12 : ry0 - 10;
+        el('text', { class: 'resetlab', x: rlx.toFixed(1), y: rly.toFixed(1) }, svg).textContent = 'reset';
+        P.states.forEach((name, s) => {
+            const nd = N[s], g = el('g', { class: 'sd-node' + (isMoore(P) && P.z[s] ? ' z1' : '') }, svg);
+            el('circle', { class: 'sdc', cx: nd.x, cy: nd.y, r: R }, g);
+            el('text', { class: 'sdname', x: nd.x, y: nd.y + (isMoore(P) ? -5 : -2) }, g).textContent = name;
+            el('text', { class: 'sdenc', x: nd.x, y: nd.y + (isMoore(P) ? 9 : 14) }, g).textContent = vecOf(P, s);
+            if (isMoore(P)) el('text', { class: 'sdz', x: nd.x, y: nd.y + 22 }, g).textContent = 'Z=' + P.z[s];
+        });
+        for (const { lx, ly, text } of labels) {
+            const t = el('text', { class: 'arc-l', x: lx.toFixed(1), y: ly.toFixed(1) }, svg);
+            if (isMoore(P)) t.textContent = text;
+            else { const [xs, z] = text.split('/'); el('tspan', {}, t).textContent = xs + '/'; el('tspan', { class: z === '1' ? 'zl' : '' }, t).textContent = z; }
+        }
+        const key = isMoore(P) ? 'arc label = x · Z inside each state' : 'arc label = x / Z · Z belongs to the arc, not the state';
+        el('text', { class: 'sdkey', x: 8, y: 314 }, svg).textContent = key;
+    }
+
+    // ============ STEP CARDS ============
+    const STEPS = [
+        { n: 0, title: 'Understand the problem' },
+        { n: 1, title: 'Read the state assignment' },
+        { n: 2, title: 'Read the next state logic' },
+        { n: 3, title: 'Read the output' },
+        { n: 4, title: 'Draw the state diagram' },
+    ];
+    function stepHint(P, n) {
+        if (n === 0) return `Find the three blocks the comments name: <span class="mono">posedge clk</span> is the state register, the <span class="mono">case</span> or the <span class="mono">next[]</span> lines are the next state logic, the Z line is the output. The width of <span class="mono">reg [${width(P) - 1}:0] state</span> is the number of flip-flops.`;
+        if (n === 4) return 'One circle per state with its name and code. Two arcs out of every state, x = 0 and x = 1, one per table cell. A reset arrow into the start state. Z inside the circles for Moore, after a slash on each arc for Mealy.';
+        return P.hints[n - 1];
+    }
+    const blankST = () => ({ hint: [false, false, false, false, false], shown: [false, false, false, false, false], lastHint: -1 });
+    const ST = PROBS.map(blankST);
+    let page = 0;
+    function nextHelp(pi) {
+        const s = ST[pi];
+        for (let n = 0; n < 5; n++) { if (!s.hint[n] && !s.shown[n]) return { kind: 'hint', n }; if (!s.shown[n]) return { kind: 'show', n }; }
+        return null;
+    }
+
+    // ============ PAGE BUILD ============
+    const stage = document.getElementById('stage');
+    const tabstrip = document.getElementById('tabstrip');
+    const encName = P => P.enc === 'binary' ? 'binary' : 'one-hot';
+    const TABS = [{ n: 0, label: 'How to Work', small: 'the steps + the buttons' }].concat(PROBS.map((P, i) => ({ n: i + 1, label: `Problem ${i + 1}`, small: `${encName(P)} state assignment` })));
+    TABS.forEach(t => {
+        const d = document.createElement('div'); d.className = 'tab'; d.dataset.page = t.n;
+        d.innerHTML = `<div class="tnum">${t.n}</div><div class="tlabel">${t.label}<small>${t.small}</small></div><div class="tdone"></div>`;
+        tabstrip.appendChild(d);
+    });
+    const pages = [];
+    function mkPage(id, inner) { const p = document.createElement('div'); p.className = 'page'; p.id = 'p' + id; p.innerHTML = inner; stage.appendChild(p); pages.push(p); return p; }
+
+    const METHOD = [
+        ['Understand the problem', 'Find the <b>three blocks</b> of the template: the state register (<span class="mono">always @(posedge clk)</span>, with <span class="mono">&lt;=</span>), the next state logic (<span class="mono">always @(*)</span>), and the output. Count the flip-flops from <span class="mono">reg [n:0] state</span>.'],
+        ['Read the state assignment', 'The <span class="mono">localparam</span> line. <b>Binary:</b> each name is a code (read it; codes need not count up), and a code not named is unused. <b>One-hot:</b> each name is a bit position. The <span class="mono">reset</span> line names the start state.'],
+        ['Read the next state logic', '<b>Binary:</b> each <span class="mono">case</span> arm is one cell of the table: present state and x on the left, next state on the right. <b>One-hot:</b> each <span class="mono">next[k]</span> line is D<sub>k</sub>, and each term is one arc <b>into</b> state k.'],
+        ['Read the output', 'If the Z line reads <span class="mono">state</span> only, Z is <b>Moore</b> and belongs to a state. If it also reads <span class="mono">x</span>, Z is <b>Mealy</b> and belongs to an arc.'],
+        ['Draw the state diagram', 'One circle per state, with its code. One arc per table cell, so two leave every state. A reset arrow into the start state. Z inside the circles (Moore) or on the arcs as <span class="mono">x / Z</span> (Mealy). Then say what the machine does.'],
+    ];
+    mkPage(0, `<div class="steps">${METHOD.map((m, i) => `${i ? '<div class="arrowcell">→</div>' : ''}<div class="step"><div class="sn">${i}</div><div class="st">${m[0]}</div><div class="sd">${m[1]}</div></div>`).join('')}</div>
+        <div class="leadrow">
+            <div class="panel" style="flex:1.25"><div class="panel-head"><span class="ph">Conventions</span><span class="role">as in class</span></div>
+                <div class="convbody"><ul>
+                    <li>Every machine is written with the template of <b data-topic="fsm-coding-template">FSM Coding Template</b>: one input <b>x</b>, one output <b>Z</b>, a synchronous active-high <b>reset</b>, and the three blocks in order, each under its comment.</li>
+                    <li><b>Binary:</b> <span class="mono">state</span> is Q<sub>1</sub>Q<sub>0</sub> and <span class="mono">next</span> is D<sub>1</sub>D<sub>0</sub>. The next state logic is <span class="mono">case ({state, x})</span> with <b>one arm per arc</b>, plus a <span class="mono">default</span> so every path assigns <span class="mono">next</span>.</li>
+                    <li><b>One-hot:</b> <span class="mono">state[k]</span> is <b>Q<sub>k</sub></b> and <span class="mono">next[k]</span> is <b>D<sub>k</sub></b>, with Q<sub>k</sub> = 1 only in state k, as in <b data-topic="one-hot-state-assignment">One Hot State Assignment</b>. <span class="mono">x &amp; state[A]</span> is &ldquo;from A on x = 1&rdquo;; <span class="mono">~x &amp; state[A]</span> is &ldquo;from A on x = 0.&rdquo;</li>
+                    <li><b>Output:</b> block 3 reading <span class="mono">state</span> only is Moore; reading <span class="mono">x</span> too is Mealy, as in <b data-topic="mealy-versus-moore">Mealy versus Moore</b>.</li>
+                    <li><b>The answer is unique.</b> The code is a complete description of the machine, so there is exactly one assignment, one table and one set of arcs. Only the drawing&rsquo;s layout is yours.</li>
+                </ul></div></div>
+            <div class="panel" style="flex:1"><div class="panel-head"><span class="ph">The buttons</span><span class="role">every step card starts empty &mdash; work it on paper first</span></div>
+                <div class="helpbody">
+                    <div class="hrow"><span class="btn hint sm">Hint</span><span>on each step card: a nudge for that step, shown in the bar at the bottom</span></div>
+                    <div class="hrow"><span class="btn sm">Show</span><span>on each step card: the worked step &mdash; the assignment, the table (with the D equations for one-hot), the output, or the diagram and what the machine does</span></div>
+                    <div class="hrow"><span class="btn hint sm">Next hint (H)</span><span>hint 0, show 0, hint 1, &hellip; show 4, one press at a time</span></div>
+                    <div class="hrow"><span class="btn final sm">Final answer (F)</span><span>every step at once, ending with the state diagram</span></div>
+                    <div class="hrow"><span class="btn sm">&#8634; Clear (R)</span><span>empties every card on the problem</span></div>
+                </div></div>
+        </div>
+        <div class="cards">${PROBS.map((P, i) => `<div class="startcard" data-goto="${i + 1}"><div class="ct">Problem ${i + 1}</div><div class="cf">${encName(P)} · ${nStates(P)} states · ${width(P)} flip-flops · read the code</div></div>`).join('')}</div>`);
+
+    const cardHTML = (id, n, cls) => `
+        <div class="panel scard ${cls}" data-step="${n}">
+          <div class="panel-head"><div class="ph"><span class="sn">Step ${n}</span>${STEPS[n].title}</div><div class="spacer"></div>
+            <span class="btn hint sm" data-act="hint" data-n="${n}">Hint</span><span class="btn sm" data-act="show" data-n="${n}">Show</span></div>
+          <div class="sbody" id="s${id}-${n}"></div>
+        </div>`;
+    function probPage(pi) {
+        const P = PROBS[pi], id = pi + 1;
+        const p = mkPage(id, `
+          <div class="main">
+            <div class="panel probpanel">
+              <div class="panel-head"><div class="ph">Problem ${id}</div><div class="spacer"></div><div class="role">the Verilog is given</div></div>
+              <div class="probbody">
+                <div class="story">This module describes a finite state machine with one input <b>x</b> and one output <span class="cy">Z</span>. From the code alone, find <b>(a)</b> the state assignment, <b>(b)</b> the next state table${P.enc === 'onehot' ? ' and the D equations' : ''}, <b>(c)</b> the output Z and whether it is Moore or Mealy, and <b>(d)</b> the state diagram.</div>
+                <pre class="vcode" id="code${id}">${codeHTML(pi)}</pre>
+                <div class="find">Then say in one sentence <b>what the machine does</b>.</div>
+              </div>
+            </div>
+            <div class="work">
+              <div class="rowA">${cardHTML(id, 0, 'c0')}${cardHTML(id, 1, 'c1')}</div>
+              <div class="rowB">${cardHTML(id, 2, 'c2')}</div>
+              <div class="rowC">${cardHTML(id, 3, 'c3')}${cardHTML(id, 4, 'c4')}</div>
+            </div>
+          </div>
+          <div class="helpbar">
+            <span class="btn hint big" data-act="next">Next hint<span class="k">H</span></span>
+            <div class="hintbox" id="hint${id}"></div>
+            <span class="btn final big" data-act="final">Final answer<span class="k">F</span></span>
+            <span class="btn big" data-act="reset">&#8634; Clear<span class="k">R</span></span>
+          </div>`);
+        p.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => act(pi, b.dataset.act, b.dataset.n === undefined ? undefined : +b.dataset.n)));
+    }
+    PROBS.forEach((P, i) => probPage(i));
+
+    // ============ WORKED STEPS (revealed by Show) ============
+    const sub = (a, b) => `${a}<sub>${b}</sub>`;
+    function step0HTML(P) {
+        const w = width(P), n = nStates(P);
+        const encLine = P.enc === 'binary'
+            ? `binary, <span class="mono">reg [${w - 1}:0] state</span>: ${w} flip-flops. <span class="mono">state</span> = ${sub('Q', 1)}${sub('Q', 0)}, <span class="mono">next</span> = ${sub('D', 1)}${sub('D', 0)}`
+            : `one-hot, <span class="mono">reg [${w - 1}:0] state</span>: ${w} flip-flops, one per state. <span class="mono">state[k]</span> = ${sub('Q', 'k')}, <span class="mono">next[k]</span> = ${sub('D', 'k')}`;
+        return `<div class="facts">
+            <div><span class="fk">Ports</span><span class="mono">clk</span>, <span class="mono">reset</span>, input <b class="am">x</b> &rarr; output <b class="cyb">Z</b></div>
+            <div><span class="fk">Encoding</span>${encLine}</div>
+            <div><span class="fk">Blocks</span><b class="b1">1</b> <span class="mono">always @(posedge clk)</span> &middot; <b class="b2">2</b> <span class="mono">always @(*)</span> + ${P.enc === 'binary' ? '<span class="mono">case</span>' : `${n} <span class="mono">next[]</span> lines`} &middot; <b class="b3">3</b> the Z line</div>
+            <div><span class="fk">Find</span>assignment &middot; table &middot; output &middot; diagram &middot; what it does</div></div>`;
+    }
+    // states whose code is not their index in binary: the "codes do not count up" note
+    const outOfOrder = P => P.enc !== 'binary' ? [] : P.states.map((s, i) => [s, P.codes[i]]).filter(([s, c], i) => parseInt(c, 2) !== i);
+    function step1HTML(P) {
+        const n = nStates(P);
+        if (P.enc === 'binary') {
+            const un = unusedCodes(P), oo = outOfOrder(P);
+            let h = `<table class="stt"><tr><th>state</th><th>${sub('Q', 1)}${sub('Q', 0)}</th><th></th></tr>`;
+            P.states.forEach((s, i) => h += `<tr><td class="st">${s}</td><td class="code">${P.codes[i].split('').join(' ')}</td><td class="${i === P.reset ? 'rs' : 'dim'}">${i === P.reset ? 'reset' : ''}</td></tr>`);
+            un.forEach(c => h += `<tr><td>&mdash;</td><td class="code">${c.split('').join(' ')}</td><td class="dim">unused</td></tr>`);
+            h += '</table>';
+            const side = `<div class="side"><b>${n} states in ${width(P)} bits.</b> ${oo.length ? `The codes do not count up: <b>${oo.map(([s, c]) => `${s} = ${c}`).join(', ')}</b>. ` : ''}${un.length ? `Code ${un.map(c => c.split('').join(' ')).join(', ')} is never named.` : 'All four codes are used.'}<br>Reset &rarr; <b>${P.states[P.reset]}</b>.</div>`;
+            return `<div class="tblwrap">${h}${side}</div>`;
+        }
+        let h = `<table class="stt"><tr><th>state</th><th>bit</th><th>state[${n - 1}:0]</th><th></th></tr>`;
+        P.states.forEach((s, i) => h += `<tr><td class="st">${s}</td><td class="code">${i}</td><td class="code">${vecOf(P, i)}</td><td class="${i === P.reset ? 'rs' : 'dim'}">${i === P.reset ? 'reset' : ''}</td></tr>`);
+        h += '</table>';
+        const side = `<div class="side"><b>One flip-flop per state:</b> <span class="mono">state[${P.states[1]}]</span> is ${sub('Q', P.states[1])}, 1 only in ${P.states[1]}.<br>Reset <span class="mono">${n}'b${vecOf(P, P.reset)}</span> &rarr; <b>${P.states[P.reset]}</b> is hot.</div>`;
+        return `<div class="tblwrap">${h}${side}</div>`;
+    }
+    function nsTable(P, withCodes) {
+        let h = `<table class="stt"><tr><th>present</th>${withCodes ? `<th>${sub('Q', 1)}${sub('Q', 0)}</th>` : ''}<th class="in">x = 0</th><th class="in">x = 1</th></tr>`;
+        P.states.forEach((s, i) => h += `<tr><td class="st">${s}</td>${withCodes ? `<td class="code">${P.codes[i].split('').join(' ')}</td>` : ''}<td class="st">${P.states[P.ns[i][0]]}</td><td class="st">${P.states[P.ns[i][1]]}</td></tr>`);
+        return h + '</table>';
+    }
+    const lit = (c, s) => c === 'any' ? sub('Q', s) : `<span class="tm">${c === 0 ? '<span class="ov">x</span>' : 'x'}&middot;${sub('Q', s)}</span>`;
+    function step2HTML(P) {
+        if (P.enc === 'binary') {
+            const ex = { i: 1, x: 0 };
+            const rd = `<div class="rd"><span class="mono">case ({state, x})</span> puts the present state and the input side by side, so <b>each arm is one cell</b> of the table: the present state picks the row, x picks the column, and <span class="mono">next</span> is the entry. ${2 * nStates(P)} arms, ${2 * nStates(P)} cells, two per state.
+                <span class="ex">{${P.states[ex.i]}, 1'b${ex.x}}: next = ${P.states[P.ns[ex.i][ex.x]]};<span class="to">&rarr; row ${P.states[ex.i]}, column x = ${ex.x}: ${P.states[P.ns[ex.i][ex.x]]}</span></span></div>`;
+            return `<div class="tblwrap">${rd}${nsTable(P, true)}</div>`;
+        }
+        let eqs = '<div class="eqs">';
+        P.states.forEach((t, k) => {
+            const into = arcsInto(P, k);
+            eqs += `<div class="eqrow"><span class="eqn"><span class="dn">${sub('D', t)}</span> = ${into.map(([i, c]) => lit(c, P.states[i])).join(' + ')}</span>
+                <span class="arcs">${into.map(([i, c]) => i === k ? `stay in <b>${P.states[i]}</b> on x = ${c}` : `from <b>${P.states[i]}</b>${c === 'any' ? ' on every clock' : ` on x = ${c}`}`).join(', ')}</span></div>`;
+        });
+        eqs += `<div class="rd" style="margin-top:4px">Each term is one arc <b>into</b> state k; fill the table row of the state it comes <b>from</b>.</div></div>`;
+        return `<div class="tblwrap">${eqs}${nsTable(P, false)}</div>`;
+    }
+    function step3HTML(P) {
+        const S = P.states;
+        if (isMoore(P)) {
+            const ones = S.filter((s, i) => P.z[i]);
+            let h = `<table class="stt"><tr><th>state</th>${S.map(s => `<td class="st">${s}</td>`).join('')}</tr><tr><th>Z</th>${S.map((s, i) => `<td class="v${P.z[i]}">${P.z[i]}</td>`).join('')}</tr></table>`;
+            return `<div class="outbox"><div class="verdict">Block 3 reads <b>state only</b>: a <b>Moore</b> output.<br>Z = 1 only in <b>${ones.join(', ')}</b>. Write it inside that circle.</div>${h}</div>`;
+        }
+        const arcs = [];
+        S.forEach((s, i) => [0, 1].forEach(x => { if (P.z[i][x]) arcs.push(`${s} on x = ${x}`); }));
+        let h = `<table class="stt"><tr><th>state</th>${S.map(s => `<td class="st">${s}</td>`).join('')}</tr><tr><th class="in">Z, x = 0</th>${S.map((s, i) => `<td class="v${P.z[i][0]}">${P.z[i][0]}</td>`).join('')}</tr><tr><th class="in">Z, x = 1</th>${S.map((s, i) => `<td class="v${P.z[i][1]}">${P.z[i][1]}</td>`).join('')}</tr></table>`;
+        return `<div class="outbox"><div class="verdict">Block 3 reads state <b>and <span class="mono">x</span></b>: a <b>Mealy</b> output.<br>Z = 1 only on the arc <b>${arcs.join('</b>, <b>')}</b>. Write it on that arc as x / Z.</div>${h}</div>`;
+    }
+    function step4HTML(P, id) {
+        return `<div class="c4wrap"><div class="sdbox" id="sdb${id}"><svg viewBox="0 0 620 322" id="sd${id}"></svg></div><div class="ansnote">${P.what}</div></div>`;
+    }
+    const STEP_HTML = [step0HTML, step1HTML, step2HTML, step3HTML, step4HTML];
+
+    // ============ RENDER ONE PROBLEM ============
+    function renderProblem(pi) {
+        const P = PROBS[pi], s = ST[pi], id = pi + 1, p = document.getElementById('p' + id);
+        for (let n = 0; n < 5; n++) {
+            const body = document.getElementById(`s${id}-${n}`), card = body.closest('.scard');
+            card.classList.toggle('open', s.shown[n]);
+            body.innerHTML = s.shown[n] ? STEP_HTML[n](P, id) : `<div class="blank">Work step ${n} on paper.</div>`;
+            if (n === 4 && s.shown[4]) buildDiagram(document.getElementById('sd' + id), P, id);
+            card.querySelector('[data-act="hint"]').classList.toggle('used', s.hint[n]);
+            card.querySelector('[data-act="show"]').classList.toggle('used', s.shown[n]);
+        }
+        const hb = document.getElementById('hint' + id), nx = nextHelp(pi);
+        const upNext = nx ? `<span class="dim">Next hint: ${nx.kind === 'hint' ? 'a nudge for' : 'the worked'} step ${nx.n}.</span>` : `<span class="dim">Every step is showing.</span>`;
+        hb.innerHTML = s.lastHint >= 0 ? `<span class="hl">Step ${s.lastHint} hint</span>${stepHint(P, s.lastHint)}` :
+            `<span class="dim">Every step card starts empty. Work each step on paper, then use a card&rsquo;s <b style="color:#a86f05">Hint</b> or <b style="color:#5a6676">Show</b>.</span> ${upNext}`;
+        p.querySelector('[data-act="next"]').classList.toggle('used', !nx);
+        p.querySelector('[data-act="final"]').classList.toggle('used', s.shown[4]);
+        renderTabs();
+    }
+    function renderTabs() {
+        document.querySelectorAll('.tab').forEach(t => {
+            const n = +t.dataset.page; t.classList.toggle('on', n === page);
+            if (n > 0) { const s = ST[n - 1]; t.classList.toggle('seen', s.shown[4]); t.querySelector('.tdone').textContent = s.shown[4] ? 'answer shown' : ''; }
+        });
+    }
+
+    // ============ ACTIONS ============
+    function act(pi, a, n) {
+        const s = ST[pi];
+        if (a === 'hint') { s.hint[n] = true; s.lastHint = n; }
+        else if (a === 'show') { s.shown[n] = true; }
+        else if (a === 'next') { const nx = nextHelp(pi); if (nx) { if (nx.kind === 'hint') { s.hint[nx.n] = true; s.lastHint = nx.n; } else s.shown[nx.n] = true; } }
+        else if (a === 'final') { s.shown = [true, true, true, true, true]; }
+        else if (a === 'reset') { ST[pi] = blankST(); }
+        renderProblem(pi);
+    }
+
+    // ============ NAVIGATION ============
+    function render() {
+        pages.forEach(p => p.classList.toggle('active', p.id === 'p' + page));
+        document.getElementById('pcNum').textContent = page;
+        if (page > 0) renderProblem(page - 1); else renderTabs();
+    }
+    function setPage(n) { page = Math.max(0, Math.min(NPROB, n)); render(); }
+    tabstrip.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => setPage(+t.dataset.page)));
+    document.querySelectorAll('[data-goto]').forEach(c => c.addEventListener('click', () => setPage(+c.dataset.goto)));
+    document.addEventListener('keydown', (e) => {
+        const k = e.key;
+        if (k >= '0' && k <= String(NPROB)) { setPage(+k); e.preventDefault(); return; }
+        switch (k) {
+            case 'ArrowRight': setPage(page + 1); e.preventDefault(); return;
+            case 'ArrowLeft': setPage(page - 1); e.preventDefault(); return;
+        }
+        if (page === 0) return;
+        const pi = page - 1;
+        switch (k.toLowerCase()) {
+            case 'h': act(pi, 'next'); break;
+            case 'f': act(pi, 'final'); break;
+            case 'r': act(pi, 'reset'); break;
+        }
+    });
+
+    // ============ SELF-TEST API ============
+    window.__api = { setPage, act, getState: () => ({ page, ST }), nextHelp, stepHint, STEPS, PROBS, verilog, run, arcsInto, diagramArcs, zOf, vecOf, unusedCodes, outOfOrder };
+
+    render();
+</script>
+</body>
+</html>

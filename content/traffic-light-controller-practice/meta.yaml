@@ -1,0 +1,10 @@
+title: "Traffic-Light-Controller Practice"
+description: "Eight multiple-choice questions about the traffic-light controller, answered from its FSMD, datapath and controller, with hints and answers on demand."
+chapter: rtl-design
+section: examples
+order: 50203
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: eight multiple-choice questions on the traffic-light controller, answered from its FSMD, datapath and controller figures"

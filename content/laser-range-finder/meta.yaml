@@ -2,7 +2,7 @@ title: "Laser-Range-Finder"
 description: "A golf laser range finder built as an FSMD: count 300 MHz clocks from the laser firing to the echo, store half the count as the distance, and time out when the shot never comes back."
 chapter: rtl-design
 section: examples
-order: 50203
+order: 50204
 
 graphics:
   01-video.youtube:

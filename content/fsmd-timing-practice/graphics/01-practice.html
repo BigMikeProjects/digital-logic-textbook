@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSMD Timing — Practice</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: #e9edf3; }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9; max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0; transform-origin: top left;
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #1c2433; background: #f7f9fc;
+        padding: 22px 48px; display: flex; flex-direction: column; }
+
+    /* tokens (light, as the decks and 38P): ink #1c2433 · state blue #3f5f9e · control orange #e8730c · status violet #7a52c7
+       · register/output green #16866a · muted #5a6676 · revealed answer cyan #0b7fa8 · right #2e8b3e · wrong #d0393a · blank amber #c98a12 */
+
+    .topbar { display: flex; align-items: center; gap: 26px; }
+    .titles { flex: 1; }
+    .titles h1 { font-size: 34px; font-weight: 800; color: #1c2433; }
+    .titles h1 .sub { color: #5a6676; font-size: 21px; font-weight: 600; }
+    .titles .subtitle { color: #5a6676; font-size: 17px; margin-top: 2px; }
+    .page-count { color: #5a6676; font-size: 20px; font-weight: 600; border: 2px solid #c9d3e0; border-radius: 10px; padding: 8px 18px; background: #fff; }
+    .page-count b { color: #3f5f9e; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 12px; margin: 12px 0 2px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 11px; position: relative; border: 2px solid #c9d3e0; border-radius: 12px;
+        padding: 9px 16px; color: #5a6676; background: #fff; cursor: pointer; }
+    .tab .tnum { width: 36px; height: 36px; flex-shrink: 0; border: 2px solid currentColor; border-radius: 9px; display: flex;
+        align-items: center; justify-content: center; font-size: 19px; font-weight: 700; }
+    .tab .tlabel { font-size: 18px; font-weight: 700; line-height: 1.15; }
+    .tab .tlabel small { display: block; font-size: 13px; font-weight: 500; color: #7b8796; }
+    .tab.on { color: #3f5f9e; border-color: #3f5f9e; background: #eef3fb; }
+    .tab.on .tnum { background: #3f5f9e; color: #fff; border-color: #3f5f9e; }
+    .tab .tdone { position: absolute; bottom: 5px; right: 12px; font-size: 13px; font-weight: 700; color: #2e8b3e; display: none; }
+    .tab.done .tdone { display: block; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 10px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 10px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'SF Mono', Menlo, monospace; }
+    .ov { text-decoration: overline; }
+
+    .panel { background: #fff; border: 2px solid #c9d3e0; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: center; gap: 12px; padding: 6px 14px 6px 18px; border-bottom: 2px solid #e3e8ef; white-space: nowrap; min-height: 42px; }
+    .panel-head .ph { font-size: 18px; font-weight: 700; color: #3f5f9e; }
+    .panel-head .ph .sn { color: #7b8796; margin-right: 6px; }
+    .panel-head .role { font-size: 14.5px; color: #7b8796; overflow: hidden; text-overflow: ellipsis; }
+
+    .btn { cursor: pointer; user-select: none; border: 2px solid #c9d3e0; border-radius: 999px; padding: 3px 14px; color: #5a6676;
+        font-size: 15px; font-weight: 700; background: #fff; white-space: nowrap; }
+    .btn:hover { border-color: #5a6676; color: #1c2433; }
+    .btn .k { font-family: Menlo, Consolas, monospace; color: #9aa5b3; font-size: 13px; margin-left: 7px; font-weight: 400; }
+    .btn.hint { border-color: #c98a12; color: #a86f05; background: #fdf6e7; }
+    .btn.check { border-color: #2e8b3e; color: #2e8b3e; background: #eef8f0; }
+    .btn.final { border-color: #0b7fa8; color: #fff; background: #0b7fa8; } .btn.final .k { color: #cbeaf5; }
+    .btn.used { opacity: 0.55; }
+    .btn.sm { font-size: 13.5px; padding: 1px 11px; }
+
+    /* ---- page 0 ---- */
+    .steps { display: flex; gap: 8px; }
+    .step { flex: 1; border: 2px solid #c9d3e0; border-radius: 14px; background: #fff; padding: 12px 15px; display: flex; flex-direction: column; gap: 7px; }
+    .step .sn { width: 34px; height: 34px; border: 2px solid #3f5f9e; border-radius: 9px; color: #3f5f9e; font-size: 18px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center; }
+    .step .st { font-size: 19px; font-weight: 700; }
+    .step .sd { font-size: 15.5px; color: #3a4556; line-height: 1.45; }
+    .step .sd b { color: #1c2433; }
+    .arrowcell { align-self: center; color: #9aa5b3; font-size: 24px; }
+    .leadrow { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .convbody { padding: 12px 22px; display: flex; flex-direction: column; gap: 8px; font-size: 16.5px; color: #3a4556; line-height: 1.45; }
+    .convbody b { color: #1c2433; } .convbody li { margin-left: 20px; margin-bottom: 3px; }
+    .convbody .c-ctl { color: #e8730c; font-weight: 700; } .convbody .c-st { color: #7a52c7; font-weight: 700; } .convbody .c-out { color: #16866a; font-weight: 700; }
+    .helpbody { padding: 12px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .hrow { display: flex; align-items: center; gap: 14px; font-size: 16px; color: #3a4556; line-height: 1.35; }
+    .hrow .btn, .hrow .demo { flex: 0 0 190px; text-align: center; cursor: default; }
+    .demo { border: 2px solid #c9d3e0; border-radius: 8px; padding: 1px 0; font-family: 'SF Mono', Menlo, monospace; font-size: 13.5px; font-weight: 700; color: #5a6676; }
+    .cards { display: flex; gap: 12px; }
+    .startcard { flex: 1; cursor: pointer; border: 2px solid #3f5f9e; border-radius: 14px; background: #eef3fb; padding: 12px 18px; }
+    .startcard .ct { font-size: 20px; font-weight: 700; color: #3f5f9e; } .startcard .cf { font-size: 15px; color: #3a4556; }
+
+    /* ---- problem page ---- */
+    .toprow { flex: 1; display: flex; gap: 10px; min-height: 0; }
+    .probpanel { flex: 0 0 600px; }
+    .story { padding: 9px 16px 0; font-size: 15.5px; line-height: 1.42; color: #1c2433; }
+    .story b { color: #3f5f9e; }
+    .fsmdbox { flex: 1; min-height: 0; padding: 2px 6px 6px; display: flex; align-items: center; justify-content: center; }
+    .fsmdbox svg, .tbox svg { width: 100%; height: 100%; display: block; }
+    .tpanel { flex: 1; }
+    .tbox { flex: 1; min-height: 0; padding: 6px 10px 4px; }
+
+    .cardrow { flex: 0 0 196px; display: flex; gap: 10px; }
+    .scard { flex: 1; min-width: 0; }
+    .scard .panel-head { min-height: 34px; padding: 4px 12px; }
+    .scard .panel-head .ph { font-size: 16.5px; }
+    .sbody { flex: 1; min-height: 0; padding: 6px 12px 0; display: flex; flex-direction: column; gap: 5px; overflow: hidden; font-size: 14px; color: #1c2433; }
+    .sq { font-size: 14px; color: #3a4556; line-height: 1.38; }
+    .sq b { color: #1c2433; }
+    .sval { font-family: 'SF Mono', Menlo, monospace; font-size: 13.5px; color: #0b7fa8; font-weight: 700; line-height: 1.35; }
+    .sval .rl { color: #5a6676; }
+    .snote { font-size: 13px; color: #3a4556; line-height: 1.38; }
+    .sblank { flex: 1; margin-bottom: 4px; border: 2px dashed #d5dbe5; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+        color: #9aa5b3; font-style: italic; font-size: 13.5px; text-align: center; padding: 0 10px; }
+    .sbtns { display: flex; gap: 8px; padding: 6px 12px 9px; }
+
+    .helpbar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; background: #fff; border: 2px solid #c9d3e0; border-radius: 14px; padding: 7px 14px; min-height: 56px; }
+    .hintbox { flex: 1; min-width: 0; font-size: 15.5px; color: #1c2433; line-height: 1.35; border-left: 3px solid #e7c27a; padding-left: 12px; max-height: 44px; overflow: hidden; }
+    .hintbox .hl { color: #a86f05; font-weight: 700; margin-right: 6px; }
+    .hintbox .dim { color: #7b8796; }
+    .checkres { flex: 0 0 auto; font-size: 15px; color: #5a6676; white-space: nowrap; }
+    .checkres b { color: #2e8b3e; } .checkres .bad { color: #d0393a; font-weight: 700; } .checkres .miss { color: #a86f05; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 8px; height: 28px; }
+    .controls { color: #7b8796; font-size: 15px; white-space: nowrap; }
+    .controls .k { display: inline-block; color: #3a4556; border: 1px solid #c9d3e0; border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: Menlo, Consolas, monospace; background: #fff; }
+
+    /* ---- SVG: the FSMD ---- */
+    .fs-bub { fill: #fff; stroke: #1c2433; stroke-width: 3; }
+    .fs-name { font-size: 26px; font-weight: 800; fill: #1c2433; text-anchor: middle; }
+    .fs-arc { fill: none; stroke: #1c2433; stroke-width: 2.5; }
+    .fs-lab { font-family: 'SF Mono', Menlo, monospace; font-size: 20px; font-weight: 700; fill: #3f5f9e; }
+    .fs-alw { font-size: 15px; fill: #7b8796; }
+    .fs-tag rect { fill: #fff; stroke: #3f5f9e; stroke-width: 2; }
+    .fs-tag text { font-family: 'SF Mono', Menlo, monospace; font-size: 18px; font-weight: 700; fill: #3f5f9e; }
+    .fs-out { font-size: 17px; font-weight: 700; fill: #5a6676; text-anchor: middle; }
+    .fs-note { font-size: 15px; fill: #5a6676; }
+
+    /* ---- SVG: the timing grid ---- */
+    .tg { stroke: #e3e8ef; stroke-width: 1.5; }
+    .tgw { fill: #fff6e0; }
+    .rowlab { font-size: 22px; font-weight: 700; text-anchor: end; }
+    .tick { font-size: 17px; fill: #7b8796; text-anchor: middle; }
+    .hv { font-size: 18px; font-weight: 700; fill: #1c2433; font-family: 'SF Mono', Menlo, monospace; text-anchor: middle; }
+    .cw { cursor: pointer; }
+    .cw:hover path { stroke-opacity: 1; stroke-width: 2.6; }
+    .cw .hv.rev, .cin.rev { fill: #0b7fa8; color: #0b7fa8; }
+    .cin { width: 100%; height: 100%; border: none; background: transparent; text-align: center; outline: none;
+        font: 700 18px 'SF Mono', Menlo, monospace; color: #1c2433; padding: 0; }
+    .cin::placeholder { color: #c4ccd8; font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+
+    <div class="topbar">
+        <div class="titles">
+            <h1>FSMD Timing <span class="sub">&mdash; practice set</span></h1>
+            <div class="subtitle">Trace an FSMD clock by clock: the state, the control signals, the registers one clock behind, and the status signals and outputs</div>
+        </div>
+        <div class="page-count">Page <b id="pcNum">0</b> of 0&ndash;4</div>
+    </div>
+
+    <div class="tabstrip" id="tabstrip"></div>
+    <div class="stage" id="stage"></div>
+
+    <div class="footer">
+        <div class="controls">
+            <span class="k">0</span>&ndash;<span class="k">4</span> page
+            &middot; <span class="k">click</span> a blank cell to cycle its value
+            &middot; <span class="k">type</span> a register value
+            &middot; <span class="k">C</span> check my work
+            &middot; <span class="k">H</span> next hint
+            &middot; <span class="k">F</span> final answer
+            &middot; <span class="k">R</span> &#8634; clear
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer'), s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight; let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * (16 / 9); } else { cw = vw; ch = cw * (9 / 16); }
+        c.style.width = cw + 'px'; c.style.height = ch + 'px'; s.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize, 100));
+
+    // ============ THE TRACES ============
+    // Written by verify.py from the Icarus Verilog simulation of each machine's datapath + one-hot controller
+    // (machines.py). Never edit by hand: run python3 verify.py. The self-test checks these against MODEL below.
+    /*@@DATA*/ const DATA = [{"n":10,"states":["IDLE","GRAB","SHOW"],"gap":[6,7,8,9],"inputs":[{"label":"s","vals":["0","1","1","1","0","0","1","0","0","0"]},{"label":"D","vals":["12","34","56","78","9A","BC","DE","F0","21","43"]}],"rows":[{"label":"state","role":"state","step":1,"kind":"state","hex":false,"vals":["IDLE","IDLE","GRAB","SHOW","SHOW","IDLE","IDLE","GRAB","SHOW","IDLE"]},{"label":"ldR","role":"ctl","step":2,"kind":"bit","hex":false,"vals":["0","0","1","0","0","0","0","1","0","0"]},{"label":"R","role":"out","step":3,"kind":"num","hex":true,"vals":["??","??","??","56","56","56","56","56","F0","F0"]},{"label":"v","role":"out","step":4,"kind":"bit","hex":false,"vals":["0","0","0","1","1","0","0","0","1","0"]}]},{"n":12,"states":["IDLE","RUN","DONE"],"gap":[7,8,9,10,11],"inputs":[{"label":"start","vals":["0","1","0","0","0","0","0","1","1","0","0","0"]}],"rows":[{"label":"state","role":"state","step":1,"kind":"state","hex":false,"vals":["IDLE","IDLE","RUN","RUN","RUN","DONE","IDLE","IDLE","RUN","RUN","RUN","DONE"]},{"label":"selK","role":"ctl","step":2,"kind":"bit","hex":false,"vals":["1","1","0","0","0","1","1","1","0","0","0","1"]},{"label":"C","role":"out","step":3,"kind":"num","hex":false,"vals":["??","3","3","2","1","0","3","3","3","2","1","0"]},{"label":"one","role":"stat","step":4,"kind":"bit","hex":false,"vals":["??","0","0","0","1","0","0","0","0","0","1","0"]},{"label":"done","role":"out","step":4,"kind":"bit","hex":false,"vals":["0","0","0","0","0","1","0","0","0","0","0","1"]}]},{"n":12,"states":["LOAD","DBL","HOLD"],"gap":[3,4,5,6,7],"inputs":[{"label":"go","vals":["0","0","0","0","0","0","1","0","0","0","0","0"]},{"label":"X","vals":["3","8","8","8","8","8","8","25","11","11","11","11"]}],"rows":[{"label":"state","role":"state","step":1,"kind":"state","hex":false,"vals":["LOAD","DBL","DBL","DBL","DBL","HOLD","HOLD","LOAD","DBL","HOLD","HOLD","HOLD"]},{"label":"ldR","role":"ctl","step":2,"kind":"bit","hex":false,"vals":["1","1","1","1","1","0","0","1","1","0","0","0"]},{"label":"selX","role":"ctl","step":2,"kind":"bit","hex":false,"vals":["1","0","0","0","0","0","0","1","0","0","0","0"]},{"label":"R","role":"out","step":3,"kind":"num","hex":false,"vals":["??","3","6","12","24","48","48","48","25","50","50","50"]},{"label":"big","role":"stat","step":4,"kind":"bit","hex":false,"vals":["??","0","0","0","1","1","1","1","1","1","1","1"]},{"label":"done","role":"out","step":4,"kind":"bit","hex":false,"vals":["0","0","0","0","0","1","1","0","0","1","1","1"]}]},{"n":11,"states":["IDLE","SAMP","SHOW"],"gap":[3,4,5,6,7],"inputs":[{"label":"go","vals":["0","1","0","0","0","0","0","0","1","0","0"]},{"label":"b","vals":["1","1","1","0","1","1","1","0","0","1","1"]}],"rows":[{"label":"state","role":"state","step":1,"kind":"state","hex":false,"vals":["IDLE","IDLE","SAMP","SAMP","SAMP","SAMP","SHOW","IDLE","IDLE","SAMP","SAMP"]},{"label":"incK","role":"ctl","step":2,"kind":"bit","hex":false,"vals":["0","0","1","0","1","1","0","0","0","1","1"]},{"label":"C","role":"out","step":3,"kind":"num","hex":false,"vals":["??","0","0","1","2","3","4","4","0","0","1"]},{"label":"K","role":"out","step":3,"kind":"num","hex":false,"vals":["??","0","0","1","1","2","3","3","0","0","1"]},{"label":"tc","role":"stat","step":4,"kind":"bit","hex":false,"vals":["??","0","0","0","0","1","0","0","0","0","0"]},{"label":"done","role":"out","step":4,"kind":"bit","hex":false,"vals":["0","0","0","0","0","0","1","0","0","0","0"]}]}]; /*@@END*/
+
+    // ============ THE FOUR FSMDs ============
+    // story: the statement · fs: the drawing (positions, arcs, loops, transfer tags, notes) · model: the FSMD table as a
+    // step function, used only by the self-test as a second, independent run.
+    const PROBS = [
+        {   // ---------------- 1 · snapshot ----------------
+            story: 'A snapshot register. While <b>s</b> is 0 the machine waits in IDLE. On <b>s</b> it spends one clock in GRAB, copying the data input <b>D</b> into <b>R</b>, then shows it in SHOW (<b>v</b> = 1) until s goes back to 0. R has a load line: <b>ldR</b> = 1 in GRAB. D and R are in <b>hex</b>.',
+            states: ['IDLE', 'GRAB', 'SHOW'],
+            fs: { pos: { IDLE: [350, 108], GRAB: [175, 318], SHOW: [525, 318] },
+                arcs: [ { a: 'IDLE', b: 'GRAB', bow: 28, t: 's', lab: [-24, 0, 'end'] }, { a: 'GRAB', b: 'SHOW', bow: 0, t: null, lab: [0, -12, 'middle'] },
+                        { a: 'SHOW', b: 'IDLE', bow: 28, t: 's̅', lab: [22, 0, 'start'] } ],
+                loops: [ { s: 'IDLE', ang: 0, t: 's̅' }, { s: 'SHOW', ang: 0, t: 's' } ],
+                tags: [ { x: 175, y: 390, lines: ['R ← D'], anchor: 'middle' } ],
+                outs: { SHOW: 'v = 1' }, notes: ['in: s, D (8-bit)', 'out: R (8-bit), v'] },
+            init: { R: null },
+            model(q, r, x) {
+                return { out: { ldR: +(q === 'GRAB'), v: +(q === 'SHOW') },
+                    next: q === 'IDLE' ? (x.s ? 'GRAB' : 'IDLE') : q === 'GRAB' ? 'SHOW' : (x.s ? 'SHOW' : 'IDLE'),
+                    regs: q === 'GRAB' ? { R: x.D } : {} }; },
+        },
+        {   // ---------------- 2 · count-down delay ----------------
+            story: 'On <b>start</b>, the machine stays in RUN for exactly <b>K = 3</b> clocks, counting <b>C</b> down from K, then pulses <b>done</b> for one clock. C is written in every state, so it has no load line: <b>selK</b> = 1 (IDLE, DONE) picks K, 0 picks C − 1. Status: <b>one</b> = (C == 1).',
+            states: ['IDLE', 'RUN', 'DONE'],
+            fs: { pos: { IDLE: [350, 108], RUN: [175, 318], DONE: [525, 318] },
+                arcs: [ { a: 'IDLE', b: 'RUN', bow: 28, t: 'start', lab: [-24, 0, 'end'] }, { a: 'RUN', b: 'DONE', bow: 0, t: 'one', lab: [0, -12, 'middle'] },
+                        { a: 'DONE', b: 'IDLE', bow: 28, t: null, lab: [22, 0, 'start'] } ],
+                loops: [ { s: 'IDLE', ang: 0, t: 'start̅' }, { s: 'RUN', ang: 180, t: 'one̅', lab: [-108, -62, 'middle'] } ],
+                tags: [ { x: 272, y: 96, lines: ['C ← K'], anchor: 'end' }, { x: 175, y: 390, lines: ['C ← C − 1'], anchor: 'middle' },
+                        { x: 525, y: 390, lines: ['C ← K'], anchor: 'middle' } ],
+                outs: { DONE: 'done = 1' }, notes: ['in: start, K = 3', 'one = (C == 1)'], noteAt: [690, 30, 'end'] },
+            init: { C: null }, K: 3,
+            model(q, r, x) {
+                const one = r.C === null ? null : +(r.C === 1);
+                return { out: { selK: +(q !== 'RUN'), one, done: +(q === 'DONE') },
+                    next: q === 'IDLE' ? (x.start ? 'RUN' : 'IDLE') : q === 'RUN' ? (one ? 'DONE' : 'RUN') : 'IDLE',
+                    regs: { C: q === 'RUN' ? (r.C - 1 + 16) % 16 : 3 } }; },
+        },
+        {   // ---------------- 3 · doubler ----------------
+            story: 'The machine loads <b>X</b> into <b>R</b>, then doubles R every clock until <b>big</b> = (R ≥ 20), then holds the result in HOLD (<b>done</b> = 1) until <b>go</b>. <b>ldR</b> = 1 in LOAD and DBL (HOLD keeps R); <b>selX</b> = 1 picks X (LOAD), 0 picks R + R. Values are in decimal.',
+            states: ['LOAD', 'DBL', 'HOLD'],
+            fs: { pos: { LOAD: [350, 108], DBL: [175, 318], HOLD: [525, 318] },
+                arcs: [ { a: 'LOAD', b: 'DBL', bow: 28, t: null, lab: [-24, 0, 'end'] }, { a: 'DBL', b: 'HOLD', bow: 0, t: 'big', lab: [0, -12, 'middle'] },
+                        { a: 'HOLD', b: 'LOAD', bow: 28, t: 'go', lab: [22, 0, 'start'] } ],
+                loops: [ { s: 'DBL', ang: 180, t: 'big̅', lab: [-108, -62, 'middle'] }, { s: 'HOLD', ang: 0, t: 'go̅' } ],
+                tags: [ { x: 272, y: 96, lines: ['R ← X'], anchor: 'end' }, { x: 175, y: 390, lines: ['R ← R + R'], anchor: 'middle' } ],
+                outs: { HOLD: 'done = 1' }, notes: ['in: go, X (8-bit)', 'big = (R ≥ 20)'], noteAt: [690, 30, 'end'] },
+            init: { R: null },
+            model(q, r, x) {
+                const big = r.R === null ? null : +(r.R >= 20);
+                return { out: { ldR: +(q !== 'HOLD'), selX: +(q === 'LOAD'), big, done: +(q === 'HOLD') },
+                    next: q === 'LOAD' ? 'DBL' : q === 'DBL' ? (big ? 'HOLD' : 'DBL') : (x.go ? 'LOAD' : 'HOLD'),
+                    regs: q === 'LOAD' ? { R: x.X } : q === 'DBL' ? { R: (2 * r.R) % 256 } : {} }; },
+        },
+        {   // ---------------- 4 · ones in a window ----------------
+            story: 'After <b>go</b>, the machine samples <b>b</b> for a window of 4 clocks: <b>C</b> counts the clocks and <b>K</b> counts the 1s, then SHOW raises <b>done</b> for one clock. K counts only when b = 1, so <b>incK</b> = SAMP · b is a Mealy signal. Status: <b>tc</b> = (C == 3).',
+            states: ['IDLE', 'SAMP', 'SHOW'],
+            fs: { pos: { IDLE: [350, 108], SAMP: [175, 318], SHOW: [525, 318] },
+                arcs: [ { a: 'IDLE', b: 'SAMP', bow: 28, t: 'go', lab: [-24, 0, 'end'] }, { a: 'SAMP', b: 'SHOW', bow: 0, t: 'tc', lab: [0, -12, 'middle'] },
+                        { a: 'SHOW', b: 'IDLE', bow: 28, t: null, lab: [22, 0, 'start'] } ],
+                loops: [ { s: 'IDLE', ang: 0, t: 'go̅' }, { s: 'SAMP', ang: 180, t: 'tc̅', lab: [-108, -62, 'middle'] } ],
+                tags: [ { x: 272, y: 96, lines: ['C ← 0', 'K ← 0'], anchor: 'end' }, { x: 175, y: 386, lines: ['C ← C + 1', 'if b: K ← K + 1'], anchor: 'middle' } ],
+                outs: { SHOW: 'done = 1' }, notes: ['in: go, b', 'tc = (C == 3)'], noteAt: [690, 30, 'end'] },
+            init: { C: null, K: null },
+            model(q, r, x) {
+                const tc = r.C === null ? null : +(r.C === 3), incK = +(q === 'SAMP' && x.b === 1);
+                return { out: { incK, tc, done: +(q === 'SHOW') },
+                    next: q === 'IDLE' ? (x.go ? 'SAMP' : 'IDLE') : q === 'SAMP' ? (tc ? 'SHOW' : 'SAMP') : 'IDLE',
+                    regs: q === 'IDLE' ? { C: 0, K: 0 } : q === 'SAMP' ? { C: r.C + 1, K: r.K + incK } : {} }; },
+        },
+    ];
+    const NPROB = PROBS.length;
+
+    // ============ HINTS AND WORKED STEPS ============
+    // Worked-step notes quote values as {row@cycle}; they are filled from DATA, so a note can never disagree with the trace.
+    const STEPS = [
+        { n: 0, title: 'Understand the FSMD', rows: 'the FSMD and the given cycles' },
+        { n: 1, title: 'The state row', rows: 'state' },
+        { n: 2, title: 'Control outputs', rows: '' },
+        { n: 3, title: 'Registers', rows: '' },
+        { n: 4, title: 'Status and outputs', rows: '' },
+    ];
+    const HINT = [
+        [   'Read each bubble: what it writes into R, and which arcs leave it on s and on s-bar. Then read the last given cycle before the blanks: that is where you start.',
+            'Each cycle, look at the current state and at s in the same cycle: together they pick the arc, and the next state appears after the edge.',
+            'ldR is combinational in the state: it is 1 in exactly the cycles the state row says GRAB.',
+            'R changes only at the edge that ends a GRAB cycle. It takes the D present during that GRAB cycle, and shows it from the next cycle on.',
+            'v is 1 in exactly the cycles the state row says SHOW.' ],
+        [   'C counts down in RUN, and RUN ends when one = (C == 1). Read where the given part leaves off: which state, and what C holds.',
+            'From IDLE, start picks RUN. Inside RUN only one matters: start is not read there. DONE always goes back to IDLE.',
+            'selK is 1 in IDLE and DONE and 0 in RUN, cycle by cycle with the state row.',
+            'C changes at every edge: in IDLE and DONE it takes K, in RUN it takes C − 1. The new value shows in the next cycle.',
+            'one compares the C shown in the same cycle with 1. done is 1 in the DONE cycles.' ],
+        [   'R doubles in DBL until big = (R ≥ 20). Read where the given part leaves off: the state, R, and whether big is already 1.',
+            'In DBL, big picks the arc: big̅ stays, big goes to HOLD. In HOLD, go picks the arc back to LOAD.',
+            'ldR is 1 in LOAD and DBL, 0 in HOLD. selX is 1 only in LOAD.',
+            'R takes R + R at the edge that ends every DBL cycle, even the one where big is already 1. In HOLD, ldR = 0, so R holds.',
+            'big compares the R shown in the same cycle with 20. done is 1 in the HOLD cycles.' ],
+        [   'C counts every SAMP clock; K counts only the SAMP clocks with b = 1. The window ends when tc = (C == 3).',
+            'In SAMP, tc picks the arc: tc̅ stays, tc goes to SHOW. SHOW always returns to IDLE, and IDLE waits for go.',
+            'incK = SAMP · b: in a SAMP cycle it copies b from the same cycle; outside SAMP it is 0.',
+            'C and K step at the edge that ends each SAMP cycle, so each shows its new count one clock later. In SHOW they hold; IDLE clears them at its edge.',
+            'tc compares the C shown in the same cycle with 3. done is 1 in the SHOW cycle.' ],
+    ];
+    const NOTE = [
+        [   'The blanks start in cycle {first}. Before them the machine has captured D once (R = {R@5}) and gone back to IDLE.',
+            '',
+            'ldR follows the state row: it is 1 only in the GRAB cycle.',
+            'R takes the D present <b>during</b> GRAB ({D@7}), not the D present when s rose. It shows it one clock later, in SHOW.',
+            'v follows the state row: it is 1 in the SHOW cycle.' ],
+        [   'The blanks start in cycle {first}, in IDLE with C = {C@6}. start rises there and again in the next cycle.',
+            'start in cycle {last2} is ignored: RUN doesn\'t read it. RUN lasts exactly K = 3 clocks because the test is C == 1, not C == 0.',
+            'selK follows the state row: 1 in IDLE and DONE, 0 in RUN.',
+            'C counts 3, 2, 1 in RUN, and reads {C@11} in DONE: the last decrement happens on the edge that leaves RUN.',
+            'one is 1 only when C = 1, which ends RUN. done is 1 for the single DONE cycle.' ],
+        [   'The blanks start in cycle {first}: R = {R@3} in DBL, so big = 0 and R doubles again.',
+            'big turns 1 in cycle {bigat}, so the machine leaves DBL at that edge. HOLD lasts until go, then LOAD.',
+            'ldR is 1 in LOAD and DBL, selX only in LOAD.',
+            'R = {R@4} makes big = 1, but the doubling written in DBL still happens on that edge, so HOLD shows <b>{R@5}</b>, not {R@4}.',
+            'big compares the R in the same cycle with 20. done is 1 in HOLD.' ],
+        [   'The blanks start in cycle {first}. The window began in cycle 2 with C = K = 0; b in cycle 2 was 1, so K = {K@3} in cycle 3.',
+            'tc turns 1 in cycle {tcat}, so SAMP ends at that edge: four SAMP clocks, then one SHOW clock, then IDLE.',
+            'incK copies b in the same cycle while in SAMP. The 1s on b in IDLE and SHOW are not counted.',
+            'Both counters step on the edge leaving SAMP, so SHOW reads C = {C@6} and K = {K@6}: the ones among b = 1, 0, 1, 1.',
+            'tc is 1 when C = 3. done is 1 for the single SHOW cycle.' ],
+    ];
+    function fillNote(pi, t) {
+        const D = DATA[pi], row = l => D.rows.find(r => r.label === l) || D.inputs.find(r => r.label === l);
+        return t.replace(/\{(\w+)@(\d+)\}/g, (_, l, c) => row(l).vals[+c])
+            .replace(/\{first\}/g, D.gap[0]).replace(/\{last2\}/g, D.gap[1])
+            .replace(/\{bigat\}/g, row('big') ? row('big').vals.indexOf('1', D.gap[0]) : '')
+            .replace(/\{tcat\}/g, row('tc') ? row('tc').vals.indexOf('1', D.gap[0]) : '');
+    }
+    const stepRows = (pi, n) => DATA[pi].rows.filter(r => r.step === n);
+
+    // ============ THE FSMD FIGURE (38P's drawing code) ============
+    const R = 60;
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    function lab(x, y, t, anchor = 'middle') {        // a trailing U+0305 (go̅) is drawn as a real bar over the name
+        const bar = t.endsWith('̅'), s = bar ? t.slice(0, -1) : t, w = s.length * 12.1;
+        const x0 = anchor === 'middle' ? x - w / 2 : anchor === 'end' ? x - w : x;
+        return `<text class="fs-lab" x="${x}" y="${y}" text-anchor="${anchor}">${esc(s)}</text>` +
+            (bar ? `<line x1="${x0}" y1="${y - 17}" x2="${x0 + w}" y2="${y - 17}" stroke="#3f5f9e" stroke-width="2.2"/>` : '');
+    }
+    function headAt(x, y, ux, uy) { const L = 16, W = 6.5;
+        return `<path d="M${x},${y} L${x - L * ux + W * uy},${y - L * uy - W * ux} L${x - L * ux - W * uy},${y - L * uy + W * ux} Z" fill="#1c2433"/>`; }
+    function arc(Pos, a, b, bow) {
+        const [x1, y1] = Pos[a], [x2, y2] = Pos[b], dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy), ux = dx / d, uy = dy / d;
+        const nx = -uy, ny = ux, mx = (x1 + x2) / 2 + nx * bow, my = (y1 + y2) / 2 + ny * bow;
+        const t1 = Math.atan2(my - y1, mx - x1), t2 = Math.atan2(my - y2, mx - x2);
+        const sx = x1 + R * Math.cos(t1), sy = y1 + R * Math.sin(t1), ex = x2 + R * Math.cos(t2), ey = y2 + R * Math.sin(t2);
+        const hx = ex - mx, hy = ey - my, hd = Math.hypot(hx, hy);
+        return { d: `<path class="fs-arc" d="M${sx},${sy} Q${mx},${my} ${ex - 14 * hx / hd},${ey - 14 * hy / hd}"/>` + headAt(ex, ey, hx / hd, hy / hd),
+            mid: [(sx + 2 * mx + ex) / 4, (sy + 2 * my + ey) / 4] };
+    }
+    function selfLoop(Pos, s, ang) {
+        const [x, y] = Pos[s], a = ang * Math.PI / 180, sp = 0.45;
+        const p1 = [x + R * Math.cos(a - sp), y + R * Math.sin(a - sp)], p2 = [x + R * Math.cos(a + sp), y + R * Math.sin(a + sp)];
+        const k = 2.5 * R, c1 = [x + k * Math.cos(a - 0.78), y + k * Math.sin(a - 0.78)], c2 = [x + k * Math.cos(a + 0.78), y + k * Math.sin(a + 0.78)];
+        const tx = p2[0] - c2[0], ty = p2[1] - c2[1], td = Math.hypot(tx, ty);
+        return `<path class="fs-arc" d="M${p1[0]},${p1[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p2[0] - 12 * tx / td},${p2[1] - 12 * ty / td}"/>` + headAt(p2[0], p2[1], tx / td, ty / td);
+    }
+    function tag(x, y, lines, anchor) {
+        const w = Math.max(...lines.map(l => l.length)) * 11 + 24, h = lines.length * 24 + 12, x0 = anchor === 'end' ? x - w : anchor === 'middle' ? x - w / 2 : x;
+        return `<g class="fs-tag"><rect x="${x0}" y="${y}" width="${w}" height="${h}" rx="8"/>` +
+            lines.map((l, i) => `<text x="${x0 + 12}" y="${y + 28 + i * 24}">${esc(l)}</text>`).join('') + '</g>';
+    }
+    function fsmdSVG(pi) {
+        const P = PROBS[pi], F = P.fs, Pos = F.pos, b = [], first = P.states[0];
+        const [rx1, ry1, rx2, ry2] = [178, 40, 300, 75], rd = Math.hypot(rx2 - rx1, ry2 - ry1);
+        b.push(`<path class="fs-arc" d="M${rx1},${ry1} L${rx2 - 12 * (rx2 - rx1) / rd},${ry2 - 12 * (ry2 - ry1) / rd}"/>` + headAt(rx2, ry2, (rx2 - rx1) / rd, (ry2 - ry1) / rd));
+        b.push(`<text x="${rx1 - 8}" y="${ry1 - 4}" font-size="18" font-weight="700" fill="#1c2433" text-anchor="end">reset</text>`);
+        F.arcs.forEach(A => { const ar = arc(Pos, A.a, A.b, A.bow); b.push(ar.d);
+            const [x, y] = [ar.mid[0] + A.lab[0], ar.mid[1] + A.lab[1]];
+            b.push(A.t ? lab(x, y, A.t, A.lab[2]) : `<text class="fs-alw" x="${x}" y="${y}" text-anchor="${A.lab[2]}">always</text>`); });
+        F.loops.forEach(Lp => { b.push(selfLoop(Pos, Lp.s, Lp.ang)); const [x, y] = Pos[Lp.s];
+            const o = Lp.lab || [Math.cos(Lp.ang * Math.PI / 180) * 150, 8, Math.cos(Lp.ang * Math.PI / 180) > 0 ? 'start' : 'end'];
+            b.push(lab(x + o[0], y + o[1], Lp.t, o[2])); });
+        P.states.forEach(s => { const [x, y] = Pos[s];
+            b.push(`<circle class="fs-bub" cx="${x}" cy="${y}" r="${R}"/>`);
+            b.push(`<text class="fs-name" x="${x}" y="${y + (F.outs[s] ? -2 : 9)}">${s}</text>`);
+            if (F.outs[s]) b.push(`<text class="fs-out" x="${x}" y="${y + 24}">${F.outs[s]}</text>`); });
+        F.tags.forEach(t => b.push(tag(t.x, t.y, t.lines, t.anchor)));
+        const [nx, ny, na] = F.noteAt || [690, 30, 'end'];
+        F.notes.forEach((n, i) => b.push(`<text class="fs-note" x="${nx}" y="${ny + 22 * i}" text-anchor="${na}">${n}</text>`));
+        const aria = `FSMD with states ${P.states.join(', ')}; ${first} is the reset state. ` + F.arcs.map(a => `${a.a} to ${a.b}${a.t ? ' on ' + a.t.replace('̅', '-bar') : ' always'}`)
+            .concat(F.loops.map(l => `${l.s} stays on ${l.t.replace('̅', '-bar')}`)).join('; ') + '. Transfers: ' + F.tags.map(t => t.lines.join(', ')).join('; ');
+        return `<svg viewBox="0 0 700 455" role="img" aria-label="${esc(aria)}">${b.join('')}</svg>`;
+    }
+
+    // ============ THE TIMING GRID ============
+    // Given cells are drawn as hex runs (merged while the value holds, never across the blank window). Blank cells are
+    // one per cycle: click to cycle a bit or a state; type a register value. Values change only at clock edges.
+    const U = 92, LW = 92, RH = 50, TOP = 8;
+    const ROWC = { in: '#5a6676', state: '#3f5f9e', ctl: '#e8730c', out: '#16866a', stat: '#7a52c7' };
+    const FILL = { state: '#e4ecf7', ctl: '#fdecd2', out: '#d9f0ea', stat: '#ece3fa' };
+    const MARK = { ok: ['#e6f5e9', '#2e8b3e'], bad: ['#fbe8e8', '#d0393a'], miss: ['#fff', '#c98a12'] };
+    const hexPath = (xa, xb, ym, hi, lo, k = 9) => `M${xa},${ym} L${xa + k},${hi} H${xb - k} L${xb},${ym} L${xb - k},${lo} H${xa + k} Z`;
+    function gridGeom(pi) { const D = DATA[pi], nrows = 1 + D.inputs.length + D.rows.length;
+        return { W: LW + D.n * U + 12, H: TOP + nrows * RH + 34, X: c => LW + c * U, nrows }; }
+    function timingSVG(pi) {
+        const D = DATA[pi], s = ST[pi], G = gridGeom(pi), b = [], gap = new Set(D.gap);
+        const ybot = TOP + G.nrows * RH;
+        b.push(`<rect class="tgw" x="${G.X(D.gap[0])}" y="${TOP}" width="${D.gap.length * U}" height="${ybot - TOP}"/>`);
+        for (let c = 0; c <= D.n; c++) b.push(`<line class="tg" x1="${G.X(c)}" y1="${TOP}" x2="${G.X(c)}" y2="${ybot}"/>`);
+        for (let c = 0; c < D.n; c++) b.push(`<text class="tick" x="${G.X(c) + U / 2}" y="${ybot + 26}">${c}</text>`);
+        b.push(`<text class="tick" x="${LW - 12}" y="${ybot + 26}" style="text-anchor:end">cycle</text>`);
+        const rows = [{ label: 'CLK', clk: true }].concat(D.inputs.map(r => ({ ...r, role: 'in', given: true })), D.rows);
+        rows.forEach((row, i) => {
+            const y0 = TOP + i * RH, hi = y0 + 9, lo = y0 + RH - 9, ym = (hi + lo) / 2, col = row.clk ? '#e8730c' : ROWC[row.role];
+            b.push(`<line class="tg" x1="${LW}" y1="${y0 + RH}" x2="${G.X(D.n)}" y2="${y0 + RH}"/>`);
+            b.push(`<text class="rowlab" x="${LW - 12}" y="${ym + 8}" fill="${col}">${row.label}</text>`);
+            if (row.clk) { let d = `M${LW},${lo}`; for (let c = 0; c < D.n; c++) d += ` H${G.X(c)} V${hi} H${G.X(c) + U / 2} V${lo}`;
+                b.push(`<path d="${d} H${G.X(D.n)}" fill="none" stroke="#e8730c" stroke-width="3.5"/>`); return; }
+            const ri = i - 1 - D.inputs.length;          // index into D.rows, or negative for an input row
+            let c = 0;
+            while (c < D.n) {
+                if (!row.given && gap.has(c)) { b.push(blankCell(pi, ri, c, G.X(c), G.X(c + 1), ym, hi, lo, col)); c++; continue; }
+                const v = row.vals[c]; let e = c;
+                while (e + 1 < D.n && row.vals[e + 1] === v && (row.given || !gap.has(e + 1))) e++;
+                const fill = row.role === 'in' || v === '0' || v === '??' ? '#fff' : FILL[row.role];
+                b.push(`<g class="cg" data-r="${row.given ? 'in' : ri}" data-c0="${c}" data-c1="${e}"><path d="${hexPath(G.X(c), G.X(e + 1), ym, hi, lo)}" fill="${fill}" stroke="${col}" stroke-width="2.6"${v === '??' ? ' stroke-dasharray="7 6"' : ''}/>` +
+                    `<text class="hv" x="${(G.X(c) + G.X(e + 1)) / 2}" y="${ym + 7}">${v}</text></g>`);
+                c = e + 1;
+            }
+        });
+        const aria = `Timing diagram, cycles 0 to ${D.n - 1}: CLK, ${D.inputs.map(r => r.label).join(' and ')} given; ${D.rows.map(r => r.label).join(', ')} given except cycles ${D.gap[0]} to ${D.gap[D.gap.length - 1]}, which are blank for you to fill in.`;
+        return `<svg viewBox="0 0 ${G.W} ${G.H}" role="img" aria-label="${esc(aria)}">${b.join('')}</svg>`;
+    }
+    function blankCell(pi, ri, c, xa, xb, ym, hi, lo, col) {
+        const s = ST[pi], row = DATA[pi].rows[ri], key = ri + ':' + c, v = s.cells[key] || '', mk = s.marks && s.marks[key];
+        const [fill, stroke] = mk ? MARK[mk] : ['#fff', col], dash = mk === 'miss' ? ' stroke-dasharray="6 5"' : '';
+        const rev = s.rev[key] ? ' rev' : '', path = `<path d="${hexPath(xa, xb, ym, hi, lo)}" fill="${fill}" stroke="${stroke}" stroke-width="${mk ? 3 : 2}"${mk ? '' : ' stroke-opacity="0.55"'}${dash}/>`;
+        if (row.kind === 'num')
+            return `<g class="cw" data-k="${key}">${path}<foreignObject x="${xa + 10}" y="${hi + 2}" width="${xb - xa - 20}" height="${lo - hi - 4}">` +
+                `<input xmlns="http://www.w3.org/1999/xhtml" class="cin${rev}" data-k="${key}" value="${esc(v)}" placeholder="${row.hex ? 'hex' : '#'}" maxlength="4" ` +
+                `oninput="typed(${pi},'${key}',this.value)" spellcheck="false" autocomplete="off"/></foreignObject></g>`;
+        return `<g class="cw" data-k="${key}" onclick="cyc(${pi},${ri},${c})">${path}<text class="hv${rev}" x="${(xa + xb) / 2}" y="${ym + 7}"${row.kind === 'state' ? ' style="font-size:16px"' : ''}>${esc(v)}</text></g>`;
+    }
+
+    // ============ STATE ============
+    const blankST = () => ({ cells: {}, rev: {}, marks: null, hint: [], shown: [] });
+    const ST = PROBS.map(blankST);
+    let page = 0;
+    const keysOf = pi => DATA[pi].rows.flatMap((r, ri) => DATA[pi].gap.map(c => ri + ':' + c));
+    const truth = (pi, key) => { const [ri, c] = key.split(':').map(Number); return DATA[pi].rows[ri].vals[c]; };
+    function norm(pi, key, v) {
+        const row = DATA[pi].rows[+key.split(':')[0]]; v = String(v).trim().toUpperCase();
+        if (row.kind !== 'num' || v === '' || v === '??') return v;
+        if (row.hex) { v = v.replace(/^0X/, ''); return /^[0-9A-F]{1,2}$/.test(v) ? v.padStart(2, '0') : '#' + v; }
+        return /^\d+$/.test(v) ? String(+v) : '#' + v;
+    }
+    const right = (pi, key) => norm(pi, key, ST[pi].cells[key] || '') === truth(pi, key);
+    function grade(pi) { const g = {}; keysOf(pi).forEach(k => g[k] = !(ST[pi].cells[k] || '').trim() ? 'miss' : right(pi, k) ? 'ok' : 'bad'); return g; }
+    function countMarks(g) { const c = { ok: 0, bad: 0, miss: 0 }; Object.values(g).forEach(v => c[v]++); return c; }
+    const solved = pi => keysOf(pi).every(k => right(pi, k));
+
+    // ============ PAGES ============
+    const stage = document.getElementById('stage'), tabstrip = document.getElementById('tabstrip');
+    const TABS = [{ n: 0, label: 'How to Work', small: 'the steps + the buttons' }].concat(PROBS.map((P, i) => ({ n: i + 1, label: `Problem ${i + 1}`, small: 'trace the FSMD' })));
+    TABS.forEach(t => { const d = document.createElement('div'); d.className = 'tab'; d.dataset.page = t.n;
+        d.innerHTML = `<div class="tnum">${t.n}</div><div class="tlabel">${t.label}<small>${t.small}</small></div><div class="tdone">✓ solved</div>`;
+        d.onclick = () => setPage(t.n); tabstrip.appendChild(d); });
+    const pages = [];
+    function mkPage(inner) { const p = document.createElement('div'); p.className = 'page'; p.innerHTML = inner; stage.appendChild(p); pages.push(p); return p; }
+
+    const METHOD = [
+        ['Understand the FSMD', 'Read what each state <b>writes</b>, which arcs test an <b>input</b> or a <b>status</b> signal, and where the given part of the trace leaves off.'],
+        ['The state row', 'Each cycle, the <b>current state</b> and the inputs in that cycle pick the arc. The next state appears <b>after the edge</b>.'],
+        ['Control outputs', 'Control signals are <b>combinational</b> in the state: they change in the <b>same</b> cycle as the state that asserts them.'],
+        ['Registers', 'A transfer written in a state takes effect at the edge that <b>ends</b> that state\'s cycle, so a register shows its new value <b>one clock later</b>.'],
+        ['Status and outputs', 'A status signal compares the register value shown in the <b>same</b> cycle. Moore outputs follow the state row.'],
+    ];
+    mkPage(`<div class="steps">${METHOD.map((m, i) => `${i ? '<div class="arrowcell">→</div>' : ''}<div class="step"><div class="sn">${i}</div><div class="st">${m[0]}</div><div class="sd">${m[1]}</div></div>`).join('')}</div>
+        <div class="leadrow">
+            <div class="panel" style="flex:1.2"><div class="panel-head"><span class="ph">Conventions</span><span class="role">as in class</span></div>
+                <div class="convbody"><ul>
+                    <li>Values change only at <b>clock edges</b>. Inputs are read just before an edge, and a value drawn across an edge holds through it.</li>
+                    <li>Register transfers <b>lag one clock</b>: the value written in a state appears in the next cycle. A register with a load line holds when its load is 0.</li>
+                    <li><span class="c-ctl">Control</span> outputs and <span class="c-out">Moore outputs</span> are combinational in the current state; a control signal that also reads an input (Mealy) copies that input in the same cycle.</li>
+                    <li><span class="c-st">Status</span> signals compare the register value shown in the same cycle. To wait N clocks, a counter tests N − 1.</li>
+                    <li><b>??</b> means a register nobody has loaded yet. Reset puts the machine in its reset state for cycle 0.</li>
+                    <li>About 60% of each trace is given. Fill the <b>blank cycles</b> (shaded) on every row; the answer is unique because the inputs are given.</li>
+                </ul></div></div>
+            <div class="panel" style="flex:1"><div class="panel-head"><span class="ph">The buttons</span></div>
+                <div class="helpbody">
+                    <div class="hrow"><span class="demo">click a cell</span><span>bit rows cycle 0 → 1 → blank; the state row cycles the state names</span></div>
+                    <div class="hrow"><span class="demo">type a value</span><span>register rows: a number (decimal, or hex where the problem says so)</span></div>
+                    <div class="hrow"><span class="btn check sm">Check my work</span><span>green right · red wrong · dashed amber blank</span></div>
+                    <div class="hrow"><span class="btn hint sm">Hint</span><span>a nudge for that step, in the bar at the bottom</span></div>
+                    <div class="hrow"><span class="btn sm">Show</span><span>fills that step's rows in blue, with a note on the tricky edge</span></div>
+                    <div class="hrow"><span class="btn hint sm">Next hint (H)</span><span>hint 0, show 0, hint 1, … show 4</span></div>
+                    <div class="hrow"><span class="btn final sm">Final answer (F)</span><span>every blank cell</span></div>
+                </div></div>
+        </div>
+        <div class="cards">${PROBS.map((P, i) => `<div class="startcard" onclick="setPage(${i + 1})"><div class="ct">Problem ${i + 1}</div><div class="cf">${DATA[i] ? DATA[i].n : ''} cycles · blank cycles ${DATA[i] ? DATA[i].gap[0] + '–' + DATA[i].gap[DATA[i].gap.length - 1] : ''}</div></div>`).join('')}</div>`);
+
+    PROBS.forEach((P, pi) => mkPage(`<div class="toprow">
+            <div class="panel probpanel"><div class="panel-head"><span class="ph">Problem ${pi + 1}</span><span class="role">the FSMD is given</span></div>
+                <div class="story">${P.story} <span style="white-space:nowrap">Fill in cycles <b>${DATA[pi].gap[0]}–${DATA[pi].gap[DATA[pi].gap.length - 1]}</b>.</span></div>
+                <div class="fsmdbox">${fsmdSVG(pi)}</div></div>
+            <div class="panel tpanel"><div class="panel-head"><span class="ph">The trace</span><span class="role">CLK and the inputs are given; complete the shaded cycles on every row</span></div>
+                <div class="tbox" id="tbox${pi}"></div></div>
+        </div>
+        <div class="cardrow" id="cardrow${pi}"></div>
+        <div class="helpbar"><div class="hintbox" id="hintbox${pi}"><span class="dim">Work the steps left to right. Hint nudges, Show fills a step, Check my work marks every blank cell.</span></div>
+            <span class="btn check" onclick="act('check')">Check my work<span class="k">C</span></span>
+            <span class="btn hint" onclick="act('next')">Next hint<span class="k">H</span></span>
+            <span class="btn final" onclick="act('final')">Final answer<span class="k">F</span></span>
+            <span class="btn" onclick="act('clear')">&#8634; Clear<span class="k">R</span></span>
+            <span class="checkres" id="checkres${pi}"></span></div>`));
+
+    function cardBody(pi, n) {
+        const s = ST[pi], D = DATA[pi], g = D.gap;
+        if (n === 0) return s.shown[0] ? `<div class="snote">${fillNote(pi, NOTE[pi][0])}</div>` :
+            `<div class="sblank">Read the FSMD and the given cycles before the blanks (on paper)</div>`;
+        const rows = stepRows(pi, n), names = rows.map(r => `<b>${r.label}</b>`).join(', ');
+        if (!s.shown[n]) return `<div class="sq">Fill ${names} in cycles ${g[0]}–${g[g.length - 1]}.</div><div class="sblank">${n === 3 ? 'type each value' : 'click each cell'}</div>`;
+        return rows.map(r => `<div class="sval"><span class="rl">${r.label}:</span> ${g.map(c => r.vals[c]).join(' ')}</div>`).join('') +
+            (NOTE[pi][n] ? `<div class="snote">${fillNote(pi, NOTE[pi][n])}</div>` : '');
+    }
+    function renderCards(pi) {
+        const row = document.getElementById('cardrow' + pi), s = ST[pi];
+        row.innerHTML = STEPS.map(st => `<div class="panel scard" id="card${pi}-${st.n}">
+            <div class="panel-head"><span class="ph"><span class="sn">${st.n}</span>${st.title}</span></div>
+            <div class="sbody">${cardBody(pi, st.n)}</div>
+            <div class="sbtns"><span class="btn hint sm${s.hint[st.n] ? ' used' : ''}" onclick="act('hint',${st.n})">Hint</span><span class="btn sm${s.shown[st.n] ? ' used' : ''}" onclick="act('show',${st.n})">Show</span></div></div>`).join('');
+    }
+    function renderCheck(pi) {
+        const el = document.getElementById('checkres' + pi), g = ST[pi].marks;
+        if (!g) { el.innerHTML = ''; return; }
+        const c = countMarks(g); el.innerHTML = `<b>${c.ok}</b> right · <span class="bad">${c.bad}</span> wrong · <span class="miss">${c.miss}</span> blank`;
+    }
+    const setHelp = (pi, html) => { document.getElementById('hintbox' + pi).innerHTML = html; };
+    function render() {
+        pages.forEach((p, i) => p.classList.toggle('active', i === page));
+        document.querySelectorAll('.tab').forEach(t => { const n = +t.dataset.page; t.classList.toggle('on', n === page); t.classList.toggle('done', n > 0 && solved(n - 1)); });
+        document.getElementById('pcNum').textContent = page;
+        if (page > 0) { const pi = page - 1; document.getElementById('tbox' + pi).innerHTML = timingSVG(pi); renderCards(pi); renderCheck(pi); }
+    }
+
+    // ============ ACTIONS ============
+    function cyc(pi, ri, c) {                       // bit: '' -> 0 -> 1 -> ''; state: '' -> each state name -> ''
+        const row = DATA[pi].rows[ri], key = ri + ':' + c, s = ST[pi];
+        const seq = [''].concat(row.kind === 'state' ? DATA[pi].states : ['0', '1']);
+        s.cells[key] = seq[(seq.indexOf(s.cells[key] || '') + 1) % seq.length];
+        delete s.rev[key]; if (s.marks) delete s.marks[key]; render();
+    }
+    function typed(pi, key, v) {                    // typing never re-renders, so the caret stays put
+        const s = ST[pi]; s.cells[key] = v; delete s.rev[key];
+        if (s.marks && s.marks[key]) { delete s.marks[key];
+            const g = document.querySelector(`#tbox${pi} g.cw[data-k="${key}"] path`); if (g) { g.setAttribute('fill', '#fff'); g.setAttribute('stroke-dasharray', ''); } }
+        document.querySelectorAll('.tab').forEach(t => { const n = +t.dataset.page; t.classList.toggle('done', n > 0 && solved(n - 1)); });
+    }
+    function setCell(pi, ri, c, v) { ST[pi].cells[ri + ':' + c] = v; render(); }
+    function fillStep(pi, n) { const s = ST[pi];
+        DATA[pi].rows.forEach((r, ri) => { if (r.step === n) DATA[pi].gap.forEach(c => { const k = ri + ':' + c; s.cells[k] = r.vals[c]; s.rev[k] = true; }); }); }
+    function showText(pi, n) { const rows = stepRows(pi, n), g = DATA[pi].gap;
+        return (n ? rows.map(r => `${r.label} = ${g.map(c => r.vals[c]).join(' ')}`).join(' · ') + '. ' : '') + fillNote(pi, NOTE[pi][n]); }
+    function doShow(pi, n) { const s = ST[pi]; fillStep(pi, n); s.shown[n] = true; s.marks = null; trail.push('s' + n);
+        setHelp(pi, `<span class="hl">Step ${n}</span>${showText(pi, n)}`); }
+    const trail = [];                               // the self-test reads the order Next hint walks
+    function act(a, n) {
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        if (page < 1) { if (a === 'next' || a === 'final') setPage(1); else return; }
+        const pi = page - 1, s = ST[pi];
+        if (a === 'hint') { s.hint[n] = true; trail.push('h' + n); setHelp(pi, `<span class="hl">Hint ${n}</span>${HINT[pi][n]}`); }
+        else if (a === 'show') doShow(pi, n);
+        else if (a === 'next') { for (let k = 0; k < 5; k++) { if (!s.hint[k] && !s.shown[k]) { act('hint', k); return; } if (!s.shown[k]) { doShow(pi, k); break; } } }
+        else if (a === 'final') { for (let k = 0; k < 5; k++) { fillStep(pi, k); s.shown[k] = true; }
+            s.marks = null; setHelp(pi, '<span class="hl">Final answer</span>' + fillNote(pi, NOTE[pi][3])); }
+        else if (a === 'check') { const g = grade(pi); s.marks = g; const c = countMarks(g);
+            setHelp(pi, c.bad || c.miss ? `<span class="hl">Checked</span>Fix the red cells and fill the dashed ones. Work left to right: one wrong state makes every later cell wrong.`
+                : '<span class="hl">All right</span>The trace is complete.'); }
+        else if (a === 'clear') { ST[pi] = blankST(); setHelp(pi, '<span class="dim">Cleared. Work the steps left to right.</span>'); }
+        render();
+    }
+    function setPage(n) { page = Math.max(0, Math.min(NPROB, n)); render(); }
+    document.addEventListener('keydown', e => {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const ae = document.activeElement;
+        if (ae && ae.tagName === 'INPUT') { if (e.key === 'Enter' || e.key === 'Escape') ae.blur(); return; }   // typing a value
+        const k = e.key.toLowerCase();
+        if (/^[0-4]$/.test(k)) setPage(+k);
+        else if (k === 'c') act('check'); else if (k === 'h') act('next'); else if (k === 'f') act('final'); else if (k === 'r') act('clear');
+        else if (k === 'arrowright') setPage(page + 1); else if (k === 'arrowleft') setPage(page - 1);
+    });
+
+    // ============ AN INDEPENDENT RUN (for the self-test) ============
+    // Runs each FSMD table (PROBS[pi].model) on the page's inputs and formats the rows the way the trace does.
+    function runModel(pi) {
+        const P = PROBS[pi], D = DATA[pi], fmt = (r, v) => v === null ? '??' : r.hex ? v.toString(16).toUpperCase().padStart(2, '0') : String(v);
+        let q = P.states[0], regs = { ...P.init }; const out = D.rows.map(() => []);
+        for (let t = 0; t < D.n; t++) {
+            const x = {}; D.inputs.forEach(r => x[r.label] = r.label === 'D' ? parseInt(r.vals[t], 16) : +r.vals[t]);
+            const m = P.model(q, regs, x), vals = { state: q, ...m.out, ...regs };
+            D.rows.forEach((r, ri) => out[ri].push(r.kind === 'state' ? q : fmt(r, vals[r.label] === undefined ? null : vals[r.label])));
+            regs = { ...regs, ...m.regs }; q = m.next;
+        }
+        return out;
+    }
+
+    window.__api = { setPage, act, setCell, typed, cyc, grade, countMarks, solved, keysOf, truth, norm, runModel, fillNote, showText, HINT, NOTE, PROBS, DATA, state: pi => ST[pi], trail };
+    window.cyc = cyc; window.typed = typed; window.act = act; window.setPage = setPage;
+    render();
+
+</script>
+</body>
+</html>

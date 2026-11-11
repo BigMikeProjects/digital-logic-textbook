@@ -1,0 +1,10 @@
+title: "Verilog to State Diagram Practice"
+description: "Two state machines written in Verilog with the coding template, one binary and one one-hot: read each back to its state assignment, next state logic and output, then draw the state diagram and say what the machine does, with hints and worked steps on demand."
+chapter: verilog
+section: verilog-basics
+order: 70406
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: two finite state machines written in Verilog with the coding template, one binary and one one-hot. Read the code back to the state assignment, the next state logic, the output and the state diagram on paper, then step through hints and worked steps on demand"

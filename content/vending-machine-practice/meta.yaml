@@ -1,0 +1,10 @@
+title: "Vending Machine Practice"
+description: "Eight multiple-choice questions about a vending machine designed as an FSMD, answered from its FSMD, datapath and controller, with hints and answers on demand."
+chapter: rtl-design
+section: examples
+order: 50206
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: eight multiple-choice questions on a vending machine FSMD, answered from its FSMD, datapath and controller figures"

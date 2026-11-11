@@ -947,7 +947,7 @@
           "published": true
         },
         {
-          "num": "5.2.3",
+          "num": "5.2.4",
           "title": "Laser-Range-Finder",
           "slug": "laser-range-finder",
           "type": "full",
@@ -999,6 +999,41 @@
           "num": "5.1.2",
           "title": "FSMD to Datapath Practice",
           "slug": "fsmd-to-datapath-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
+          "num": "5.1.4",
+          "title": "FSMD Timing Practice",
+          "slug": "fsmd-timing-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
+          "num": "5.2.3",
+          "title": "Traffic-Light-Controller Practice",
+          "slug": "traffic-light-controller-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
+          "num": "5.2.5",
+          "title": "Laser-Range-Finder Practice",
+          "slug": "laser-range-finder-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
+          "num": "5.2.6",
+          "title": "Vending Machine Practice",
+          "slug": "vending-machine-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
+          "num": "7.4.6",
+          "title": "Verilog to State Diagram Practice",
+          "slug": "verilog-to-state-diagram-practice",
           "type": "practice",
           "published": true
         },
