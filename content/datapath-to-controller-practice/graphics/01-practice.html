@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datapath to Controller — Practice</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: #e9edf3; }
+    body { display: flex; align-items: center; justify-content: center; }
+    .viewport-container { width: 100%; max-width: 100vw; aspect-ratio: 16/9; max-height: 100vh; position: relative; overflow: hidden; }
+    .design-surface { width: 1920px; height: 1080px; position: absolute; top: 0; left: 0; transform-origin: top left;
+        font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #1c2433; background: #f7f9fc;
+        padding: 22px 48px; display: flex; flex-direction: column; }
+
+    /* tokens (light, as the decks): ink #1c2433 · state blue #3f5f9e · control orange #e8730c · status violet #7a52c7
+       · data/output green #16866a · muted #5a6676 · revealed answer cyan #0b7fa8 · right #2e8b3e · wrong #d0393a · blank amber #c98a12 */
+
+    .topbar { display: flex; align-items: center; gap: 26px; }
+    .titles { flex: 1; }
+    .titles h1 { font-size: 34px; font-weight: 800; color: #1c2433; }
+    .titles h1 .sub { color: #5a6676; font-size: 21px; font-weight: 600; }
+    .titles .subtitle { color: #5a6676; font-size: 17px; margin-top: 2px; }
+    .page-count { color: #5a6676; font-size: 20px; font-weight: 600; border: 2px solid #c9d3e0; border-radius: 10px; padding: 8px 18px; background: #fff; }
+    .page-count b { color: #3f5f9e; font-size: 26px; }
+
+    .tabstrip { display: flex; gap: 12px; margin: 12px 0 2px; }
+    .tab { flex: 1; display: flex; align-items: center; gap: 11px; position: relative; border: 2px solid #c9d3e0; border-radius: 12px;
+        padding: 9px 16px; color: #5a6676; background: #fff; cursor: pointer; }
+    .tab .tnum { width: 36px; height: 36px; flex-shrink: 0; border: 2px solid currentColor; border-radius: 9px; display: flex;
+        align-items: center; justify-content: center; font-size: 19px; font-weight: 700; }
+    .tab .tlabel { font-size: 18px; font-weight: 700; line-height: 1.15; }
+    .tab .tlabel small { display: block; font-size: 13px; font-weight: 500; color: #7b8796; }
+    .tab.on { color: #3f5f9e; border-color: #3f5f9e; background: #eef3fb; }
+    .tab.on .tnum { background: #3f5f9e; color: #fff; border-color: #3f5f9e; }
+    .tab .tdone { position: absolute; bottom: 5px; right: 12px; font-size: 13px; font-weight: 700; color: #2e8b3e; display: none; }
+    .tab.done .tdone { display: block; }
+
+    .stage { flex: 1; position: relative; min-height: 0; margin-top: 10px; }
+    .page { position: absolute; inset: 0; display: none; flex-direction: column; gap: 10px; }
+    .page.active { display: flex; }
+    .mono { font-family: 'SF Mono', Menlo, Consolas, monospace; }
+    .ov { text-decoration: overline; }
+
+    .panel { background: #fff; border: 2px solid #c9d3e0; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .panel-head { display: flex; align-items: center; gap: 12px; padding: 6px 14px 6px 18px; border-bottom: 2px solid #e3e8ef; white-space: nowrap; min-height: 42px; }
+    .panel-head .ph { font-size: 18px; font-weight: 700; color: #3f5f9e; }
+    .panel-head .ph .sn { color: #7b8796; margin-right: 6px; }
+    .panel-head .role { font-size: 14.5px; color: #7b8796; overflow: hidden; text-overflow: ellipsis; }
+
+    .btn { cursor: pointer; user-select: none; border: 2px solid #c9d3e0; border-radius: 999px; padding: 3px 14px; color: #5a6676;
+        font-size: 15px; font-weight: 700; background: #fff; white-space: nowrap; }
+    .btn:hover { border-color: #5a6676; color: #1c2433; }
+    .btn .k { font-family: Menlo, Consolas, monospace; color: #9aa5b3; font-size: 13px; margin-left: 7px; font-weight: 400; }
+    .btn.hint { border-color: #c98a12; color: #a86f05; background: #fdf6e7; }
+    .btn.check { border-color: #2e8b3e; color: #2e8b3e; background: #eef8f0; }
+    .btn.final { border-color: #0b7fa8; color: #fff; background: #0b7fa8; } .btn.final .k { color: #cbeaf5; }
+    .btn.used { opacity: 0.55; }
+    .btn.sm { font-size: 13.5px; padding: 1px 11px; }
+
+    /* ---- page 0 ---- */
+    .steps { display: flex; gap: 8px; }
+    .step { flex: 1; border: 2px solid #c9d3e0; border-radius: 14px; background: #fff; padding: 12px 15px; display: flex; flex-direction: column; gap: 7px; }
+    .step .sn { width: 34px; height: 34px; border: 2px solid #3f5f9e; border-radius: 9px; color: #3f5f9e; font-size: 18px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center; }
+    .step .st { font-size: 19px; font-weight: 700; }
+    .step .sd { font-size: 15.5px; color: #3a4556; line-height: 1.45; }
+    .step .sd b { color: #1c2433; }
+    .arrowcell { align-self: center; color: #9aa5b3; font-size: 24px; }
+    .leadrow { display: flex; gap: 12px; flex: 1; min-height: 0; }
+    .convbody { padding: 12px 22px; display: flex; flex-direction: column; gap: 8px; font-size: 16.5px; color: #3a4556; line-height: 1.45; }
+    .convbody b { color: #1c2433; } .convbody li { margin-left: 20px; margin-bottom: 3px; }
+    .convbody .c-ctl { color: #e8730c; font-weight: 700; } .convbody .c-st { color: #7a52c7; font-weight: 700; }
+    .helpbody { padding: 12px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .hrow { display: flex; align-items: center; gap: 14px; font-size: 16px; color: #3a4556; line-height: 1.35; }
+    .hrow .btn { flex: 0 0 190px; text-align: center; cursor: default; }
+    .cards { display: flex; gap: 12px; }
+    .startcard { flex: 1; cursor: pointer; border: 2px solid #3f5f9e; border-radius: 14px; background: #eef3fb; padding: 12px 18px; }
+    .startcard .ct { font-size: 20px; font-weight: 700; color: #3f5f9e; } .startcard .cf { font-size: 15px; color: #3a4556; }
+
+    /* ---- problem page ---- */
+    .toprow { flex: 1; display: flex; gap: 10px; min-height: 0; }
+    .probpanel { flex: 0 0 690px; }
+    .story { padding: 10px 18px 0; font-size: 16.5px; line-height: 1.45; color: #1c2433; }
+    .story b { color: #3f5f9e; }
+    .fsmdbox { flex: 1; min-height: 0; padding: 4px 10px 8px; display: flex; align-items: center; justify-content: center; }
+    .fsmdbox svg, .dpbox svg { width: 100%; height: 100%; display: block; }
+    .dppanel { flex: 1; }
+    .dpbox { flex: 1; min-height: 0; padding: 4px 10px; position: relative; }
+    .dpempty { position: absolute; inset: 30px 120px; display: flex; align-items: center; justify-content: center; text-align: center;
+        border: 2px dashed #d5dbe5; border-radius: 12px; color: #9aa5b3; font-style: italic; font-size: 17px; pointer-events: none; }
+
+    .cardrow { flex: 0 0 250px; display: flex; gap: 10px; }
+    .scard { flex: 1; min-width: 0; }
+    .scard.s0 { flex: 0.82; } .scard.s4 { flex: 1.3; }
+    .scard .panel-head { min-height: 34px; padding: 4px 12px; }
+    .scard .panel-head .ph { font-size: 16.5px; }
+    .sbody { flex: 1; min-height: 0; padding: 6px 12px 0; display: flex; flex-direction: column; gap: 6px; overflow: hidden; font-size: 14.5px; color: #1c2433; }
+    .sq { font-size: 14px; color: #3a4556; line-height: 1.35; }
+    .sbtns { display: flex; gap: 8px; padding: 6px 12px 9px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+    .chip { cursor: pointer; user-select: none; border: 2px solid #c9d3e0; border-radius: 8px; padding: 1px 9px; font-family: 'SF Mono', Menlo, monospace;
+        font-size: 14px; font-weight: 700; color: #5a6676; background: #fff; }
+    .chip:hover { border-color: #5a6676; }
+    .chip.on { border-color: #1c2433; color: #1c2433; background: #edf1f7; }
+    .chip.rev { color: #0b7fa8; border-color: #0b7fa8; background: #e8f6fb; }
+    .chip.ok { border-color: #2e8b3e; background: #e6f5e9; color: #1d6b2b; }
+    .chip.bad { border-color: #d0393a; background: #fbe8e8; color: #b02a2b; }
+    .chip.miss { border-color: #c98a12; border-style: dashed; }
+    .rrow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .rlab { font-family: 'SF Mono', Menlo, monospace; font-weight: 800; font-size: 14.5px; width: 34px; color: #16866a; }
+    .derived { font-size: 13px; color: #7b8796; }
+    .derived b { color: #1c2433; }
+    .sgrid { display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 4px 8px; align-items: center; }
+    .sgrid .sname { font-family: 'SF Mono', Menlo, monospace; font-weight: 800; font-size: 14px; }
+    .tog { display: flex; gap: 3px; }
+    .tog .chip { padding: 0 7px; font-size: 12.5px; font-family: 'Segoe UI', Arial, sans-serif; }
+    .s0note { font-size: 13.5px; line-height: 1.42; color: #3a4556; }
+    .s0note .mono { color: #0b7fa8; font-weight: 700; }
+    .s0blank { flex: 1; margin-bottom: 4px; border: 2px dashed #d5dbe5; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+        color: #9aa5b3; font-style: italic; font-size: 13.5px; text-align: center; padding: 0 10px; }
+
+    .helpbar { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; background: #fff; border: 2px solid #c9d3e0; border-radius: 14px; padding: 7px 14px; min-height: 56px; }
+    .hintbox { flex: 1; min-width: 0; font-size: 15.5px; color: #1c2433; line-height: 1.35; border-left: 3px solid #e7c27a; padding-left: 12px; }
+    .hintbox .hl { color: #a86f05; font-weight: 700; margin-right: 6px; }
+    .hintbox .dim { color: #7b8796; }
+    .checkres { flex: 0 0 auto; font-size: 15px; color: #5a6676; white-space: nowrap; }
+    .checkres b { color: #2e8b3e; } .checkres .bad { color: #d0393a; font-weight: 700; } .checkres .miss { color: #a86f05; }
+
+    .footer { display: flex; align-items: center; justify-content: center; gap: 24px; margin-top: 8px; height: 28px; }
+    .controls { color: #7b8796; font-size: 15px; white-space: nowrap; }
+    .controls .k { display: inline-block; color: #3a4556; border: 1px solid #c9d3e0; border-radius: 6px; padding: 1px 8px; margin: 0 2px; font-size: 14px;
+        font-family: Menlo, Consolas, monospace; background: #fff; }
+
+    /* ---- SVG (FSMD and datapath) ---- */
+    .fs-bub { fill: #fff; stroke: #1c2433; stroke-width: 3; }
+    .fs-name { font-size: 26px; font-weight: 800; fill: #1c2433; text-anchor: middle; }
+    .fs-arc { fill: none; stroke: #1c2433; stroke-width: 2.5; }
+    .fs-lab { font-family: 'SF Mono', Menlo, monospace; font-size: 20px; font-weight: 700; fill: #3f5f9e; }
+    .fs-tag rect { fill: #fff; stroke: #3f5f9e; stroke-width: 2; }
+    .fs-tag text { font-family: 'SF Mono', Menlo, monospace; font-size: 18px; font-weight: 700; fill: #3f5f9e; }
+    .fs-out { font-size: 17px; font-weight: 700; fill: #5a6676; text-anchor: middle; }
+    .fs-note { font-size: 15px; fill: #5a6676; }
+    .dp-w { fill: none; stroke: #1c2433; stroke-width: 3; }
+    .dp-box { fill: #fff; stroke: #1c2433; stroke-width: 3.5; }
+    .dp-reg { fill: #eaf4f0; stroke: #16866a; stroke-width: 3.5; }
+    .dp-mux { fill: #fff; stroke: #1c2433; stroke-width: 3.5; }
+    .dp-t { font-size: 27px; font-weight: 800; fill: #1c2433; text-anchor: middle; font-family: 'SF Mono', Menlo, monospace; }
+    .dp-reg-t { font-size: 30px; font-weight: 800; fill: #16866a; text-anchor: middle; font-family: 'SF Mono', Menlo, monospace; }
+    .dp-pin { font-size: 19px; font-weight: 700; fill: #5a6676; text-anchor: middle; font-family: 'SF Mono', Menlo, monospace; }
+    .dp-in { font-size: 25px; font-weight: 800; fill: #5a6676; font-family: 'SF Mono', Menlo, monospace; }
+    .dp-sig { font-size: 25px; font-weight: 800; fill: #9aa5b3; font-family: 'SF Mono', Menlo, monospace; }
+    .dp-cw { fill: none; stroke: #9aa5b3; stroke-width: 2.5; }
+    .sig-on .dp-sig.ctl { fill: #e8730c; } .sig-on .dp-cw.ctl { stroke: #e8730c; }
+    .sig-on .dp-sig.st { fill: #7a52c7; } .sig-on .dp-cw.st { stroke: #7a52c7; }
+    .dp-dot { fill: #1c2433; }
+    .dp-legend { font-size: 19px; font-weight: 700; }
+    .part { opacity: 0; transition: opacity .35s ease; }
+    .part.on { opacity: 1; }
+    .givenpanel { flex: 0 0 1000px; }
+    .givenrow { flex: 1; min-height: 0; display: flex; gap: 6px; padding: 0 8px 6px; }
+    .givenrow .fsmdbox { flex: 1.25; padding: 0; } .dpgiven { flex: 0.85; min-height: 0; }
+    .givenrow.wide .fsmdbox { flex: 1; } .givenrow.wide .dpgiven { flex: 1.15; }
+    .dpgiven svg { width: 100%; height: 100%; display: block; }
+    .alab { font-family: 'SF Mono', Menlo, monospace; font-weight: 800; font-size: 12.5px; width: 96px; flex-shrink: 0; color: #3f5f9e; }
+    .olab { font-family: 'SF Mono', Menlo, monospace; font-weight: 800; font-size: 13.5px; width: 52px; color: #e8730c; }
+    .eqsign { font-weight: 800; color: #1c2433; }
+    .ogrid { display: grid; gap: 3px 6px; align-items: center; }
+    .ogrid .ohead { font-family: 'SF Mono', Menlo, monospace; font-weight: 800; font-size: 13.5px; color: #e8730c; }
+    .scard.s2 { flex: 1.55; } .scard.s3 { flex: 1.12; } .scard.s4 { flex: 1.65; } .scard.s1 { flex: 0.72; } .scard.s0 { flex: 0.7; }
+    .cardrow { flex: 0 0 262px; min-height: 0; } .scard { min-height: 0; }
+    .arcrow { display: flex; align-items: center; gap: 4px; } .arcrow .alab { width: 92px; }
+    .arcrow .chip { padding: 0 5px; font-size: 12px; line-height: 1.25; }
+    .s2 .sbody { gap: 2px; }
+    .s4 .chip, .s3 .chip { line-height: 1.3; } .s4 .tog .chip { padding: 0 4px; font-size: 11.5px; } .s4 .rrow { flex-wrap: nowrap; gap: 4px; } .s4 .olab { width: 44px; }
+    .s3 .tog .chip { padding: 0 6px; font-size: 11.5px; } .ogrid { gap: 2px 5px; } .chip sub { font-size: 9px; }
+    .scard .sbody { gap: 4px; }
+    .rrow { gap: 5px; }
+</style>
+</head>
+<body>
+<div class="viewport-container" id="viewportContainer">
+<div class="design-surface" id="designSurface">
+    <div class="topbar">
+        <div class="titles">
+            <h1>Datapath to Controller <span class="sub">&mdash; practice set</span></h1>
+            <div class="subtitle">Given an FSMD and the datapath built from it, derive the controller: the same states and arcs, with control signals in place of the register transfers</div>
+        </div>
+        <div class="page-count">Page <b id="pcNum">0</b> of 0&ndash;5</div>
+    </div>
+    <div class="tabstrip" id="tabstrip"></div>
+    <div class="stage" id="stage"></div>
+    <div class="footer"><div class="controls">
+        <span class="k">0</span>&ndash;<span class="k">5</span> page &middot; <span class="k">click</span> a chip to pick it &middot; <span class="k">C</span> check my work
+        &middot; <span class="k">H</span> next hint &middot; <span class="k">F</span> final answer &middot; <span class="k">R</span> &#8634; clear
+    </div></div>
+</div>
+</div>
+<script>
+    // ============ RESPONSIVE SCALE ============
+    const DESIGN_WIDTH = 1920, DESIGN_HEIGHT = 1080;
+    function autoResize() {
+        const c = document.getElementById('viewportContainer'), s = document.getElementById('designSurface');
+        const vw = window.innerWidth, vh = window.innerHeight; let cw, ch;
+        if (vw / vh > 16 / 9) { ch = vh; cw = ch * (16 / 9); } else { cw = vw; ch = cw * (9 / 16); }
+        c.style.width = cw + 'px'; c.style.height = ch + 'px'; s.style.transform = `scale(${cw / DESIGN_WIDTH})`;
+    }
+    autoResize();
+    let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(autoResize, 50); });
+    window.addEventListener('orientationchange', () => setTimeout(autoResize, 100));
+
+    // ============ SMALL EVALUATORS (shared by the key and the self-test runs) ============
+    // A transfer's right-hand side is a constant, a name, or a sum of names and constants ("S+X", "C+1"), 8-bit.
+    function evalExpr(e, env) {
+        let t = 0;
+        for (const p of e.split('+')) { const v = /^\d+$/.test(p) ? +p : env[p]; if (v === null || v === undefined) return null; t += v; }
+        return t & 255;
+    }
+    // An arc condition is a JS boolean expression over inputs, registers and status signals.
+    const condFn = {};
+    function evalCond(c, env) {
+        if (c === '1') return true;
+        if (!condFn[c]) condFn[c] = new Function('env', 'with (env) { return !!(' + c + '); }');
+        try { return condFn[c](env); } catch (e) { return false; }
+    }
+    const isArith = e => /\+/.test(e);
+    const muxSize = n => n <= 1 ? 0 : 2 ** Math.ceil(Math.log2(n));
+
+    // ============ THE FIVE PROBLEMS (source of truth) ============
+    // Each machine's FSMD is data: states, the transfers each state makes (xfer), arcs (from, to, label, cond on data,
+    // dcond on status signals, optional Mealy transfer), outputs. The key on every card is DERIVED from that table.
+    // `dp` is the answer datapath as drawn: for each register its mux legs by select code, select and load signals;
+    // comparators; and the controller's one-hot equations (CTL: signal -> terms {s: state, c: condition}). The
+    // self-test runs dp register by register against the FSMD table; verify.py does the same in Icarus Verilog.
+    const PROBS = [
+        {   // ---------------- 1 · load and hold ----------------
+            story: 'On <b>s</b>, this machine copies the input <b>X</b> into the register <b>R</b> and raises <b>ready</b> while it holds the value. While it waits, R is cleared.',
+            states: ['WAIT', 'LOAD', 'HOLD'], reset: 'WAIT',
+            xfer: { WAIT: { R: '0' }, LOAD: { R: 'X' }, HOLD: {} }, outs: { HOLD: 'ready = 1' },
+            arcs: [ ['WAIT', 'WAIT', 's̅', '!s', '!s'], ['WAIT', 'LOAD', 's', 's', 's'], ['LOAD', 'HOLD', '', '1', '1'],
+                    ['HOLD', 'HOLD', 's̅', '!s', '!s'], ['HOLD', 'WAIT', 's', 's', 's'] ],
+            ins: { s: 1, X: 8 }, outNames: ['ready'], notes: ['in: s, X (8-bit)', 'out: R (8-bit), ready'],
+            regChoices: ['R', 'X', 's', 'ready'],
+            srcChoices: ['0', 'X', 'R', 'R+X', 'R+1', 's'],
+            blocks: [ { id: 'none', label: 'no blocks needed', none: true }, { id: 'addRX', label: 'R + X adder', expr: 'R+X' },
+                      { id: 'incR', label: 'R + 1', expr: 'R+1' }, { id: 'cmpRX', label: 'R == X comparator', cond: 'R==X' },
+                      { id: 'sub', label: 'subtractor' }, { id: 'dec', label: 'decoder' } ],
+            signals: [ ['ldR', 'control'], ['clrR', 'control'], ['s', 'input'], ['X', 'input'], ['ready', 'output'] ],
+            ctl: { ldR: [{ s: 'WAIT' }, { s: 'LOAD' }], clrR: [{ s: 'WAIT' }], ready: [{ s: 'HOLD' }] },
+            dp: { regs: { R: { legs: ['X', '0'], sel: ['clrR'], ld: 'ldR' } }, cmps: {} },
+            extras: [],
+            run: { s: [1, 0, 0, 0, 1, 0, 1, 0, 0], X: [9, 23, 40, 41, 42, 43, 44, 77, 78] },
+            expect: 'R = 23 in HOLD: it takes the X present during LOAD, not when s rose',
+            fs: { pos: { WAIT: [350, 108], LOAD: [175, 318], HOLD: [525, 318] },
+                arcs: [ { a: 'WAIT', b: 'LOAD', bow: 28, lab: [-24, 0, 'end'] }, { a: 'LOAD', b: 'HOLD', bow: 0 },
+                        { a: 'HOLD', b: 'WAIT', bow: 28, lab: [22, 0, 'start'] } ],
+                loops: [ { s: 'WAIT', ang: 0 }, { s: 'HOLD', ang: 0 } ],
+                tags: [ { s: 'WAIT', x: 268, y: 68, lines: ['R ← 0'], anchor: 'end' }, { s: 'LOAD', x: 185, y: 390, lines: ['R ← X'], anchor: 'middle' } ],
+                reset: [178, 40, 300, 75] },
+        },
+        {   // ---------------- 2 · accumulate four values ----------------
+            story: 'On <b>go</b>, this machine clears <b>S</b> and the counter <b>C</b>, then adds the input <b>X</b> into S on four clocks while C counts, and raises <b>done</b>.',
+            states: ['IDLE', 'ADD', 'DONE'], reset: 'IDLE',
+            xfer: { IDLE: { S: '0', C: '0' }, ADD: { S: 'S+X', C: 'C+1' }, DONE: {} }, outs: { DONE: 'done = 1' },
+            arcs: [ ['IDLE', 'IDLE', 'go̅', '!go', '!go'], ['IDLE', 'ADD', 'go', 'go', 'go'], ['ADD', 'ADD', 'C ≠ 3', 'C!=3', '!eq'],
+                    ['ADD', 'DONE', 'C = 3', 'C==3', 'eq'], ['DONE', 'DONE', 'go̅', '!go', '!go'], ['DONE', 'IDLE', 'go', 'go', 'go'] ],
+            ins: { go: 1, X: 8 }, outNames: ['done'], notes: ['in: go, X (8-bit)', 'out: S (8-bit), done'],
+            regChoices: ['S', 'C', 'X', 'go', 'done', 'eq'],
+            srcChoices: ['0', 'X', 'S+X', 'C+1', 'S', 'C'],
+            blocks: [ { id: 'add', label: 'S + X adder', expr: 'S+X' }, { id: 'sub', label: 'subtractor' },
+                      { id: 'inc', label: 'C + 1', expr: 'C+1' }, { id: 'dec', label: 'decoder' },
+                      { id: 'cmp', label: 'C == 3 comparator', cond: 'C==3' }, { id: 'cmpSX', label: 'S == X comparator', cond: 'S==X' } ],
+            signals: [ ['ldS', 'control'], ['ldC', 'control'], ['clrS', 'control'], ['clrC', 'control'],
+                       ['eq', 'status'], ['go', 'input'], ['X', 'input'], ['done', 'output'] ],
+            ctl: { ldS: [{ s: 'IDLE' }, { s: 'ADD' }], ldC: [{ s: 'IDLE' }, { s: 'ADD' }], clrS: [{ s: 'IDLE' }], clrC: [{ s: 'IDLE' }], done: [{ s: 'DONE' }] },
+            dp: { regs: { S: { legs: ['S+X', '0'], sel: ['clrS'], ld: 'ldS' }, C: { legs: ['C+1', '0'], sel: ['clrC'], ld: 'ldC' } }, cmps: { eq: 'C==3' } },
+            extras: [ { id: 'ld', q: 'Can <b>ldS</b> and <b>ldC</b> be one wire?', share: ['ldS', 'ldC'] },
+                      { id: 'clr', q: 'Can <b>clrS</b> and <b>clrC</b> be one wire?', share: ['clrS', 'clrC'] } ],
+            run: { go: [1, 0, 0, 0, 0, 0, 0, 1, 0], X: [0, 5, 7, 2, 9, 0, 0, 0, 0] },
+            expect: 'X = 5, 7, 2, 9 gives S = 23 and C = 4 in DONE; ADD lasts four clocks',
+            fs: { pos: { IDLE: [350, 108], ADD: [175, 318], DONE: [525, 318] },
+                arcs: [ { a: 'IDLE', b: 'ADD', bow: 28, lab: [-24, 0, 'end'] }, { a: 'ADD', b: 'DONE', bow: 0, lab: [0, -12, 'middle'] },
+                        { a: 'DONE', b: 'IDLE', bow: 28, lab: [22, 0, 'start'] } ],
+                loops: [ { s: 'IDLE', ang: 0 }, { s: 'ADD', ang: 180, lab: [-108, -62, 'middle'] }, { s: 'DONE', ang: 0 } ],
+                tags: [ { s: 'IDLE', x: 268, y: 68, lines: ['S ← 0', 'C ← 0'], anchor: 'end' }, { s: 'ADD', x: 185, y: 390, lines: ['S ← S + X', 'C ← C + 1'], anchor: 'middle' } ],
+                reset: [178, 40, 300, 75] },
+        },
+        {   // ---------------- 3 · three sources ----------------
+            story: 'On <b>go</b>, this machine clears <b>R</b>, loads the input <b>X</b> (0 to 9), then counts R up by one each clock until R reaches 9, and raises <b>done</b>.',
+            states: ['IDLE', 'LOAD', 'CNT', 'SHOW'], reset: 'IDLE',
+            xfer: { IDLE: { R: '0' }, LOAD: { R: 'X' }, CNT: { R: 'R+1' }, SHOW: {} }, outs: { SHOW: 'done = 1' },
+            arcs: [ ['IDLE', 'IDLE', 'go̅', '!go', '!go'], ['IDLE', 'LOAD', 'go', 'go', 'go'], ['LOAD', 'CNT', '', '1', '1'],
+                    ['CNT', 'CNT', 'R ≠ 9', 'R!=9', '!eq'], ['CNT', 'SHOW', 'R = 9', 'R==9', 'eq'],
+                    ['SHOW', 'SHOW', 'go̅', '!go', '!go'], ['SHOW', 'IDLE', 'go', 'go', 'go'] ],
+            ins: { go: 1, X: 4 }, outNames: ['done'], notes: ['in: go, X (0 to 9)', 'out: R (8-bit), done'],
+            regChoices: ['R', 'X', 'go', 'done', 'eq'],
+            srcChoices: ['0', 'X', 'R+1', 'R', 'R+X', '9'],
+            blocks: [ { id: 'inc', label: 'R + 1', expr: 'R+1' }, { id: 'add', label: 'R + X adder', expr: 'R+X' },
+                      { id: 'dec', label: 'decoder' }, { id: 'cmp', label: 'R == 9 comparator', cond: 'R==9' },
+                      { id: 'cmpRX', label: 'R == X comparator', cond: 'R==X' }, { id: 'none', label: 'no blocks needed', none: true } ],
+            signals: [ ['ldR', 'control'], ['sel1', 'control'], ['sel0', 'control'], ['eq', 'status'],
+                       ['go', 'input'], ['X', 'input'], ['done', 'output'] ],
+            ctl: { ldR: [{ s: 'IDLE' }, { s: 'LOAD' }, { s: 'CNT' }], sel1: [{ s: 'CNT' }], sel0: [{ s: 'LOAD' }], done: [{ s: 'SHOW' }] },
+            // legs by select code sel1 sel0: 00 -> 0, 01 -> X, 10 -> R + 1, 11 unused
+            dp: { regs: { R: { legs: ['0', 'X', 'R+1', null], sel: ['sel1', 'sel0'], ld: 'ldR' } }, cmps: { eq: 'R==9' } },
+            extras: [ { id: 'unused', q: 'Which select code (sel1 sel0) picks <b>no</b> source?', pick: ['00', '01', '10', '11'], unusedOf: 'R' } ],
+            run: { go: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0], X: [6, 6, 6, 6, 6, 6, 6, 6, 6, 6] },
+            expect: 'X = 6 counts 6, 7, 8, 9 in CNT, then SHOW holds 10 (the last count happens on the edge that leaves CNT)',
+            fs: { pos: { IDLE: [210, 118], LOAD: [500, 118], CNT: [500, 335], SHOW: [210, 335] },
+                arcs: [ { a: 'IDLE', b: 'LOAD', bow: 0, lab: [0, 28, 'middle'] }, { a: 'LOAD', b: 'CNT', bow: 0 },
+                        { a: 'CNT', b: 'SHOW', bow: 0, lab: [0, -12, 'middle'] }, { a: 'SHOW', b: 'IDLE', bow: 0, lab: [-12, 6, 'end'] } ],
+                loops: [ { s: 'IDLE', ang: 180, lab: [-150, 8, 'end'] }, { s: 'CNT', ang: 0, lab: [118, -66, 'middle'] }, { s: 'SHOW', ang: 180, lab: [-150, 8, 'end'] } ], noteAt: [8, 418, 'start'],
+                tags: [ { s: 'IDLE', x: 300, y: 30, lines: ['R ← 0'], anchor: 'start' }, { s: 'LOAD', x: 572, y: 60, lines: ['R ← X'], anchor: 'start' },
+                        { s: 'CNT', x: 500, y: 402, lines: ['R ← R + 1'], anchor: 'middle' } ],
+                reset: [124, 26, 166, 74] },
+        },
+        {   // ---------------- 4 · one adder, two transfers ----------------
+            story: 'On <b>go</b>, this machine sets <b>A</b> and <b>B</b> to 1, then alternates A ← A + B and B ← A + B (the Fibonacci numbers) until B is at least 50, and raises <b>done</b>. <b>Use as few blocks as possible.</b>',
+            states: ['IDLE', 'PA', 'PB', 'DONE'], reset: 'IDLE',
+            xfer: { IDLE: { A: '1', B: '1' }, PA: { A: 'A+B' }, PB: { B: 'A+B' }, DONE: {} }, outs: { DONE: 'done = 1' },
+            arcs: [ ['IDLE', 'IDLE', 'go̅', '!go', '!go'], ['IDLE', 'PA', 'go', 'go', 'go'], ['PA', 'PB', '', '1', '1'],
+                    ['PB', 'PA', 'B < 50', 'B<50', '!big'], ['PB', 'DONE', 'B ≥ 50', 'B>=50', 'big'],
+                    ['DONE', 'DONE', 'go̅', '!go', '!go'], ['DONE', 'IDLE', 'go', 'go', 'go'] ],
+            ins: { go: 1 }, outNames: ['done'], notes: ['in: go', 'out: A, B (8-bit), done'],
+            regChoices: ['A', 'B', 'go', 'done', 'big'],
+            srcChoices: ['1', 'A', 'B', 'A+B', 'A+1', 'B+1'],
+            blocks: [ { id: 'add', label: 'one A + B adder', expr: 'A+B' }, { id: 'add2', label: 'a second A + B adder' },
+                      { id: 'cmp', label: 'B ≥ 50 comparator', cond: 'B>=50' }, { id: 'cmpA', label: 'A ≥ 50 comparator', cond: 'A>=50' },
+                      { id: 'sub', label: 'subtractor' }, { id: 'none', label: 'no blocks needed', none: true } ],
+            signals: [ ['ldA', 'control'], ['ldB', 'control'], ['initA', 'control'], ['initB', 'control'],
+                       ['big', 'status'], ['go', 'input'], ['done', 'output'] ],
+            ctl: { ldA: [{ s: 'IDLE' }, { s: 'PA' }], ldB: [{ s: 'IDLE' }, { s: 'PB' }], initA: [{ s: 'IDLE' }], initB: [{ s: 'IDLE' }], done: [{ s: 'DONE' }] },
+            dp: { regs: { A: { legs: ['A+B', '1'], sel: ['initA'], ld: 'ldA' }, B: { legs: ['A+B', '1'], sel: ['initB'], ld: 'ldB' } }, cmps: { big: 'B>=50' } },
+            extras: [ { id: 'ld', q: 'Can <b>ldA</b> and <b>ldB</b> be one wire?', share: ['ldA', 'ldB'] },
+                      { id: 'init', q: 'Can <b>initA</b> and <b>initB</b> be one wire?', share: ['initA', 'initB'] } ],
+            run: { go: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0] },
+            expect: 'A = 89, B = 144 in DONE (PB sees B = 55 and leaves, writing B ← 34 + 55... no: B ← A + B = 89 + 55)',
+            fs: { pos: { IDLE: [210, 118], PA: [500, 118], PB: [500, 335], DONE: [210, 335] },
+                arcs: [ { a: 'IDLE', b: 'PA', bow: 0, lab: [0, 28, 'middle'] }, { a: 'PA', b: 'PB', bow: 28 },
+                        { a: 'PB', b: 'PA', bow: 28, lab: [16, 0, 'start'] }, { a: 'PB', b: 'DONE', bow: 0, lab: [0, -12, 'middle'] },
+                        { a: 'DONE', b: 'IDLE', bow: 0, lab: [-12, 6, 'end'] } ],
+                loops: [ { s: 'IDLE', ang: 180, lab: [-150, 8, 'end'] }, { s: 'DONE', ang: 180, lab: [-150, 8, 'end'] } ], noteAt: [8, 418, 'start'],
+                tags: [ { s: 'IDLE', x: 300, y: 30, lines: ['A ← 1', 'B ← 1'], anchor: 'start' }, { s: 'PA', x: 572, y: 62, lines: ['A ← A + B'], anchor: 'start' },
+                        { s: 'PB', x: 500, y: 402, lines: ['B ← A + B'], anchor: 'middle' } ],
+                reset: [124, 26, 166, 74] },
+        },
+        {   // ---------------- 5 · a transfer on an arc ----------------
+            story: 'A stopwatch. On <b>go</b>, it clears the counter <b>C</b> and counts clocks. When <b>stop</b> comes, the arc into SHOW copies C into <b>R</b>, and SHOW raises <b>done</b>.',
+            states: ['IDLE', 'RUN', 'SHOW'], reset: 'IDLE',
+            xfer: { IDLE: { C: '0' }, RUN: { C: 'C+1' }, SHOW: {} }, outs: { SHOW: 'done = 1' },
+            arcs: [ ['IDLE', 'IDLE', 'go̅', '!go', '!go'], ['IDLE', 'RUN', 'go', 'go', 'go'], ['RUN', 'RUN', 'stop̅', '!stop', '!stop'],
+                    ['RUN', 'SHOW', 'stop / R ← C', 'stop', 'stop', { R: 'C' }], ['SHOW', 'SHOW', 'go̅', '!go', '!go'], ['SHOW', 'IDLE', 'go', 'go', 'go'] ],
+            ins: { go: 1, stop: 1 }, outNames: ['done'], notes: ['in: go, stop', 'out: R (8-bit), done'],
+            regChoices: ['C', 'R', 'go', 'stop', 'done'],
+            srcChoices: ['0', 'C', 'C+1', 'R', 'R+1', 'stop'],
+            blocks: [ { id: 'inc', label: 'C + 1', expr: 'C+1' }, { id: 'incR', label: 'R + 1', expr: 'R+1' },
+                      { id: 'cmp', label: 'C == R comparator', cond: 'C==R' }, { id: 'add', label: 'C + R adder', expr: 'C+R' },
+                      { id: 'dec', label: 'decoder' }, { id: 'none', label: 'no blocks needed', none: true } ],
+            signals: [ ['ldC', 'control'], ['clrC', 'control'], ['ldR', 'control'], ['go', 'input'], ['stop', 'input'], ['done', 'output'] ],
+            ctl: { ldC: [{ s: 'IDLE' }, { s: 'RUN' }], clrC: [{ s: 'IDLE' }], ldR: [{ s: 'RUN', c: 'stop' }], done: [{ s: 'SHOW' }] },
+            dp: { regs: { C: { legs: ['C+1', '0'], sel: ['clrC'], ld: 'ldC' }, R: { legs: ['C'], sel: [], ld: 'ldR' } }, cmps: {} },
+            extras: [ { id: 'mealy', q: 'Which control signal depends on an <b>input</b> as well as the state?', mealy: ['ldC', 'clrC', 'ldR'] } ],
+            run: { go: [1, 0, 0, 0, 0, 0, 0, 1, 0], stop: [0, 0, 0, 0, 1, 0, 0, 0, 0] },
+            expect: 'go, then stop four clocks into RUN: R = 3 (C before its last count) while C counts on to 4',
+            fs: { pos: { IDLE: [350, 108], RUN: [175, 318], SHOW: [525, 318] },
+                arcs: [ { a: 'IDLE', b: 'RUN', bow: 28, lab: [-24, 0, 'end'] }, { a: 'RUN', b: 'SHOW', bow: 0, lab: [0, -12, 'middle'] },
+                        { a: 'SHOW', b: 'IDLE', bow: 28, lab: [22, 0, 'start'] } ],
+                loops: [ { s: 'IDLE', ang: 0 }, { s: 'RUN', ang: 180, lab: [-108, -62, 'middle'] }, { s: 'SHOW', ang: 0 } ],
+                tags: [ { s: 'IDLE', x: 268, y: 68, lines: ['C ← 0'], anchor: 'end' }, { s: 'RUN', x: 185, y: 390, lines: ['C ← C + 1'], anchor: 'middle' } ],
+                reset: [178, 40, 300, 75] },
+        },
+    ];
+    // The expectation strings are prose for README/self-test messages; P4's is tidied here so it reads cleanly.
+    PROBS[3].expect = 'A = 89 and B = 144 in DONE: PB sees B = 55 (at least 50) and leaves, writing B ← 89 + 55';
+    const NPROB = PROBS.length;
+
+    const fmtX = e => e.replace(/\+/g, ' + ');
+    // ============ THE FSMD FIGURE ============
+    const R = 60;
+    const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    function lab(x, y, t, anchor = 'middle') {        // a trailing U+0305 (go̅) is drawn as a real bar over the name
+        const bar = t.endsWith('̅'), s = bar ? t.slice(0, -1) : t, w = s.length * 12.1;
+        const x0 = anchor === 'middle' ? x - w / 2 : anchor === 'end' ? x - w : x;
+        return `<text class="fs-lab" x="${x}" y="${y}" text-anchor="${anchor}">${esc(s)}</text>` +
+            (bar ? `<line x1="${x0}" y1="${y - 17}" x2="${x0 + w}" y2="${y - 17}" stroke="#3f5f9e" stroke-width="2.2"/>` : '');
+    }
+    function headAt(x, y, ux, uy) { const L = 16, W = 6.5;
+        return `<path d="M${x},${y} L${x - L * ux + W * uy},${y - L * uy - W * ux} L${x - L * ux - W * uy},${y - L * uy + W * ux} Z" fill="#1c2433"/>`; }
+    function arc(Pos, a, b, bow) {
+        const [x1, y1] = Pos[a], [x2, y2] = Pos[b], dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy), ux = dx / d, uy = dy / d;
+        const nx = -uy, ny = ux, mx = (x1 + x2) / 2 + nx * bow, my = (y1 + y2) / 2 + ny * bow;
+        const t1 = Math.atan2(my - y1, mx - x1), t2 = Math.atan2(my - y2, mx - x2);
+        const sx = x1 + R * Math.cos(t1), sy = y1 + R * Math.sin(t1), ex = x2 + R * Math.cos(t2), ey = y2 + R * Math.sin(t2);
+        const hx = ex - mx, hy = ey - my, hd = Math.hypot(hx, hy);
+        return { d: `<path class="fs-arc" d="M${sx},${sy} Q${mx},${my} ${ex - 14 * hx / hd},${ey - 14 * hy / hd}"/>` + headAt(ex, ey, hx / hd, hy / hd),
+            mid: [(sx + 2 * mx + ex) / 4, (sy + 2 * my + ey) / 4] };
+    }
+    function selfLoop(Pos, s, ang) {
+        const [x, y] = Pos[s], a = ang * Math.PI / 180, sp = 0.45;
+        const p1 = [x + R * Math.cos(a - sp), y + R * Math.sin(a - sp)], p2 = [x + R * Math.cos(a + sp), y + R * Math.sin(a + sp)];
+        const k = 2.5 * R, c1 = [x + k * Math.cos(a - 0.78), y + k * Math.sin(a - 0.78)], c2 = [x + k * Math.cos(a + 0.78), y + k * Math.sin(a + 0.78)];
+        const tx = p2[0] - c2[0], ty = p2[1] - c2[1], td = Math.hypot(tx, ty);
+        return `<path class="fs-arc" d="M${p1[0]},${p1[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${p2[0] - 12 * tx / td},${p2[1] - 12 * ty / td}"/>` + headAt(p2[0], p2[1], tx / td, ty / td);
+    }
+    function tag(x, y, lines, anchor) {
+        const w = Math.max(...lines.map(l => l.length)) * 11 + 24, h = lines.length * 24 + 12, x0 = anchor === 'end' ? x - w : anchor === 'middle' ? x - w / 2 : x;
+        return `<g class="fs-tag"><rect x="${x0}" y="${y}" width="${w}" height="${h}" rx="8"/>` +
+            lines.map((l, i) => `<text x="${x0 + 12}" y="${y + 28 + i * 24}">${esc(l)}</text>`).join('') + '</g>';
+    }
+    function fsmdSVG(pi) {
+        const P = PROBS[pi], F = P.fs, Pos = F.pos, b = [];
+        const [rx1, ry1, rx2, ry2] = F.reset, rd = Math.hypot(rx2 - rx1, ry2 - ry1);
+        b.push(`<path class="fs-arc" d="M${rx1},${ry1} L${rx2 - 12 * (rx2 - rx1) / rd},${ry2 - 12 * (ry2 - ry1) / rd}"/>` + headAt(rx2, ry2, (rx2 - rx1) / rd, (ry2 - ry1) / rd));
+        b.push(`<text x="${rx1 - 8}" y="${ry1 - 4}" font-size="18" font-weight="700" fill="#1c2433" text-anchor="end">reset</text>`);
+        F.arcs.forEach(A => { const ar = arc(Pos, A.a, A.b, A.bow); b.push(ar.d);
+            const L = P.arcs.find(x => x[0] === A.a && x[1] === A.b)[2];
+            if (L && A.lab) b.push(lab(ar.mid[0] + A.lab[0], ar.mid[1] + A.lab[1], L, A.lab[2])); });
+        F.loops.forEach(Lp => { b.push(selfLoop(Pos, Lp.s, Lp.ang));
+            const L = P.arcs.find(x => x[0] === Lp.s && x[1] === Lp.s)[2], [x, y] = Pos[Lp.s];
+            const o = Lp.lab || [Math.cos(Lp.ang * Math.PI / 180) * 150, 8, Math.cos(Lp.ang * Math.PI / 180) > 0 ? 'start' : 'end'];
+            b.push(lab(x + o[0], y + o[1], L, o[2])); });
+        P.states.forEach(s => { const [x, y] = Pos[s];
+            b.push(`<circle class="fs-bub" cx="${x}" cy="${y}" r="${R}"/>`);
+            b.push(`<text class="fs-name" x="${x}" y="${y + (P.outs[s] ? -2 : 9)}"${s.length > 4 ? ' style="font-size:23px"' : ''}>${s}</text>`);
+            if (P.outs[s]) b.push(`<text class="fs-out" x="${x}" y="${y + 24}">${P.outs[s]}</text>`); });
+        F.tags.forEach(t => b.push(tag(t.x, t.y, t.lines, t.anchor)));
+        const [nx, ny, na] = F.noteAt || [690, 410, 'end'];
+        P.notes.forEach((n, i) => b.push(`<text class="fs-note" x="${nx}" y="${ny + 22 * i}" text-anchor="${na}">${n}</text>`));
+        const aria = 'FSMD. ' + P.states.map(s => `${s}${s === P.reset ? ' (reset)' : ''} does ${Object.entries(P.xfer[s]).map(([r, e]) => r + ' gets ' + e).join(' and ') || 'nothing'}`).join('. ') +
+            '. Arcs: ' + P.arcs.map(a => `${a[0]} to ${a[1]}${a[2] ? ' on ' + a[2].replace('̅', '-bar') : ''}`).join('; ');
+        return `<svg viewBox="0 0 700 455" role="img" aria-label="${esc(aria)}">${b.join('')}</svg>`;
+    }
+
+    // ============ THE DATAPATH FIGURES (assemble step by step) ============
+    // Each part carries data-part="k" (the step that draws it); wires that join two parts carry data-needs="a,b".
+    const D = {
+        W: (d, cls = 'dp-w') => `<path class="${cls}" d="${d}"/>`,
+        ar(x, y, dir) { const L = 13, H = 6.5;
+            const p = dir === 'd' ? `M${x},${y} L${x - H},${y - L} L${x + H},${y - L} Z` : dir === 'r' ? `M${x},${y} L${x - L},${y - H} L${x - L},${y + H} Z` : `M${x},${y} L${x + L},${y - H} L${x + L},${y + H} Z`;
+            return `<path d="${p}" fill="#1c2433"/>`; },
+        part: (k, inner, needs) => `<g class="part" data-part="${k}"${needs ? ` data-needs="${needs}"` : ''}>${inner}</g>`,
+        // a control stub coming in from the right, arrowhead at x1 (the part it drives)
+        ctl: (x1, y, x2, name) => `<g class="sig ctl"><path class="dp-cw ctl" d="M${x1},${y} H${x2}"/><path class="dp-cw ctl" d="M${x1 + 12},${y - 6} L${x1},${y} L${x1 + 12},${y + 6}"/>` +
+            `<text class="dp-sig ctl" x="${x1 + 26}" y="${y - 9}">${name}</text></g>`,
+        stat: (x1, y, x2, name) => `<g class="sig st"><path class="dp-cw st" d="M${x1},${y} H${x2}"/><path class="dp-cw st" d="M${x2 - 12},${y - 6} L${x2},${y} L${x2 - 12},${y + 6}"/>` +
+            `<text class="dp-sig st" x="${x1 + 17}" y="${y - 9}">${name}</text></g>`,
+        reg(x, y0, name, h = 70) { return `<rect class="dp-reg" x="${x - 75}" y="${y0}" width="150" height="${h}" rx="6"/><text class="dp-reg-t" x="${x}" y="${y0 + 45}">${name}</text>` +
+            `<path class="dp-w" d="M${x - 75},${y0 + h - 32} L${x - 58},${y0 + h - 22} L${x - 75},${y0 + h - 12}"/><text class="dp-pin" x="${x - 84}" y="${y0 + h - 16}" style="text-anchor:end">clk</text>`; },
+        mux2(x, t, codes = ['0', '1']) { return `<path class="dp-mux" d="M${x - 85},${t} H${x + 85} L${x + 55},${t + 60} H${x - 55} Z"/>` +
+            `<text class="dp-pin" x="${x - 45}" y="${t + 22}">${codes[0]}</text><text class="dp-pin" x="${x + 45}" y="${t + 22}">${codes[1]}</text>` +
+            `<text class="dp-pin" x="${x}" y="${t + 48}" style="font-size:14px">2:1</text>`; },
+        mux4(x, t) { return `<path class="dp-mux" d="M${x - 145},${t} H${x + 145} L${x + 115},${t + 60} H${x - 115} Z"/>` +
+            ['00', '01', '10', '11'].map((c, i) => `<text class="dp-pin" x="${x - 105 + 70 * i}" y="${t + 22}">${c}</text>`).join('') +
+            `<text class="dp-pin" x="${x}" y="${t + 48}" style="font-size:14px">4:1</text>`; },
+        k(x, y, v) { return `<rect class="dp-box" x="${x - 24}" y="${y}" width="48" height="38" rx="5"/><text class="dp-t" x="${x}" y="${y + 27}">${v}</text>`; },
+        blk(x, y, label, w = 100) { return `<rect class="dp-box" x="${x - w / 2}" y="${y}" width="${w}" height="62" rx="8"/><text class="dp-t" x="${x}" y="${y + 40}">${label}</text>`; },
+        inp(x, y1, y2, name, left) { return `<path class="dp-w" d="M${x},${y1} V${y2 - 13}"/>` + D.ar(x, y2, 'd') + `<text class="dp-in" x="${left ? x - 12 : x + 12}" y="${y1 + 12}"${left ? ' style="text-anchor:end"' : ''}>${name}</text>`; },
+        dot: (x, y) => `<circle class="dp-dot" cx="${x}" cy="${y}" r="6"/>`,
+        lbl: (x, y, t, anchor = 'end') => `<text class="dp-pin" x="${x}" y="${y}" style="text-anchor:${anchor}">${t}</text>`,
+    };
+    const MT = 262, MB = 322, RT = 382, RB = 452;       // mux top / bottom, register top / bottom
+    // a standard register column with a 2:1 mux: leg 0 at x-45, leg 1 at x+45; the select and load come from the right
+    function col2(b, x, name, sel, ld, leg0, leg1) {
+        b.push(D.part(1, D.reg(x, RT, name)));
+        b.push(D.part(2, D.mux2(x, MT) + D.W(`M${x},${MB} V${RT - 13}`) + D.ar(x, RT, 'd') + D.ctl(x + 70, 292, x + 210, sel) + D.ctl(x + 75, 417, x + 210, ld) +
+            (leg1.k !== undefined ? D.k(x + 45, 196, leg1.k) + D.W(`M${x + 45},234 V${MT - 13}`) + D.ar(x + 45, MT, 'd') : '') +
+            (leg0.inp ? D.inp(x - 45, 150, MT, leg0.inp) : '')));
+    }
+    const DPFIG = [
+        // 1 · R: X on leg 0, 0 on leg 1 (clrR = 1 picks 0); no blocks
+        () => { const b = [], x = 560; col2(b, x, 'R', 'clrR', 'ldR', { inp: 'X' }, { k: '0' });
+            b.push(D.part(1, D.W(`M${x},${RB} V${548}`) + D.ar(x, 562, 'd') + `<text class="dp-in" x="${x + 14}" y="582">R</text>`));
+            return { vb: '270 66 720 534', body: b.join('') }; },
+        // 2 · S and C (the accumulator)
+        () => { const b = [];
+            [['S', 300, 260, '+', 'S + X'], ['C', 790, 750, '+1', 'C + 1']].forEach(([r, x, ax, op, out]) => {
+                col2(b, x, r, 'clr' + r, 'ld' + r, {}, { k: '0' });
+                b.push(D.part(1, D.W(`M${x},${RB} V${r === 'S' ? 548 : 512}`) + (r === 'S' ? D.ar(x, 562, 'd') + `<text class="dp-in" x="${x + 14}" y="582">S</text>` : '')));
+                b.push(D.part(3, D.blk(ax, 120, op) + D.lbl(ax - 10, 226, out)));
+                b.push(D.part(3, D.W(`M${ax},182 V${MT - 13}`) + D.ar(ax, MT, 'd'), '2,3'));
+                const fin = r === 'S' ? ax - 25 : ax;
+                b.push(D.part(3, D.W(`M${x},482 H${x - 140} V92 H${fin} V${107}`) + D.ar(fin, 120, 'd') + D.dot(x, 482), '1,3'));
+            });
+            b.push(D.part(3, D.inp(285, 40, 120, 'X')));
+            b.push(D.part(3, D.blk(790, 526, '== 3', 150) + D.stat(865, 557, 995, 'eq')));
+            b.push(D.part(3, D.W(`M790,512 V513`) + D.ar(790, 526, 'd'), '1,3'));
+            return { vb: '110 14 950 590', body: b.join('') }; },
+        // 3 · R with a 4:1 mux: 00 -> 0, 01 -> X, 10 -> R + 1, 11 unused
+        () => { const b = [], x = 500;
+            b.push(D.part(1, D.reg(x, RT, 'R') + D.W(`M${x},${RB} V512`)));
+            b.push(D.part(2, D.mux4(x, MT) + D.W(`M${x},${MB} V${RT - 13}`) + D.ar(x, RT, 'd') +
+                D.k(x - 105, 196, '0') + D.W(`M${x - 105},234 V${MT - 13}`) + D.ar(x - 105, MT, 'd') +
+                D.inp(x - 35, 150, MT, 'X', true) + D.lbl(x + 105, 250, 'unused', 'middle') +
+                D.ctl(x + 138, 276, x + 300, 'sel1') + D.ctl(x + 119, 314, x + 300, 'sel0') + D.ctl(x + 75, 417, x + 300, 'ldR')));
+            b.push(D.part(3, D.blk(x + 35, 120, '+1') + D.lbl(x + 25, 226, 'R + 1')));
+            b.push(D.part(3, D.W(`M${x + 35},182 V${MT - 13}`) + D.ar(x + 35, MT, 'd'), '2,3'));
+            b.push(D.part(3, D.W(`M${x},482 H${x + 330} V92 H${x + 35} V107`) + D.ar(x + 35, 120, 'd') + D.dot(x, 482), '1,3'));
+            b.push(D.part(3, D.blk(x, 526, '== 9', 150) + D.stat(x + 75, 557, x + 205, 'eq')));
+            b.push(D.part(3, D.W(`M${x},512 V513`) + D.ar(x, 526, 'd'), '1,3'));
+            return { vb: '250 20 650 590', body: b.join('') }; },
+        // 4 · A and B share one adder; A's constant leg is on the left (code 1), its sum leg on the right (code 0)
+        () => { const b = [], xa = 330, xb = 770, ax = 550;
+            b.push(D.part(1, D.reg(xa, RT, 'A') + D.W(`M${xa},${RB} V482`) + D.reg(xb, RT, 'B') + D.W(`M${xb},${RB} V512`)));
+            b.push(D.part(2, D.mux2(xa, MT, ['1', '0']) + D.W(`M${xa},${MB} V${RT - 13}`) + D.ar(xa, RT, 'd') +
+                D.k(xa - 45, 196, '1') + D.W(`M${xa - 45},234 V${MT - 13}`) + D.ar(xa - 45, MT, 'd') +
+                D.ctl(xa + 70, 292, xa + 200, 'initA') + D.ctl(xa + 75, 417, xa + 200, 'ldA')));
+            b.push(D.part(2, D.mux2(xb, MT) + D.W(`M${xb},${MB} V${RT - 13}`) + D.ar(xb, RT, 'd') +
+                D.k(xb + 45, 196, '1') + D.W(`M${xb + 45},234 V${MT - 13}`) + D.ar(xb + 45, MT, 'd') +
+                D.ctl(xb + 70, 292, xb + 210, 'initB') + D.ctl(xb + 75, 417, xb + 210, 'ldB')));
+            b.push(D.part(3, D.blk(ax, 120, '+', 120) + D.lbl(ax + 10, 206, 'A + B', 'start')));
+            b.push(D.part(3, D.W(`M${ax},182 V215 M${xa + 45},215 H${xb - 45} M${xa + 45},215 V${MT - 13} M${xb - 45},215 V${MT - 13}`) +
+                D.ar(xa + 45, MT, 'd') + D.ar(xb - 45, MT, 'd') + D.dot(ax, 215), '2,3'));
+            b.push(D.part(3, D.W(`M${xa},482 H190 V92 H${ax - 25} V107`) + D.ar(ax - 25, 120, 'd'), '1,3'));
+            b.push(D.part(3, D.W(`M${xb},482 H1010 V92 H${ax + 25} V107`) + D.ar(ax + 25, 120, 'd') + D.dot(xb, 482), '1,3'));
+            b.push(D.part(3, D.blk(xb, 526, '≥ 50', 150) + D.stat(xb + 75, 557, xb + 205, 'big')));
+            b.push(D.part(3, D.W(`M${xb},512 V513`) + D.ar(xb, 526, 'd'), '1,3'));
+            return { vb: '140 30 920 590', body: b.join('') }; },
+        // 5 · C counts; R has one source (C) and a Mealy load line
+        () => { const b = [], x = 380, xr = 760;
+            col2(b, x, 'C', 'clrC', 'ldC', {}, { k: '0' });
+            b.push(D.part(1, D.W(`M${x},${RB} V500`) + D.reg(xr, 540, 'R') + D.W(`M${xr},610 V636`) + D.ar(xr, 650, 'd') + `<text class="dp-in" x="${xr + 14}" y="668">R</text>`));
+            b.push(D.part(2, D.W(`M${x},500 H${xr} V527`) + D.ar(xr, 540, 'd') + D.ctl(xr + 75, 575, xr + 210, 'ldR') + D.dot(x, 500), '1,2'));
+            b.push(D.part(3, D.blk(x - 40, 120, '+1') + D.lbl(x - 50, 226, 'C + 1')));
+            b.push(D.part(3, D.W(`M${x - 40},182 V${MT - 13}`) + D.ar(x - 40, MT, 'd'), '2,3'));
+            b.push(D.part(3, D.W(`M${x},500 H${x - 140} V92 H${x - 40} V107`) + D.ar(x - 40, 120, 'd') + D.dot(x, 500), '1,3'));
+            return { vb: '190 30 850 660', body: b.join('') }; },
+    ];
+    function inputsAt(P, ins, t) { return Object.fromEntries(Object.keys(P.ins).map(n => [n, ins[n][t]])); }
+    function nextOf(P, q, env, key) { const hits = P.arcs.filter(a => a[0] === q && evalCond(a[key], env));
+        if (hits.length !== 1) throw new Error(`${hits.length} arcs true from ${q}`); return hits[0]; }
+    function runFSMD(P, ins, n) {
+        let q = P.reset; const regs = Object.fromEntries(Object.keys(P.dp.regs).map(r => [r, null])), tr = [];
+        for (let t = 0; t < n; t++) {
+            const env = { ...inputsAt(P, ins, t), ...regs }, a = nextOf(P, q, env, 3);
+            tr.push({ q, ...regs });
+            const nx = { ...regs };
+            Object.entries(P.xfer[q]).forEach(([r, e]) => nx[r] = evalExpr(e, env));
+            if (a[5]) Object.entries(a[5]).forEach(([r, e]) => nx[r] = evalExpr(e, env));
+            Object.assign(regs, nx); q = a[1];
+        }
+        return tr;
+    }
+    // ============ WHAT THIS SET ADDS TO 38P's PROBLEMS ============
+    // The FSMDs, datapaths and drawings above are 38P's, unchanged. Here: the choices each card offers (decoys),
+    // and for the Mealy problem the per-arc rows in Step 3's grid and the input-carrying terms in Step 4.
+    const CX = [
+        { states: ['WAIT', 'R = 0', 'LOAD', 'R = X', 'HOLD', 'ldR'], arcDecoys: ['R = X', 'ldR'], arcRows: false, terms: [],
+          story: 'On <b>s</b>, the machine copies <b>X</b> into <b>R</b> and raises <b>ready</b> while it holds the value; while it waits, R is cleared.' },
+        { states: ['IDLE', 'C = 3', 'ADD', 'S + X', 'DONE', 'ldS'], arcDecoys: ['C = 3', 'C ≠ 3'], arcRows: false, terms: [],
+          story: 'On <b>go</b>, the machine clears <b>S</b> and <b>C</b>, adds <b>X</b> into S on four clocks while C counts, and raises <b>done</b>. The datapath\'s comparator reports C == 3 as the status signal <b>eq</b>.' },
+        { states: ['IDLE', 'R = 9', 'LOAD', 'sel1', 'CNT', 'SHOW', 'R + 1'], arcDecoys: ['R = 9', 'R ≠ 9'], arcRows: false, terms: [],
+          story: 'On <b>go</b>, the machine clears <b>R</b>, loads <b>X</b>, then counts R up until R reaches 9, and raises <b>done</b>. The 4:1 mux is selected by two control bits, <b>sel1 sel0</b>; the comparator reports R == 9 as <b>eq</b>.' },
+        { states: ['IDLE', 'B ≥ 50', 'PA', 'A + B', 'PB', 'DONE', 'ldA'], arcDecoys: ['B ≥ 50', 'B < 50'], arcRows: false, terms: [],
+          story: 'On <b>go</b>, the machine sets <b>A</b> and <b>B</b> to 1, then alternates A ← A + B and B ← A + B until B is at least 50, and raises <b>done</b>. One adder feeds both registers; the comparator reports B ≥ 50 as <b>big</b>.' },
+        { states: ['IDLE', 'C = 0', 'RUN', 'R ← C', 'SHOW', 'ldR'], arcDecoys: ['C = R', 'R ← C'], arcRows: true, terms: ['Q_RUN·stop', 'Q_IDLE·go'],
+          story: 'A stopwatch. On <b>go</b>, it clears <b>C</b> and counts clocks. The arc RUN → SHOW, taken on <b>stop</b>, copies C into <b>R</b> (a transfer on an <b>arc</b>), and SHOW raises <b>done</b>.' },
+    ];
+
+    // ============ THE KEYS, DERIVED FROM EACH FSMD AND ITS DATAPATH ============
+    // Outputs: each register's load line, then its select bits (datapath order), then the FSMD's Moore outputs.
+    // A state that writes a register: ld = 1 and the select bits pick the leg holding its right-hand side.
+    // A state that leaves it alone: nothing asserted, every output 0 (class convention; Mike 11-10, no don't-cares).
+    // A transfer written on an ARC asserts its signals only on that arc: a Mealy output, Q_FROM · condition.
+    const condLabel = c => c === '1' ? 'always' : c.startsWith('!') ? c.slice(1) + '̅' : c;
+    function derive(pi) {
+        const P = PROBS[pi], cx = CX[pi], ctl = [];
+        Object.values(P.dp.regs).forEach(d => { if (d.ld) ctl.push(d.ld); d.sel.forEach(s => ctl.push(s)); });
+        const moore = Object.entries(P.outs).map(([st, t]) => [t.split(' ')[0], st]);
+        const outs = ctl.concat([...new Set(moore.map(m => m[0]))]);
+        const rowFor = w => { const row = Object.fromEntries(outs.map(o => [o, 0]));
+            Object.entries(w).forEach(([r, e]) => { const d = P.dp.regs[r]; if (d.ld) row[d.ld] = 1;
+                const code = d.legs.indexOf(e); if (code < 0) throw new Error(`${r} ← ${e} is not a mux leg`);
+                d.sel.forEach((s, i) => row[s] = (code >> (d.sel.length - 1 - i)) & 1); });
+            return row; };
+        const table = Object.fromEntries(P.states.map(st => [st, rowFor(P.xfer[st])]));
+        moore.forEach(([o, st]) => table[st][o] = 1);
+        const arcs = P.arcs.map(a => ({ a: a[0], b: a[1], lab: condLabel(a[4]), cond: a[4], xfer: a[5] || null }));
+        const arcRows = cx.arcRows ? arcs.filter(a => a.a !== a.b) : [];
+        const arow = Object.fromEntries(arcRows.map(a => [`${a.a}>${a.b}`, rowFor(a.xfer || {})]));
+        const ones = Object.fromEntries(outs.map(o => [o, P.states.filter(st => table[st][o])]));
+        const mealy = Object.fromEntries(outs.map(o => [o, arcRows.filter(a => arow[`${a.a}>${a.b}`][o]).map(a => `Q_${a.a}·${a.lab}`)]));
+        const terms = Object.fromEntries(outs.map(o => [o, ones[o].map(s => 'Q_' + s).concat(mealy[o])]));
+        const kind = Object.fromEntries(outs.map(o => [o, mealy[o].length ? 'Mealy' : 'Moore']));
+        const labels = [...new Set(arcs.map(a => a.lab).concat(['always']))];
+        return { states: P.states.slice(), arcs, outs, ctl, table, arcRows: arcRows.map(a => `${a.a}>${a.b}`), arow, ones, mealy, terms, kind,
+            arcChoices: labels.concat(cx.arcDecoys), termChoices: P.states.map(s => 'Q_' + s).concat(cx.terms) };
+    }
+    const KEYS = PROBS.map((_, i) => derive(i));
+    const arcKey = a => `${a.a}>${a.b}`;
+
+    // ============ STEPS ============
+    const STEPS = [
+        { n: 0, title: 'The transfers' }, { n: 1, title: 'The controller\'s states' }, { n: 2, title: 'Arcs and their conditions' },
+        { n: 3, title: 'Control outputs' }, { n: 4, title: 'Moore or Mealy, and equations' } ];
+    const HINT = [
+        () => 'For each state (and each arc with a transfer), ask what the datapath must do: load each register or hold it, and through which mux leg.',
+        () => 'The controller is an ordinary FSM with the same states as the FSMD. A state per register value, per expression or per signal puts data back into the state.',
+        () => 'Arcs carry over from the FSMD. Conditions name inputs and status signals only: a test on a register becomes the comparator\'s status signal.',
+        pi => 'In a state that writes a register: its ld = 1, and its select bits pick the leg holding that right-hand side. Every output not asserted is 0.' +
+            (CX[pi].arcRows ? ' A transfer on an arc is asserted only on that arc: mark it in the arc\'s row.' : ''),
+        pi => 'An output set by the state alone is Moore; one that also needs an input is Mealy. Each equation ORs the Q\'s where the output is 1' +
+            (CX[pi].arcRows ? ', plus Q·condition for an arc that asserts it.' : '.'),
+    ];
+    const qn = s => `Q<sub>${s}</sub>`;
+    const termHTML = t => t.replace(/^Q_(\w+)/, (m, s) => qn(s)).replace('·', '·');
+    const list = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : (a[0] || '');
+    function showText(pi, n) {
+        const P = PROBS[pi], K = KEYS[pi];
+        const on = row => K.outs.filter(o => row[o]);
+        if (n === 0) return 'Step 0\'s card lists what each state asks of the datapath. A state that writes nothing holds every register.';
+        if (n === 1) return `${K.states.length} states, ${list(K.states)}: the same as the FSMD. The other chips are data, expressions or signals, not states.`;
+        if (n === 2) return K.arcs.map(a => `${a.a} → ${a.b}: ${a.lab}`).join(' · ') + '.';
+        if (n === 3) { const t = K.states.map(st => `${st}: ${on(K.table[st]).join(', ') || 'nothing'}`).join(' · ');
+            const ar = K.arcRows.filter(k => on(K.arow[k]).length).map(k => `arc ${k.replace('>', ' → ')}: ${on(K.arow[k]).join(', ')}`);
+            const note = { 0: ' In HOLD, ldR = 0, so R ignores the mux and clrR could be anything; the controller lists it as 0.',
+                2: ' SHOW holds R, so sel1 sel0 are listed as 0 0 there; the code 11 is never used.',
+                4: ' ldR is asserted only on the arc RUN → SHOW, not in RUN itself.' }[pi] || '';
+            return t + (ar.length ? ' · ' + ar.join(' · ') : '') + '. Everything else is 0.' + note; }
+        const eqs = K.outs.map(o => `${o} = ${K.terms[o].map(termHTML).join(' + ')}`);
+        return K.outs.filter(o => K.kind[o] === 'Mealy').map(o => `${o} is Mealy. `).join('') + (K.outs.some(o => K.kind[o] === 'Mealy') ? 'The rest are Moore. ' : 'All are Moore. ') + eqs.join(', ') + '.';
+    }
+
+    const blankST = pi => { const K = KEYS[pi]; return { hint: [false, false, false, false, false], shown: [false, false, false, false, false],
+        states: new Set(), arcs: Object.fromEntries(K.arcs.map(a => [arcKey(a), null])),
+        table: Object.fromEntries(K.states.concat(K.arcRows.map(k => 'arc:' + k)).map(r => [r, Object.fromEntries(K.outs.map(o => [o, null]))])),
+        kind: Object.fromEntries(K.outs.map(o => [o, null])), eqs: Object.fromEntries(K.outs.map(o => [o, new Set()])),
+        marks: null, drawn: [false, false, false, false, false] }; };
+    const ST = PROBS.map((_, i) => blankST(i));
+    let page = 0;
+    const keyCell = (K, r, o) => r.startsWith('arc:') ? K.arow[r.slice(4)][o] : K.table[r][o];
+
+    // ============ GRADING ============
+    function grade(pi) {
+        const K = KEYS[pi], s = ST[pi], g = { states: {}, arcs: {}, table: {}, kind: {}, eqs: {} };
+        CX[pi].states.forEach(c => { const want = K.states.includes(c), got = s.states.has(c); g.states[c] = got ? (want ? 'ok' : 'bad') : (want ? 'miss' : 'none'); });
+        K.arcs.forEach(a => { const v = s.arcs[arcKey(a)]; g.arcs[arcKey(a)] = v === null ? 'miss' : (v === a.lab ? 'ok' : 'bad'); });
+        Object.keys(s.table).forEach(r => { g.table[r] = {}; K.outs.forEach(o => { const v = s.table[r][o];
+            g.table[r][o] = v === null ? 'miss' : (v === String(keyCell(K, r, o)) ? 'ok' : 'bad'); }); });
+        K.outs.forEach(o => { const v = s.kind[o]; g.kind[o] = v === null ? 'miss' : (v === K.kind[o] ? 'ok' : 'bad');
+            const set = s.eqs[o]; g.eqs[o] = set.size === 0 ? 'miss' : (set.size === K.terms[o].length && K.terms[o].every(t => set.has(t)) ? 'ok' : 'bad'); });
+        return g;
+    }
+    const allOk = o => Object.values(o).every(v => typeof v === 'object' ? allOk(v) : (v === 'ok' || v === 'none'));
+    const stepCorrect = (g, n) => n === 1 ? allOk(g.states) : n === 2 ? allOk(g.arcs) : n === 3 ? allOk(g.table) : n === 4 ? allOk(g.kind) && allOk(g.eqs) : false;
+    function countMarks(g) { const c = { ok: 0, bad: 0, miss: 0 };
+        const walk = o => Object.values(o).forEach(v => typeof v === 'object' ? walk(v) : (v in c && c[v]++)); walk(g); return c; }
+
+    // ============ FIGURES ============
+    const ORANGE = '#e8730c';
+    function givenDatapath(pi) {        // 38P's datapath for this problem, every part drawn
+        const f = DPFIG[pi](), vb = pi === 0 ? '420 120 470 490' : f.vb;   // P1: drop the room 38P kept for its legend
+        return `<svg viewBox="${vb}" class="dpsvg sig-on" role="img" aria-label="The given datapath for problem ${pi + 1}">` + f.body.replace(/class="part"/g, 'class="part on"') + `</svg>`;
+    }
+    function ctlSVG(pi) {
+        const P = PROBS[pi], K = KEYS[pi], F = P.fs, Pos = F.pos, b = [];
+        const part = (k, inner, needs) => `<g class="part" data-part="${k}"${needs ? ` data-needs="${needs}"` : ''}>${inner}</g>`;
+        const [rx1, ry1, rx2, ry2] = F.reset, rd = Math.hypot(rx2 - rx1, ry2 - ry1);
+        let bub = `<path class="fs-arc" d="M${rx1},${ry1} L${rx2 - 12 * (rx2 - rx1) / rd},${ry2 - 12 * (ry2 - ry1) / rd}"/>` + headAt(rx2, ry2, (rx2 - rx1) / rd, (ry2 - ry1) / rd) +
+            `<text x="${rx1 - 8}" y="${ry1 - 4}" font-size="18" font-weight="700" fill="#1c2433" text-anchor="end">reset</text>`;
+        K.states.forEach(s => { const [x, y] = Pos[s]; bub += `<circle class="fs-bub" cx="${x}" cy="${y}" r="${R}"/><text class="fs-name" x="${x}" y="${y + 2}"${s.length > 4 ? ' style="font-size:23px"' : ''}>${s}</text>`; });
+        let arcs = '', mealyLabs = '';
+        F.arcs.forEach(A => { const ar = arc(Pos, A.a, A.b, A.bow), k = K.arcs.find(x => x.a === A.a && x.b === A.b);
+            arcs += ar.d;
+            if (k.lab !== 'always' && A.lab) {
+                const x = ar.mid[0] + A.lab[0], y = ar.mid[1] + A.lab[1]; arcs += lab(x, y, k.lab, A.lab[2]);
+                const m = K.outs.filter(o => K.arcRows.includes(arcKey(k)) && K.arow[arcKey(k)][o]);
+                if (m.length) mealyLabs += `<text x="${x + k.lab.length * 6.5 + 8}" y="${y}" font-size="20" font-weight="800" fill="${ORANGE}" font-family="SF Mono, Menlo, monospace">/ ${m.join(', ')}</text>`;
+            } });
+        F.loops.forEach(Lp => { const k = K.arcs.find(x => x.a === Lp.s && x.b === Lp.s), [x, y] = Pos[Lp.s];
+            const o = Lp.lab || [Math.cos(Lp.ang * Math.PI / 180) * 150, 8, Math.cos(Lp.ang * Math.PI / 180) > 0 ? 'start' : 'end'];
+            arcs += selfLoop(Pos, Lp.s, Lp.ang) + lab(x + o[0], y + o[1], k.lab, o[2]); });
+        b.push(part(1, bub)); b.push(part(2, arcs, '1,2'));
+        // control outputs: only the asserted ones, orange, in a tag where the FSMD had its transfers (Moore outputs to the
+        // outside world inside the bubble, as the FSMD drew them); a Mealy output beside its arc's condition
+        let outs = mealyLabs;
+        K.states.forEach(s => { const [x, y] = Pos[s], on = K.ctl.filter(o => K.table[s][o]), ext = K.outs.filter(o => !K.ctl.includes(o) && K.table[s][o]);
+            if (ext.length) outs += `<text x="${x}" y="${y + 26}" text-anchor="middle" font-size="17" font-weight="800" fill="${ORANGE}" font-family="SF Mono, Menlo, monospace">${ext.join(', ')}</text>`;
+            if (!on.length) return;
+            const t = F.tags.find(t => t.s === s), lines = []; for (let i = 0; i < on.length; i += 2) lines.push(on.slice(i, i + 2).join(', '));
+            const w = Math.max(...lines.map(l => l.length)) * 11 + 24, h = lines.length * 24 + 12, x0 = t.anchor === 'end' ? t.x - w : t.anchor === 'middle' ? t.x - w / 2 : t.x;
+            outs += `<rect x="${x0}" y="${t.y}" width="${w}" height="${h}" rx="8" fill="#fff" stroke="${ORANGE}" stroke-width="2"/>` +
+                lines.map((l, i) => `<text x="${x0 + 12}" y="${t.y + 28 + i * 24}" font-size="18" font-weight="800" fill="${ORANGE}" font-family="SF Mono, Menlo, monospace">${l}</text>`).join(''); });
+        b.push(part(3, outs, '1,3'));
+        const half = Math.ceil(K.outs.length / 2);
+        b.push(part(4, K.outs.map((o, i) => `<text x="${i < half ? 12 : 360}" y="${492 + 24 * (i % half)}" font-size="20" font-weight="700" fill="#1c2433" font-family="SF Mono, Menlo, monospace">` +
+            `<tspan fill="${ORANGE}">${o}</tspan> = ${K.terms[o].map(t => t.replace(/^Q_(\w+)/, 'Q<tspan baseline-shift="sub" font-size="11">$1</tspan>')).join(' + ')}</text>`).join('') +
+            `<text x="690" y="${492 + 24 * half + 6}" text-anchor="end" font-size="15" fill="#5a6676">${K.outs.some(o => K.kind[o] === 'Mealy') ? K.outs.filter(o => K.kind[o] === 'Mealy').join(', ') + ' Mealy, the rest Moore' : 'all outputs Moore'} · unlisted outputs are 0</text>`));
+        return `<svg viewBox="0 0 700 ${500 + 24 * half + 20}" id="ctlsvg${pi}" role="img" aria-label="The controller for problem ${pi + 1}, drawn as you complete the steps">${b.join('')}</svg>`;
+    }
+    function applyDrawn(pi) {
+        const svg = document.getElementById('ctlsvg' + pi); if (!svg) return;
+        const on = k => ST[pi].drawn[k];
+        svg.querySelectorAll('.part').forEach(p => { const k = +p.dataset.part, needs = (p.dataset.needs || '').split(',').filter(Boolean).map(Number);
+            p.classList.toggle('on', on(k) && needs.every(on)); });
+        document.getElementById('ctlempty' + pi).style.display = ST[pi].drawn.some(Boolean) ? 'none' : 'flex';
+    }
+
+    // ============ PAGES ============
+    const stage = document.getElementById('stage'), tabstrip = document.getElementById('tabstrip');
+    [{ n: 0, label: 'How to Work', small: 'the steps + the buttons' }].concat(PROBS.map((_, i) => ({ n: i + 1, label: `Problem ${i + 1}`, small: 'derive the controller' }))).forEach(t => {
+        const d = document.createElement('div'); d.className = 'tab'; d.dataset.page = t.n;
+        d.innerHTML = `<div class="tnum">${t.n}</div><div class="tlabel">${t.label}<small>${t.small}</small></div><div class="tdone">✓ built</div>`;
+        d.onclick = () => setPage(t.n); tabstrip.appendChild(d); });
+    const pages = [];
+    function mkPage(inner) { const p = document.createElement('div'); p.className = 'page'; p.innerHTML = inner; stage.appendChild(p); pages.push(p); return p; }
+    const METHOD = [
+        ['Understand the transfers', 'For each state, read what its transfers ask of the datapath: <b>load</b> a register or <b>hold</b> it, and through which mux leg. Note any transfer written on an <b>arc</b>.'],
+        ['The controller\'s states', 'The controller has the <b>same states</b> as the FSMD. Data stays in the datapath, never in the state.'],
+        ['Arcs and their conditions', 'The arcs carry over. Conditions name <b>inputs</b> and <b>status</b> signals only: a test on a register becomes its comparator\'s status signal.'],
+        ['Control outputs', 'Replace each transfer by control values: <b>ld = 1</b> where a register is written, the <b>select bits</b> that pick its leg. Every output not asserted is 0.'],
+        ['Moore or Mealy, and equations', 'Set by the state alone: <b>Moore</b>. Needs an input too: <b>Mealy</b>. One-hot: each output ORs its Q\'s (and Q·condition for an arc).'],
+    ];
+    mkPage(`<div class="steps">${METHOD.map((m, i) => `${i ? '<div class="arrowcell">→</div>' : ''}<div class="step"><div class="sn">${i}</div><div class="st">${m[0]}</div><div class="sd">${m[1]}</div></div>`).join('')}</div>
+        <div class="leadrow">
+            <div class="panel" style="flex:1.2"><div class="panel-head"><span class="ph">Conventions</span><span class="role">as in class</span></div>
+                <div class="convbody"><ul>
+                    <li>The controller is the FSMD redrawn with <b>control signals in place of the transfers</b>. Outputs are written in <span class="c-ctl">orange</span>: beside a state, or after a <b>/</b> on an arc for a Mealy output.</li>
+                    <li>List only the <b>asserted</b> signals. Every output that is not asserted is <b>0</b>.</li>
+                    <li>A multi-bit select is written as its bits: a 4:1 mux on <b>sel1 sel0</b> takes code 10 as sel1 = 1, sel0 = 0.</li>
+                    <li>One-hot naming: flip-flop Q<sub>STATE</sub> is 1 in that state. A Mealy term is written Q<sub>STATE</sub>·condition.</li>
+                </ul></div></div>
+            <div class="panel" style="flex:1"><div class="panel-head"><span class="ph">The buttons</span></div>
+                <div class="helpbody">
+                    <div class="hrow"><span class="btn sm">click a chip</span><span>pick or unpick it; on a row of choices, pick one</span></div>
+                    <div class="hrow"><span class="btn check sm">Check my work</span><span>green right · red wrong · dashed amber missing. A step you get fully right <b>draws its part</b> of the controller.</span></div>
+                    <div class="hrow"><span class="btn hint sm">Hint</span><span>a nudge for that step, in the bar at the bottom</span></div>
+                    <div class="hrow"><span class="btn sm">Show</span><span>fills that step's answer in blue and draws its part</span></div>
+                    <div class="hrow"><span class="btn hint sm">Next hint (H)</span><span>hint 0, show 0, hint 1, … show 4</span></div>
+                    <div class="hrow"><span class="btn final sm">Final answer (F)</span><span>every step, and the whole controller</span></div>
+                </div></div>
+        </div>
+        <div class="cards">${PROBS.map((P, i) => `<div class="startcard" onclick="setPage(${i + 1})"><div class="ct">Problem ${i + 1}</div><div class="cf">${P.states.length} states · derive the controller</div></div>`).join('')}</div>`);
+    PROBS.forEach((P, pi) => mkPage(`<div class="toprow">
+            <div class="panel givenpanel"><div class="panel-head"><span class="ph">Problem ${pi + 1}</span><span class="role">the FSMD and its datapath are given</span></div>
+                <div class="story">The FSMD and its datapath are <b>given</b>. Derive the <b>controller</b>. ${CX[pi].story}</div>
+                <div class="givenrow${Object.keys(P.dp.regs).length > 1 ? ' wide' : ''}"><div class="fsmdbox">${fsmdSVG(pi)}</div><div class="dpgiven">${givenDatapath(pi)}</div></div></div>
+            <div class="panel dppanel"><div class="panel-head"><span class="ph">Your controller</span><span class="role">each part appears when its step is right</span></div>
+                <div class="dpbox">${ctlSVG(pi)}<div class="dpempty" id="ctlempty${pi}">Nothing yet. Work the steps below and press Check my work: each step you get right draws its part here.</div></div></div>
+        </div>
+        <div class="cardrow" id="cardrow${pi}"></div>
+        <div class="helpbar"><div class="hintbox" id="hintbox${pi}"><span class="dim">Work the steps left to right. Hint nudges, Show fills a step, Check my work marks every pick.</span></div>
+            <span class="btn check" onclick="act('check')">Check my work<span class="k">C</span></span>
+            <span class="btn hint" onclick="act('next')">Next hint<span class="k">H</span></span>
+            <span class="btn final" onclick="act('final')">Final answer<span class="k">F</span></span>
+            <span class="btn" onclick="act('clear')">&#8634; Clear<span class="k">R</span></span>
+            <span class="checkres" id="checkres${pi}"></span></div>`));
+
+    // ----- cards -----
+    function chip(label, on, cls, onclick, html) { return `<span class="chip${on ? ' on' : ''}${cls}" onclick="${onclick}">${html || esc(label)}</span>`; }
+    const termChip = t => t.replace(/^Q_(\w+)/, 'Q<sub>$1</sub>');
+    function cardBody(pi, n) {
+        const P = PROBS[pi], K = KEYS[pi], s = ST[pi], g = s.marks;
+        const one = (picked, v, mark) => g ? (picked === v ? ' ' + mark : (picked === null ? ' miss' : '')) : '';
+        if (n === 0) return s.shown[0] ? `<div class="s0note">${K.states.map(st => { const w = Object.entries(P.xfer[st]);
+                return `<span class="mono">${st}</span>: ${w.length ? w.map(([r, e]) => `load ${r} ← ${fmtX(e)}`).join('; ') : 'writes nothing: hold'}`; }).join('<br>') +
+                K.arcs.filter(a => a.xfer).map(a => `<br>arc <span class="mono">${a.a} → ${a.b}</span>: ${Object.entries(a.xfer).map(([r, e]) => `load ${r} ← ${e}`).join('; ')}`).join('')}</div>`
+            : `<div class="s0blank">For each state: which registers load or hold, and through which leg? (on paper)</div>`;
+        if (n === 1) return `<div class="sq">Which are the controller's <b>states</b>?</div><div class="chips">${CX[pi].states.map(c => {
+            const m = g && (g.states[c] === 'ok' || g.states[c] === 'bad') ? ' ' + g.states[c] : '';
+            return chip(c, s.states.has(c), m, `pick('states','${c}')`); }).join('')}</div>`;
+        if (n === 2) return `<div class="sq">Pick each arc's <b>condition</b>.</div>` + K.arcs.map(a => { const k = arcKey(a);
+            return `<div class="arcrow"><span class="alab">${a.a}→${a.b}</span><span class="tog">${K.arcChoices.map(c =>
+                chip(c, s.arcs[k] === c, one(s.arcs[k], c, g && g.arcs[k]), `pick('arcs','${k}','${c}')`)).join('')}</span></div>`; }).join('');
+        if (n === 3) return `<div class="sq">${K.arcRows.length ? 'Each state and arc' : 'Each state'}, each output: <b>1</b> or <b>0</b>.</div><div class="ogrid" style="grid-template-columns: ${K.arcRows.length ? 92 : 50}px repeat(${K.outs.length}, 1fr)">` +
+            `<span></span>${K.outs.map(o => `<span class="ohead">${o}</span>`).join('')}` +
+            Object.keys(s.table).map(r => `<span class="sname">${r.startsWith('arc:') ? r.slice(4).replace('>', '→') : r}</span>` + K.outs.map(o => `<span class="tog">${['1', '0'].map(v =>
+                chip(v, s.table[r][o] === v, one(s.table[r][o], v, g && g.table[r][o]), `pick('table','${r}','${o}','${v}')`)).join('')}</span>`).join('')).join('') + `</div>`;
+        return `<div class="sq">Moore or Mealy, and each output's terms.</div>` + K.outs.map(o =>
+            `<div class="rrow"><span class="olab">${o}</span><span class="tog">${['Moore', 'Mealy'].map(v => chip(v, s.kind[o] === v, one(s.kind[o], v, g && g.kind[o]), `pick('kind','${o}','${v}')`)).join('')}</span>` +
+            `<span class="eqsign">=</span><span class="tog">${K.termChoices.map(t => { const on = s.eqs[o].has(t);
+                const m = g && on ? (K.terms[o].includes(t) ? ' ok' : ' bad') : (g && s.eqs[o].size === 0 ? ' miss' : '');
+                return chip(t, on, m, `pick('eqs','${o}','${t}')`, termChip(t)); }).join('')}</span></div>`).join('');
+    }
+    function renderCards(pi) {
+        const row = document.getElementById('cardrow' + pi), s = ST[pi];
+        row.innerHTML = STEPS.map(st => `<div class="panel scard s${st.n}${s.shown[st.n] ? ' open' : ''}" id="card${pi}-${st.n}">
+            <div class="panel-head"><span class="ph"><span class="sn">${st.n}</span>${st.title}</span></div>
+            <div class="sbody">${cardBody(pi, st.n)}</div>
+            <div class="sbtns"><span class="btn hint sm${s.hint[st.n] ? ' used' : ''}" onclick="act('hint',${st.n})">Hint</span><span class="btn sm${s.shown[st.n] ? ' used' : ''}" onclick="act('show',${st.n})">Show</span></div></div>`).join('');
+        STEPS.forEach(st => { if (s.shown[st.n]) row.querySelectorAll(`#card${pi}-${st.n} .chip.on`).forEach(c => c.classList.add('rev')); });
+    }
+    function renderCheck(pi) { const el = document.getElementById('checkres' + pi), g = ST[pi].marks; if (!g) { el.innerHTML = ''; return; }
+        const c = countMarks(g); el.innerHTML = `<b>${c.ok}</b> right · <span class="bad">${c.bad}</span> wrong · <span class="miss">${c.miss}</span> missing`; }
+    const setHelp = (pi, h) => { document.getElementById('hintbox' + pi).innerHTML = h; };
+    function render() {
+        pages.forEach((p, i) => p.classList.toggle('active', i === page));
+        document.querySelectorAll('.tab').forEach(t => { const n = +t.dataset.page; t.classList.toggle('on', n === page);
+            t.classList.toggle('done', n > 0 && ST[n - 1].drawn.slice(1).every(Boolean)); });
+        document.getElementById('pcNum').textContent = page;
+        if (page > 0) { const pi = page - 1; renderCards(pi); renderCheck(pi); applyDrawn(pi); }
+    }
+
+    // ============ ACTIONS ============
+    function pick(what, a, b, c) {
+        if (page < 1) return;
+        const s = ST[page - 1];
+        if (what === 'states') s.states.has(a) ? s.states.delete(a) : s.states.add(a);
+        else if (what === 'arcs') s.arcs[a] = s.arcs[a] === b ? null : b;
+        else if (what === 'table') s.table[a][b] = s.table[a][b] === c ? null : c;
+        else if (what === 'kind') s.kind[a] = s.kind[a] === b ? null : b;
+        else if (what === 'eqs') s.eqs[a].has(b) ? s.eqs[a].delete(b) : s.eqs[a].add(b);
+        s.marks = null; render();
+    }
+    function fillStep(pi, n) {
+        const s = ST[pi], K = KEYS[pi];
+        if (n === 1) s.states = new Set(K.states);
+        if (n === 2) K.arcs.forEach(a => s.arcs[arcKey(a)] = a.lab);
+        if (n === 3) Object.keys(s.table).forEach(r => K.outs.forEach(o => s.table[r][o] = String(keyCell(K, r, o))));
+        if (n === 4) K.outs.forEach(o => { s.kind[o] = K.kind[o]; s.eqs[o] = new Set(K.terms[o]); });
+    }
+    function doShow(pi, n) { const s = ST[pi]; fillStep(pi, n); s.shown[n] = true; if (n) s.drawn[n] = true; s.marks = null; setHelp(pi, `<span class="hl">Step ${n}</span>${showText(pi, n)}`); }
+    function act(a, n) {
+        if (page < 1) { if (a === 'next' || a === 'final') setPage(1); else return; }
+        const pi = page - 1, s = ST[pi];
+        if (a === 'hint') { s.hint[n] = true; setHelp(pi, `<span class="hl">Hint ${n}</span>${HINT[n](pi)}`); }
+        else if (a === 'show') doShow(pi, n);
+        else if (a === 'next') { for (let k = 0; k < 5; k++) { if (!s.hint[k] && !s.shown[k]) { act('hint', k); return; } if (!s.shown[k]) { doShow(pi, k); break; } } }
+        else if (a === 'final') { for (let k = 0; k < 5; k++) { fillStep(pi, k); s.shown[k] = true; if (k) s.drawn[k] = true; }
+            s.marks = null; setHelp(pi, '<span class="hl">Final answer</span>' + showText(pi, 3) + ' ' + showText(pi, 4)); }
+        else if (a === 'check') { const g = grade(pi); s.marks = g;
+            for (let k = 1; k < 5; k++) if (stepCorrect(g, k)) s.drawn[k] = true;
+            const c = countMarks(g), right = [1, 2, 3, 4].filter(k => stepCorrect(g, k)), K = KEYS[pi];
+            const dataState = [...s.states].some(x => !K.states.includes(x)), regArc = Object.values(s.arcs).some(v => v && CX[pi].arcDecoys.includes(v));
+            setHelp(pi, c.bad || c.miss ? `<span class="hl">Checked</span>${right.length ? `Step${right.length > 1 ? 's' : ''} ${right.join(', ')} right and drawn. ` : ''}Fix the red picks and fill the dashed ones.` +
+                (dataState ? ' <span class="dim">Register values, expressions and signals are not states.</span>' : regArc ? ' <span class="dim">An arc tests inputs and status signals, never a register or a transfer.</span>' : '')
+                : '<span class="hl">All right</span>The controller is complete.'); }
+        else if (a === 'clear') { ST[pi] = blankST(pi); setHelp(pi, '<span class="dim">Cleared. Work the steps left to right.</span>'); }
+        render();
+    }
+    function setPage(n) { page = Math.max(0, Math.min(PROBS.length, n)); render(); }
+    document.addEventListener('keydown', e => {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        const k = e.key.toLowerCase();
+        if (/^[0-5]$/.test(k)) setPage(+k);
+        else if (k === 'c') act('check'); else if (k === 'h') act('next'); else if (k === 'f') act('final'); else if (k === 'r') act('clear');
+        else if (k === 'arrowright') setPage(page + 1); else if (k === 'arrowleft') setPage(page - 1);
+    });
+
+    // ============ INDEPENDENT RUNS (self-test) ============
+    // runFSMD (38P's) applies the FSMD table directly. runController runs the controller AS DERIVED here: its states,
+    // the status-form arc conditions, its output table (plus arc rows for Mealy outputs), driving the given datapath
+    // (each register loads, if its ld is 1, the mux leg its select bits pick; status from the comparators).
+    function runController(pi, K, ins, n) {
+        const P = PROBS[pi]; let q = P.reset; const regs = Object.fromEntries(Object.keys(P.dp.regs).map(r => [r, null])), tr = [];
+        for (let t = 0; t < n; t++) {
+            const env = { ...inputsAt(P, ins, t), ...regs };
+            Object.entries(P.dp.cmps).forEach(([st, c]) => env[st] = Object.values(regs).some(v => v === null) ? false : evalCond(c, env));
+            const nx = K.arcs.filter(a => a.a === q && evalCond(a.cond, env)); if (nx.length !== 1) throw new Error(`${nx.length} arcs from ${q}`);
+            const out = { ...K.table[q] }, k = arcKey(nx[0]);
+            if (K.arow[k]) K.outs.forEach(o => out[o] = out[o] | K.arow[k][o]);
+            tr.push({ q, ...regs, out });
+            const nr = { ...regs };
+            Object.entries(P.dp.regs).forEach(([r, d]) => { if (d.ld && !out[d.ld]) return;
+                const code = d.sel.reduce((c, nm) => c * 2 + (out[nm] ? 1 : 0), 0), e = d.legs[code];
+                if (e === null || e === undefined) throw new Error(`${r}: code ${code} picks no leg`);
+                nr[r] = evalExpr(e, env); });
+            Object.assign(regs, nr); q = nx[0].b;
+        }
+        return tr;
+    }
+
+    window.__api = { setPage, act, pick, grade, stepCorrect, KEYS, PROBS, CX, derive, state: pi => ST[pi], runFSMD, runController, HINT, showText };
+    window.pick = pick; window.act = act; window.setPage = setPage;
+    render();
+
+</script>
+</body>
+</html>

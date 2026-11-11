@@ -1,0 +1,10 @@
+title: "Datapath to Controller Practice"
+description: "The five FSMDs from FSMD to Datapath Practice with their datapaths given: derive each controller by finding its states, labeling its arcs with inputs and status signals, filling in its control outputs, and writing its output equations, with the controller drawing itself as each step comes out right."
+chapter: rtl-design
+section: introduction-to-rtl-design
+order: 50103
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: five FSMDs with their datapaths given. Derive each controller step by step: states, arc conditions, control outputs per state, then Moore or Mealy and the output equations. Check my work marks each pick and draws the controller as it comes out right"

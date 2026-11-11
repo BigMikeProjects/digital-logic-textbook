@@ -877,7 +877,7 @@
       "weekday": "Fri",
       "items": [
         {
-          "num": "5.1.3",
+          "num": "5.1.4",
           "title": "FSMD Timing",
           "slug": "fsmd-timing",
           "type": "full",
@@ -1003,7 +1003,14 @@
           "published": true
         },
         {
-          "num": "5.1.4",
+          "num": "5.1.3",
+          "title": "Datapath to Controller Practice",
+          "slug": "datapath-to-controller-practice",
+          "type": "practice",
+          "published": true
+        },
+        {
+          "num": "5.1.5",
           "title": "FSMD Timing Practice",
           "slug": "fsmd-timing-practice",
           "type": "practice",
