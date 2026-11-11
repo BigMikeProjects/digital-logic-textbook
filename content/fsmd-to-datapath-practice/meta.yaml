@@ -1,0 +1,10 @@
+title: "FSMD to Datapath Practice"
+description: "Five finite state machines with datapaths, warm-up to hardest: build the datapath for each one by choosing its registers, the muxes and load lines in front of them, the arithmetic blocks and comparators, and the control and status signals, with the datapath drawing itself as each step comes out right."
+chapter: rtl-design
+section: introduction-to-rtl-design
+order: 50102
+type: practice
+
+graphics:
+  01-practice.html:
+    caption: "Practice set: five FSMDs, warm-up to hardest. Build each datapath step by step: registers, what feeds each one (mux and load line), arithmetic and comparators, then control and status signals. Check my work marks each pick and draws the datapath as it comes out right"
